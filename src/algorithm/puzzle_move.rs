@@ -7,8 +7,13 @@ pub struct Move {
     pub amount: u32,
 }
 
-pub struct DisplayLong<'a>(&'a Move);
-pub struct DisplayShort<'a>(&'a Move);
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum DisplayType {
+    Long,
+    Short,
+}
+
+pub struct DisplayMove<'a, const T: DisplayType>(&'a Move);
 
 impl Move {
     pub fn inverse(&self) -> Self {
@@ -18,16 +23,16 @@ impl Move {
         }
     }
 
-    pub fn display_long(&self) -> DisplayLong {
-        DisplayLong(self)
+    pub fn display_long(&self) -> DisplayMove<{ DisplayType::Long }> {
+        DisplayMove::<{ DisplayType::Long }>(self)
     }
 
-    pub fn display_short(&self) -> DisplayShort {
-        DisplayShort(self)
+    pub fn display_short(&self) -> DisplayMove<{ DisplayType::Short }> {
+        DisplayMove::<{ DisplayType::Short }>(self)
     }
 }
 
-impl Display for DisplayLong<'_> {
+impl Display for DisplayMove<'_, { DisplayType::Long }> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -37,7 +42,7 @@ impl Display for DisplayLong<'_> {
     }
 }
 
-impl Display for DisplayShort<'_> {
+impl Display for DisplayMove<'_, { DisplayType::Short }> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.0.amount == 1 {
             write!(f, "{}", self.0.direction)
