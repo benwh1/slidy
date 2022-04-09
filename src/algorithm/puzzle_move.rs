@@ -23,12 +23,16 @@ impl Move {
         }
     }
 
+    pub fn display<const T: DisplayType>(&self) -> DisplayMove<'_, { T }> {
+        DisplayMove::<T>(self)
+    }
+
     pub fn display_long(&self) -> DisplayMove<{ DisplayType::Long }> {
-        DisplayMove::<{ DisplayType::Long }>(self)
+        self.display::<{ DisplayType::Long }>()
     }
 
     pub fn display_short(&self) -> DisplayMove<{ DisplayType::Short }> {
-        DisplayMove::<{ DisplayType::Short }>(self)
+        self.display::<{ DisplayType::Short }>()
     }
 }
 
