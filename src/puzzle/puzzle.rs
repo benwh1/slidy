@@ -1,4 +1,5 @@
-use super::{puzzle_move::Direction, traits::SlidingPuzzle};
+use super::traits::SlidingPuzzle;
+use crate::algorithm::puzzle_move::Direction;
 
 pub struct Puzzle {
     pieces: Vec<u32>,
