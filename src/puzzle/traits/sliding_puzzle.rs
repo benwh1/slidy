@@ -1,4 +1,4 @@
-use crate::algorithm::puzzle_move::Direction;
+use crate::algorithm::direction::Direction;
 
 pub trait SlidingPuzzle<Piece>
 where

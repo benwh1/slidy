@@ -1,10 +1,4 @@
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Direction {
-    Up,
-    Left,
-    Down,
-    Right,
-}
+use super::direction::Direction;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Move {
