@@ -7,7 +7,7 @@ pub enum Direction {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-struct Move {
-    direction: Direction,
-    amount: u32,
+pub struct Move {
+    pub direction: Direction,
+    pub amount: u32,
 }
