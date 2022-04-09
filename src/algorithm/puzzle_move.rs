@@ -8,12 +8,12 @@ pub struct Move {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum DisplayType {
+pub enum MoveDisplay {
     Long,
     Short,
 }
 
-pub struct DisplayMove<'a, const T: DisplayType>(&'a Move);
+pub struct DisplayMove<'a, const T: MoveDisplay>(&'a Move);
 
 impl Move {
     pub fn inverse(&self) -> Self {
@@ -23,20 +23,20 @@ impl Move {
         }
     }
 
-    pub fn display<const T: DisplayType>(&self) -> DisplayMove<'_, { T }> {
+    pub fn display<const T: MoveDisplay>(&self) -> DisplayMove<'_, { T }> {
         DisplayMove::<T>(self)
     }
 
-    pub fn display_long(&self) -> DisplayMove<{ DisplayType::Long }> {
-        self.display::<{ DisplayType::Long }>()
+    pub fn display_long(&self) -> DisplayMove<{ MoveDisplay::Long }> {
+        self.display::<{ MoveDisplay::Long }>()
     }
 
-    pub fn display_short(&self) -> DisplayMove<{ DisplayType::Short }> {
-        self.display::<{ DisplayType::Short }>()
+    pub fn display_short(&self) -> DisplayMove<{ MoveDisplay::Short }> {
+        self.display::<{ MoveDisplay::Short }>()
     }
 }
 
-impl Display for DisplayMove<'_, { DisplayType::Long }> {
+impl Display for DisplayMove<'_, { MoveDisplay::Long }> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -46,7 +46,7 @@ impl Display for DisplayMove<'_, { DisplayType::Long }> {
     }
 }
 
-impl Display for DisplayMove<'_, { DisplayType::Short }> {
+impl Display for DisplayMove<'_, { MoveDisplay::Short }> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.0.amount == 1 {
             write!(f, "{}", self.0.direction)
