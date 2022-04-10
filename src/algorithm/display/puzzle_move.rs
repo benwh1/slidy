@@ -68,3 +68,34 @@ impl MoveDisplay for DisplayMove<'_, DisplayShort> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::algorithm::{
+        direction::Direction,
+        display::puzzle_move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
+        puzzle_move::Move,
+    };
+
+    #[test]
+    fn test_display() {
+        let m = Move {
+            direction: Direction::Up,
+            amount: 1,
+        };
+        assert_eq!(m.display::<DisplayLongSpaced>().to_string(), "U");
+        assert_eq!(m.display::<DisplayLongUnspaced>().to_string(), "U");
+        assert_eq!(m.display::<DisplayShort>().to_string(), "U");
+    }
+
+    #[test]
+    fn test_display_2() {
+        let m = Move {
+            direction: Direction::Up,
+            amount: 3,
+        };
+        assert_eq!(m.display::<DisplayLongSpaced>().to_string(), "U U U");
+        assert_eq!(m.display::<DisplayLongUnspaced>().to_string(), "UUU");
+        assert_eq!(m.display::<DisplayShort>().to_string(), "U3");
+    }
+}
