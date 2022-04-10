@@ -64,15 +64,6 @@ impl SlidingPuzzle<u32> for Puzzle {
         self.piece_at_mut(x + self.width() * y)
     }
 
-    fn can_move_dir(&self, dir: Direction) -> bool {
-        match dir {
-            Direction::Up => self.gap_position_y() + 1 < self.height(),
-            Direction::Left => self.gap_position_x() + 1 < self.width(),
-            Direction::Down => self.gap_position_y() > 0,
-            Direction::Right => self.gap_position_x() > 0,
-        }
-    }
-
     fn move_dir(&mut self, dir: Direction) {
         if !self.can_move_dir(dir) {
             return;
