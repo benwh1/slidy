@@ -5,15 +5,15 @@ pub struct Algorithm {
 }
 
 impl Algorithm {
-    fn new(moves: Vec<Move>) -> Self {
+    pub fn new(moves: Vec<Move>) -> Self {
         Self { moves }
     }
 
-    fn length(&self) -> u32 {
+    pub fn length(&self) -> u32 {
         self.moves.iter().map(|m| m.amount).sum()
     }
 
-    fn push(&mut self, m: Move) {
+    pub fn push(&mut self, m: Move) {
         self.moves.push(m)
     }
 }
