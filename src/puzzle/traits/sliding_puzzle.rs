@@ -25,8 +25,8 @@ where
     fn piece_at(&self, idx: usize) -> Piece;
     fn piece_at_xy(&self, x: usize, y: usize) -> Piece;
 
-    fn piece_at_mut(&mut self, idx: usize) -> &mut Piece;
-    fn piece_at_xy_mut(&mut self, x: usize, y: usize) -> &mut Piece;
+    fn swap_pieces(&mut self, idx1: usize, idx2: usize);
+    fn swap_pieces_xy(&mut self, x1: usize, y1: usize, x2: usize, y2: usize);
 
     fn can_move_dir(&self, dir: Direction) -> bool {
         match dir {

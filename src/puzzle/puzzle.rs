@@ -56,12 +56,13 @@ impl SlidingPuzzle<u32> for Puzzle {
         self.piece_at(x + self.width() * y)
     }
 
-    fn piece_at_mut(&mut self, idx: usize) -> &mut u32 {
-        &mut self.pieces[idx]
+    fn swap_pieces(&mut self, idx1: usize, idx2: usize) {
+        self.pieces.swap(idx1, idx2)
     }
 
-    fn piece_at_xy_mut(&mut self, x: usize, y: usize) -> &mut u32 {
-        self.piece_at_mut(x + self.width() * y)
+    fn swap_pieces_xy(&mut self, x1: usize, y1: usize, x2: usize, y2: usize) {
+        let w = self.width();
+        self.swap_pieces(x1 + w * y1, x2 + w * y2)
     }
 
     fn move_dir(&mut self, dir: Direction) {
