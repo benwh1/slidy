@@ -54,3 +54,20 @@ where
         )
     }
 }
+
+impl<'a, T> AlgorithmDisplay for DisplayAlgorithm<'a, DisplayUnspaced, T>
+where
+    DisplayMove<'a, T>: MoveDisplay,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.alg
+                .moves
+                .iter()
+                .map(|m| m.display::<T>().to_string())
+                .collect::<String>()
+        )
+    }
+}
