@@ -7,12 +7,14 @@ pub struct Move {
     pub amount: u32,
 }
 
-struct DisplayLong;
+struct DisplayLongSpaced;
+struct DisplayLongUnspaced;
 struct DisplayShort;
 
 trait MoveDisplay {}
 
-impl MoveDisplay for DisplayLong {}
+impl MoveDisplay for DisplayLongSpaced {}
+impl MoveDisplay for DisplayLongUnspaced {}
 impl MoveDisplay for DisplayShort {}
 
 pub struct DisplayMove<'a, T: MoveDisplay> {
@@ -35,8 +37,12 @@ impl Move {
         }
     }
 
-    pub fn display_long(&self) -> DisplayMove<DisplayLong> {
-        self.display::<DisplayLong>()
+    pub fn display_long_spaced(&self) -> DisplayMove<DisplayLongSpaced> {
+        self.display::<DisplayLongSpaced>()
+    }
+
+    pub fn display_long_unspaced(&self) -> DisplayMove<DisplayLongUnspaced> {
+        self.display::<DisplayLongUnspaced>()
     }
 
     pub fn display_short(&self) -> DisplayMove<DisplayShort> {
@@ -44,7 +50,21 @@ impl Move {
     }
 }
 
-impl Display for DisplayMove<'_, DisplayLong> {
+impl Display for DisplayMove<'_, DisplayLongSpaced> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = {
+            let mut a = self.mv.direction.to_string();
+            a.push(' ');
+            a = a.repeat(self.mv.amount as usize);
+            a.pop();
+            a
+        };
+
+        write!(f, "{}", str)
+    }
+}
+
+impl Display for DisplayMove<'_, DisplayLongUnspaced> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
