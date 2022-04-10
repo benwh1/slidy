@@ -7,11 +7,11 @@ pub struct Move {
     pub amount: u32,
 }
 
-struct DisplayLongSpaced;
-struct DisplayLongUnspaced;
-struct DisplayShort;
+pub struct DisplayLongSpaced;
+pub struct DisplayLongUnspaced;
+pub struct DisplayShort;
 
-trait MoveDisplay {}
+pub trait MoveDisplay {}
 
 impl MoveDisplay for DisplayLongSpaced {}
 impl MoveDisplay for DisplayLongUnspaced {}
