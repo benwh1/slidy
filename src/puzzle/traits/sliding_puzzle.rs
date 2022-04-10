@@ -1,4 +1,4 @@
-use crate::algorithm::direction::Direction;
+use crate::algorithm::{algorithm::Algorithm, direction::Direction, puzzle_move::Move};
 
 pub trait SlidingPuzzle<Piece>
 where
@@ -37,4 +37,44 @@ where
         }
     }
     fn move_dir(&mut self, dir: Direction);
+
+    fn can_apply_move(&self, mv: Move) -> bool {
+        match mv.direction {
+            Direction::Up => self.gap_position_y() + (mv.amount as usize) < self.height(),
+            Direction::Left => self.gap_position_x() + (mv.amount as usize) < self.width(),
+            Direction::Down => self.gap_position_y() >= mv.amount as usize,
+            Direction::Right => self.gap_position_x() >= mv.amount as usize,
+        }
+    }
+    fn apply_move(&mut self, mv: Move) {
+        if !self.can_apply_move(mv) {
+            return;
+        }
+
+        for _ in 0..mv.amount {
+            self.move_dir(mv.direction);
+        }
+    }
+
+    fn can_apply_alg(&self, alg: &Algorithm) -> bool {
+        let (gx, gy) = self.gap_position_xy();
+        let (mut gx, mut gy) = (gx as isize, gy as isize);
+
+        for m in &alg.moves {
+            let amount = m.amount as isize;
+            match m.direction {
+                Direction::Up => gy += amount,
+                Direction::Left => gx += amount,
+                Direction::Down => gy -= amount,
+                Direction::Right => gx -= amount,
+            }
+            if gx < 0 || gx >= self.width() as isize || gy < 0 || gy > self.height() as isize {
+                return false;
+            }
+        }
+        true
+    }
+    fn apply_alg(&mut self, alg: &Algorithm) {
+        alg.moves.iter().map(|&m| self.apply_move(m)).collect()
+    }
 }
