@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use thiserror::Error;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Direction {
@@ -31,5 +32,25 @@ impl Display for Direction {
                 Self::Right => "R",
             }
         )
+    }
+}
+
+#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum TryDirectionFromCharError {
+    #[error("InvalidCharacter: character {0} must be 'U', 'L', 'D', or 'R'")]
+    InvalidCharacter(char),
+}
+
+impl TryFrom<char> for Direction {
+    type Error = TryDirectionFromCharError;
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value {
+            'U' => Ok(Self::Up),
+            'L' => Ok(Self::Left),
+            'D' => Ok(Self::Down),
+            'R' => Ok(Self::Right),
+            _ => Err(TryDirectionFromCharError::InvalidCharacter(value)),
+        }
     }
 }
