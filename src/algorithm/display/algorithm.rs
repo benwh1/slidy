@@ -1,8 +1,6 @@
-use std::{fmt::Display, marker::PhantomData};
-
-use crate::algorithm::algorithm::Algorithm;
-
 use super::puzzle_move::{DisplayMove, MoveDisplay};
+use crate::algorithm::algorithm::Algorithm;
+use std::{fmt::Display, marker::PhantomData};
 
 pub struct DisplaySpaced;
 pub struct DisplayUnspaced;
