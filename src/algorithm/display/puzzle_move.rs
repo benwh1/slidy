@@ -34,15 +34,12 @@ pub struct DisplayShort;
 
 impl MoveDisplay for DisplayMove<'_, DisplayLongSpaced> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let str = {
-            let mut a = self.mv.direction.to_string();
-            a.push(' ');
-            a = a.repeat(self.mv.amount as usize);
-            a.pop();
-            a
-        };
+        let mut s = self.mv.direction.to_string();
+        s.push(' ');
+        s = s.repeat(self.mv.amount as usize);
+        s.pop();
 
-        write!(f, "{}", str)
+        write!(f, "{}", s)
     }
 }
 
