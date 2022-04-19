@@ -67,18 +67,18 @@ impl FromStr for Algorithm {
         let mut alg = Self::default();
 
         let mut dir = None;
-        let mut amount = 0;
+        let mut amount = None;
 
         // Useful macro to try and push the last move that was read
         macro_rules! try_push {
             () => {
                 if let Some(prev_dir) = dir {
                     // This is not the first move in the algorithm, so push the previous move
-                    let real_amount = if amount == 0 {
+                    let real_amount = if let Some(a) = amount {
                         // No number after the previous move means the amount is actually 1
-                        1
+                        a
                     } else {
-                        amount
+                        1
                     };
 
                     match Move::new(prev_dir, real_amount) {
@@ -97,7 +97,7 @@ impl FromStr for Algorithm {
 
                     // Set the new direction and default amount for the next move
                     dir = Some(d);
-                    amount = 0;
+                    amount = None;
                 },
                 c if let Some(d) = c.to_digit(10) => {
                     // Must have a direction before an amount
@@ -105,7 +105,12 @@ impl FromStr for Algorithm {
                         return Err(ParseAlgorithmError::MissingDirection);
                     }
 
-                    amount = 10 * amount + d;
+                    if let Some(a) = amount {
+                        amount = Some(10 * a + d);
+                    }
+                    else {
+                        amount = Some(d);
+                    }
                 }
                 c if c.is_whitespace() => continue,
                 _ => return Err(ParseAlgorithmError::InvalidCharacter(c)),
