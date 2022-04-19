@@ -1,4 +1,5 @@
 use super::{direction::Direction, display::puzzle_move::DisplayMove};
+use std::{cmp::Ordering, ops::Add};
 use thiserror::Error;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -11,6 +12,13 @@ pub struct Move {
 pub enum MoveError {
     #[error("InvalidAmount: `amount` ({0}) must be greater than 0")]
     InvalidAmount(u32),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum MoveSum {
+    Ok(Move),
+    Invalid,
+    Empty,
 }
 
 impl Move {
@@ -31,5 +39,32 @@ impl Move {
 
     pub fn display<T>(&self) -> DisplayMove<'_, T> {
         DisplayMove::<T>::new(self)
+    }
+}
+
+impl Add for Move {
+    type Output = MoveSum;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        if self.direction == rhs.direction {
+            MoveSum::Ok(Move {
+                direction: self.direction,
+                amount: self.amount + rhs.amount,
+            })
+        } else if self.direction == rhs.direction.inverse() {
+            match self.amount.cmp(&rhs.amount) {
+                Ordering::Less => MoveSum::Ok(Move {
+                    direction: rhs.direction,
+                    amount: rhs.amount - self.amount,
+                }),
+                Ordering::Equal => MoveSum::Empty,
+                Ordering::Greater => MoveSum::Ok(Move {
+                    direction: self.direction,
+                    amount: self.amount - rhs.amount,
+                }),
+            }
+        } else {
+            MoveSum::Invalid
+        }
     }
 }
