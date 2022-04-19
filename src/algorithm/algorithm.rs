@@ -42,6 +42,10 @@ impl Algorithm {
 
         Algorithm::new(moves)
     }
+
+    pub fn simplify(&mut self) {
+        self.moves = self.simplified().moves
+    }
 }
 
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
