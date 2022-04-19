@@ -67,23 +67,37 @@ impl FromStr for Algorithm {
         let mut alg = Self::default();
 
         let mut dir = None;
-        let mut amount = 1;
+        let mut amount = 0;
+
+        // Useful macro to try and push the last move that was read
+        macro_rules! try_push {
+            () => {
+                if let Some(prev_dir) = dir {
+                    // This is not the first move in the algorithm, so push the previous move
+                    let real_amount = if amount == 0 {
+                        // No number after the previous move means the amount is actually 1
+                        1
+                    } else {
+                        amount
+                    };
+
+                    match Move::new(prev_dir, real_amount) {
+                        Ok(m) => alg.push(m),
+                        Err(e) => return Err(ParseAlgorithmError::MoveError(e)),
+                    }
+                }
+            };
+        }
+
         for c in s.chars() {
             match c {
                 // New direction
                 c if let Ok(d) = Direction::try_from(c) => {
-                    if let Some(prev_dir) = dir {
-                        // This is not the beginning of the first move in the algorithm.
-                        // Push the previous move
-                        match Move::new(prev_dir, amount) {
-                            Ok(m) => alg.push(m),
-                            Err(e) => return Err(ParseAlgorithmError::MoveError(e)),
-                        }
-                    }
+                    try_push!();
 
                     // Set the new direction and default amount for the next move
                     dir = Some(d);
-                    amount = 1;
+                    amount = 0;
                 },
                 c if let Some(d) = c.to_digit(10) => {
                     // Must have a direction before an amount
@@ -97,6 +111,9 @@ impl FromStr for Algorithm {
                 _ => return Err(ParseAlgorithmError::InvalidCharacter(c)),
             }
         }
+
+        // Push the last move
+        try_push!();
 
         Ok(alg)
     }
