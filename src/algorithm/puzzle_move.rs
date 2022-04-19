@@ -68,3 +68,93 @@ impl Add for Move {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Move;
+    use crate::algorithm::direction::Direction;
+
+    #[test]
+    fn test_inverse() {
+        let m = Move {
+            direction: Direction::Up,
+            amount: 3,
+        };
+        assert_eq!(
+            m.inverse(),
+            Move {
+                direction: Direction::Down,
+                amount: 3
+            }
+        );
+    }
+
+    mod add {
+        use super::*;
+        use crate::algorithm::puzzle_move::MoveSum;
+
+        #[test]
+        fn test_add() {
+            let m1 = Move {
+                direction: Direction::Up,
+                amount: 3,
+            };
+            let m2 = Move {
+                direction: Direction::Up,
+                amount: 4,
+            };
+            assert_eq!(
+                m1 + m2,
+                MoveSum::Ok(Move {
+                    direction: Direction::Up,
+                    amount: 7
+                })
+            );
+        }
+
+        #[test]
+        fn test_add_2() {
+            let m1 = Move {
+                direction: Direction::Up,
+                amount: 3,
+            };
+            let m2 = Move {
+                direction: Direction::Down,
+                amount: 4,
+            };
+            assert_eq!(
+                m1 + m2,
+                MoveSum::Ok(Move {
+                    direction: Direction::Down,
+                    amount: 1
+                })
+            );
+        }
+
+        #[test]
+        fn test_add_3() {
+            let m1 = Move {
+                direction: Direction::Left,
+                amount: 5,
+            };
+            let m2 = Move {
+                direction: Direction::Right,
+                amount: 5,
+            };
+            assert_eq!(m1 + m2, MoveSum::Empty);
+        }
+
+        #[test]
+        fn test_add_4() {
+            let m1 = Move {
+                direction: Direction::Left,
+                amount: 2,
+            };
+            let m2 = Move {
+                direction: Direction::Up,
+                amount: 1,
+            };
+            assert_eq!(m1 + m2, MoveSum::Invalid);
+        }
+    }
+}
