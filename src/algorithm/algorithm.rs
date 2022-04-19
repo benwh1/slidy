@@ -101,3 +101,39 @@ impl FromStr for Algorithm {
         Ok(alg)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    mod from_str {
+        use crate::algorithm::{algorithm::Algorithm, direction::Direction, puzzle_move::Move};
+        use std::str::FromStr;
+
+        #[test]
+        fn test_from_str() {
+            let a = Algorithm::from_str("U2L3DR4");
+            assert_eq!(
+                a,
+                Ok(Algorithm {
+                    moves: vec![
+                        Move {
+                            direction: Direction::Up,
+                            amount: 2,
+                        },
+                        Move {
+                            direction: Direction::Left,
+                            amount: 3,
+                        },
+                        Move {
+                            direction: Direction::Down,
+                            amount: 1,
+                        },
+                        Move {
+                            direction: Direction::Right,
+                            amount: 4,
+                        },
+                    ],
+                })
+            );
+        }
+    }
+}
