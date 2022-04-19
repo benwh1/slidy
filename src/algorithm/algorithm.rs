@@ -5,7 +5,7 @@ use super::{
 use std::str::FromStr;
 use thiserror::Error;
 
-#[derive(Default)]
+#[derive(Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Algorithm {
     pub moves: Vec<Move>,
 }
