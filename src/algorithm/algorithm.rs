@@ -1,6 +1,6 @@
 use super::{
     direction::Direction,
-    puzzle_move::{Move, MoveError},
+    puzzle_move::{Move, MoveError, MoveSum},
 };
 use std::str::FromStr;
 use thiserror::Error;
@@ -21,6 +21,26 @@ impl Algorithm {
 
     pub fn push(&mut self, m: Move) {
         self.moves.push(m)
+    }
+
+    pub fn simplified(&self) -> Self {
+        if self.moves.len() < 2 {
+            return Algorithm::new(self.moves.clone());
+        }
+
+        let mut moves = Vec::new();
+        let mut mv = self.moves[0];
+        for i in 1..self.moves.len() {
+            if let MoveSum::Ok(m) = mv + self.moves[i] {
+                mv = m;
+            } else {
+                moves.push(mv);
+                mv = self.moves[i];
+            }
+        }
+        moves.push(mv);
+
+        Algorithm::new(moves)
     }
 }
 
