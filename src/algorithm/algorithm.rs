@@ -127,7 +127,11 @@ impl FromStr for Algorithm {
 #[cfg(test)]
 mod tests {
     mod from_str {
-        use crate::algorithm::{algorithm::Algorithm, direction::Direction, puzzle_move::Move};
+        use crate::algorithm::{
+            algorithm::{Algorithm, ParseAlgorithmError},
+            direction::Direction,
+            puzzle_move::{Move, MoveError},
+        };
         use std::str::FromStr;
 
         #[test]
@@ -155,6 +159,89 @@ mod tests {
                         },
                     ],
                 })
+            );
+        }
+
+        #[test]
+        fn test_from_str_2() {
+            let a = Algorithm::from_str("");
+            assert_eq!(a, Ok(Algorithm { moves: vec![] }));
+        }
+
+        #[test]
+        fn test_from_str_3() {
+            let a = Algorithm::from_str("U");
+            assert_eq!(
+                a,
+                Ok(Algorithm {
+                    moves: vec![Move {
+                        direction: Direction::Up,
+                        amount: 1
+                    }]
+                })
+            );
+        }
+
+        #[test]
+        fn test_from_str_4() {
+            let a = Algorithm::from_str("L1234567890");
+            assert_eq!(
+                a,
+                Ok(Algorithm {
+                    moves: vec![Move {
+                        direction: Direction::Left,
+                        amount: 1234567890
+                    }]
+                })
+            );
+        }
+
+        #[test]
+        fn test_from_str_5() {
+            let a = Algorithm::from_str("ULDR");
+            assert_eq!(
+                a,
+                Ok(Algorithm {
+                    moves: vec![
+                        Move {
+                            direction: Direction::Up,
+                            amount: 1
+                        },
+                        Move {
+                            direction: Direction::Left,
+                            amount: 1
+                        },
+                        Move {
+                            direction: Direction::Down,
+                            amount: 1
+                        },
+                        Move {
+                            direction: Direction::Right,
+                            amount: 1
+                        }
+                    ]
+                })
+            );
+        }
+
+        #[test]
+        fn test_from_str_6() {
+            let a = Algorithm::from_str("D3RU2RD2aRU3L3");
+            assert_eq!(a, Err(ParseAlgorithmError::InvalidCharacter('a')));
+        }
+
+        #[test]
+        fn test_from_str_7() {
+            let a = Algorithm::from_str("3R4DL2");
+            assert_eq!(a, Err(ParseAlgorithmError::MissingDirection));
+        }
+
+        #[test]
+        fn test_from_str_8() {
+            let a = Algorithm::from_str("R3L0U2");
+            assert_eq!(
+                a,
+                Err(ParseAlgorithmError::MoveError(MoveError::InvalidAmount(0)))
             );
         }
     }
