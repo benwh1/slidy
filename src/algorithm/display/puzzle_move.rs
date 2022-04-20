@@ -1,10 +1,6 @@
 use crate::algorithm::puzzle_move::Move;
 use std::{fmt::Display, marker::PhantomData};
 
-pub trait MoveDisplay {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result;
-}
-
 pub struct DisplayMove<'a, T> {
     mv: &'a Move,
     phantom: PhantomData<T>,
@@ -19,20 +15,11 @@ impl<'a, T> DisplayMove<'a, T> {
     }
 }
 
-impl<'a, T> Display for DisplayMove<'a, T>
-where
-    DisplayMove<'a, T>: MoveDisplay,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        MoveDisplay::fmt(self, f)
-    }
-}
-
 pub struct DisplayLongSpaced;
 pub struct DisplayLongUnspaced;
 pub struct DisplayShort;
 
-impl MoveDisplay for DisplayMove<'_, DisplayLongSpaced> {
+impl Display for DisplayMove<'_, DisplayLongSpaced> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut s = self.mv.direction.to_string();
         s.push(' ');
@@ -43,7 +30,7 @@ impl MoveDisplay for DisplayMove<'_, DisplayLongSpaced> {
     }
 }
 
-impl MoveDisplay for DisplayMove<'_, DisplayLongUnspaced> {
+impl Display for DisplayMove<'_, DisplayLongUnspaced> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -56,7 +43,7 @@ impl MoveDisplay for DisplayMove<'_, DisplayLongUnspaced> {
     }
 }
 
-impl MoveDisplay for DisplayMove<'_, DisplayShort> {
+impl Display for DisplayMove<'_, DisplayShort> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.mv.amount == 1 {
             write!(f, "{}", self.mv.direction)
