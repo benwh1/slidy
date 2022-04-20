@@ -6,6 +6,9 @@ where
 {
     fn width(&self) -> usize;
     fn height(&self) -> usize;
+    fn size(&self) -> (usize, usize) {
+        (self.width(), self.height())
+    }
     fn num_pieces(&self) -> usize {
         self.width() * self.height() - 1
     }
