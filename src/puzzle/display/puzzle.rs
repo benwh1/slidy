@@ -16,6 +16,7 @@ impl<'a, T> DisplayPuzzle<'a, T> {
 }
 
 pub struct DisplayGrid;
+pub struct DisplayInline;
 
 impl Display for DisplayPuzzle<'_, DisplayGrid> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
@@ -38,16 +39,42 @@ impl Display for DisplayPuzzle<'_, DisplayGrid> {
     }
 }
 
+impl Display for DisplayPuzzle<'_, DisplayInline> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        let (w, h) = self.puzzle.size();
+        let mut s = String::new();
+        for y in 0..h {
+            for x in 0..w {
+                let n = self.puzzle.piece_at_xy(x, y);
+                s.push_str(&n.to_string());
+                s.push(' ');
+            }
+            s.pop();
+            s.push('/');
+        }
+        s.pop();
+        write!(f, "{}", &s)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{DisplayGrid, DisplayPuzzle};
-    use crate::puzzle::puzzle::Puzzle;
+    use crate::puzzle::{display::puzzle::DisplayInline, puzzle::Puzzle};
 
     #[test]
-    fn test_display_puzzle() {
+    fn test_display_grid() {
         let p = Puzzle::new(4, 4);
         let a = DisplayPuzzle::<DisplayGrid>::new(&p);
         let s = a.to_string();
         assert_eq!(s, " 1  2  3  4\n 5  6  7  8\n 9 10 11 12\n13 14 15  0");
+    }
+
+    #[test]
+    fn test_display_inline() {
+        let p = Puzzle::new(4, 4);
+        let a = DisplayPuzzle::<DisplayInline>::new(&p);
+        let s = a.to_string();
+        assert_eq!(s, "1 2 3 4/5 6 7 8/9 10 11 12/13 14 15 0");
     }
 }
