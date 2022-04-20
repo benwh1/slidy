@@ -5,6 +5,7 @@ use regex::Regex;
 use std::{collections::HashSet, num::ParseIntError, str::FromStr};
 use thiserror::Error;
 
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Puzzle {
     pieces: Vec<u32>,
     width: usize,
