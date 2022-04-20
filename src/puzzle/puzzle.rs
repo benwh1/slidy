@@ -200,3 +200,27 @@ impl FromStr for Puzzle {
         Err(ParsePuzzleError::InvalidCharacter('a'))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Puzzle;
+
+    mod from_str {
+        use super::*;
+        use std::str::FromStr;
+
+        #[test]
+        fn test_from_str() {
+            let a = Puzzle::from_str("1 2 3 4/5 6 7 0");
+            assert_eq!(
+                a,
+                Ok(Puzzle {
+                    pieces: vec![1, 2, 3, 4, 5, 6, 7, 0],
+                    width: 4,
+                    height: 2,
+                    gap: 7
+                })
+            );
+        }
+    }
+}
