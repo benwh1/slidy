@@ -1,6 +1,8 @@
 use super::traits::SlidingPuzzle;
 use crate::algorithm::direction::Direction;
-use std::collections::HashSet;
+use lazy_static::lazy_static;
+use regex::Regex;
+use std::{collections::HashSet, num::ParseIntError, str::FromStr};
 use thiserror::Error;
 
 pub struct Puzzle {
@@ -139,5 +141,61 @@ impl SlidingPuzzle<u32> for Puzzle {
         };
 
         self.pieces.swap(gap, piece);
+    }
+}
+
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
+pub enum ParsePuzzleError {
+    #[error("InvalidCharacter: character {0} is invalid")]
+    InvalidCharacter(char),
+
+    #[error("MismatchedRowLengths: all row lengths must be equal")]
+    MismatchedRowLengths,
+
+    #[error("ParseIntError: {0}")]
+    ParseIntError(ParseIntError),
+}
+
+impl FromStr for Puzzle {
+    type Err = ParsePuzzleError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // Verify that no invalid characters are used
+        for c in s.chars() {
+            if !(c.is_whitespace() || c.is_digit(10) || c == '/') {
+                return Err(ParsePuzzleError::InvalidCharacter(c));
+            }
+        }
+
+        // Match on numbers, slashes, new lines
+        lazy_static! {
+            static ref RE: Regex = Regex::new(r"[\d+\n/]").unwrap();
+        }
+
+        let mut grid: Vec<Vec<u32>> = Vec::new();
+        let mut row = Vec::new();
+        for m in RE.find_iter(s) {
+            let m = m.as_str();
+            match m {
+                "\n" | "/" => {
+                    // Verify that this row has the correct length
+                    if let Some(first_row) = grid.first() {
+                        if row.len() != first_row.len() {
+                            // Row lengths are wrong
+                            return Err(ParsePuzzleError::MismatchedRowLengths);
+                        }
+                        grid.push(row);
+                        row = Vec::new();
+                    }
+                }
+                // Must be a number
+                _ => {
+                    let n = m.parse::<u32>().map_err(ParsePuzzleError::ParseIntError)?;
+                    row.push(n);
+                }
+            }
+        }
+
+        Err(ParsePuzzleError::InvalidCharacter('a'))
     }
 }
