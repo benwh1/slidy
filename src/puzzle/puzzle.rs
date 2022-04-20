@@ -3,35 +3,35 @@ use crate::algorithm::direction::Direction;
 
 pub struct Puzzle {
     pieces: Vec<u32>,
-    width: u32,
-    height: u32,
+    width: usize,
+    height: usize,
     gap: usize,
 }
 
 const GAP_PIECE: u32 = 0;
 
 impl Puzzle {
-    pub fn new(width: u32, height: u32) -> Puzzle {
+    pub fn new(width: usize, height: usize) -> Puzzle {
         Puzzle {
             pieces: {
-                let mut v: Vec<u32> = (1..width * height).collect();
+                let mut v: Vec<u32> = (1..(width * height) as u32).collect();
                 v.push(GAP_PIECE);
                 v
             },
             width,
             height,
-            gap: (width * height - 1) as usize,
+            gap: width * height - 1,
         }
     }
 }
 
 impl SlidingPuzzle<u32> for Puzzle {
     fn width(&self) -> usize {
-        self.width as usize
+        self.width
     }
 
     fn height(&self) -> usize {
-        self.height as usize
+        self.height
     }
 
     fn gap_piece() -> u32 {
