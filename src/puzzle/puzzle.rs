@@ -1,11 +1,28 @@
 use super::traits::SlidingPuzzle;
 use crate::algorithm::direction::Direction;
+use std::collections::HashSet;
+use thiserror::Error;
 
 pub struct Puzzle {
     pieces: Vec<u32>,
     width: usize,
     height: usize,
     gap: usize,
+}
+
+#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum PuzzleError {
+    #[error("Empty: grid is empty")]
+    Empty,
+
+    #[error("MismatchedRowLengths: all row lengths must be equal")]
+    MismatchedRowLengths,
+
+    #[error("PieceOutOfRange: piece {0} is out of range")]
+    PieceOutOfRange(u32),
+
+    #[error("DuplicatePiece: piece {0} appears more than once")]
+    DuplicatePiece(u32),
 }
 
 const GAP_PIECE: u32 = 0;
@@ -22,6 +39,49 @@ impl Puzzle {
             height,
             gap: width * height - 1,
         }
+    }
+
+    pub fn new_from_grid(grid: Vec<Vec<u32>>) -> Result<Puzzle, PuzzleError> {
+        if grid.is_empty() {
+            return Err(PuzzleError::Empty);
+        }
+
+        let w = grid[0].len();
+        let h = grid.len();
+
+        // Check if all rows are the same length
+        if grid.iter().any(|r| r.len() != w) {
+            return Err(PuzzleError::MismatchedRowLengths);
+        }
+
+        let mut gap = None;
+        let mut pieces = HashSet::new();
+        for (y, row) in grid.iter().enumerate() {
+            for (x, &n) in row.iter().enumerate() {
+                if n as usize >= w * h {
+                    return Err(PuzzleError::PieceOutOfRange(n));
+                }
+                if pieces.contains(&n) {
+                    return Err(PuzzleError::DuplicatePiece(n));
+                }
+
+                pieces.insert(n);
+
+                if n == 0 {
+                    gap = Some(x + w * y);
+                }
+            }
+        }
+
+        // At this point, `gap` is guaranteed to be Some because we found w * h non-negative
+        // integers, all less than w * h, with no duplicates, so 0 must have occurred somewhere.
+        // So it is safe to call unwrap.
+        Ok(Puzzle {
+            pieces: grid.into_iter().flatten().collect(),
+            width: w,
+            height: h,
+            gap: gap.unwrap(),
+        })
     }
 }
 
