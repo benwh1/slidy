@@ -150,11 +150,11 @@ pub enum ParsePuzzleError {
     #[error("InvalidCharacter: character {0} is invalid")]
     InvalidCharacter(char),
 
-    #[error("MismatchedRowLengths: all row lengths must be equal")]
-    MismatchedRowLengths,
-
     #[error("ParseIntError: {0}")]
     ParseIntError(ParseIntError),
+
+    #[error("PuzzleError: {0}")]
+    PuzzleError(PuzzleError),
 }
 
 impl FromStr for Puzzle {
@@ -178,16 +178,10 @@ impl FromStr for Puzzle {
         for m in RE.find_iter(s) {
             let m = m.as_str();
             match m {
+                // End of a row
                 "\n" | "/" => {
-                    // Verify that this row has the correct length
-                    if let Some(first_row) = grid.first() {
-                        if row.len() != first_row.len() {
-                            // Row lengths are wrong
-                            return Err(ParsePuzzleError::MismatchedRowLengths);
-                        }
-                        grid.push(row);
-                        row = Vec::new();
-                    }
+                    grid.push(row);
+                    row = Vec::new();
                 }
                 // Must be a number
                 _ => {
@@ -197,7 +191,10 @@ impl FromStr for Puzzle {
             }
         }
 
-        Err(ParsePuzzleError::InvalidCharacter('a'))
+        // Append the last row
+        grid.push(row);
+
+        Puzzle::new_from_grid(grid).map_err(ParsePuzzleError::PuzzleError)
     }
 }
 
