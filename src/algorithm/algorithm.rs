@@ -31,11 +31,17 @@ impl Algorithm {
         let mut moves = Vec::new();
         let mut mv = self.moves[0];
         for i in 1..self.moves.len() {
-            if let MoveSum::Ok(m) = mv + self.moves[i] {
-                mv = m;
-            } else {
-                moves.push(mv);
-                mv = self.moves[i];
+            match mv + self.moves[i] {
+                // If the moves can be added and don't completely cancel, keep accumulating into mv
+                MoveSum::Ok(m) => {
+                    mv = m;
+                }
+                // If the moves can't be added, there is no more simplification at this point, so
+                // push mv and go to the next move
+                MoveSum::Invalid => {
+                    moves.push(mv);
+                    mv = self.moves[i];
+                }
             }
         }
         moves.push(mv);
