@@ -71,7 +71,17 @@ impl Algorithm {
     }
 
     pub fn simplify(&mut self) {
-        self.moves = self.simplified().moves
+        self.moves = self.simplified().moves;
+    }
+
+    pub fn inverse(&self) -> Self {
+        Algorithm {
+            moves: self.moves.iter().rev().map(|m| m.inverse()).collect(),
+        }
+    }
+
+    pub fn invert(&mut self) {
+        self.moves = self.inverse().moves;
     }
 }
 
