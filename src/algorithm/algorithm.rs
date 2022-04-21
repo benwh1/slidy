@@ -62,7 +62,10 @@ impl Algorithm {
                 }
             }
         }
-        moves.push(mv);
+
+        if mv.amount != 0 {
+            moves.push(mv);
+        }
 
         Algorithm::new(moves)
     }
