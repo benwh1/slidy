@@ -211,6 +211,26 @@ mod tests {
         assert_eq!(a, b);
     }
 
+    #[test]
+    fn test_inverse() {
+        let a = Algorithm::from_str("ULDR").unwrap();
+        let b = Algorithm::from_str("LURD").unwrap();
+        assert_eq!(a.inverse(), b);
+    }
+
+    #[test]
+    fn test_inverse_2() {
+        let a = Algorithm::from_str("").unwrap();
+        assert_eq!(a.inverse(), a);
+    }
+
+    #[test]
+    fn test_inverse_3() {
+        let a = Algorithm::from_str("DL3ULU3R2DLD2RUL2U").unwrap();
+        let b = Algorithm::from_str("DR2DLU2RUL2D3RDR3U").unwrap();
+        assert_eq!(a.inverse(), b);
+    }
+
     mod from_str {
         use crate::algorithm::{
             algorithm::{Algorithm, ParseAlgorithmError},
