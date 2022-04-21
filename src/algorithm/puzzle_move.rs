@@ -50,6 +50,15 @@ impl Add for Move {
                     amount: self.amount - rhs.amount,
                 }),
             }
+        }
+        // Even if the directions are not on the same axis, we can still add the moves if one of
+        // them has amount == 0 (in which case the sum is just the other move).
+        // Put the check for rhs.amount == 0 first so that if they are both 0, we return self
+        // instead of rhs.
+        else if rhs.amount == 0 {
+            MoveSum::Ok(self)
+        } else if self.amount == 0 {
+            MoveSum::Ok(rhs)
         } else {
             MoveSum::Invalid
         }
