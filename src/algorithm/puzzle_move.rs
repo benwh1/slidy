@@ -1,6 +1,5 @@
 use super::{direction::Direction, display::puzzle_move::DisplayMove};
 use std::{cmp::Ordering, ops::Add};
-use thiserror::Error;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Move {
@@ -8,26 +7,15 @@ pub struct Move {
     pub amount: u32,
 }
 
-#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum MoveError {
-    #[error("InvalidAmount: `amount` ({0}) must be greater than 0")]
-    InvalidAmount(u32),
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum MoveSum {
     Ok(Move),
     Invalid,
-    Empty,
 }
 
 impl Move {
-    pub fn new(direction: Direction, amount: u32) -> Result<Self, MoveError> {
-        if amount > 0 {
-            Ok(Self { direction, amount })
-        } else {
-            Err(MoveError::InvalidAmount(amount))
-        }
+    pub fn new(direction: Direction, amount: u32) -> Self {
+        Self { direction, amount }
     }
 
     pub fn inverse(&self) -> Self {
@@ -57,8 +45,7 @@ impl Add for Move {
                     direction: rhs.direction,
                     amount: rhs.amount - self.amount,
                 }),
-                Ordering::Equal => MoveSum::Empty,
-                Ordering::Greater => MoveSum::Ok(Move {
+                Ordering::Equal | Ordering::Greater => MoveSum::Ok(Move {
                     direction: self.direction,
                     amount: self.amount - rhs.amount,
                 }),
@@ -141,7 +128,13 @@ mod tests {
                 direction: Direction::Right,
                 amount: 5,
             };
-            assert_eq!(m1 + m2, MoveSum::Empty);
+            assert_eq!(
+                m1 + m2,
+                MoveSum::Ok(Move {
+                    direction: Direction::Left,
+                    amount: 0
+                })
+            );
         }
 
         #[test]

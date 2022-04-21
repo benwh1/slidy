@@ -1,6 +1,6 @@
 use super::{
     direction::Direction,
-    puzzle_move::{Move, MoveError, MoveSum},
+    puzzle_move::{Move, MoveSum},
 };
 use std::str::FromStr;
 use thiserror::Error;
@@ -50,9 +50,6 @@ impl Algorithm {
 
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ParseAlgorithmError {
-    #[error("MoveError: {0}")]
-    MoveError(MoveError),
-
     #[error("InvalidCharacter: character {0} is invalid")]
     InvalidCharacter(char),
 
@@ -81,10 +78,10 @@ impl FromStr for Algorithm {
                         1
                     };
 
-                    match Move::new(prev_dir, real_amount) {
-                        Ok(m) => alg.push(m),
-                        Err(e) => return Err(ParseAlgorithmError::MoveError(e)),
-                    }
+                    alg.push(Move {
+                        amount: real_amount,
+                        direction: prev_dir,
+                    });
                 }
             };
         }
@@ -130,7 +127,7 @@ mod tests {
         use crate::algorithm::{
             algorithm::{Algorithm, ParseAlgorithmError},
             direction::Direction,
-            puzzle_move::{Move, MoveError},
+            puzzle_move::Move,
         };
         use std::str::FromStr;
 
@@ -241,7 +238,22 @@ mod tests {
             let a = Algorithm::from_str("R3L0U2");
             assert_eq!(
                 a,
-                Err(ParseAlgorithmError::MoveError(MoveError::InvalidAmount(0)))
+                Ok(Algorithm {
+                    moves: vec![
+                        Move {
+                            direction: Direction::Right,
+                            amount: 3
+                        },
+                        Move {
+                            direction: Direction::Left,
+                            amount: 0
+                        },
+                        Move {
+                            direction: Direction::Up,
+                            amount: 2
+                        },
+                    ]
+                })
             );
         }
     }
