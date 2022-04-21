@@ -335,4 +335,15 @@ mod tests {
             );
         }
     }
+
+    mod add {
+        use super::*;
+
+        #[test]
+        fn test_add() {
+            let a = Algorithm::from_str("ULDR").unwrap();
+            let b = Algorithm::from_str("DRUL").unwrap();
+            assert_eq!(a + b, Algorithm::from_str("ULDRDRUL").unwrap());
+        }
+    }
 }
