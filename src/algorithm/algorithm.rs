@@ -29,12 +29,30 @@ impl Algorithm {
         }
 
         let mut moves = Vec::new();
-        let mut mv = self.moves[0];
-        for i in 1..self.moves.len() {
+        let mut mv = Move {
+            direction: Direction::Up,
+            amount: 0,
+        };
+        for i in 0..self.moves.len() {
             match mv + self.moves[i] {
-                // If the moves can be added and don't completely cancel, keep accumulating into mv
                 MoveSum::Ok(m) => {
-                    mv = m;
+                    mv = if m.amount == 0 {
+                        // Moves completely cancel.
+                        // Try and pop a move off `moves` (the next move might cancel with it,
+                        // e.g. URLD after the L move).
+                        // If there is no move in moves, just restart from an empty move.
+                        if let Some(last) = moves.pop() {
+                            last
+                        } else {
+                            Move {
+                                direction: Direction::Up,
+                                amount: 0,
+                            }
+                        }
+                    } else {
+                        // Moves can be added don't fully cancel, keep accumulating into mv.
+                        m
+                    };
                 }
                 // If the moves can't be added, there is no more simplification at this point, so
                 // push mv and go to the next move
