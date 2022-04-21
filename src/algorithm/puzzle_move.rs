@@ -172,5 +172,33 @@ mod tests {
             assert_eq!(m1 + m2, MoveSum::Ok(m2));
             assert_eq!(m2 + m1, MoveSum::Ok(m2));
         }
+
+        #[test]
+        fn test_add_6() {
+            let m1 = Move {
+                direction: Direction::Up,
+                amount: 0,
+            };
+            let m2 = Move {
+                direction: Direction::Left,
+                amount: 2,
+            };
+            assert_eq!(m1 + m2, MoveSum::Ok(m2));
+            assert_eq!(m2 + m1, MoveSum::Ok(m2));
+        }
+
+        #[test]
+        fn test_add_7() {
+            let m1 = Move {
+                direction: Direction::Up,
+                amount: 0,
+            };
+            let m2 = Move {
+                direction: Direction::Left,
+                amount: 0,
+            };
+            assert_eq!(m1 + m2, MoveSum::Ok(m1));
+            assert_eq!(m2 + m1, MoveSum::Ok(m2));
+        }
     }
 }
