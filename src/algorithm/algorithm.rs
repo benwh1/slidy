@@ -2,7 +2,7 @@ use super::{
     direction::Direction,
     puzzle_move::{Move, MoveSum},
 };
-use std::str::FromStr;
+use std::{ops::Add, str::FromStr};
 use thiserror::Error;
 
 #[derive(Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -145,6 +145,16 @@ impl FromStr for Algorithm {
         try_push!();
 
         Ok(alg)
+    }
+}
+
+impl Add for Algorithm {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        let mut moves = self.moves.clone();
+        moves.append(&mut rhs.moves.clone());
+        Algorithm { moves }
     }
 }
 
