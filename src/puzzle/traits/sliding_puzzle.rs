@@ -2,7 +2,7 @@ use crate::algorithm::{algorithm::Algorithm, direction::Direction, puzzle_move::
 
 pub trait SlidingPuzzle<Piece>
 where
-    Piece: Copy,
+    Piece: Into<u64>,
 {
     fn width(&self) -> usize;
     fn height(&self) -> usize;
