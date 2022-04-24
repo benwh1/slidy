@@ -8,9 +8,9 @@ where
     fn is_solved(puzzle: &Puzzle) -> bool;
 }
 
-struct Normal;
+struct Rows;
 
-impl<Piece, Puzzle> SolvedState<Piece, Puzzle> for Normal
+impl<Piece, Puzzle> SolvedState<Piece, Puzzle> for Rows
 where
     Piece: Into<u64>,
     Puzzle: SlidingPuzzle<Piece>,
