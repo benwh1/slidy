@@ -219,5 +219,33 @@ mod tests {
                 })
             );
         }
+
+        #[test]
+        fn test_from_str_2() {
+            let a = Puzzle::from_str("1 2 3 4/5 6 7 8/9 10 11 12/13 14 15 0");
+            assert_eq!(
+                a,
+                Ok(Puzzle {
+                    pieces: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0],
+                    width: 4,
+                    height: 4,
+                    gap: 15
+                })
+            );
+        }
+
+        #[test]
+        fn test_from_str_3() {
+            let a = Puzzle::from_str("   1  2 3 4  \n5 6\t7 8/9 10 11 12 / 13 14   15 0\t");
+            assert_eq!(
+                a,
+                Ok(Puzzle {
+                    pieces: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0],
+                    width: 4,
+                    height: 4,
+                    gap: 15
+                })
+            );
+        }
     }
 }
