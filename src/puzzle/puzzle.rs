@@ -170,7 +170,7 @@ impl FromStr for Puzzle {
 
         // Match on numbers, slashes, new lines
         lazy_static! {
-            static ref RE: Regex = Regex::new(r"[\d+\n/]").unwrap();
+            static ref RE: Regex = Regex::new(r"\d+|\n|/").unwrap();
         }
 
         let mut grid: Vec<Vec<u32>> = Vec::new();
