@@ -1,6 +1,6 @@
 use crate::{
     algorithm::{algorithm::Algorithm, direction::Direction, puzzle_move::Move},
-    puzzle::solved::solved::SolvedState,
+    puzzle::solved_state::solved_state::SolvedState,
 };
 
 pub trait SlidingPuzzle<Piece>

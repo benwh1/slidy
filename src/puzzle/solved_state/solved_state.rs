@@ -125,7 +125,7 @@ mod tests {
 
     mod rows {
         use super::*;
-        use crate::puzzle::solved::solved::Rows;
+        use crate::puzzle::solved_state::solved_state::Rows;
 
         #[test]
         fn test_rows() {
@@ -154,7 +154,7 @@ mod tests {
 
     mod columns {
         use super::*;
-        use crate::puzzle::solved::solved::Columns;
+        use crate::puzzle::solved_state::solved_state::Columns;
 
         #[test]
         fn test_columns() {
@@ -183,7 +183,7 @@ mod tests {
 
     mod rows_setwise {
         use super::*;
-        use crate::puzzle::solved::solved::RowsSetwise;
+        use crate::puzzle::solved_state::solved_state::RowsSetwise;
 
         #[test]
         fn test_rows_setwise() {
@@ -218,7 +218,7 @@ mod tests {
 
     mod columns_setwise {
         use super::*;
-        use crate::puzzle::solved::solved::ColumnsSetwise;
+        use crate::puzzle::solved_state::solved_state::ColumnsSetwise;
 
         #[test]
         fn test_columns_setwise() {
