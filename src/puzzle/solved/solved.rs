@@ -180,4 +180,74 @@ mod tests {
             assert!(!p.is_solved::<Columns>());
         }
     }
+
+    mod rows_setwise {
+        use super::*;
+        use crate::puzzle::solved::solved::RowsSetwise;
+
+        #[test]
+        fn test_rows_setwise() {
+            let p = Puzzle::from_str("4 1 3 2/6 7 8 5/9 10 11 12/14 13 15 0").unwrap();
+            assert!(p.is_solved::<RowsSetwise>());
+        }
+
+        #[test]
+        fn test_rows_setwise_2() {
+            let p = Puzzle::from_str("1 2 3 5/4 6 7 8/9 10 11 12/13 14 15 0").unwrap();
+            assert!(!p.is_solved::<RowsSetwise>());
+        }
+
+        #[test]
+        fn test_rows_setwise_3() {
+            let p = Puzzle::from_str("1 2 3 4/5 6 7 8/9 10 11 12/13 14 0 15").unwrap();
+            assert!(!p.is_solved::<RowsSetwise>());
+        }
+
+        #[test]
+        fn test_rows_setwise_4() {
+            let p = Puzzle::from_str("1 2 3/6 5 4/9 7 8/12 11 10/14 15 13/16 17 0").unwrap();
+            assert!(p.is_solved::<RowsSetwise>());
+        }
+
+        #[test]
+        fn test_rows_setwise_5() {
+            let p = Puzzle::from_str("1 2 6/3 5 4/9 7 8/12 11 10/14 15 13/16 17 0").unwrap();
+            assert!(!p.is_solved::<RowsSetwise>());
+        }
+    }
+
+    mod columns_setwise {
+        use super::*;
+        use crate::puzzle::solved::solved::ColumnsSetwise;
+
+        #[test]
+        fn test_columns_setwise() {
+            let p = Puzzle::from_str("13 14 15 8/1 10 3 4/5 6 11 12/9 2 7 0").unwrap();
+            assert!(p.is_solved::<ColumnsSetwise>());
+        }
+
+        #[test]
+        fn test_columns_setwise_2() {
+            let p = Puzzle::from_str("13 14 15 8/1 3 10 4/5 6 11 12/9 2 7 0").unwrap();
+            assert!(!p.is_solved::<ColumnsSetwise>());
+        }
+
+        #[test]
+        fn test_columns_setwise_3() {
+            let p = Puzzle::from_str("1 2 3 4/5 6 7 8/9 10 11 0/13 14 15 12").unwrap();
+            assert!(!p.is_solved::<ColumnsSetwise>());
+        }
+
+        #[test]
+        fn test_columns_setwise_4() {
+            let p = Puzzle::from_str("5 8/3 2/17 14/13 12/11 10/9 6/1 18/7 16/15 4/19 0").unwrap();
+            assert!(p.is_solved::<ColumnsSetwise>());
+        }
+
+        #[test]
+        fn test_columns_setwise_5() {
+            let p = Puzzle::from_str("1 11/7 17/4 14/2 13/12 3/5 15/9 19/8 16/10 18/6 0").unwrap();
+            assert!(!p.is_solved::<ColumnsSetwise>());
+        }
+    }
 }
