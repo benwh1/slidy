@@ -1,4 +1,4 @@
-use crate::puzzle::{puzzle::Puzzle, traits::SlidingPuzzle};
+use crate::puzzle::{puzzle::Puzzle, sliding_puzzle::SlidingPuzzle};
 use std::{fmt::Display, marker::PhantomData};
 
 pub struct DisplayPuzzle<'a, T> {

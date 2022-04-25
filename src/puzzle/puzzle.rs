@@ -1,4 +1,4 @@
-use super::traits::SlidingPuzzle;
+use super::sliding_puzzle::SlidingPuzzle;
 use crate::algorithm::direction::Direction;
 use lazy_static::lazy_static;
 use regex::Regex;

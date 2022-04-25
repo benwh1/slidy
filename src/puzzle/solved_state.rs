@@ -1,4 +1,4 @@
-use crate::puzzle::{label::Label, traits::SlidingPuzzle};
+use crate::puzzle::{label::Label, sliding_puzzle::SlidingPuzzle};
 
 pub trait SolvedState<Piece, Puzzle>
 where
@@ -24,12 +24,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::puzzle::{puzzle::Puzzle, traits::SlidingPuzzle};
+    use crate::puzzle::{puzzle::Puzzle, sliding_puzzle::SlidingPuzzle};
     use std::str::FromStr;
 
     mod rows {
         use super::*;
-        use crate::puzzle::solved_state::solved_state::Rows;
+        use crate::puzzle::label::Rows;
 
         #[test]
         fn test_rows() {
@@ -58,7 +58,7 @@ mod tests {
 
     mod columns {
         use super::*;
-        use crate::puzzle::solved_state::solved_state::Columns;
+        use crate::puzzle::label::Columns;
 
         #[test]
         fn test_columns() {
@@ -87,7 +87,7 @@ mod tests {
 
     mod rows_setwise {
         use super::*;
-        use crate::puzzle::solved_state::solved_state::RowsSetwise;
+        use crate::puzzle::label::RowsSetwise;
 
         #[test]
         fn test_rows_setwise() {
@@ -122,7 +122,7 @@ mod tests {
 
     mod columns_setwise {
         use super::*;
-        use crate::puzzle::solved_state::solved_state::ColumnsSetwise;
+        use crate::puzzle::label::ColumnsSetwise;
 
         #[test]
         fn test_columns_setwise() {
