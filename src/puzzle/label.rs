@@ -15,7 +15,7 @@ impl<Piece> Label<Piece> for Rows
 where
     Piece: Into<u64>,
 {
-    fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
+    fn position_label(width: usize, _height: usize, x: usize, y: usize) -> usize {
         x + width * y
     }
 
@@ -33,7 +33,7 @@ impl<Piece> Label<Piece> for Columns
 where
     Piece: Into<u64>,
 {
-    fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
+    fn position_label(_width: usize, height: usize, x: usize, y: usize) -> usize {
         y + height * x
     }
 
@@ -76,7 +76,7 @@ where
         }
     }
 
-    fn piece_label(width: usize, height: usize, piece: Piece) -> usize {
+    fn piece_label(width: usize, _height: usize, piece: Piece) -> usize {
         let p = piece.into() as usize;
         if p == 0 {
             width
