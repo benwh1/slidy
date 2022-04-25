@@ -10,6 +10,8 @@ where
 
 struct Rows;
 struct Columns;
+struct RowsSetwise;
+struct ColumnsSetwise;
 
 impl<Piece, Puzzle> SolvedState<Piece, Puzzle> for Rows
 where
@@ -43,6 +45,70 @@ where
                 }
 
                 if puzzle.piece_at_xy(x, y).into() != (1 + y + h * x) as u64 {
+                    return false;
+                }
+            }
+        }
+
+        true
+    }
+}
+
+impl<Piece, Puzzle> SolvedState<Piece, Puzzle> for RowsSetwise
+where
+    Piece: Into<u64>,
+    Puzzle: SlidingPuzzle<Piece>,
+{
+    fn is_solved(puzzle: &Puzzle) -> bool {
+        if puzzle.gap_position() != puzzle.num_pieces() {
+            return false;
+        }
+
+        let (w, h) = puzzle.size();
+        for y in 0..h {
+            for x in 0..w {
+                if (x, y) == (w - 1, h - 1) {
+                    continue;
+                }
+
+                let (_, solved_location_y) = {
+                    let a = (puzzle.piece_at_xy(x, y).into() - 1) as usize;
+                    (a % w, a / w)
+                };
+
+                if y != solved_location_y {
+                    return false;
+                }
+            }
+        }
+
+        true
+    }
+}
+
+impl<Piece, Puzzle> SolvedState<Piece, Puzzle> for ColumnsSetwise
+where
+    Piece: Into<u64>,
+    Puzzle: SlidingPuzzle<Piece>,
+{
+    fn is_solved(puzzle: &Puzzle) -> bool {
+        if puzzle.gap_position() != puzzle.num_pieces() {
+            return false;
+        }
+
+        let (w, h) = puzzle.size();
+        for y in 0..h {
+            for x in 0..w {
+                if (x, y) == (w - 1, h - 1) {
+                    continue;
+                }
+
+                let (solved_location_x, _) = {
+                    let a = (puzzle.piece_at_xy(x, y).into() - 1) as usize;
+                    (a % w, a / w)
+                };
+
+                if x != solved_location_x {
                     return false;
                 }
             }
