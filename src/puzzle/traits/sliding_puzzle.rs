@@ -1,8 +1,12 @@
-use crate::algorithm::{algorithm::Algorithm, direction::Direction, puzzle_move::Move};
+use crate::{
+    algorithm::{algorithm::Algorithm, direction::Direction, puzzle_move::Move},
+    puzzle::solved::solved::SolvedState,
+};
 
 pub trait SlidingPuzzle<Piece>
 where
-    Piece: Copy,
+    Piece: Into<u64>,
+    Self: Sized,
 {
     fn width(&self) -> usize;
     fn height(&self) -> usize;
@@ -23,6 +27,10 @@ where
     }
     fn gap_position_y(&self) -> usize {
         self.gap_position_xy().1
+    }
+
+    fn is_solved<T: SolvedState<Piece, Self>>(&self) -> bool {
+        T::is_solved(self)
     }
 
     fn piece_at(&self, idx: usize) -> Piece;

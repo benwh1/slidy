@@ -170,7 +170,7 @@ impl FromStr for Puzzle {
 
         // Match on numbers, slashes, new lines
         lazy_static! {
-            static ref RE: Regex = Regex::new(r"[\d+\n/]").unwrap();
+            static ref RE: Regex = Regex::new(r"\d+|\n|/").unwrap();
         }
 
         let mut grid: Vec<Vec<u32>> = Vec::new();
@@ -216,6 +216,34 @@ mod tests {
                     width: 4,
                     height: 2,
                     gap: 7
+                })
+            );
+        }
+
+        #[test]
+        fn test_from_str_2() {
+            let a = Puzzle::from_str("1 2 3 4/5 6 7 8/9 10 11 12/13 14 15 0");
+            assert_eq!(
+                a,
+                Ok(Puzzle {
+                    pieces: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0],
+                    width: 4,
+                    height: 4,
+                    gap: 15
+                })
+            );
+        }
+
+        #[test]
+        fn test_from_str_3() {
+            let a = Puzzle::from_str("   1  2 3 4  \n5 6\t7 8/9 10 11 12 / 13 14   15 0\t");
+            assert_eq!(
+                a,
+                Ok(Puzzle {
+                    pieces: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0],
+                    width: 4,
+                    height: 4,
+                    gap: 15
                 })
             );
         }

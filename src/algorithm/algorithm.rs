@@ -162,8 +162,9 @@ impl Add for Algorithm {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        let mut moves = self.moves.clone();
-        moves.append(&mut rhs.moves.clone());
+        let mut moves = self.moves;
+        let mut moves2 = rhs.moves;
+        moves.append(&mut moves2);
         Algorithm { moves }
     }
 }
