@@ -1,4 +1,4 @@
-use crate::puzzle::traits::SlidingPuzzle;
+use crate::puzzle::{label::Label, traits::SlidingPuzzle};
 
 pub trait SolvedState<Piece, Puzzle>
 where
@@ -8,113 +8,17 @@ where
     fn is_solved(puzzle: &Puzzle) -> bool;
 }
 
-struct Rows;
-struct Columns;
-struct RowsSetwise;
-struct ColumnsSetwise;
-
-impl<Piece, Puzzle> SolvedState<Piece, Puzzle> for Rows
+impl<Piece, Puzzle, T> SolvedState<Piece, Puzzle> for T
 where
     Piece: Into<u64>,
     Puzzle: SlidingPuzzle<Piece>,
+    T: Label<Piece>,
 {
     fn is_solved(puzzle: &Puzzle) -> bool {
-        if puzzle.gap_position() != puzzle.num_pieces() {
-            return false;
-        }
-
-        (0..puzzle.num_pieces()).all(|i| puzzle.piece_at(i).into() == (i + 1) as u64)
-    }
-}
-
-impl<Piece, Puzzle> SolvedState<Piece, Puzzle> for Columns
-where
-    Piece: Into<u64>,
-    Puzzle: SlidingPuzzle<Piece>,
-{
-    fn is_solved(puzzle: &Puzzle) -> bool {
-        if puzzle.gap_position() != puzzle.num_pieces() {
-            return false;
-        }
-
         let (w, h) = puzzle.size();
-        for y in 0..h {
-            for x in 0..w {
-                if (x, y) == (w - 1, h - 1) {
-                    continue;
-                }
-
-                if puzzle.piece_at_xy(x, y).into() != (1 + y + h * x) as u64 {
-                    return false;
-                }
-            }
-        }
-
-        true
-    }
-}
-
-impl<Piece, Puzzle> SolvedState<Piece, Puzzle> for RowsSetwise
-where
-    Piece: Into<u64>,
-    Puzzle: SlidingPuzzle<Piece>,
-{
-    fn is_solved(puzzle: &Puzzle) -> bool {
-        if puzzle.gap_position() != puzzle.num_pieces() {
-            return false;
-        }
-
-        let (w, h) = puzzle.size();
-        for y in 0..h {
-            for x in 0..w {
-                if (x, y) == (w - 1, h - 1) {
-                    continue;
-                }
-
-                let (_, solved_location_y) = {
-                    let a = (puzzle.piece_at_xy(x, y).into() - 1) as usize;
-                    (a % w, a / w)
-                };
-
-                if y != solved_location_y {
-                    return false;
-                }
-            }
-        }
-
-        true
-    }
-}
-
-impl<Piece, Puzzle> SolvedState<Piece, Puzzle> for ColumnsSetwise
-where
-    Piece: Into<u64>,
-    Puzzle: SlidingPuzzle<Piece>,
-{
-    fn is_solved(puzzle: &Puzzle) -> bool {
-        if puzzle.gap_position() != puzzle.num_pieces() {
-            return false;
-        }
-
-        let (w, h) = puzzle.size();
-        for y in 0..h {
-            for x in 0..w {
-                if (x, y) == (w - 1, h - 1) {
-                    continue;
-                }
-
-                let (solved_location_x, _) = {
-                    let a = (puzzle.piece_at_xy(x, y).into() - 1) as usize;
-                    (a % w, a / w)
-                };
-
-                if x != solved_location_x {
-                    return false;
-                }
-            }
-        }
-
-        true
+        (0..w).zip(0..h).all(|(x, y)| {
+            T::position_label(w, h, x, y) == T::piece_label(w, h, puzzle.piece_at_xy(x, y))
+        })
     }
 }
 
