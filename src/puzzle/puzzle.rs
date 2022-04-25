@@ -28,14 +28,12 @@ pub enum PuzzleError {
     DuplicatePiece(u32),
 }
 
-const GAP_PIECE: u32 = 0;
-
 impl Puzzle {
     pub fn new(width: usize, height: usize) -> Puzzle {
         Puzzle {
             pieces: {
                 let mut v: Vec<u32> = (1..(width * height) as u32).collect();
-                v.push(GAP_PIECE);
+                v.push(0);
                 v
             },
             width,
@@ -95,10 +93,6 @@ impl SlidingPuzzle<u32> for Puzzle {
 
     fn height(&self) -> usize {
         self.height
-    }
-
-    fn gap_piece() -> u32 {
-        GAP_PIECE
     }
 
     fn gap_position(&self) -> usize {

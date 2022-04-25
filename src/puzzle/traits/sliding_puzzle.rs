@@ -17,8 +17,6 @@ where
         self.width() * self.height() - 1
     }
 
-    fn gap_piece() -> Piece;
-
     fn gap_position(&self) -> usize;
     fn gap_position_xy(&self) -> (usize, usize);
 
