@@ -8,6 +8,8 @@ where
         let p = if piece == 0 { width * height } else { piece } - 1;
         Self::position_label(width, height, p % width, p / width)
     }
+
+    fn num_labels(width: usize, height: usize) -> usize;
 }
 
 pub struct Rows;
@@ -22,6 +24,10 @@ where
     fn position_label(width: usize, _height: usize, x: usize, y: usize) -> usize {
         x + width * y
     }
+
+    fn num_labels(width: usize, height: usize) -> usize {
+        width * height
+    }
 }
 
 impl<Piece> Label<Piece> for Columns
@@ -34,6 +40,10 @@ where
 
     fn piece_label(width: usize, height: usize, piece: Piece) -> usize {
         Rows::piece_label(width, height, piece)
+    }
+
+    fn num_labels(width: usize, height: usize) -> usize {
+        width * height
     }
 }
 
@@ -48,6 +58,10 @@ where
             y
         }
     }
+
+    fn num_labels(_width: usize, height: usize) -> usize {
+        height + 1
+    }
 }
 
 impl<Piece> Label<Piece> for ColumnsSetwise
@@ -60,6 +74,10 @@ where
         } else {
             x
         }
+    }
+
+    fn num_labels(width: usize, _height: usize) -> usize {
+        width + 1
     }
 }
 
