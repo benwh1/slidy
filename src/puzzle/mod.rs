@@ -1,3 +1,4 @@
+pub mod color_scheme;
 pub mod display;
 pub mod label;
 pub mod puzzle;
