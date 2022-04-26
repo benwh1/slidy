@@ -3,7 +3,11 @@ where
     Piece: Into<u64>,
 {
     fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize;
-    fn piece_label(width: usize, height: usize, piece: Piece) -> usize;
+    fn piece_label(width: usize, height: usize, piece: Piece) -> usize {
+        let piece = piece.into() as usize;
+        let p = if piece == 0 { width * height } else { piece } - 1;
+        Self::position_label(width, height, p % width, p / width)
+    }
 }
 
 pub struct Rows;
@@ -17,15 +21,6 @@ where
 {
     fn position_label(width: usize, _height: usize, x: usize, y: usize) -> usize {
         x + width * y
-    }
-
-    fn piece_label(width: usize, height: usize, piece: Piece) -> usize {
-        let p = piece.into() as usize;
-        if p == 0 {
-            width * height - 1
-        } else {
-            p - 1
-        }
     }
 }
 
@@ -53,15 +48,6 @@ where
             y
         }
     }
-
-    fn piece_label(width: usize, height: usize, piece: Piece) -> usize {
-        let p = piece.into() as usize;
-        if p == 0 {
-            height
-        } else {
-            p / width
-        }
-    }
 }
 
 impl<Piece> Label<Piece> for ColumnsSetwise
@@ -73,15 +59,6 @@ where
             width
         } else {
             x
-        }
-    }
-
-    fn piece_label(width: usize, _height: usize, piece: Piece) -> usize {
-        let p = piece.into() as usize;
-        if p == 0 {
-            width
-        } else {
-            p % width
         }
     }
 }
