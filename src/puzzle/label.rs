@@ -62,3 +62,56 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::puzzle::label::{Columns, ColumnsSetwise, Label, Rows, RowsSetwise};
+
+    #[test]
+    fn test_rows() {
+        let pos = (0..12)
+            .map(|i| <Rows as Label<u64>>::position_label(4, 3, i % 4, i / 4))
+            .collect::<Vec<_>>();
+        let piece = (0..12)
+            .map(|i: u64| Rows::piece_label(4, 3, i))
+            .collect::<Vec<_>>();
+        assert_eq!(pos, vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+        assert_eq!(piece, vec![11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    }
+
+    #[test]
+    fn test_columns() {
+        let pos = (0..12)
+            .map(|i| <Columns as Label<u64>>::position_label(4, 3, i % 4, i / 4))
+            .collect::<Vec<_>>();
+        let piece = (0..12)
+            .map(|i: u64| Columns::piece_label(4, 3, i))
+            .collect::<Vec<_>>();
+        assert_eq!(pos, vec![0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11]);
+        assert_eq!(piece, vec![11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    }
+
+    #[test]
+    fn test_rows_setwise() {
+        let pos = (0..12)
+            .map(|i| <RowsSetwise as Label<u64>>::position_label(4, 3, i % 4, i / 4))
+            .collect::<Vec<_>>();
+        let piece = (0..12)
+            .map(|i: u64| RowsSetwise::piece_label(4, 3, i))
+            .collect::<Vec<_>>();
+        assert_eq!(pos, vec![0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 3]);
+        assert_eq!(piece, vec![3, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2]);
+    }
+
+    #[test]
+    fn test_columns_setwise() {
+        let pos = (0..12)
+            .map(|i| <ColumnsSetwise as Label<u64>>::position_label(4, 3, i % 4, i / 4))
+            .collect::<Vec<_>>();
+        let piece = (0..12)
+            .map(|i: u64| ColumnsSetwise::piece_label(4, 3, i))
+            .collect::<Vec<_>>();
+        assert_eq!(pos, vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 4]);
+        assert_eq!(piece, vec![4, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2]);
+    }
+}
