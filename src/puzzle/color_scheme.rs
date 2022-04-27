@@ -4,12 +4,12 @@ trait ColorScheme {
     fn color(&self, label: usize, num_labels: usize) -> Rgb;
 }
 
-struct Monochrome {
-    color: Rgb,
+struct ColorList {
+    colors: Vec<Rgb>,
 }
 
-impl ColorScheme for Monochrome {
-    fn color(&self, _label: usize, _num_labels: usize) -> Rgb {
-        self.color
+impl ColorScheme for ColorList {
+    fn color(&self, label: usize, _num_labels: usize) -> Rgb {
+        self.colors[label % self.colors.len()]
     }
 }
