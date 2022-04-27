@@ -1,17 +1,17 @@
 use palette::rgb::Rgb;
 use thiserror::Error;
 
-trait ColorScheme {
+pub trait ColorScheme {
     fn color(&self, label: usize, num_labels: usize) -> Rgb;
 }
 
 #[derive(Error, Debug)]
-enum ColorSchemeError {
+pub enum ColorSchemeError {
     #[error("EmptyColorList: color list must be non-empty")]
     EmptyColorList,
 }
 
-struct ColorList {
+pub struct ColorList {
     colors: Vec<Rgb>,
 }
 
