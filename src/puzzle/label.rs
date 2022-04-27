@@ -16,6 +16,7 @@ pub struct Rows;
 pub struct Columns;
 pub struct RowsSetwise;
 pub struct ColumnsSetwise;
+pub struct FringeSetwise;
 
 impl<Piece> Label<Piece> for Rows
 where
@@ -81,9 +82,22 @@ where
     }
 }
 
+impl<Piece> Label<Piece> for FringeSetwise
+where
+    Piece: Into<u64>,
+{
+    fn position_label(_width: usize, _height: usize, x: usize, y: usize) -> usize {
+        x.min(y)
+    }
+
+    fn num_labels(width: usize, height: usize) -> usize {
+        width.min(height)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::puzzle::label::{Columns, ColumnsSetwise, Label, Rows, RowsSetwise};
+    use crate::puzzle::label::{Columns, ColumnsSetwise, FringeSetwise, Label, Rows, RowsSetwise};
 
     #[test]
     fn test_rows() {
@@ -131,5 +145,17 @@ mod tests {
             .collect::<Vec<_>>();
         assert_eq!(pos, vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 4]);
         assert_eq!(piece, vec![4, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2]);
+    }
+
+    #[test]
+    fn test_fringe_setwise() {
+        let pos = (0..12)
+            .map(|i| <FringeSetwise as Label<u64>>::position_label(4, 3, i % 4, i / 4))
+            .collect::<Vec<_>>();
+        let piece = (0..12)
+            .map(|i: u64| FringeSetwise::piece_label(4, 3, i))
+            .collect::<Vec<_>>();
+        assert_eq!(pos, vec![0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 2, 3]);
+        assert_eq!(piece, vec![3, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 2]);
     }
 }
