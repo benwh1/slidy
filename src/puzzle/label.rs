@@ -17,6 +17,7 @@ pub struct Columns;
 pub struct RowsSetwise;
 pub struct ColumnsSetwise;
 pub struct FringeSetwise;
+pub struct DiagonalsSetwise;
 
 impl<Piece> Label<Piece> for Rows
 where
@@ -95,9 +96,24 @@ where
     }
 }
 
+impl<Piece> Label<Piece> for DiagonalsSetwise
+where
+    Piece: Into<u64>,
+{
+    fn position_label(_width: usize, _height: usize, x: usize, y: usize) -> usize {
+        x + y
+    }
+
+    fn num_labels(width: usize, height: usize) -> usize {
+        width + height - 1
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::puzzle::label::{Columns, ColumnsSetwise, FringeSetwise, Label, Rows, RowsSetwise};
+    use crate::puzzle::label::{
+        Columns, ColumnsSetwise, DiagonalsSetwise, FringeSetwise, Label, Rows, RowsSetwise,
+    };
 
     #[test]
     fn test_rows() {
@@ -157,5 +173,17 @@ mod tests {
             .collect::<Vec<_>>();
         assert_eq!(pos, vec![0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 2, 3]);
         assert_eq!(piece, vec![3, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 2]);
+    }
+
+    #[test]
+    fn test_diagonals_setwise() {
+        let pos = (0..12)
+            .map(|i| <DiagonalsSetwise as Label<u64>>::position_label(4, 3, i % 4, i / 4))
+            .collect::<Vec<_>>();
+        let piece = (0..12)
+            .map(|i: u64| DiagonalsSetwise::piece_label(4, 3, i))
+            .collect::<Vec<_>>();
+        assert_eq!(pos, vec![0, 1, 2, 3, 1, 2, 3, 4, 2, 3, 4, 5]);
+        assert_eq!(piece, vec![5, 0, 1, 2, 3, 1, 2, 3, 4, 2, 3, 4]);
     }
 }
