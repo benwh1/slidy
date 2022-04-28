@@ -14,15 +14,15 @@ where
     fn num_labels(width: usize, height: usize) -> usize;
 }
 
+pub struct RowGrids;
+pub struct ColumnGrids;
 pub struct Rows;
 pub struct Columns;
-pub struct RowsSetwise;
-pub struct ColumnsSetwise;
-pub struct FringeSetwise;
-pub struct SquareFringeSetwise;
-pub struct DiagonalsSetwise;
+pub struct Fringe;
+pub struct SquareFringe;
+pub struct Diagonals;
 
-impl<Piece> Label<Piece> for Rows
+impl<Piece> Label<Piece> for RowGrids
 where
     Piece: Into<u64>,
 {
@@ -35,7 +35,7 @@ where
     }
 }
 
-impl<Piece> Label<Piece> for Columns
+impl<Piece> Label<Piece> for ColumnGrids
 where
     Piece: Into<u64>,
 {
@@ -44,7 +44,7 @@ where
     }
 
     fn piece_label(width: usize, height: usize, piece: Piece) -> usize {
-        Rows::piece_label(width, height, piece)
+        RowGrids::piece_label(width, height, piece)
     }
 
     fn num_labels(width: usize, height: usize) -> usize {
@@ -52,7 +52,7 @@ where
     }
 }
 
-impl<Piece> Label<Piece> for RowsSetwise
+impl<Piece> Label<Piece> for Rows
 where
     Piece: Into<u64>,
 {
@@ -65,7 +65,7 @@ where
     }
 }
 
-impl<Piece> Label<Piece> for ColumnsSetwise
+impl<Piece> Label<Piece> for Columns
 where
     Piece: Into<u64>,
 {
@@ -78,7 +78,7 @@ where
     }
 }
 
-impl<Piece> Label<Piece> for FringeSetwise
+impl<Piece> Label<Piece> for Fringe
 where
     Piece: Into<u64>,
 {
@@ -91,7 +91,7 @@ where
     }
 }
 
-impl<Piece> Label<Piece> for SquareFringeSetwise
+impl<Piece> Label<Piece> for SquareFringe
 where
     Piece: Into<u64>,
 {
@@ -106,25 +106,20 @@ where
                 }
                 // Square part of the puzzle
                 else {
-                    diff + <FringeSetwise as Label<Piece>>::position_label(
-                        width,
-                        width,
-                        x,
-                        y - diff,
-                    )
+                    diff + <Fringe as Label<Piece>>::position_label(width, width, x, y - diff)
                 }
             }
-            Ordering::Equal => <FringeSetwise as Label<Piece>>::position_label(width, height, x, y),
+            Ordering::Equal => <Fringe as Label<Piece>>::position_label(width, height, x, y),
             Ordering::Greater => <Self as Label<Piece>>::position_label(height, width, y, x),
         }
     }
 
     fn num_labels(width: usize, height: usize) -> usize {
-        <FringeSetwise as Label<Piece>>::num_labels(width, height) + width.abs_diff(height)
+        <Fringe as Label<Piece>>::num_labels(width, height) + width.abs_diff(height)
     }
 }
 
-impl<Piece> Label<Piece> for DiagonalsSetwise
+impl<Piece> Label<Piece> for Diagonals
 where
     Piece: Into<u64>,
 {
@@ -140,9 +135,32 @@ where
 #[cfg(test)]
 mod tests {
     use crate::puzzle::label::{
-        Columns, ColumnsSetwise, DiagonalsSetwise, FringeSetwise, Label, Rows, RowsSetwise,
-        SquareFringeSetwise,
+        ColumnGrids, Columns, Diagonals, Fringe, Label, RowGrids, Rows, SquareFringe,
     };
+
+    #[test]
+    fn test_row_grids() {
+        let pos = (0..12)
+            .map(|i| <RowGrids as Label<u64>>::position_label(4, 3, i % 4, i / 4))
+            .collect::<Vec<_>>();
+        let piece = (0..12)
+            .map(|i: u64| RowGrids::piece_label(4, 3, i))
+            .collect::<Vec<_>>();
+        assert_eq!(pos, vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+        assert_eq!(piece, vec![11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    }
+
+    #[test]
+    fn test_column_grids() {
+        let pos = (0..12)
+            .map(|i| <ColumnGrids as Label<u64>>::position_label(4, 3, i % 4, i / 4))
+            .collect::<Vec<_>>();
+        let piece = (0..12)
+            .map(|i: u64| ColumnGrids::piece_label(4, 3, i))
+            .collect::<Vec<_>>();
+        assert_eq!(pos, vec![0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11]);
+        assert_eq!(piece, vec![11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    }
 
     #[test]
     fn test_rows() {
@@ -152,8 +170,8 @@ mod tests {
         let piece = (0..12)
             .map(|i: u64| Rows::piece_label(4, 3, i))
             .collect::<Vec<_>>();
-        assert_eq!(pos, vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
-        assert_eq!(piece, vec![11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        assert_eq!(pos, vec![0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2]);
+        assert_eq!(piece, vec![2, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2]);
     }
 
     #[test]
@@ -164,65 +182,41 @@ mod tests {
         let piece = (0..12)
             .map(|i: u64| Columns::piece_label(4, 3, i))
             .collect::<Vec<_>>();
-        assert_eq!(pos, vec![0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11]);
-        assert_eq!(piece, vec![11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-    }
-
-    #[test]
-    fn test_rows_setwise() {
-        let pos = (0..12)
-            .map(|i| <RowsSetwise as Label<u64>>::position_label(4, 3, i % 4, i / 4))
-            .collect::<Vec<_>>();
-        let piece = (0..12)
-            .map(|i: u64| RowsSetwise::piece_label(4, 3, i))
-            .collect::<Vec<_>>();
-        assert_eq!(pos, vec![0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2]);
-        assert_eq!(piece, vec![2, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2]);
-    }
-
-    #[test]
-    fn test_columns_setwise() {
-        let pos = (0..12)
-            .map(|i| <ColumnsSetwise as Label<u64>>::position_label(4, 3, i % 4, i / 4))
-            .collect::<Vec<_>>();
-        let piece = (0..12)
-            .map(|i: u64| ColumnsSetwise::piece_label(4, 3, i))
-            .collect::<Vec<_>>();
         assert_eq!(pos, vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3]);
         assert_eq!(piece, vec![3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2]);
     }
 
     #[test]
-    fn test_fringe_setwise() {
+    fn test_fringe() {
         let pos = (0..12)
-            .map(|i| <FringeSetwise as Label<u64>>::position_label(4, 3, i % 4, i / 4))
+            .map(|i| <Fringe as Label<u64>>::position_label(4, 3, i % 4, i / 4))
             .collect::<Vec<_>>();
         let piece = (0..12)
-            .map(|i: u64| FringeSetwise::piece_label(4, 3, i))
+            .map(|i: u64| Fringe::piece_label(4, 3, i))
             .collect::<Vec<_>>();
         assert_eq!(pos, vec![0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 2, 2]);
         assert_eq!(piece, vec![2, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 2]);
     }
 
     #[test]
-    fn test_square_fringe_setwise() {
+    fn test_square_fringe() {
         let pos = (0..12)
-            .map(|i| <SquareFringeSetwise as Label<u64>>::position_label(4, 3, i % 4, i / 4))
+            .map(|i| <SquareFringe as Label<u64>>::position_label(4, 3, i % 4, i / 4))
             .collect::<Vec<_>>();
         let piece = (0..12)
-            .map(|i: u64| SquareFringeSetwise::piece_label(4, 3, i))
+            .map(|i: u64| SquareFringe::piece_label(4, 3, i))
             .collect::<Vec<_>>();
         assert_eq!(pos, vec![0, 1, 1, 1, 0, 1, 2, 2, 0, 1, 2, 3]);
         assert_eq!(piece, vec![3, 0, 1, 1, 1, 0, 1, 2, 2, 0, 1, 2]);
     }
 
     #[test]
-    fn test_diagonals_setwise() {
+    fn test_diagonals() {
         let pos = (0..12)
-            .map(|i| <DiagonalsSetwise as Label<u64>>::position_label(4, 3, i % 4, i / 4))
+            .map(|i| <Diagonals as Label<u64>>::position_label(4, 3, i % 4, i / 4))
             .collect::<Vec<_>>();
         let piece = (0..12)
-            .map(|i: u64| DiagonalsSetwise::piece_label(4, 3, i))
+            .map(|i: u64| Diagonals::piece_label(4, 3, i))
             .collect::<Vec<_>>();
         assert_eq!(pos, vec![0, 1, 2, 3, 1, 2, 3, 4, 2, 3, 4, 5]);
         assert_eq!(piece, vec![5, 0, 1, 2, 3, 1, 2, 3, 4, 2, 3, 4]);
