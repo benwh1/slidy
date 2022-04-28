@@ -56,16 +56,12 @@ impl<Piece> Label<Piece> for RowsSetwise
 where
     Piece: Into<u64>,
 {
-    fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
-        if (x, y) == (width - 1, height - 1) {
-            height
-        } else {
-            y
-        }
+    fn position_label(_width: usize, _height: usize, _x: usize, y: usize) -> usize {
+        y
     }
 
     fn num_labels(_width: usize, height: usize) -> usize {
-        height + 1
+        height
     }
 }
 
@@ -73,16 +69,12 @@ impl<Piece> Label<Piece> for ColumnsSetwise
 where
     Piece: Into<u64>,
 {
-    fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
-        if (x, y) == (width - 1, height - 1) {
-            width
-        } else {
-            x
-        }
+    fn position_label(_width: usize, _height: usize, x: usize, _y: usize) -> usize {
+        x
     }
 
     fn num_labels(width: usize, _height: usize) -> usize {
-        width + 1
+        width
     }
 }
 
@@ -184,8 +176,8 @@ mod tests {
         let piece = (0..12)
             .map(|i: u64| RowsSetwise::piece_label(4, 3, i))
             .collect::<Vec<_>>();
-        assert_eq!(pos, vec![0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 3]);
-        assert_eq!(piece, vec![3, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2]);
+        assert_eq!(pos, vec![0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2]);
+        assert_eq!(piece, vec![2, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2]);
     }
 
     #[test]
@@ -196,8 +188,8 @@ mod tests {
         let piece = (0..12)
             .map(|i: u64| ColumnsSetwise::piece_label(4, 3, i))
             .collect::<Vec<_>>();
-        assert_eq!(pos, vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 4]);
-        assert_eq!(piece, vec![4, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2]);
+        assert_eq!(pos, vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3]);
+        assert_eq!(piece, vec![3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2]);
     }
 
     #[test]
@@ -208,8 +200,8 @@ mod tests {
         let piece = (0..12)
             .map(|i: u64| FringeSetwise::piece_label(4, 3, i))
             .collect::<Vec<_>>();
-        assert_eq!(pos, vec![0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 2, 3]);
-        assert_eq!(piece, vec![3, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 2]);
+        assert_eq!(pos, vec![0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 2, 2]);
+        assert_eq!(piece, vec![2, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 2]);
     }
 
     #[test]
