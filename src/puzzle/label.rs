@@ -21,6 +21,7 @@ pub struct Columns;
 pub struct Fringe;
 pub struct SquareFringe;
 pub struct SplitFringe;
+pub struct SplitSquareFringe;
 pub struct Diagonals;
 
 impl<Piece> Label<Piece> for RowGrids
@@ -136,6 +137,40 @@ where
 
     fn num_labels(width: usize, height: usize) -> usize {
         width + height - if height > width { 1 } else { 0 }
+    }
+}
+
+impl<Piece> Label<Piece> for SplitSquareFringe
+where
+    Piece: Into<u64>,
+{
+    fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
+        let d = width.abs_diff(height);
+
+        match width.cmp(&height) {
+            Ordering::Less => {
+                if y < d {
+                    y
+                } else {
+                    d + <SplitFringe as Label<Piece>>::position_label(width, width, x, y - d)
+                }
+            }
+            Ordering::Equal => <SplitFringe as Label<Piece>>::position_label(width, width, x, y),
+            Ordering::Greater => {
+                if x < d {
+                    x
+                } else {
+                    d + <SplitFringe as Label<Piece>>::position_label(height, height, x - d, y)
+                }
+            }
+        }
+    }
+
+    fn num_labels(width: usize, height: usize) -> usize {
+        let diff = width.abs_diff(height);
+        let min = width.min(height);
+
+        diff + <SplitFringe as Label<Piece>>::num_labels(min, min)
     }
 }
 
