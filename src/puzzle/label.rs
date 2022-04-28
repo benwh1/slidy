@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 pub trait Label<Piece>
 where
     Piece: Into<u64>,
@@ -17,6 +19,7 @@ pub struct Columns;
 pub struct RowsSetwise;
 pub struct ColumnsSetwise;
 pub struct FringeSetwise;
+pub struct SquareFringeSetwise;
 pub struct DiagonalsSetwise;
 
 impl<Piece> Label<Piece> for Rows
@@ -96,6 +99,39 @@ where
     }
 }
 
+impl<Piece> Label<Piece> for SquareFringeSetwise
+where
+    Piece: Into<u64>,
+{
+    fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
+        match width.cmp(&height) {
+            // Puzzle is taller than it is wide
+            Ordering::Less => {
+                let diff = height - width;
+                // Top part of the puzzle, above square part
+                if y < diff {
+                    y
+                }
+                // Square part of the puzzle
+                else {
+                    diff + <FringeSetwise as Label<Piece>>::position_label(
+                        width,
+                        width,
+                        x,
+                        y - diff,
+                    )
+                }
+            }
+            Ordering::Equal => <FringeSetwise as Label<Piece>>::position_label(width, height, x, y),
+            Ordering::Greater => <Self as Label<Piece>>::position_label(height, width, y, x),
+        }
+    }
+
+    fn num_labels(width: usize, height: usize) -> usize {
+        <FringeSetwise as Label<Piece>>::num_labels(width, height) + width.abs_diff(height)
+    }
+}
+
 impl<Piece> Label<Piece> for DiagonalsSetwise
 where
     Piece: Into<u64>,
@@ -113,6 +149,7 @@ where
 mod tests {
     use crate::puzzle::label::{
         Columns, ColumnsSetwise, DiagonalsSetwise, FringeSetwise, Label, Rows, RowsSetwise,
+        SquareFringeSetwise,
     };
 
     #[test]
@@ -173,6 +210,18 @@ mod tests {
             .collect::<Vec<_>>();
         assert_eq!(pos, vec![0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 2, 3]);
         assert_eq!(piece, vec![3, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 2]);
+    }
+
+    #[test]
+    fn test_square_fringe_setwise() {
+        let pos = (0..12)
+            .map(|i| <SquareFringeSetwise as Label<u64>>::position_label(4, 3, i % 4, i / 4))
+            .collect::<Vec<_>>();
+        let piece = (0..12)
+            .map(|i: u64| SquareFringeSetwise::piece_label(4, 3, i))
+            .collect::<Vec<_>>();
+        assert_eq!(pos, vec![0, 1, 1, 1, 0, 1, 2, 2, 0, 1, 2, 3]);
+        assert_eq!(piece, vec![3, 0, 1, 1, 1, 0, 1, 2, 2, 0, 1, 2]);
     }
 
     #[test]
