@@ -20,6 +20,7 @@ pub struct Rows;
 pub struct Columns;
 pub struct Fringe;
 pub struct SquareFringe;
+pub struct SplitFringe;
 pub struct Diagonals;
 
 impl<Piece> Label<Piece> for RowGrids
@@ -116,6 +117,25 @@ where
 
     fn num_labels(width: usize, height: usize) -> usize {
         <Fringe as Label<Piece>>::num_labels(width, height) + width.abs_diff(height)
+    }
+}
+
+impl<Piece> Label<Piece> for SplitFringe
+where
+    Piece: Into<u64>,
+{
+    fn position_label(_width: usize, _height: usize, x: usize, y: usize) -> usize {
+        // Which (non-split) fringe is (x, y) in?
+        let fringe = x.min(y);
+
+        // Is it in the row part or the horizontal part?
+        let vertical_part = x < y;
+
+        2 * fringe + if vertical_part { 1 } else { 0 }
+    }
+
+    fn num_labels(width: usize, height: usize) -> usize {
+        width + height - if height > width { 1 } else { 0 }
     }
 }
 
