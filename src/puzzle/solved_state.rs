@@ -1,4 +1,4 @@
-use crate::puzzle::{label::Label, sliding_puzzle::SlidingPuzzle};
+use crate::puzzle::{label::label::Label, sliding_puzzle::SlidingPuzzle};
 
 pub trait SolvedState<Piece, Puzzle>
 where
@@ -29,7 +29,7 @@ mod tests {
 
     mod row_grids {
         use super::*;
-        use crate::puzzle::label::RowGrids;
+        use crate::puzzle::label::label::RowGrids;
 
         #[test]
         fn test_row_grids() {
@@ -58,7 +58,7 @@ mod tests {
 
     mod column_grids {
         use super::*;
-        use crate::puzzle::label::ColumnGrids;
+        use crate::puzzle::label::label::ColumnGrids;
 
         #[test]
         fn test_column_grids() {
@@ -87,7 +87,7 @@ mod tests {
 
     mod rows {
         use super::*;
-        use crate::puzzle::label::Rows;
+        use crate::puzzle::label::label::Rows;
 
         #[test]
         fn test_rows() {
@@ -122,7 +122,7 @@ mod tests {
 
     mod columns {
         use super::*;
-        use crate::puzzle::label::Columns;
+        use crate::puzzle::label::label::Columns;
 
         #[test]
         fn test_columns() {

@@ -189,7 +189,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::puzzle::label::{ColumnGrids, Label};
+    use crate::puzzle::label::label::{ColumnGrids, Label};
 
     macro_rules! test_label {
         (fn $name:ident, $label:ty, $w:literal x $h:literal, $pos_label:expr, $piece_label:expr, $num_labels:expr) => {
@@ -222,7 +222,7 @@ mod tests {
         ($label:ty, $($w:literal x $h:literal : $pos:expr,)*) => {
             ::paste::paste! {
                 mod [< $label:snake >] {
-                    use crate::puzzle::label::{Label, $label};
+                    use crate::puzzle::label::label::{Label, $label};
 
                     $(test_label!( fn [< test_ $label:snake _ $w x $h >] , $label, $w x $h, $pos);)*
                 }
