@@ -41,131 +41,49 @@ mod tests {
     use crate::puzzle::{puzzle::Puzzle, sliding_puzzle::SlidingPuzzle};
     use std::str::FromStr;
 
-    mod row_grids {
-        use super::*;
-        use crate::puzzle::label::label::RowGrids;
+    macro_rules! test_solved_state {
+        (fn $name:ident, $i:literal, $label:ty, $ok:literal : $pos:literal) => {
+            #[test]
+            fn $name() {
+                let p = Puzzle::from_str($pos).unwrap();
+                if $ok {
+                    assert!(p.is_solved::<$label>());
+                } else {
+                    assert!(!p.is_solved::<$label>());
+                }
+            }
+        };
 
-        #[test]
-        fn test_row_grids() {
-            let p = Puzzle::from_str("1 2 3 4/5 6 7 8/9 10 11 12/13 14 15 0").unwrap();
-            assert!(p.is_solved::<RowGrids>());
-        }
+        ($label:ty, $($i:literal : $ok:literal : $pos:literal,)*) => {
+            ::paste::paste! {
+                mod [< $label:snake >] {
+                    use super::*;
+                    use crate::puzzle::label::label::$label;
 
-        #[test]
-        fn test_row_grids_2() {
-            let p = Puzzle::from_str("1 2 3 4/5 6 7 8/9 0 11 12/13 14 15 10").unwrap();
-            assert!(!p.is_solved::<RowGrids>());
-        }
-
-        #[test]
-        fn test_row_grids_3() {
-            let p = Puzzle::from_str("1 2/3 4/5 6/7 8/9 10/11 12/13 14/15 16/17 18/19 0").unwrap();
-            assert!(p.is_solved::<RowGrids>());
-        }
-
-        #[test]
-        fn test_row_grids_4() {
-            let p = Puzzle::from_str("1 2/3 4/7 8/5 6/9 10/11 12/13 14/15 16/17 18/19 0").unwrap();
-            assert!(!p.is_solved::<RowGrids>());
-        }
+                    $(test_solved_state!(
+                        fn [< test_ $label:snake _ $i >] , $i, $label, $ok : $pos);
+                    )*
+                }
+            }
+        };
     }
 
-    mod column_grids {
-        use super::*;
-        use crate::puzzle::label::label::ColumnGrids;
+    test_solved_state!(
+        RowGrids,
+        1: true:  "1 2 3 4/5 6 7 8/9 10 11 12/13 14 15 0",
+        2: false: "1 2 3 4/5 6 7 8/9 0 11 12/13 14 15 10",
+        3: true:  "1 2/3 4/5 6/7 8/9 10/11 12/13 14/15 16/17 18/19 0",
+        4: false: "1 2/3 4/7 8/5 6/9 10/11 12/13 14/15 16/17 18/19 0",
+        5: false: "3 8 9 10/4 15 0 12/6 2 1 5/11 7 14 13",
+    );
 
-        #[test]
-        fn test_column_grids() {
-            let p = Puzzle::from_str("1 5 9 13/2 6 10 14/3 7 11 15/4 8 12 0").unwrap();
-            assert!(p.is_solved::<ColumnGrids>());
-        }
-
-        #[test]
-        fn test_column_grids_2() {
-            let p = Puzzle::from_str("1 5 9 13/6 2 10 14/3 7 11 15/8 4 12 0").unwrap();
-            assert!(!p.is_solved::<ColumnGrids>());
-        }
-
-        #[test]
-        fn test_column_grids_3() {
-            let p = Puzzle::from_str("1 11/2 12/3 13/4 14/5 15/6 16/7 17/8 18/9 19/10 0").unwrap();
-            assert!(p.is_solved::<ColumnGrids>());
-        }
-
-        #[test]
-        fn test_column_grids_4() {
-            let p = Puzzle::from_str("1 11/2 13/3 12/4 14/6 15/5 16/7 17/8 18/9 19/10 0").unwrap();
-            assert!(!p.is_solved::<ColumnGrids>());
-        }
-    }
-
-    mod rows {
-        use super::*;
-        use crate::puzzle::label::label::Rows;
-
-        #[test]
-        fn test_rows() {
-            let p = Puzzle::from_str("4 1 3 2/6 7 8 5/9 10 11 12/14 13 15 0").unwrap();
-            assert!(p.is_solved::<Rows>());
-        }
-
-        #[test]
-        fn test_rows_2() {
-            let p = Puzzle::from_str("1 2 3 5/4 6 7 8/9 10 11 12/13 14 15 0").unwrap();
-            assert!(!p.is_solved::<Rows>());
-        }
-
-        #[test]
-        fn test_rows_3() {
-            let p = Puzzle::from_str("1 2 3 4/5 6 7 8/9 10 11 12/13 14 0 15").unwrap();
-            assert!(!p.is_solved::<Rows>());
-        }
-
-        #[test]
-        fn test_rows_4() {
-            let p = Puzzle::from_str("1 2 3/6 5 4/9 7 8/12 11 10/14 15 13/16 17 0").unwrap();
-            assert!(p.is_solved::<Rows>());
-        }
-
-        #[test]
-        fn test_rows_5() {
-            let p = Puzzle::from_str("1 2 6/3 5 4/9 7 8/12 11 10/14 15 13/16 17 0").unwrap();
-            assert!(!p.is_solved::<Rows>());
-        }
-    }
-
-    mod columns {
-        use super::*;
-        use crate::puzzle::label::label::Columns;
-
-        #[test]
-        fn test_columns() {
-            let p = Puzzle::from_str("13 14 15 8/1 10 3 4/5 6 11 12/9 2 7 0").unwrap();
-            assert!(p.is_solved::<Columns>());
-        }
-
-        #[test]
-        fn test_columns_2() {
-            let p = Puzzle::from_str("13 14 15 8/1 3 10 4/5 6 11 12/9 2 7 0").unwrap();
-            assert!(!p.is_solved::<Columns>());
-        }
-
-        #[test]
-        fn test_columns_3() {
-            let p = Puzzle::from_str("1 2 3 4/5 6 7 8/9 10 11 0/13 14 15 12").unwrap();
-            assert!(!p.is_solved::<Columns>());
-        }
-
-        #[test]
-        fn test_columns_4() {
-            let p = Puzzle::from_str("5 8/3 2/17 14/13 12/11 10/9 6/1 18/7 16/15 4/19 0").unwrap();
-            assert!(p.is_solved::<Columns>());
-        }
-
-        #[test]
-        fn test_columns_5() {
-            let p = Puzzle::from_str("1 11/7 17/4 14/2 13/12 3/5 15/9 19/8 16/10 18/6 0").unwrap();
-            assert!(!p.is_solved::<Columns>());
-        }
-    }
+    test_solved_state!(
+        Rows,
+        1: true:  "4 1 3 2/6 7 8 5/9 10 11 12/14 13 15 0",
+        2: false: "1 2 3 5/4 6 7 8/9 10 11 12/13 14 15 0",
+        3: false: "1 2 3 4/5 6 7 8/9 10 11 12/13 14 0 15",
+        4: true:  "1 2 3/6 5 4/9 7 8/12 11 10/14 15 13/16 17 0",
+        5: false: "1 2 6/3 5 4/9 7 8/12 11 10/14 15 13/16 17 0",
+        6: false: "3 8 9 10/4 15 0 12/6 2 1 5/11 7 14 13",
+    );
 }
