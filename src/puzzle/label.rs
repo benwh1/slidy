@@ -136,7 +136,7 @@ where
     }
 
     fn num_labels(width: usize, height: usize) -> usize {
-        width + height - if height > width { 1 } else { 0 }
+        2 * width.min(height) - if height > width { 0 } else { 1 }
     }
 }
 
