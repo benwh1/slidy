@@ -193,6 +193,47 @@ mod tests {
         ColumnGrids, Columns, Diagonals, Fringe, Label, RowGrids, Rows, SquareFringe,
     };
 
+    macro_rules! test_label {
+        (fn $name:ident, $label:ty, $w:literal x $h:literal, $pos_label:expr, $piece_label:expr, $num_labels:expr) => {
+            #[test]
+            fn $name() {
+                let wh = $w * $h;
+                let pos = (0..wh)
+                    .map(|i| <$label as Label<u64>>::position_label($w, $h, i % $w, i / $w))
+                    .collect::<Vec<_>>();
+                let piece = (0..wh)
+                    .map(|i| <$label as Label<u64>>::piece_label($w, $h, i as u64))
+                    .collect::<Vec<_>>();
+                let num = <$label as Label<u64>>::num_labels($w, $h);
+                assert_eq!(pos, $pos_label);
+                assert_eq!(piece, $piece_label);
+                assert_eq!(num, $num_labels);
+            }
+        };
+
+        (fn $name:ident, $label:ty, $w:literal x $h:literal, $pos_label:expr) => {
+            test_label!(fn $name, $label, $w x $h, $pos_label, {
+                let mut v = $pos_label.clone();
+                let last = v.pop().unwrap();
+                let mut w = vec![last];
+                w.append(&mut v);
+                w
+            }, $pos_label.iter().max().unwrap() + 1);
+        };
+
+        ($label:ty, $pos1:expr, $pos2:expr, $pos3:expr) => {
+            ::paste::paste! {
+                mod [< $label:snake >] {
+                    use crate::puzzle::label::{Label, $label};
+
+                    test_label!( fn [< test_ $label:snake _4x4 >] , $label, 4 x 4, $pos1);
+                    test_label!( fn [< test_ $label:snake _4x6 >] , $label, 4 x 6, $pos2);
+                    test_label!( fn [< test_ $label:snake _6x4 >] , $label, 6 x 4, $pos3);
+                }
+            }
+        };
+    }
+
     #[test]
     fn test_row_grids() {
         let pos = (0..12)
