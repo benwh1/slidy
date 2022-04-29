@@ -21,6 +21,7 @@ pub struct SquareFringe;
 pub struct SplitFringe;
 pub struct SplitSquareFringe;
 pub struct Diagonals;
+pub struct LastTwoRows;
 
 impl<Piece> Label<Piece> for RowGrids
 where
@@ -155,6 +156,23 @@ where
     }
 }
 
+impl<Piece> Label<Piece> for LastTwoRows
+where
+    Piece: Into<u64>,
+{
+    fn position_label(_width: usize, height: usize, x: usize, y: usize) -> usize {
+        if y < height - 2 {
+            y
+        } else {
+            height - 2 + x
+        }
+    }
+
+    fn num_labels(width: usize, height: usize) -> usize {
+        width + height - 2
+    }
+}
+
 #[cfg(test)]
 mod tests {
     macro_rules! test_label {
@@ -243,5 +261,14 @@ mod tests {
         4 x 4: vec![0, 1, 2, 3, 1, 2, 3, 4, 2, 3, 4, 5, 3, 4, 5, 6],
         4 x 6: vec![0, 1, 2, 3, 1, 2, 3, 4, 2, 3, 4, 5, 3, 4, 5, 6, 4, 5, 6, 7, 5, 6, 7, 8],
         6 x 4: vec![0, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 6, 2, 3, 4, 5, 6, 7, 3, 4, 5, 6, 7, 8],
+    );
+
+    test_label!(
+        LastTwoRows,
+        4 x 4: vec![0, 0, 0, 0, 1, 1, 1, 1, 2, 3, 4, 5, 2, 3, 4, 5],
+        4 x 6: vec![0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 5, 6, 7, 4, 5, 6, 7],
+        6 x 4: vec![0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 7],
+        4 x 2: vec![0, 1, 2, 3, 0, 1, 2, 3],
+        2 x 4: vec![0, 0, 1, 1, 2, 3, 2, 3],
     );
 }
