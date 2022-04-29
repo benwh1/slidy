@@ -1,4 +1,5 @@
 use crate::puzzle::{label::label::Label, sliding_puzzle::SlidingPuzzle};
+use itertools::Itertools;
 
 pub trait SolvedState<Piece, Puzzle>
 where
@@ -16,9 +17,22 @@ where
 {
     fn is_solved(puzzle: &Puzzle) -> bool {
         let (w, h) = puzzle.size();
-        (0..w).zip(0..h).all(|(x, y)| {
-            T::position_label(w, h, x, y) == T::piece_label(w, h, puzzle.piece_at_xy(x, y))
-        })
+        if puzzle.gap_position_xy() != (w - 1, h - 1) {
+            return false;
+        }
+
+        (0..w)
+            .cartesian_product(0..h)
+            .take(w * h - 1)
+            .all(|(x, y)| {
+                // Label of piece in position (x, y)
+                let piece_label = T::piece_label(w, h, puzzle.piece_at_xy(x, y));
+
+                // Label of piece in position (x, y) on a solved puzzle
+                let solved_label = T::position_label(w, h, x, y);
+
+                piece_label == solved_label
+            })
     }
 }
 
