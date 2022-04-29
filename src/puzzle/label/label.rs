@@ -15,9 +15,7 @@ where
 }
 
 pub struct RowGrids;
-pub struct ColumnGrids;
 pub struct Rows;
-pub struct Columns;
 pub struct Fringe;
 pub struct SquareFringe;
 pub struct SplitFringe;
@@ -37,23 +35,6 @@ where
     }
 }
 
-impl<Piece> Label<Piece> for ColumnGrids
-where
-    Piece: Into<u64>,
-{
-    fn position_label(_width: usize, height: usize, x: usize, y: usize) -> usize {
-        y + height * x
-    }
-
-    fn piece_label(width: usize, height: usize, piece: Piece) -> usize {
-        RowGrids::piece_label(width, height, piece)
-    }
-
-    fn num_labels(width: usize, height: usize) -> usize {
-        width * height
-    }
-}
-
 impl<Piece> Label<Piece> for Rows
 where
     Piece: Into<u64>,
@@ -64,19 +45,6 @@ where
 
     fn num_labels(_width: usize, height: usize) -> usize {
         height
-    }
-}
-
-impl<Piece> Label<Piece> for Columns
-where
-    Piece: Into<u64>,
-{
-    fn position_label(_width: usize, _height: usize, x: usize, _y: usize) -> usize {
-        x
-    }
-
-    fn num_labels(width: usize, _height: usize) -> usize {
-        width
     }
 }
 
@@ -189,8 +157,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::puzzle::label::label::{ColumnGrids, Label};
-
     macro_rules! test_label {
         (fn $name:ident, $label:ty, $w:literal x $h:literal, $pos_label:expr, $piece_label:expr, $num_labels:expr) => {
             #[test]
@@ -237,30 +203,11 @@ mod tests {
         6 x 4: vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
     );
 
-    #[test]
-    fn test_column_grids() {
-        let pos = (0..12)
-            .map(|i| <ColumnGrids as Label<u64>>::position_label(4, 3, i % 4, i / 4))
-            .collect::<Vec<_>>();
-        let piece = (0..12)
-            .map(|i: u64| ColumnGrids::piece_label(4, 3, i))
-            .collect::<Vec<_>>();
-        assert_eq!(pos, vec![0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11]);
-        assert_eq!(piece, vec![11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-    }
-
     test_label!(
         Rows,
         4 x 4: vec![0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3],
         4 x 6: vec![0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5],
         6 x 4: vec![0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3],
-    );
-
-    test_label!(
-        Columns,
-        4 x 4: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
-        4 x 6: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
-        6 x 4: vec![0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5],
     );
 
     test_label!(
