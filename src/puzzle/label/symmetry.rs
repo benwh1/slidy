@@ -63,7 +63,7 @@ where
     L: Label<Piece>,
 {
     fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
-        L::position_label(height, width, height - 1 - y, x)
+        L::position_label(height, width, y, width - 1 - x)
     }
 
     fn num_labels(width: usize, height: usize) -> usize {
@@ -77,7 +77,7 @@ where
     L: Label<Piece>,
 {
     fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
-        L::position_label(height, width, y, width - 1 - x)
+        L::position_label(height, width, height - 1 - y, x)
     }
 
     fn num_labels(width: usize, height: usize) -> usize {
