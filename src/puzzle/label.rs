@@ -189,9 +189,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::puzzle::label::{
-        ColumnGrids, Columns, Diagonals, Fringe, Label, RowGrids, Rows, SquareFringe,
-    };
+    use crate::puzzle::label::{ColumnGrids, Label};
 
     macro_rules! test_label {
         (fn $name:ident, $label:ty, $w:literal x $h:literal, $pos_label:expr, $piece_label:expr, $num_labels:expr) => {
@@ -234,17 +232,12 @@ mod tests {
         };
     }
 
-    #[test]
-    fn test_row_grids() {
-        let pos = (0..12)
-            .map(|i| <RowGrids as Label<u64>>::position_label(4, 3, i % 4, i / 4))
-            .collect::<Vec<_>>();
-        let piece = (0..12)
-            .map(|i: u64| RowGrids::piece_label(4, 3, i))
-            .collect::<Vec<_>>();
-        assert_eq!(pos, vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
-        assert_eq!(piece, vec![11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-    }
+    test_label!(
+        RowGrids,
+        vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+        vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
+        vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+    );
 
     #[test]
     fn test_column_grids() {
@@ -258,63 +251,38 @@ mod tests {
         assert_eq!(piece, vec![11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     }
 
-    #[test]
-    fn test_rows() {
-        let pos = (0..12)
-            .map(|i| <Rows as Label<u64>>::position_label(4, 3, i % 4, i / 4))
-            .collect::<Vec<_>>();
-        let piece = (0..12)
-            .map(|i: u64| Rows::piece_label(4, 3, i))
-            .collect::<Vec<_>>();
-        assert_eq!(pos, vec![0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2]);
-        assert_eq!(piece, vec![2, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2]);
-    }
+    test_label!(
+        Rows,
+        vec![0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3],
+        vec![0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5],
+        vec![0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3]
+    );
 
-    #[test]
-    fn test_columns() {
-        let pos = (0..12)
-            .map(|i| <Columns as Label<u64>>::position_label(4, 3, i % 4, i / 4))
-            .collect::<Vec<_>>();
-        let piece = (0..12)
-            .map(|i: u64| Columns::piece_label(4, 3, i))
-            .collect::<Vec<_>>();
-        assert_eq!(pos, vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3]);
-        assert_eq!(piece, vec![3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2]);
-    }
+    test_label!(
+        Columns,
+        vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
+        vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
+        vec![0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5]
+    );
 
-    #[test]
-    fn test_fringe() {
-        let pos = (0..12)
-            .map(|i| <Fringe as Label<u64>>::position_label(4, 3, i % 4, i / 4))
-            .collect::<Vec<_>>();
-        let piece = (0..12)
-            .map(|i: u64| Fringe::piece_label(4, 3, i))
-            .collect::<Vec<_>>();
-        assert_eq!(pos, vec![0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 2, 2]);
-        assert_eq!(piece, vec![2, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 2]);
-    }
+    test_label!(
+        Fringe,
+        vec![0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 2, 2, 0, 1, 2, 3],
+        vec![0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 2, 2, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
+        vec![0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 2, 2, 2, 2, 0, 1, 2, 3, 3, 3]
+    );
 
-    #[test]
-    fn test_square_fringe() {
-        let pos = (0..12)
-            .map(|i| <SquareFringe as Label<u64>>::position_label(4, 3, i % 4, i / 4))
-            .collect::<Vec<_>>();
-        let piece = (0..12)
-            .map(|i: u64| SquareFringe::piece_label(4, 3, i))
-            .collect::<Vec<_>>();
-        assert_eq!(pos, vec![0, 1, 1, 1, 0, 1, 2, 2, 0, 1, 2, 3]);
-        assert_eq!(piece, vec![3, 0, 1, 1, 1, 0, 1, 2, 2, 0, 1, 2]);
-    }
+    test_label!(
+        SquareFringe,
+        vec![0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 2, 2, 0, 1, 2, 3],
+        vec![0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 2, 3, 4, 4, 2, 3, 4, 5],
+        vec![0, 1, 2, 2, 2, 2, 0, 1, 2, 3, 3, 3, 0, 1, 2, 3, 4, 4, 0, 1, 2, 3, 4, 5]
+    );
 
-    #[test]
-    fn test_diagonals() {
-        let pos = (0..12)
-            .map(|i| <Diagonals as Label<u64>>::position_label(4, 3, i % 4, i / 4))
-            .collect::<Vec<_>>();
-        let piece = (0..12)
-            .map(|i: u64| Diagonals::piece_label(4, 3, i))
-            .collect::<Vec<_>>();
-        assert_eq!(pos, vec![0, 1, 2, 3, 1, 2, 3, 4, 2, 3, 4, 5]);
-        assert_eq!(piece, vec![5, 0, 1, 2, 3, 1, 2, 3, 4, 2, 3, 4]);
-    }
+    test_label!(
+        Diagonals,
+        vec![0, 1, 2, 3, 1, 2, 3, 4, 2, 3, 4, 5, 3, 4, 5, 6],
+        vec![0, 1, 2, 3, 1, 2, 3, 4, 2, 3, 4, 5, 3, 4, 5, 6, 4, 5, 6, 7, 5, 6, 7, 8],
+        vec![0, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 6, 2, 3, 4, 5, 6, 7, 3, 4, 5, 6, 7, 8]
+    );
 }
