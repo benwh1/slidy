@@ -17,6 +17,15 @@ pub struct Symmetry<L, T> {
     phantom_t: PhantomData<T>,
 }
 
+impl<L, T> Symmetry<L, T> {
+    pub fn new() -> Self {
+        Self {
+            phantom_l: PhantomData,
+            phantom_t: PhantomData,
+        }
+    }
+}
+
 macro_rules! make_type {
     ($t:ident) => {
         pub type $t<L> = Symmetry<L, sym::$t>;
