@@ -12,19 +12,14 @@ mod sym {
     pub struct ReflectAntidiagonal;
 }
 
-pub struct Symmetry<Piece, L, T>
-where
-    Piece: Into<u64>,
-    L: Label<Piece>,
-{
-    phantom_piece: PhantomData<Piece>,
+pub struct Symmetry<L, T> {
     phantom_l: PhantomData<L>,
     phantom_t: PhantomData<T>,
 }
 
 macro_rules! make_type {
     ($t:ident) => {
-        pub type $t<Piece, L> = Symmetry<Piece, L, sym::$t>;
+        pub type $t<L> = Symmetry<L, sym::$t>;
     };
     ($t:ident, $($t2:ident),+) => {
         make_type!($t);
@@ -43,10 +38,9 @@ make_type!(
     ReflectAntidiagonal
 );
 
-impl<Piece, L> Label<Piece> for Symmetry<Piece, L, sym::Id>
+impl<L> Label for Symmetry<L, sym::Id>
 where
-    Piece: Into<u64>,
-    L: Label<Piece>,
+    L: Label,
 {
     fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
         L::position_label(width, height, x, y)
@@ -57,10 +51,9 @@ where
     }
 }
 
-impl<Piece, L> Label<Piece> for Symmetry<Piece, L, sym::RotateCw>
+impl<L> Label for Symmetry<L, sym::RotateCw>
 where
-    Piece: Into<u64>,
-    L: Label<Piece>,
+    L: Label,
 {
     fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
         L::position_label(height, width, y, width - 1 - x)
@@ -71,10 +64,9 @@ where
     }
 }
 
-impl<Piece, L> Label<Piece> for Symmetry<Piece, L, sym::RotateCcw>
+impl<L> Label for Symmetry<L, sym::RotateCcw>
 where
-    Piece: Into<u64>,
-    L: Label<Piece>,
+    L: Label,
 {
     fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
         L::position_label(height, width, height - 1 - y, x)
@@ -85,10 +77,9 @@ where
     }
 }
 
-impl<Piece, L> Label<Piece> for Symmetry<Piece, L, sym::RotateHalf>
+impl<L> Label for Symmetry<L, sym::RotateHalf>
 where
-    Piece: Into<u64>,
-    L: Label<Piece>,
+    L: Label,
 {
     fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
         L::position_label(width, height, width - 1 - x, height - 1 - y)
@@ -99,10 +90,9 @@ where
     }
 }
 
-impl<Piece, L> Label<Piece> for Symmetry<Piece, L, sym::ReflectVertical>
+impl<L> Label for Symmetry<L, sym::ReflectVertical>
 where
-    Piece: Into<u64>,
-    L: Label<Piece>,
+    L: Label,
 {
     fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
         L::position_label(width, height, x, height - 1 - y)
@@ -113,10 +103,9 @@ where
     }
 }
 
-impl<Piece, L> Label<Piece> for Symmetry<Piece, L, sym::ReflectHorizontal>
+impl<L> Label for Symmetry<L, sym::ReflectHorizontal>
 where
-    Piece: Into<u64>,
-    L: Label<Piece>,
+    L: Label,
 {
     fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
         L::position_label(width, height, width - 1 - x, y)
@@ -127,10 +116,9 @@ where
     }
 }
 
-impl<Piece, L> Label<Piece> for Symmetry<Piece, L, sym::ReflectDiagonal>
+impl<L> Label for Symmetry<L, sym::ReflectDiagonal>
 where
-    Piece: Into<u64>,
-    L: Label<Piece>,
+    L: Label,
 {
     fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
         L::position_label(height, width, y, x)
@@ -141,10 +129,9 @@ where
     }
 }
 
-impl<Piece, L> Label<Piece> for Symmetry<Piece, L, sym::ReflectAntidiagonal>
+impl<L> Label for Symmetry<L, sym::ReflectAntidiagonal>
 where
-    Piece: Into<u64>,
-    L: Label<Piece>,
+    L: Label,
 {
     fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
         L::position_label(height, width, height - 1 - y, width - 1 - x)
@@ -158,31 +145,21 @@ where
 #[cfg(test)]
 mod tests {
     macro_rules! test_label {
-        (fn $name:ident, $label:ty, $w:literal x $h:literal, $pos_label:expr, $piece_label:expr, $num_labels:expr) => {
+        (fn $name:ident, $label:ty, $w:literal x $h:literal, $pos_label:expr, $num_labels:expr) => {
             #[test]
             fn $name() {
                 let wh = $w * $h;
                 let pos = (0..wh)
-                    .map(|i| <$label as Label<u64>>::position_label($w, $h, i % $w, i / $w))
+                    .map(|i| <$label as Label>::position_label($w, $h, i % $w, i / $w))
                     .collect::<Vec<_>>();
-                let piece = (0..wh)
-                    .map(|i| <$label as Label<u64>>::piece_label($w, $h, i as u64))
-                    .collect::<Vec<_>>();
-                let num = <$label as Label<u64>>::num_labels($w, $h);
+                let num = <$label as Label>::num_labels($w, $h);
                 assert_eq!(pos, $pos_label);
-                assert_eq!(piece, $piece_label);
                 assert_eq!(num, $num_labels);
             }
         };
 
         (fn $name:ident, $label:ty, $w:literal x $h:literal, $pos_label:expr) => {
-            test_label!(fn $name, $label, $w x $h, $pos_label, {
-                let mut v = $pos_label.clone();
-                let last = v.pop().unwrap();
-                let mut w = vec![last];
-                w.append(&mut v);
-                w
-            }, $pos_label.iter().max().unwrap() + 1);
+            test_label!(fn $name, $label, $w x $h, $pos_label, $pos_label.iter().max().unwrap() + 1);
         };
 
         ($label:ty, $($w:literal x $h:literal : $pos:expr,)*) => {
@@ -199,7 +176,7 @@ mod tests {
 
     macro_rules! make_type {
         ($t:ident) => {
-            type $t = super::$t<u64, crate::puzzle::label::label::RowGrids>;
+            type $t = super::$t<crate::puzzle::label::label::RowGrids>;
         };
         ($t:ident, $($t2:ident),+) => {
             make_type!($t);

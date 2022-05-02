@@ -13,7 +13,7 @@ impl<Piece, Puzzle, T> SolvedState<Piece, Puzzle> for T
 where
     Piece: Into<u64>,
     Puzzle: SlidingPuzzle<Piece>,
-    T: Label<Piece>,
+    T: Label,
 {
     fn is_solved(puzzle: &Puzzle) -> bool {
         let (w, h) = puzzle.size();
@@ -26,7 +26,9 @@ where
             .take(w * h - 1)
             .all(|(x, y)| {
                 // Label of piece in position (x, y)
-                let piece_label = T::piece_label(w, h, puzzle.piece_at_xy(x, y));
+                let piece = puzzle.piece_at_xy(x, y).into() as usize;
+                let solved_pos = ((piece - 1) % w, (piece - 1) / w);
+                let piece_label = T::position_label(w, h, solved_pos.0, solved_pos.1);
 
                 // Label of piece in position (x, y) on a solved puzzle
                 let solved_label = T::position_label(w, h, x, y);

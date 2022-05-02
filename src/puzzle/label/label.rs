@@ -1,16 +1,7 @@
 use std::cmp::Ordering;
 
-pub trait Label<Piece>
-where
-    Piece: Into<u64>,
-{
+pub trait Label {
     fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize;
-    fn piece_label(width: usize, height: usize, piece: Piece) -> usize {
-        let piece = piece.into() as usize;
-        let p = if piece == 0 { width * height } else { piece } - 1;
-        Self::position_label(width, height, p % width, p / width)
-    }
-
     fn num_labels(width: usize, height: usize) -> usize;
 }
 
@@ -24,10 +15,7 @@ pub struct Diagonals;
 pub struct LastTwoRows;
 pub struct SplitLastTwoRows;
 
-impl<Piece> Label<Piece> for RowGrids
-where
-    Piece: Into<u64>,
-{
+impl Label for RowGrids {
     fn position_label(width: usize, _height: usize, x: usize, y: usize) -> usize {
         x + width * y
     }
@@ -37,10 +25,7 @@ where
     }
 }
 
-impl<Piece> Label<Piece> for Rows
-where
-    Piece: Into<u64>,
-{
+impl Label for Rows {
     fn position_label(_width: usize, _height: usize, _x: usize, y: usize) -> usize {
         y
     }
@@ -50,10 +35,7 @@ where
     }
 }
 
-impl<Piece> Label<Piece> for Fringe
-where
-    Piece: Into<u64>,
-{
+impl Label for Fringe {
     fn position_label(_width: usize, _height: usize, x: usize, y: usize) -> usize {
         x.min(y)
     }
@@ -63,10 +45,7 @@ where
     }
 }
 
-impl<Piece> Label<Piece> for SquareFringe
-where
-    Piece: Into<u64>,
-{
+impl Label for SquareFringe {
     fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
         match width.cmp(&height) {
             // Puzzle is taller than it is wide
@@ -78,23 +57,20 @@ where
                 }
                 // Square part of the puzzle
                 else {
-                    diff + <Fringe as Label<Piece>>::position_label(width, width, x, y - diff)
+                    diff + <Fringe as Label>::position_label(width, width, x, y - diff)
                 }
             }
-            Ordering::Equal => <Fringe as Label<Piece>>::position_label(width, height, x, y),
-            Ordering::Greater => <Self as Label<Piece>>::position_label(height, width, y, x),
+            Ordering::Equal => <Fringe as Label>::position_label(width, height, x, y),
+            Ordering::Greater => <Self as Label>::position_label(height, width, y, x),
         }
     }
 
     fn num_labels(width: usize, height: usize) -> usize {
-        <Fringe as Label<Piece>>::num_labels(width, height) + width.abs_diff(height)
+        <Fringe as Label>::num_labels(width, height) + width.abs_diff(height)
     }
 }
 
-impl<Piece> Label<Piece> for SplitFringe
-where
-    Piece: Into<u64>,
-{
+impl Label for SplitFringe {
     fn position_label(_width: usize, _height: usize, x: usize, y: usize) -> usize {
         // Which (non-split) fringe is (x, y) in?
         let fringe = x.min(y);
@@ -110,10 +86,7 @@ where
     }
 }
 
-impl<Piece> Label<Piece> for SplitSquareFringe
-where
-    Piece: Into<u64>,
-{
+impl Label for SplitSquareFringe {
     fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
         let d = width.abs_diff(height);
 
@@ -122,15 +95,15 @@ where
                 if y < d {
                     y
                 } else {
-                    d + <SplitFringe as Label<Piece>>::position_label(width, width, x, y - d)
+                    d + <SplitFringe as Label>::position_label(width, width, x, y - d)
                 }
             }
-            Ordering::Equal => <SplitFringe as Label<Piece>>::position_label(width, width, x, y),
+            Ordering::Equal => <SplitFringe as Label>::position_label(width, width, x, y),
             Ordering::Greater => {
                 if x < d {
                     x
                 } else {
-                    d + <SplitFringe as Label<Piece>>::position_label(height, height, x - d, y)
+                    d + <SplitFringe as Label>::position_label(height, height, x - d, y)
                 }
             }
         }
@@ -140,14 +113,11 @@ where
         let diff = width.abs_diff(height);
         let min = width.min(height);
 
-        diff + <SplitFringe as Label<Piece>>::num_labels(min, min)
+        diff + <SplitFringe as Label>::num_labels(min, min)
     }
 }
 
-impl<Piece> Label<Piece> for Diagonals
-where
-    Piece: Into<u64>,
-{
+impl Label for Diagonals {
     fn position_label(_width: usize, _height: usize, x: usize, y: usize) -> usize {
         x + y
     }
@@ -157,10 +127,7 @@ where
     }
 }
 
-impl<Piece> Label<Piece> for LastTwoRows
-where
-    Piece: Into<u64>,
-{
+impl Label for LastTwoRows {
     fn position_label(_width: usize, height: usize, x: usize, y: usize) -> usize {
         if y < height - 2 {
             y
@@ -174,10 +141,7 @@ where
     }
 }
 
-impl<Piece> Label<Piece> for SplitLastTwoRows
-where
-    Piece: Into<u64>,
-{
+impl Label for SplitLastTwoRows {
     fn position_label(_width: usize, height: usize, x: usize, y: usize) -> usize {
         if y < height - 2 {
             y
@@ -194,31 +158,21 @@ where
 #[cfg(test)]
 mod tests {
     macro_rules! test_label {
-        (fn $name:ident, $label:ty, $w:literal x $h:literal, $pos_label:expr, $piece_label:expr, $num_labels:expr) => {
+        (fn $name:ident, $label:ty, $w:literal x $h:literal, $pos_label:expr, $num_labels:expr) => {
             #[test]
             fn $name() {
                 let wh = $w * $h;
                 let pos = (0..wh)
-                    .map(|i| <$label as Label<u64>>::position_label($w, $h, i % $w, i / $w))
+                    .map(|i| <$label as Label>::position_label($w, $h, i % $w, i / $w))
                     .collect::<Vec<_>>();
-                let piece = (0..wh)
-                    .map(|i| <$label as Label<u64>>::piece_label($w, $h, i as u64))
-                    .collect::<Vec<_>>();
-                let num = <$label as Label<u64>>::num_labels($w, $h);
+                let num = <$label as Label>::num_labels($w, $h);
                 assert_eq!(pos, $pos_label);
-                assert_eq!(piece, $piece_label);
                 assert_eq!(num, $num_labels);
             }
         };
 
         (fn $name:ident, $label:ty, $w:literal x $h:literal, $pos_label:expr) => {
-            test_label!(fn $name, $label, $w x $h, $pos_label, {
-                let mut v = $pos_label.clone();
-                let last = v.pop().unwrap();
-                let mut w = vec![last];
-                w.append(&mut v);
-                w
-            }, $pos_label.iter().max().unwrap() + 1);
+            test_label!(fn $name, $label, $w x $h, $pos_label, $pos_label.iter().max().unwrap() + 1);
         };
 
         ($label:ty, $($w:literal x $h:literal : $pos:expr,)*) => {
