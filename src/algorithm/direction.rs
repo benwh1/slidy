@@ -1,3 +1,4 @@
+use rand::{distributions::Standard, prelude::Distribution};
 use std::fmt::Display;
 use thiserror::Error;
 
@@ -51,6 +52,18 @@ impl TryFrom<char> for Direction {
             'D' => Ok(Self::Down),
             'R' => Ok(Self::Right),
             _ => Err(TryDirectionFromCharError::InvalidCharacter(value)),
+        }
+    }
+}
+
+impl Distribution<Direction> for Standard {
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Direction {
+        match rng.gen_range(0..4) {
+            0 => Direction::Up,
+            1 => Direction::Left,
+            2 => Direction::Down,
+            3 => Direction::Right,
+            _ => unreachable!(),
         }
     }
 }
