@@ -48,3 +48,22 @@ where
         puzzle.apply_move(Move::new(Direction::Right, r as u32));
     }
 }
+
+struct RandomMoves {
+    moves: u64,
+}
+
+impl<P, Piece> Scrambler<P, Piece> for RandomMoves
+where
+    P: SlidingPuzzle<Piece>,
+    Piece: Into<u64>,
+{
+    fn scramble(&self, puzzle: &mut P) {
+        let mut rng = rand::thread_rng();
+
+        for _ in 0..self.moves {
+            let dir = rng.gen::<Direction>();
+            puzzle.move_dir(dir);
+        }
+    }
+}
