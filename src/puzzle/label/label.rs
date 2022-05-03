@@ -14,6 +14,7 @@ pub struct SplitSquareFringe;
 pub struct Diagonals;
 pub struct LastTwoRows;
 pub struct SplitLastTwoRows;
+pub struct ConcentricRectangles;
 
 impl Label for RowGrids {
     fn position_label(width: usize, _height: usize, x: usize, y: usize) -> usize {
@@ -155,6 +156,16 @@ impl Label for SplitLastTwoRows {
     }
 }
 
+impl Label for ConcentricRectangles {
+    fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
+        x.min(y).min(width - 1 - x).min(height - 1 - y)
+    }
+
+    fn num_labels(width: usize, height: usize) -> usize {
+        width.min(height).div_ceil(2)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     macro_rules! test_label {
@@ -251,5 +262,14 @@ mod tests {
         6 x 4: vec![0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5],
         4 x 2: vec![0, 1, 2, 3, 0, 1, 2, 3],
         2 x 4: vec![0, 0, 1, 1, 0, 1, 0, 1],
+    );
+
+    test_label!(
+        ConcentricRectangles,
+        4 x 4: vec![0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0],
+        4 x 6: vec![0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0],
+        6 x 4: vec![0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+        5 x 5: vec![0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 2, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+        7 x 8: vec![0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 2, 2, 2, 1, 0, 0, 1, 2, 3, 2, 1, 0, 0, 1, 2, 3, 2, 1, 0, 0, 1, 2, 2, 2, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
     );
 }
