@@ -51,6 +51,8 @@ where
 
 struct RandomMoves {
     moves: u64,
+    allow_cancellation: bool,
+    require_applyable: bool,
 }
 
 impl<P, Piece> Scrambler<P, Piece> for RandomMoves
@@ -61,8 +63,19 @@ where
     fn scramble(&self, puzzle: &mut P) {
         let mut rng = rand::thread_rng();
 
+        let mut last_dir = None::<Direction>;
         for _ in 0..self.moves {
-            let dir = rng.gen::<Direction>();
+            let dir = {
+                let mut d = rng.gen::<Direction>();
+                while (!self.allow_cancellation && last_dir == Some(d.inverse()))
+                    || (self.require_applyable && !puzzle.can_move_dir(d))
+                {
+                    d = rng.gen();
+                }
+                d
+            };
+
+            last_dir = Some(dir);
             puzzle.move_dir(dir);
         }
     }
