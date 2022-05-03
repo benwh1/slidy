@@ -7,7 +7,7 @@ where
     P: SlidingPuzzle<Piece>,
     Piece: Into<u64>,
 {
-    fn scramble(puzzle: &mut P);
+    fn scramble(&self, puzzle: &mut P);
 }
 
 struct RandomState;
@@ -17,7 +17,7 @@ where
     P: SlidingPuzzle<Piece>,
     Piece: Into<u64>,
 {
-    fn scramble(puzzle: &mut P) {
+    fn scramble(&self, puzzle: &mut P) {
         puzzle.reset();
 
         let mut rng = rand::thread_rng();
