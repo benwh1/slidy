@@ -80,3 +80,30 @@ where
         }
     }
 }
+
+struct Cycle {
+    length: u64,
+}
+
+impl<P, Piece> Scrambler<P, Piece> for Cycle
+where
+    P: SlidingPuzzle<Piece>,
+    Piece: Into<u64>,
+{
+    fn scramble(&self, puzzle: &mut P) {
+        let mut rng = rand::thread_rng();
+
+        let cycle_len = self.length as usize;
+        let n = puzzle.num_pieces() as usize;
+        let max = if cycle_len % 2 == 0 { n - 2 } else { n };
+        let pieces = rand::seq::index::sample(&mut rng, max, cycle_len);
+
+        for i in 1..cycle_len {
+            puzzle.swap_pieces(pieces.index(0), pieces.index(i));
+        }
+
+        if self.length % 2 == 0 {
+            puzzle.swap_pieces(n - 2, n - 1);
+        }
+    }
+}
