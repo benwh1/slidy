@@ -27,6 +27,8 @@ where
         self.gap_position_xy().1
     }
 
+    fn reset(&mut self);
+
     fn is_solved<T: SolvedState<Piece, Self>>(&self) -> bool {
         T::is_solved(self)
     }

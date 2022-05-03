@@ -105,6 +105,14 @@ impl SlidingPuzzle<u32> for Puzzle {
         (g % w, g / w)
     }
 
+    fn reset(&mut self) {
+        let n = self.num_pieces();
+        for i in 0..n {
+            self.pieces[i] = i as u32 + 1;
+        }
+        self.pieces[n] = 0;
+    }
+
     fn piece_at(&self, idx: usize) -> u32 {
         self.pieces[idx]
     }
