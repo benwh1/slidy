@@ -93,8 +93,8 @@ where
     fn scramble(&self, puzzle: &mut P) {
         let mut rng = rand::thread_rng();
 
-        let cycle_len = self.length as usize;
         let n = puzzle.num_pieces() as usize;
+        let cycle_len = (self.length as usize).min(if n % 2 == 0 { n - 1 } else { n });
         let max = if cycle_len % 2 == 0 { n - 2 } else { n };
         let pieces = rand::seq::index::sample(&mut rng, max, cycle_len);
 
