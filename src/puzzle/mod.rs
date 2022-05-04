@@ -4,4 +4,5 @@ pub mod label;
 pub mod puzzle;
 pub mod scrambler;
 pub mod sliding_puzzle;
+pub mod solvable;
 pub mod solved_state;
