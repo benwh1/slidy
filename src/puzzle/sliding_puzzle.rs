@@ -33,15 +33,18 @@ where
         T::is_solved(self)
     }
 
-    fn solved_pos(&self, piece: Piece) -> (usize, usize) {
+    fn solved_pos(&self, piece: Piece) -> usize {
         let p = piece.into() as usize;
         if p == 0 {
-            let (w, h) = self.size();
-            (w - 1, h - 1)
+            self.num_pieces()
         } else {
-            let w = self.width();
-            ((p - 1) % w, (p - 1) / w)
+            p - 1
         }
+    }
+    fn solved_pos_xy(&self, piece: Piece) -> (usize, usize) {
+        let p = self.solved_pos(piece);
+        let w = self.width();
+        (p % w, p / w)
     }
 
     fn piece_at(&self, idx: usize) -> Piece;
