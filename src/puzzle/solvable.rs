@@ -95,3 +95,35 @@ always_solvable!(
     SplitLastTwoRows,
     ConcentricRectangles,
 );
+
+#[cfg(test)]
+mod tests {
+    mod row_grids {
+        use crate::puzzle::{label::label::RowGrids, puzzle::Puzzle, solvable::Solvable};
+        use std::str::FromStr;
+
+        #[test]
+        fn test_solvable() {
+            let solvable = vec![
+                "1 2 3 4/5 6 7 8/9 10 11 12/13 14 15 0",
+                "2 3 1 4/5 6 7 8/9 10 11 12/13 14 15 0",
+                "0 8 7/6 5 4/3 2 1",
+                "3 1/2 0",
+            ];
+            let unsolvable = vec![
+                "2 1 3 4/5 6 7 8/9 10 11 12/13 14 15 0",
+                "4 8 12 0/3 7 11 15/2 6 10 14/1 5 9 13",
+                "4 5 6/1 2 3/7 8 0",
+                "3 1 8/6 2 0/5 4 7",
+            ];
+            for s in solvable {
+                let p = Puzzle::from_str(s).unwrap();
+                assert!(RowGrids::solvable(&p));
+            }
+            for s in unsolvable {
+                let p = Puzzle::from_str(s).unwrap();
+                assert!(!RowGrids::solvable(&p));
+            }
+        }
+    }
+}
