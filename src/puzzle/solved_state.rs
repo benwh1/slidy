@@ -26,9 +26,8 @@ where
             .take(w * h - 1)
             .all(|(x, y)| {
                 // Label of piece in position (x, y)
-                let piece = puzzle.piece_at_xy(x, y).into() as usize;
-                let solved_pos = ((piece - 1) % w, (piece - 1) / w);
-                let piece_label = T::position_label(w, h, solved_pos.0, solved_pos.1);
+                let (sx, sy) = puzzle.solved_pos(puzzle.piece_at_xy(x, y));
+                let piece_label = T::position_label(w, h, sx, sy);
 
                 // Label of piece in position (x, y) on a solved puzzle
                 let solved_label = T::position_label(w, h, x, y);
