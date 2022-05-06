@@ -1,7 +1,7 @@
 use super::{
     label::label::{
-        ConcentricRectangles, Diagonals, Fringe, LastTwoRows, Rows, SplitFringe, SplitLastTwoRows,
-        SplitSquareFringe, SquareFringe,
+        ConcentricRectangles, Diagonals, Fringe, LastTwoRows, RowGrids, Rows, SplitFringe,
+        SplitLastTwoRows, SplitSquareFringe, SquareFringe,
     },
     sliding_puzzle::SlidingPuzzle,
 };
