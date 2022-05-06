@@ -5,4 +5,5 @@
 #![feature(iter_intersperse)]
 
 pub mod algorithm;
+pub mod event;
 pub mod puzzle;
