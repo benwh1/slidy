@@ -15,6 +15,7 @@ pub struct Diagonals;
 pub struct LastTwoRows;
 pub struct SplitLastTwoRows;
 pub struct ConcentricRectangles;
+pub struct Spiral;
 
 impl Label for RowGrids {
     fn position_label(width: usize, _height: usize, x: usize, y: usize) -> usize {
@@ -163,6 +164,49 @@ impl Label for ConcentricRectangles {
 
     fn num_labels(width: usize, height: usize) -> usize {
         width.min(height).div_ceil(2)
+    }
+}
+
+impl Label for Spiral {
+    fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
+        dbg!(x, y);
+        let rect_label = ConcentricRectangles::position_label(width, height, x, y);
+        dbg!(rect_label);
+
+        // (x, y, width, height) if we pretend that the concentric rectangle containing the piece
+        // is the whole puzzle.
+        // e.g. the piece in position (1, 1) on a 4x5 puzzle becomes piece (0, 0) on a 2x3 puzzle
+        // when we throw away the outer rectangle.
+        let (rx, ry, rw, rh) = (
+            x - rect_label,
+            y - rect_label,
+            width - 2 * rect_label,
+            height - 2 * rect_label,
+        );
+        dbg!(rx, ry, rw, rh);
+
+        // Which side of the rectangle is the piece on?
+        // If the rectangle has a side of length 1, just give the whole rectangle the same label
+        // (instead of giving all pieces the same label except one, and the last a different label)
+        let rect_side = if rw.min(rh) == 1 {
+            0
+        } else if ry == 0 && rx < rw - 1 {
+            0
+        } else if rx == rw - 1 && ry < rh - 1 {
+            1
+        } else if ry == rh - 1 && rx > 0 {
+            2
+        } else {
+            3
+        };
+
+        4 * rect_label + rect_side
+    }
+
+    fn num_labels(width: usize, height: usize) -> usize {
+        // 4 * number of rectangles of width and height > 1, plus 1 if the innermost rectangle has
+        // width or height 1.
+        4 * width.min(height).div_floor(2) + if width.min(height) % 2 == 1 { 1 } else { 0 }
     }
 }
 
@@ -471,6 +515,30 @@ mod tests {
             0, 1, 2, 2, 2, 1, 0,
             0, 1, 1, 1, 1, 1, 0,
             0, 0, 0, 0, 0, 0, 0,
+        ],
+    );
+
+    test_label!(
+        Spiral,
+        4 x 4: vec![
+            0, 0, 0, 1,
+            3, 4, 5, 1,
+            3, 7, 6, 1,
+            3, 2, 2, 2,
+        ],
+        4 x 6: vec![
+            0, 0, 0, 1,
+            3, 4, 5, 1,
+            3, 7, 5, 1,
+            3, 7, 5, 1,
+            3, 7, 6, 1,
+            3, 2, 2, 2,
+        ],
+        6 x 4: vec![
+            0, 0, 0, 0, 0, 1,
+            3, 4, 4, 4, 5, 1,
+            3, 7, 6, 6, 6, 1,
+            3, 2, 2, 2, 2, 2,
         ],
     );
 }
