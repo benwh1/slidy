@@ -28,7 +28,7 @@ macro_rules! create_relay {
     }
 }
 
-create_relay!(Single);
+create_relay!(Single, WidthRelay, HeightRelay);
 
 impl<'a> Iterator for RelayIterator<'a, Single<'a>> {
     type Item = SingleEvent<'a>;
@@ -36,6 +36,38 @@ impl<'a> Iterator for RelayIterator<'a, Single<'a>> {
     fn next(&mut self) -> Option<Self::Item> {
         let single = if self.index == 0 {
             Some(self.relay.start.clone())
+        } else {
+            None
+        };
+        self.index += 1;
+        single
+    }
+}
+
+impl<'a> Iterator for RelayIterator<'a, WidthRelay<'a>> {
+    type Item = SingleEvent<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let single = if self.index < self.relay.start.width {
+            let mut single = self.relay.start.clone();
+            single.width -= self.index;
+            Some(single)
+        } else {
+            None
+        };
+        self.index += 1;
+        single
+    }
+}
+
+impl<'a> Iterator for RelayIterator<'a, HeightRelay> {
+    type Item = SingleEvent<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let single = if self.index < self.relay.start.size().1 {
+            let mut single = self.relay.start.clone();
+            single.height -= self.index;
+            Some(single)
         } else {
             None
         };
