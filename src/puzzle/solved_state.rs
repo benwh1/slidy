@@ -5,7 +5,8 @@ pub trait SolvedState {
     fn is_solved<Piece, Puzzle>(puzzle: &Puzzle) -> bool
     where
         Piece: Into<u64>,
-        Puzzle: SlidingPuzzle<Piece>;
+        Puzzle: SlidingPuzzle<Piece>,
+        Self: Sized;
 }
 
 impl<T> SolvedState for T

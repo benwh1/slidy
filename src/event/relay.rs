@@ -60,11 +60,11 @@ impl<'a> Iterator for RelayIterator<'a, WidthRelay<'a>> {
     }
 }
 
-impl<'a> Iterator for RelayIterator<'a, HeightRelay> {
+impl<'a> Iterator for RelayIterator<'a, HeightRelay<'a>> {
     type Item = SingleEvent<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let single = if self.index < self.relay.start.size().1 {
+        let single = if self.index < self.relay.start.height {
             let mut single = self.relay.start.clone();
             single.height -= self.index;
             Some(single)
