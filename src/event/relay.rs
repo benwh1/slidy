@@ -1,25 +1,38 @@
-use super::single::Single as SingleSolve;
+use super::single::{Event, Single as SingleEvent};
 
 pub struct RelayIterator<'a, T> {
     relay: &'a T,
     index: usize,
 }
 
-pub struct Single<'a> {
-    start: &'a SingleSolve,
-}
-
-impl<'a> Single<'a> {
-    pub fn iter(&self) -> RelayIterator<Single> {
-        RelayIterator {
-            relay: self,
-            index: 0,
+macro_rules! create_relay {
+    () => {};
+    ($t:ident) => {
+        pub struct $t<'a> {
+            start: &'a SingleEvent<'a>,
         }
+
+        impl<'a> $t<'a> {
+            pub fn iter(&self) -> RelayIterator<$t> {
+                RelayIterator {
+                    relay: self,
+                    index: 0,
+                }
+            }
+        }
+
+        impl<'a> Event for $t<'a> {}
+    };
+    ($t:ident, $($t2:ident,)*) => {
+        create_relay!($t);
+        create_relay!($($t2,)*);
     }
 }
 
+create_relay!(Single,);
+
 impl<'a> Iterator for RelayIterator<'a, Single<'a>> {
-    type Item = SingleSolve;
+    type Item = SingleEvent<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let single = if self.index == 0 {
