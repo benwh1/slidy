@@ -1,21 +1,22 @@
 use crate::puzzle::{label::label::Label, sliding_puzzle::SlidingPuzzle};
 use itertools::Itertools;
 
-pub trait SolvedState<Piece, Puzzle>
-where
-    Piece: Into<u64>,
-    Puzzle: SlidingPuzzle<Piece>,
-{
-    fn is_solved(puzzle: &Puzzle) -> bool;
+pub trait SolvedState {
+    fn is_solved<Piece, Puzzle>(puzzle: &Puzzle) -> bool
+    where
+        Piece: Into<u64>,
+        Puzzle: SlidingPuzzle<Piece>;
 }
 
-impl<Piece, Puzzle, T> SolvedState<Piece, Puzzle> for T
+impl<T> SolvedState for T
 where
-    Piece: Into<u64>,
-    Puzzle: SlidingPuzzle<Piece>,
     T: Label,
 {
-    fn is_solved(puzzle: &Puzzle) -> bool {
+    fn is_solved<Piece, Puzzle>(puzzle: &Puzzle) -> bool
+    where
+        Piece: Into<u64>,
+        Puzzle: SlidingPuzzle<Piece>,
+    {
         let (w, h) = puzzle.size();
         if puzzle.gap_position_xy() != (w - 1, h - 1) {
             return false;

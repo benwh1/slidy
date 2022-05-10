@@ -29,8 +29,8 @@ where
 
     fn reset(&mut self);
 
-    fn is_solved<T: SolvedState<Piece, Self>>(&self) -> bool {
-        T::is_solved(self)
+    fn is_solved<T: SolvedState>(&self) -> bool {
+        T::is_solved::<Piece, Self>(self)
     }
 
     fn solved_pos(&self, piece: Piece) -> usize {
