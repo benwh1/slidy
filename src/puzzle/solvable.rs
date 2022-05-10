@@ -1,6 +1,6 @@
 use super::{
     label::label::{
-        ConcentricRectangles, Diagonals, Fringe, LastTwoRows, RowGrids, Rows, SplitFringe,
+        ConcentricRectangles, Diagonals, Fringe, LastTwoRows, RowGrids, Rows, Spiral, SplitFringe,
         SplitLastTwoRows, SplitSquareFringe, SquareFringe,
     },
     sliding_puzzle::SlidingPuzzle,
@@ -95,6 +95,21 @@ always_solvable!(
     SplitLastTwoRows,
     ConcentricRectangles,
 );
+
+impl<Piece, Puzzle> Solvable<Piece, Puzzle> for Spiral
+where
+    Piece: Into<u64>,
+    Puzzle: SlidingPuzzle<Piece>,
+{
+    fn solvable(puzzle: &Puzzle) -> bool {
+        // Always solvable unless puzzle is 2x2, then equivalent to RowGrids.
+        if puzzle.size() == (2, 2) {
+            RowGrids::solvable(puzzle)
+        } else {
+            true
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
