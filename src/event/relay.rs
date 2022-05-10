@@ -1,5 +1,4 @@
-#[derive(Clone)]
-pub struct SingleSolve;
+use super::single::Single as SingleSolve;
 
 pub struct RelayIterator<'a, T> {
     relay: &'a T,
