@@ -230,7 +230,7 @@ mod tests {
             test_label!(fn $name, $label, $w x $h, $pos_label, $pos_label.iter().max().unwrap() + 1);
         };
 
-        ($label:ty, $($w:literal x $h:literal : $pos:expr,)*) => {
+        ($label:ty, $($w:literal x $h:literal : $pos:expr),+ $(,)?) => {
             ::paste::paste! {
                 mod [< $label:snake >] {
                     use crate::puzzle::label::label::{Label, $label};

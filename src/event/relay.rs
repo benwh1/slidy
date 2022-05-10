@@ -6,7 +6,6 @@ pub struct RelayIterator<'a, T> {
 }
 
 macro_rules! create_relay {
-    () => {};
     ($t:ident) => {
         pub struct $t<'a> {
             start: &'a SingleEvent<'a>,
@@ -23,13 +22,13 @@ macro_rules! create_relay {
 
         impl<'a> Event for $t<'a> {}
     };
-    ($t:ident, $($t2:ident,)*) => {
+    ($t:ident, $($t2:ident),+ $(,)?) => {
         create_relay!($t);
-        create_relay!($($t2,)*);
+        create_relay!($($t2),+);
     }
 }
 
-create_relay!(Single,);
+create_relay!(Single);
 
 impl<'a> Iterator for RelayIterator<'a, Single<'a>> {
     type Item = SingleEvent<'a>;

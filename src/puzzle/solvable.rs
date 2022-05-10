@@ -66,7 +66,6 @@ where
 }
 
 macro_rules! always_solvable {
-    () => {};
     ($t:ty) => {
         impl<Piece, Puzzle> Solvable<Piece, Puzzle> for $t
         where
@@ -78,9 +77,9 @@ macro_rules! always_solvable {
             }
         }
     };
-    ($t:ty, $($t2:ty,)*) => {
+    ($t:ty, $($t2:ty),+ $(,)?) => {
         always_solvable!($t);
-        always_solvable!($($t2,)*);
+        always_solvable!($($t2),+);
     }
 }
 

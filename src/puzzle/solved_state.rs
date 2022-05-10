@@ -56,7 +56,7 @@ mod tests {
             }
         };
 
-        ($label:ty, $($i:literal : $ok:literal : $pos:literal,)*) => {
+        ($label:ty, $($i:literal : $ok:literal : $pos:literal),+ $(,)?) => {
             ::paste::paste! {
                 mod [< $label:snake >] {
                     use super::*;

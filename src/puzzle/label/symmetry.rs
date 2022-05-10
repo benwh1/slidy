@@ -171,7 +171,7 @@ mod tests {
             test_label!(fn $name, $label, $w x $h, $pos_label, $pos_label.iter().max().unwrap() + 1);
         };
 
-        ($label:ty, $($w:literal x $h:literal : $pos:expr,)*) => {
+        ($label:ty, $($w:literal x $h:literal : $pos:expr),+ $(,)?) => {
             ::paste::paste! {
                 mod [< $label:snake >] {
                     use crate::puzzle::label::label::Label;
@@ -187,7 +187,7 @@ mod tests {
         ($t:ident) => {
             type $t = super::$t<crate::puzzle::label::label::RowGrids>;
         };
-        ($t:ident, $($t2:ident),+) => {
+        ($t:ident, $($t2:ident),+ $(,)?) => {
             make_type!($t);
             make_type!($($t2),+);
         }
@@ -201,7 +201,7 @@ mod tests {
         ReflectVertical,
         ReflectHorizontal,
         ReflectDiagonal,
-        ReflectAntidiagonal
+        ReflectAntidiagonal,
     );
 
     test_label!(
