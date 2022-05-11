@@ -47,6 +47,13 @@ create_relay!(
     WidthHeightRelay,
 );
 
+pub struct Marathon<'a> {
+    start: &'a SingleEvent<'a>,
+    length: usize,
+}
+
+impl_relay!(Marathon);
+
 impl<'a> Iterator for RelayIterator<'a, Single<'a>> {
     type Item = SingleEvent<'a>;
 
@@ -120,6 +127,20 @@ impl<'a> Iterator for RelayIterator<'a, WidthHeightRelay<'a>> {
             single.width -= self.index % (w - 1);
             single.height -= self.index / (w - 1);
             Some(single)
+        } else {
+            None
+        };
+        self.index += 1;
+        single
+    }
+}
+
+impl<'a> Iterator for RelayIterator<'a, Marathon<'a>> {
+    type Item = SingleEvent<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let single = if self.index < self.relay.length {
+            Some(self.relay.start.clone())
         } else {
             None
         };
