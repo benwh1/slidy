@@ -5,12 +5,16 @@ pub struct RelayIterator<'a, T> {
     index: usize,
 }
 
-macro_rules! create_relay {
+macro_rules! define_relay {
     ($t:ident) => {
         pub struct $t<'a> {
             start: &'a SingleEvent<'a>,
         }
+    };
+}
 
+macro_rules! impl_relay {
+    ($t:ident) => {
         impl<'a> $t<'a> {
             pub fn iter(&self) -> RelayIterator<$t> {
                 RelayIterator {
@@ -21,6 +25,13 @@ macro_rules! create_relay {
         }
 
         impl<'a> Event for $t<'a> {}
+    };
+}
+
+macro_rules! create_relay {
+    ($t:ident) => {
+        define_relay!($t);
+        impl_relay!($t);
     };
     ($t:ident, $($t2:ident),+ $(,)?) => {
         create_relay!($t);
