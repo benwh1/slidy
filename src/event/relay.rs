@@ -1,4 +1,4 @@
-use super::single::{Event, Single as SingleEvent};
+use super::{event::Event, single::single::Single as SingleEvent};
 
 pub struct RelayIterator<'a, T> {
     relay: &'a T,
