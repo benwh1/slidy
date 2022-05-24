@@ -85,11 +85,22 @@ fn draw_centered_text(
     }
 }
 
+pub struct RenderOptions<'a, 'b, L, S>
+where
+    L: Label,
+    S: ColorScheme,
+{
+    label: L,
+    scheme: S,
+    font: &'a FontRef<'b>,
+    draw_borders: bool,
+    tile_size: u32,
+    font_size: f32,
+}
+
 pub fn render<Piece, P, L, S>(
     puzzle: &P,
-    _label: L,
-    scheme: S,
-    font: &FontRef,
+    options: RenderOptions<L, S>,
 ) -> ImageBuffer<Rgba<u8>, Vec<u8>>
 where
     Piece: Into<u64> + Copy,
@@ -97,11 +108,14 @@ where
     L: Label,
     S: ColorScheme,
 {
-    let tile_size = 75;
+    let tile_size = options.tile_size;
 
     let (w, h) = puzzle.size();
     let (w, h) = (w as u32, h as u32);
-    let (image_w, image_h) = (w * tile_size + 1, h * tile_size + 1);
+    let (image_w, image_h) = {
+        let a = if options.draw_borders { 1 } else { 0 };
+        (w * tile_size + a, h * tile_size + a)
+    };
 
     let mut img = RgbaImage::new(image_w as u32, image_h as u32);
 
@@ -113,23 +127,25 @@ where
                 let solved_pos = puzzle.solved_pos_xy(piece);
                 let label = L::position_label(w as usize, h as usize, solved_pos.0, solved_pos.1);
                 let num_labels = L::num_labels(w as usize, h as usize);
-                let color = convert_rgb(scheme.color(label, num_labels));
+                let color = convert_rgb(options.scheme.color(label, num_labels));
                 let (rect_x, rect_y) = ((tile_size * x) as i32, (tile_size * y) as i32);
                 let rect = Rect::at(rect_x, rect_y).of_size(tile_size, tile_size);
 
                 drawing::draw_filled_rect_mut(&mut img, rect, color);
-                drawing::draw_hollow_rect_mut(
-                    &mut img,
-                    Rect::at(rect_x, rect_y).of_size(tile_size + 1, tile_size + 1),
-                    Rgba([0u8, 0u8, 0u8, 255u8]),
-                );
+                if options.draw_borders {
+                    drawing::draw_hollow_rect_mut(
+                        &mut img,
+                        Rect::at(rect_x, rect_y).of_size(tile_size + 1, tile_size + 1),
+                        Rgba([0u8, 0u8, 0u8, 255u8]),
+                    );
+                }
 
                 let text = piece.into().to_string();
                 let (x, y) = (x as f32, y as f32);
                 draw_centered_text(
                     &mut img,
-                    &font,
-                    30.0,
+                    options.font,
+                    options.font_size,
                     (tile_size as f32 * (x + 0.5), tile_size as f32 * (y + 0.5)),
                     &text,
                 );
