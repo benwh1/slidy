@@ -77,9 +77,10 @@ fn draw_centered_text(
         let top_left = (rect.min.x as u32, rect.min.y as u32);
         outline.draw(|x, y, c| {
             let (px, py) = (top_left.0 + x, top_left.1 + y);
-            let pixel = image.get_pixel_mut(px, py);
-            let base_color = Rgba([0u8, 0u8, 0u8, (c * 255.0).floor() as u8]);
-            pixel.blend(&base_color);
+            if let Some(pixel) = image.get_pixel_mut_checked(px, py) {
+                let base_color = Rgba([0u8, 0u8, 0u8, (c * 255.0).floor() as u8]);
+                pixel.blend(&base_color);
+            }
         });
     }
 }
