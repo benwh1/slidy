@@ -6,6 +6,7 @@ use image::{ImageBuffer, Pixel, Rgba, RgbaImage};
 use imageproc::{drawing, rect::Rect};
 use itertools::Itertools;
 use palette::rgb::Rgb as PaletteRgb;
+use std::marker::PhantomData;
 
 fn convert_rgb(c: PaletteRgb) -> Rgba<u8> {
     let (r, g, b) = c.into_format::<u8>().into_components();
@@ -90,7 +91,7 @@ where
     L: Label,
     S: ColorScheme,
 {
-    label: L,
+    phantom: PhantomData<L>,
     scheme: S,
     font: &'a FontRef<'b>,
     draw_borders: bool,
