@@ -77,13 +77,15 @@ where
         }
     }
 
-    fn apply_move(&mut self, mv: Move) {
-        if !self.can_apply_move(mv) {
-            return;
-        }
-
+    fn apply_move_unchecked(&mut self, mv: Move) {
         for _ in 0..mv.amount {
             self.move_dir(mv.direction);
+        }
+    }
+
+    fn apply_move(&mut self, mv: Move) {
+        if self.can_apply_move(mv) {
+            self.apply_move_unchecked(mv);
         }
     }
 
@@ -106,9 +108,13 @@ where
         true
     }
 
+    fn apply_alg_unchecked(&mut self, alg: &Algorithm) {
+        alg.moves.iter().map(|&m| self.apply_move(m)).collect()
+    }
+
     fn apply_alg(&mut self, alg: &Algorithm) {
         if self.can_apply_alg(alg) {
-            alg.moves.iter().map(|&m| self.apply_move(m)).collect()
+            self.apply_alg_unchecked(alg);
         }
     }
 }
