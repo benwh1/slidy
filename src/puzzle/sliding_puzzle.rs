@@ -10,9 +10,11 @@ where
 {
     fn width(&self) -> usize;
     fn height(&self) -> usize;
+
     fn size(&self) -> (usize, usize) {
         (self.width(), self.height())
     }
+
     fn num_pieces(&self) -> usize {
         self.width() * self.height() - 1
     }
@@ -23,6 +25,7 @@ where
     fn gap_position_x(&self) -> usize {
         self.gap_position_xy().0
     }
+
     fn gap_position_y(&self) -> usize {
         self.gap_position_xy().1
     }
@@ -41,6 +44,7 @@ where
             p - 1
         }
     }
+
     fn solved_pos_xy(&self, piece: Piece) -> (usize, usize) {
         let p = self.solved_pos(piece);
         let w = self.width();
@@ -61,6 +65,7 @@ where
             Direction::Right => self.gap_position_x() > 0,
         }
     }
+
     fn move_dir(&mut self, dir: Direction);
 
     fn can_apply_move(&self, mv: Move) -> bool {
@@ -71,6 +76,7 @@ where
             Direction::Right => self.gap_position_x() >= mv.amount as usize,
         }
     }
+
     fn apply_move(&mut self, mv: Move) {
         if !self.can_apply_move(mv) {
             return;
@@ -99,6 +105,7 @@ where
         }
         true
     }
+
     fn apply_alg(&mut self, alg: &Algorithm) {
         if self.can_apply_alg(alg) {
             alg.moves.iter().map(|&m| self.apply_move(m)).collect()
