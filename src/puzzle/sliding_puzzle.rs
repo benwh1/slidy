@@ -100,6 +100,8 @@ where
         true
     }
     fn apply_alg(&mut self, alg: &Algorithm) {
-        alg.moves.iter().map(|&m| self.apply_move(m)).collect()
+        if self.can_apply_alg(alg) {
+            alg.moves.iter().map(|&m| self.apply_move(m)).collect()
+        }
     }
 }
