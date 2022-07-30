@@ -86,7 +86,7 @@ fn draw_centered_text(
     }
 }
 
-pub struct RenderOptions<'a, 'b, L, S>
+pub struct Renderer<'a, 'b, L, S>
 where
     L: Label,
     S: ColorScheme,
@@ -99,60 +99,62 @@ where
     font_size: f32,
 }
 
-pub fn render<Piece, P, L, S>(
-    puzzle: &P,
-    options: RenderOptions<L, S>,
-) -> ImageBuffer<Rgba<u8>, Vec<u8>>
+impl<'a, 'b, L, S> Renderer<'a, 'b, L, S>
 where
-    Piece: Into<u64> + Copy,
-    P: SlidingPuzzle<Piece>,
     L: Label,
     S: ColorScheme,
 {
-    let tile_size = options.tile_size;
+    pub fn render<Piece, P>(&self, puzzle: &P) -> ImageBuffer<Rgba<u8>, Vec<u8>>
+    where
+        Piece: Into<u64> + Copy,
+        P: SlidingPuzzle<Piece>,
+    {
+        let tile_size = self.tile_size;
 
-    let (w, h) = puzzle.size();
-    let (w, h) = (w as u32, h as u32);
-    let (image_w, image_h) = {
-        let a = if options.draw_borders { 1 } else { 0 };
-        (w * tile_size + a, h * tile_size + a)
-    };
+        let (w, h) = puzzle.size();
+        let (w, h) = (w as u32, h as u32);
+        let (image_w, image_h) = {
+            let a = if self.draw_borders { 1 } else { 0 };
+            (w * tile_size + a, h * tile_size + a)
+        };
 
-    let mut img = RgbaImage::new(image_w as u32, image_h as u32);
+        let mut img = RgbaImage::new(image_w as u32, image_h as u32);
 
-    for y in 0..h {
-        for x in 0..w {
-            let piece = puzzle.piece_at_xy(x as usize, y as usize);
+        for y in 0..h {
+            for x in 0..w {
+                let piece = puzzle.piece_at_xy(x as usize, y as usize);
 
-            if piece.into() != 0 {
-                let solved_pos = puzzle.solved_pos_xy(piece);
-                let label = L::position_label(w as usize, h as usize, solved_pos.0, solved_pos.1);
-                let num_labels = L::num_labels(w as usize, h as usize);
-                let color = convert_rgb(options.scheme.color(label, num_labels));
-                let (rect_x, rect_y) = ((tile_size * x) as i32, (tile_size * y) as i32);
-                let rect = Rect::at(rect_x, rect_y).of_size(tile_size, tile_size);
+                if piece.into() != 0 {
+                    let solved_pos = puzzle.solved_pos_xy(piece);
+                    let label =
+                        L::position_label(w as usize, h as usize, solved_pos.0, solved_pos.1);
+                    let num_labels = L::num_labels(w as usize, h as usize);
+                    let color = convert_rgb(self.scheme.color(label, num_labels));
+                    let (rect_x, rect_y) = ((tile_size * x) as i32, (tile_size * y) as i32);
+                    let rect = Rect::at(rect_x, rect_y).of_size(tile_size, tile_size);
 
-                drawing::draw_filled_rect_mut(&mut img, rect, color);
-                if options.draw_borders {
-                    drawing::draw_hollow_rect_mut(
+                    drawing::draw_filled_rect_mut(&mut img, rect, color);
+                    if self.draw_borders {
+                        drawing::draw_hollow_rect_mut(
+                            &mut img,
+                            Rect::at(rect_x, rect_y).of_size(tile_size + 1, tile_size + 1),
+                            Rgba([0u8, 0u8, 0u8, 255u8]),
+                        );
+                    }
+
+                    let text = piece.into().to_string();
+                    let (x, y) = (x as f32, y as f32);
+                    draw_centered_text(
                         &mut img,
-                        Rect::at(rect_x, rect_y).of_size(tile_size + 1, tile_size + 1),
-                        Rgba([0u8, 0u8, 0u8, 255u8]),
+                        self.font,
+                        self.font_size,
+                        (tile_size as f32 * (x + 0.5), tile_size as f32 * (y + 0.5)),
+                        &text,
                     );
                 }
-
-                let text = piece.into().to_string();
-                let (x, y) = (x as f32, y as f32);
-                draw_centered_text(
-                    &mut img,
-                    options.font,
-                    options.font_size,
-                    (tile_size as f32 * (x + 0.5), tile_size as f32 * (y + 0.5)),
-                    &text,
-                );
             }
         }
-    }
 
-    img
+        img
+    }
 }
