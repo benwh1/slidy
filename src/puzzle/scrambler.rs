@@ -10,7 +10,7 @@ where
     fn scramble(&self, puzzle: &mut P);
 }
 
-struct RandomState;
+pub struct RandomState;
 
 impl<P, Piece> Scrambler<P, Piece> for RandomState
 where
@@ -49,10 +49,10 @@ where
     }
 }
 
-struct RandomMoves {
-    moves: u64,
-    allow_cancellation: bool,
-    require_applyable: bool,
+pub struct RandomMoves {
+    pub moves: u64,
+    pub allow_cancellation: bool,
+    pub require_applyable: bool,
 }
 
 impl<P, Piece> Scrambler<P, Piece> for RandomMoves
@@ -81,8 +81,8 @@ where
     }
 }
 
-struct Cycle {
-    length: u64,
+pub struct Cycle {
+    pub length: u64,
 }
 
 impl<P, Piece> Scrambler<P, Piece> for Cycle
