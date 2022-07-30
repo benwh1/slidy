@@ -21,13 +21,13 @@ pub struct DisplayInline;
 impl Display for DisplayPuzzle<'_, DisplayGrid> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         let max_number = self.puzzle.num_pieces();
-        let num_digits = max_number.log10() + 1;
+        let num_digits = max_number.log10() as usize + 1;
         let (w, h) = self.puzzle.size();
         let mut s = String::new();
         for y in 0..h {
             for x in 0..w {
                 let n = self.puzzle.piece_at_xy(x, y);
-                let a = format!("{: >length$}", n, length = num_digits as usize);
+                let a = format!("{n: >num_digits$}");
                 s.push_str(&a);
                 s.push(' ');
             }
@@ -35,7 +35,7 @@ impl Display for DisplayPuzzle<'_, DisplayGrid> {
             s.push('\n');
         }
         s.pop();
-        write!(f, "{}", &s)
+        f.write_str(&s)
     }
 }
 
@@ -59,8 +59,7 @@ impl Display for DisplayPuzzle<'_, DisplayInline> {
 
 #[cfg(test)]
 mod tests {
-    use super::{DisplayGrid, DisplayPuzzle};
-    use crate::puzzle::{display::puzzle::DisplayInline, puzzle::Puzzle};
+    use super::*;
 
     #[test]
     fn test_display_grid() {
