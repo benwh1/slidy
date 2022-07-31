@@ -86,25 +86,25 @@ fn draw_centered_text(
     }
 }
 
-pub struct Renderer<'a, 'b, L, S>
+pub struct Renderer<'s, 'f, 'a, L, S>
 where
     L: Label,
     S: ColorScheme,
 {
     phantom: PhantomData<L>,
-    scheme: S,
-    font: &'a FontRef<'b>,
+    scheme: &'s S,
+    font: &'f FontRef<'a>,
     draw_borders: bool,
     tile_size: u32,
     font_size: f32,
 }
 
-impl<'a, 'b, L, S> Renderer<'a, 'b, L, S>
+impl<'s, 'f, 'a, L, S> Renderer<'s, 'f, 'a, L, S>
 where
     L: Label,
     S: ColorScheme,
 {
-    pub fn with_scheme_and_font(scheme: S, font: &'a FontRef<'b>) -> Self {
+    pub fn with_scheme_and_font(scheme: &'s S, font: &'f FontRef<'a>) -> Self {
         Self {
             phantom: PhantomData,
             scheme,
@@ -113,6 +113,15 @@ where
             tile_size: 75,
             font_size: 30.0,
         }
+    }
+
+    pub fn label(self, _: L) -> Self {
+        // The purpose of this function is to allow the generic parameter `L` to be deduced, so
+        // that we can write something like
+        // Renderer::with_scheme_and_font(&scheme, &font).label(L)
+        // instead of
+        // Renderer::<L, _>::with_scheme_and_font(&scheme, &font)
+        self
     }
 
     pub fn borders(mut self, draw: bool) -> Self {
