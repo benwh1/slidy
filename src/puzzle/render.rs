@@ -104,6 +104,32 @@ where
     L: Label,
     S: ColorScheme,
 {
+    pub fn with_scheme_and_font(scheme: S, font: &'a FontRef<'b>) -> Self {
+        Self {
+            phantom: PhantomData,
+            scheme,
+            font,
+            draw_borders: false,
+            tile_size: 75,
+            font_size: 30.0,
+        }
+    }
+
+    pub fn borders(mut self, draw: bool) -> Self {
+        self.draw_borders = draw;
+        self
+    }
+
+    pub fn tile_size(mut self, size: u32) -> Self {
+        self.tile_size = size;
+        self
+    }
+
+    pub fn font_size(mut self, size: f32) -> Self {
+        self.font_size = size;
+        self
+    }
+
     pub fn render<Piece, P>(&self, puzzle: &P) -> ImageBuffer<Rgba<u8>, Vec<u8>>
     where
         Piece: Into<u64> + Copy,
