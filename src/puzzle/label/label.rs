@@ -169,9 +169,7 @@ impl Label for ConcentricRectangles {
 
 impl Label for Spiral {
     fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
-        dbg!(x, y);
         let rect_label = ConcentricRectangles::position_label(width, height, x, y);
-        dbg!(rect_label);
 
         // (x, y, width, height) if we pretend that the concentric rectangle containing the piece
         // is the whole puzzle.
@@ -183,7 +181,6 @@ impl Label for Spiral {
             width - 2 * rect_label,
             height - 2 * rect_label,
         );
-        dbg!(rx, ry, rw, rh);
 
         // Which side of the rectangle is the piece on?
         // If the rectangle has a side of length 1, just give the whole rectangle the same label
