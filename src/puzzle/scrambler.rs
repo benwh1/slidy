@@ -107,3 +107,27 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::puzzle::puzzle::Puzzle;
+
+    mod random_state {
+        use super::*;
+        use crate::puzzle::{label::label::RowGrids, solvable::Solvable};
+
+        #[test]
+        fn test_solvable_4x4() {
+            for (w, h) in [(2, 2), (4, 4), (10, 2), (20, 20)] {
+                let mut p = Puzzle::new(w, h);
+                let x = RandomState;
+                for _ in 0..100 {
+                    p.reset();
+                    x.scramble(&mut p);
+                    assert!(RowGrids::solvable(&p));
+                }
+            }
+        }
+    }
+}
