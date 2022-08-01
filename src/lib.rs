@@ -6,5 +6,4 @@
 #![feature(let_else)]
 
 pub mod algorithm;
-pub mod event;
 pub mod puzzle;
