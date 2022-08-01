@@ -44,8 +44,8 @@ where
         let (w, h) = puzzle.size();
         let (d, r) = (rng.gen_range(0..h), rng.gen_range(0..w));
 
-        puzzle.apply_move(Move::new(Direction::Down, d as u32));
-        puzzle.apply_move(Move::new(Direction::Right, r as u32));
+        puzzle.apply_move_unchecked(Move::new(Direction::Down, d as u32));
+        puzzle.apply_move_unchecked(Move::new(Direction::Right, r as u32));
     }
 }
 
