@@ -131,11 +131,7 @@ impl SlidingPuzzle<u32> for Puzzle {
         self.swap_pieces(x1 + w * y1, x2 + w * y2)
     }
 
-    fn move_dir(&mut self, dir: Direction) {
-        if !self.can_move_dir(dir) {
-            return;
-        }
-
+    fn move_dir_unchecked(&mut self, dir: Direction) {
         let gap = self.gap_position();
         let piece = match dir {
             Direction::Up => gap + self.width(),

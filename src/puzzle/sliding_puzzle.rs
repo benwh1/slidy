@@ -66,7 +66,13 @@ where
         }
     }
 
-    fn move_dir(&mut self, dir: Direction);
+    fn move_dir_unchecked(&mut self, dir: Direction);
+
+    fn move_dir(&mut self, dir: Direction) {
+        if self.can_move_dir(dir) {
+            self.move_dir_unchecked(dir)
+        }
+    }
 
     fn can_apply_move(&self, mv: Move) -> bool {
         match mv.direction {
