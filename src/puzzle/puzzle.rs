@@ -111,6 +111,7 @@ impl SlidingPuzzle<u32> for Puzzle {
             self.pieces[i] = i as u32 + 1;
         }
         self.pieces[n] = 0;
+        self.gap = n;
     }
 
     fn piece_at(&self, idx: usize) -> u32 {
@@ -144,6 +145,7 @@ impl SlidingPuzzle<u32> for Puzzle {
         };
 
         self.pieces.swap(gap, piece);
+        self.gap = piece
     }
 }
 
