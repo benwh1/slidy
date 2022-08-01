@@ -85,7 +85,7 @@ where
 
     fn apply_move_unchecked(&mut self, mv: Move) {
         for _ in 0..mv.amount {
-            self.move_dir(mv.direction);
+            self.move_dir_unchecked(mv.direction);
         }
     }
 
