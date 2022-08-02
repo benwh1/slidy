@@ -7,7 +7,12 @@ where
     P: SlidingPuzzle<Piece>,
     Piece: Into<u64>,
 {
-    fn scramble(&self, puzzle: &mut P);
+    fn scramble(&self, puzzle: &mut P) {
+        let mut rng = rand::thread_rng();
+        self.scramble_with_rng(puzzle, &mut rng);
+    }
+
+    fn scramble_with_rng<R: Rng>(&self, puzzle: &mut P, rng: &mut R);
 }
 
 pub struct RandomState;
@@ -17,10 +22,8 @@ where
     P: SlidingPuzzle<Piece>,
     Piece: Into<u64>,
 {
-    fn scramble(&self, puzzle: &mut P) {
+    fn scramble_with_rng<R: Rng>(&self, puzzle: &mut P, rng: &mut R) {
         puzzle.reset();
-
-        let mut rng = rand::thread_rng();
 
         let n = puzzle.num_pieces();
         let mut parity = false;
@@ -60,9 +63,7 @@ where
     P: SlidingPuzzle<Piece>,
     Piece: Into<u64>,
 {
-    fn scramble(&self, puzzle: &mut P) {
-        let mut rng = rand::thread_rng();
-
+    fn scramble_with_rng<R: Rng>(&self, puzzle: &mut P, rng: &mut R) {
         let mut last_dir = None::<Direction>;
         for _ in 0..self.moves {
             let dir = {
@@ -90,13 +91,11 @@ where
     P: SlidingPuzzle<Piece>,
     Piece: Into<u64>,
 {
-    fn scramble(&self, puzzle: &mut P) {
-        let mut rng = rand::thread_rng();
-
+    fn scramble_with_rng<R: Rng>(&self, puzzle: &mut P, rng: &mut R) {
         let n = puzzle.num_pieces() as usize;
         let cycle_len = (self.length as usize).min(if n % 2 == 0 { n - 1 } else { n });
         let max = if cycle_len % 2 == 0 { n - 2 } else { n };
-        let pieces = rand::seq::index::sample(&mut rng, max, cycle_len);
+        let pieces = rand::seq::index::sample(rng, max, cycle_len);
 
         for i in 1..cycle_len {
             puzzle.swap_pieces(pieces.index(0), pieces.index(i));
