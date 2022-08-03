@@ -171,10 +171,11 @@ impl Label for Spiral {
     fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
         let rect_label = ConcentricRectangles::position_label(width, height, x, y);
 
-        // (x, y, width, height) if we pretend that the concentric rectangle containing the piece
-        // is the whole puzzle.
-        // e.g. the piece in position (1, 1) on a 4x5 puzzle becomes piece (0, 0) on a 2x3 puzzle
-        // when we throw away the outer rectangle.
+        // Calculate the values (x, y, width, height) if we were to strip off any outer rectangles
+        // from the puzzle.
+        // e.g. the piece in position (1, 1) on a 4x5 puzzle becomes the piece in position (0, 0)
+        // on a 2x3 puzzle when we remove the outer rectangle, so we would have
+        // (rx, ry, rw, rh) = (0, 0, 2, 3).
         let (rx, ry, rw, rh) = (
             x - rect_label,
             y - rect_label,
@@ -185,15 +186,17 @@ impl Label for Spiral {
         // Which side of the rectangle is the piece on?
         // If the rectangle has a side of length 1, just give the whole rectangle the same label
         // (instead of giving all pieces the same label except one, and the last a different label)
-        let rect_side = if rw.min(rh) == 1 {
-            0
-        } else if ry == 0 && rx < rw - 1 {
+        let rect_side = if rw.min(rh) == 1 || (ry == 0 && rx < rw - 1) {
+            // Top row
             0
         } else if rx == rw - 1 && ry < rh - 1 {
+            // Right column
             1
         } else if ry == rh - 1 && rx > 0 {
+            // Bottom row
             2
         } else {
+            // Left column
             3
         };
 
