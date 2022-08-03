@@ -1,53 +1,21 @@
 use super::label::Label;
 use std::marker::PhantomData;
 
-mod sym {
-    pub struct Id;
-    pub struct RotateCw;
-    pub struct RotateCcw;
-    pub struct RotateHalf;
-    pub struct ReflectVertical;
-    pub struct ReflectHorizontal;
-    pub struct ReflectDiagonal;
-    pub struct ReflectAntidiagonal;
-}
+pub struct Id;
+pub struct RotateCw;
+pub struct RotateCcw;
+pub struct RotateHalf;
+pub struct ReflectVertical;
+pub struct ReflectHorizontal;
+pub struct ReflectDiagonal;
+pub struct ReflectAntidiagonal;
 
 pub struct Symmetry<L, T> {
     phantom_l: PhantomData<L>,
     phantom_t: PhantomData<T>,
 }
 
-impl<L, T> Symmetry<L, T> {
-    pub fn new() -> Self {
-        Self {
-            phantom_l: PhantomData,
-            phantom_t: PhantomData,
-        }
-    }
-}
-
-macro_rules! make_type {
-    ($t:ident) => {
-        pub type $t<L> = Symmetry<L, sym::$t>;
-    };
-    ($t:ident, $($t2:ident),+) => {
-        make_type!($t);
-        make_type!($($t2),+);
-    }
-}
-
-make_type!(
-    Id,
-    RotateCw,
-    RotateCcw,
-    RotateHalf,
-    ReflectVertical,
-    ReflectHorizontal,
-    ReflectDiagonal,
-    ReflectAntidiagonal
-);
-
-impl<L> Label for Symmetry<L, sym::Id>
+impl<L> Label for Symmetry<L, Id>
 where
     L: Label,
 {
@@ -60,7 +28,7 @@ where
     }
 }
 
-impl<L> Label for Symmetry<L, sym::RotateCw>
+impl<L> Label for Symmetry<L, RotateCw>
 where
     L: Label,
 {
@@ -73,7 +41,7 @@ where
     }
 }
 
-impl<L> Label for Symmetry<L, sym::RotateCcw>
+impl<L> Label for Symmetry<L, RotateCcw>
 where
     L: Label,
 {
@@ -86,7 +54,7 @@ where
     }
 }
 
-impl<L> Label for Symmetry<L, sym::RotateHalf>
+impl<L> Label for Symmetry<L, RotateHalf>
 where
     L: Label,
 {
@@ -99,7 +67,7 @@ where
     }
 }
 
-impl<L> Label for Symmetry<L, sym::ReflectVertical>
+impl<L> Label for Symmetry<L, ReflectVertical>
 where
     L: Label,
 {
@@ -112,7 +80,7 @@ where
     }
 }
 
-impl<L> Label for Symmetry<L, sym::ReflectHorizontal>
+impl<L> Label for Symmetry<L, ReflectHorizontal>
 where
     L: Label,
 {
@@ -125,7 +93,7 @@ where
     }
 }
 
-impl<L> Label for Symmetry<L, sym::ReflectDiagonal>
+impl<L> Label for Symmetry<L, ReflectDiagonal>
 where
     L: Label,
 {
@@ -138,7 +106,7 @@ where
     }
 }
 
-impl<L> Label for Symmetry<L, sym::ReflectAntidiagonal>
+impl<L> Label for Symmetry<L, ReflectAntidiagonal>
 where
     L: Label,
 {
@@ -153,15 +121,17 @@ where
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     macro_rules! test_label {
         (fn $name:ident, $label:ty, $w:literal x $h:literal, $pos_label:expr, $num_labels:expr) => {
             #[test]
             fn $name() {
                 let wh = $w * $h;
                 let pos = (0..wh)
-                    .map(|i| <$label as Label>::position_label($w, $h, i % $w, i / $w))
+                    .map(|i| <Symmetry<RowGrids, $label> as Label>::position_label($w, $h, i % $w, i / $w))
                     .collect::<Vec<_>>();
-                let num = <$label as Label>::num_labels($w, $h);
+                let num = <Symmetry<RowGrids, $label>  as Label>::num_labels($w, $h);
                 assert_eq!(pos, $pos_label);
                 assert_eq!(num, $num_labels);
             }
@@ -174,35 +144,14 @@ mod tests {
         ($label:ty, $($w:literal x $h:literal : $pos:expr),+ $(,)?) => {
             ::paste::paste! {
                 mod [< $label:snake >] {
-                    use crate::puzzle::label::label::Label;
-                    use super::$label;
+                    use crate::puzzle::label::label::{Label, RowGrids};
+                    use super::{Symmetry, $label};
 
                     $(test_label!( fn [< test_ $label:snake _ $w x $h >] , $label, $w x $h, $pos);)*
                 }
             }
         };
     }
-
-    macro_rules! make_type {
-        ($t:ident) => {
-            type $t = super::$t<crate::puzzle::label::label::RowGrids>;
-        };
-        ($t:ident, $($t2:ident),+ $(,)?) => {
-            make_type!($t);
-            make_type!($($t2),+);
-        }
-    }
-
-    make_type!(
-        Id,
-        RotateCw,
-        RotateCcw,
-        RotateHalf,
-        ReflectVertical,
-        ReflectHorizontal,
-        ReflectDiagonal,
-        ReflectAntidiagonal,
-    );
 
     test_label!(
         Id,
