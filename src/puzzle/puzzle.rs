@@ -163,7 +163,7 @@ impl FromStr for Puzzle {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // Verify that no invalid characters are used
         for c in s.chars() {
-            if !(c.is_whitespace() || c.is_digit(10) || c == '/') {
+            if !(c.is_whitespace() || c.is_ascii_digit() || c == '/') {
                 return Err(ParsePuzzleError::InvalidCharacter(c));
             }
         }
