@@ -210,29 +210,25 @@ impl Label for Spiral {
 #[cfg(test)]
 mod tests {
     macro_rules! test_label {
-        (fn $name:ident, $label:ty, $w:literal x $h:literal, $pos_label:expr, $num_labels:expr) => {
+        (fn $name:ident, $label:ty, $w:literal x $h:literal, $labels:expr) => {
             #[test]
             fn $name() {
-                let wh = $w * $h;
-                let pos = (0..wh)
+                let labels = (0..$w * $h)
                     .map(|i| <$label as Label>::position_label($w, $h, i % $w, i / $w))
                     .collect::<Vec<_>>();
-                let num = <$label as Label>::num_labels($w, $h);
-                assert_eq!(pos, $pos_label);
-                assert_eq!(num, $num_labels);
+                let num_labels = <$label as Label>::num_labels($w, $h);
+                let expected_num_labels = $labels.iter().max().unwrap() + 1;
+                assert_eq!(labels, $labels);
+                assert_eq!(num_labels, expected_num_labels);
             }
         };
 
-        (fn $name:ident, $label:ty, $w:literal x $h:literal, $pos_label:expr) => {
-            test_label!(fn $name, $label, $w x $h, $pos_label, $pos_label.iter().max().unwrap() + 1);
-        };
-
-        ($label:ty, $($w:literal x $h:literal : $pos:expr),+ $(,)?) => {
+        ($label:ty, $($w:literal x $h:literal : $labels:expr),+ $(,)?) => {
             ::paste::paste! {
                 mod [< $label:snake >] {
                     use crate::puzzle::label::label::{Label, $label};
 
-                    $(test_label!( fn [< test_ $label:snake _ $w x $h >] , $label, $w x $h, $pos);)*
+                    $(test_label!( fn [< test_ $label:snake _ $w x $h >] , $label, $w x $h, $labels);)*
                 }
             }
         };
