@@ -1,3 +1,5 @@
+use num_traits::PrimInt;
+
 use crate::{
     algorithm::{algorithm::Algorithm, direction::Direction, puzzle_move::Move},
     puzzle::solved_state::SolvedState,
@@ -5,7 +7,7 @@ use crate::{
 
 pub trait SlidingPuzzle<Piece>
 where
-    Piece: Into<u64>,
+    Piece: PrimInt,
     Self: Sized,
 {
     fn width(&self) -> usize;
@@ -37,11 +39,10 @@ where
     }
 
     fn solved_pos(&self, piece: Piece) -> usize {
-        let p = piece.into() as usize;
-        if p == 0 {
+        if piece == Piece::zero() {
             self.num_pieces()
         } else {
-            p - 1
+            piece.to_usize().expect("Failed to convert Piece to usize") - 1
         }
     }
 

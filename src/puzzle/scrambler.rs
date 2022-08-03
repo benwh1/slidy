@@ -1,11 +1,12 @@
 use super::sliding_puzzle::SlidingPuzzle;
 use crate::algorithm::{direction::Direction, puzzle_move::Move};
+use num_traits::PrimInt;
 use rand::Rng;
 
 pub trait Scrambler<P, Piece>
 where
     P: SlidingPuzzle<Piece>,
-    Piece: Into<u64>,
+    Piece: PrimInt,
 {
     fn scramble(&self, puzzle: &mut P) {
         let mut rng = rand::thread_rng();
@@ -20,7 +21,7 @@ pub struct RandomState;
 impl<P, Piece> Scrambler<P, Piece> for RandomState
 where
     P: SlidingPuzzle<Piece>,
-    Piece: Into<u64>,
+    Piece: PrimInt,
 {
     fn scramble_with_rng<R: Rng>(&self, puzzle: &mut P, rng: &mut R) {
         puzzle.reset();
@@ -61,7 +62,7 @@ pub struct RandomMoves {
 impl<P, Piece> Scrambler<P, Piece> for RandomMoves
 where
     P: SlidingPuzzle<Piece>,
-    Piece: Into<u64>,
+    Piece: PrimInt,
 {
     fn scramble_with_rng<R: Rng>(&self, puzzle: &mut P, rng: &mut R) {
         let mut last_dir = None::<Direction>;
@@ -89,7 +90,7 @@ pub struct Cycle {
 impl<P, Piece> Scrambler<P, Piece> for Cycle
 where
     P: SlidingPuzzle<Piece>,
-    Piece: Into<u64>,
+    Piece: PrimInt,
 {
     fn scramble_with_rng<R: Rng>(&self, puzzle: &mut P, rng: &mut R) {
         let n = puzzle.num_pieces() as usize;

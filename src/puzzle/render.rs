@@ -5,8 +5,9 @@ use ab_glyph::{point, Font, FontRef, ScaleFont};
 use image::{ImageBuffer, Pixel, Rgba, RgbaImage};
 use imageproc::{drawing, rect::Rect};
 use itertools::Itertools;
+use num_traits::PrimInt;
 use palette::rgb::Rgb as PaletteRgb;
-use std::marker::PhantomData;
+use std::{fmt::Display, marker::PhantomData};
 
 fn convert_rgb(c: PaletteRgb) -> Rgba<u8> {
     let (r, g, b) = c.into_format::<u8>().into_components();
@@ -141,7 +142,7 @@ where
 
     pub fn render<Piece, P>(&self, puzzle: &P) -> ImageBuffer<Rgba<u8>, Vec<u8>>
     where
-        Piece: Into<u64> + Copy,
+        Piece: PrimInt + Display,
         P: SlidingPuzzle<Piece>,
     {
         let tile_size = self.tile_size;
@@ -159,7 +160,7 @@ where
             for x in 0..w {
                 let piece = puzzle.piece_at_xy(x as usize, y as usize);
 
-                if piece.into() != 0 {
+                if piece != Piece::zero() {
                     let solved_pos = puzzle.solved_pos_xy(piece);
                     let label =
                         L::position_label(w as usize, h as usize, solved_pos.0, solved_pos.1);
@@ -177,7 +178,7 @@ where
                         );
                     }
 
-                    let text = piece.into().to_string();
+                    let text = piece.to_string();
                     let (x, y) = (x as f32, y as f32);
                     draw_centered_text(
                         &mut img,

@@ -1,3 +1,5 @@
+use num_traits::PrimInt;
+
 use super::{
     label::label::{
         ConcentricRectangles, Diagonals, Fringe, LastTwoRows, RowGrids, Rows, Spiral, SplitFringe,
@@ -8,7 +10,7 @@ use super::{
 
 pub trait Solvable<Piece, Puzzle>
 where
-    Piece: Into<u64>,
+    Piece: PrimInt,
     Puzzle: SlidingPuzzle<Piece>,
 {
     fn solvable(puzzle: &Puzzle) -> bool;
@@ -16,7 +18,7 @@ where
 
 impl<Piece, Puzzle> Solvable<Piece, Puzzle> for RowGrids
 where
-    Piece: Into<u64>,
+    Piece: PrimInt,
     Puzzle: SlidingPuzzle<Piece>,
 {
     fn solvable(puzzle: &Puzzle) -> bool {
@@ -69,7 +71,7 @@ macro_rules! always_solvable {
     ($t:ty) => {
         impl<Piece, Puzzle> Solvable<Piece, Puzzle> for $t
         where
-            Piece: Into<u64>,
+            Piece: PrimInt,
             Puzzle: SlidingPuzzle<Piece>,
         {
             fn solvable(_puzzle: &Puzzle) -> bool {
@@ -97,7 +99,7 @@ always_solvable!(
 
 impl<Piece, Puzzle> Solvable<Piece, Puzzle> for Spiral
 where
-    Piece: Into<u64>,
+    Piece: PrimInt,
     Puzzle: SlidingPuzzle<Piece>,
 {
     fn solvable(puzzle: &Puzzle) -> bool {

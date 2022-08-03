@@ -1,10 +1,11 @@
 use crate::puzzle::{label::label::Label, sliding_puzzle::SlidingPuzzle};
 use itertools::Itertools;
+use num_traits::PrimInt;
 
 pub trait SolvedState {
     fn is_solved<Piece, Puzzle>(puzzle: &Puzzle) -> bool
     where
-        Piece: Into<u64>,
+        Piece: PrimInt,
         Puzzle: SlidingPuzzle<Piece>,
         Self: Sized;
 }
@@ -15,7 +16,7 @@ where
 {
     fn is_solved<Piece, Puzzle>(puzzle: &Puzzle) -> bool
     where
-        Piece: Into<u64>,
+        Piece: PrimInt,
         Puzzle: SlidingPuzzle<Piece>,
     {
         let (w, h) = puzzle.size();
