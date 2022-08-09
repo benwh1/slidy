@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use num_traits::{PrimInt, Unsigned};
 
 use crate::puzzle::sliding_puzzle::SlidingPuzzle;
@@ -9,4 +10,32 @@ where
     T: PrimInt + Unsigned,
 {
     fn bound(&self, puzzle: &Puzzle) -> T;
+}
+
+pub struct ManhattanDistance;
+
+impl<Piece, Puzzle, T> Heuristic<Piece, Puzzle, T> for ManhattanDistance
+where
+    Piece: PrimInt,
+    Puzzle: SlidingPuzzle<Piece>,
+    T: PrimInt + Unsigned + TryFrom<usize>,
+{
+    fn bound(&self, puzzle: &Puzzle) -> T {
+        let (w, h) = puzzle.size();
+        (0..w)
+            .cartesian_product(0..h)
+            .map(|(x, y)| {
+                let piece = puzzle.piece_at_xy(x, y);
+                let (a, b) = puzzle.solved_pos_xy(piece);
+
+                if piece == Piece::zero() {
+                    0
+                } else {
+                    x.abs_diff(a) + y.abs_diff(b)
+                }
+            })
+            .sum::<usize>()
+            .try_into()
+            .unwrap_or(T::zero())
+    }
 }
