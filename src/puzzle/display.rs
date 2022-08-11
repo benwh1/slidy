@@ -39,7 +39,7 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         let max_number = self.puzzle.num_pieces();
-        let num_digits = max_number.log10() as usize + 1;
+        let num_digits = max_number.ilog10() as usize + 1;
         let (w, h) = self.puzzle.size();
         let mut s = String::new();
         for y in 0..h {
