@@ -145,6 +145,12 @@ impl SlidingPuzzle<u32> for Puzzle {
     }
 }
 
+impl Default for Puzzle {
+    fn default() -> Self {
+        Puzzle::new(4, 4)
+    }
+}
+
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 pub enum ParsePuzzleError {
     #[error("InvalidCharacter: character {0} is invalid")]
