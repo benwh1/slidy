@@ -2,6 +2,8 @@ use rand::{distributions::Standard, prelude::Distribution};
 use std::fmt::Display;
 use thiserror::Error;
 
+use crate::algorithm::puzzle_move::Move;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Direction {
     Up,
@@ -33,6 +35,15 @@ impl Display for Direction {
                 Self::Right => "R",
             }
         )
+    }
+}
+
+impl Into<Move> for Direction {
+    fn into(self) -> Move {
+        Move {
+            direction: self,
+            amount: 1,
+        }
     }
 }
 
