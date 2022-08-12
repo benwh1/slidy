@@ -69,9 +69,12 @@ where
 
     fn move_dir_unchecked(&mut self, dir: Direction);
 
-    fn move_dir(&mut self, dir: Direction) {
+    fn move_dir(&mut self, dir: Direction) -> bool {
         if self.can_move_dir(dir) {
-            self.move_dir_unchecked(dir)
+            self.move_dir_unchecked(dir);
+            true
+        } else {
+            false
         }
     }
 
@@ -90,9 +93,12 @@ where
         }
     }
 
-    fn apply_move(&mut self, mv: Move) {
+    fn apply_move(&mut self, mv: Move) -> bool {
         if self.can_apply_move(mv) {
             self.apply_move_unchecked(mv);
+            true
+        } else {
+            false
         }
     }
 
@@ -122,9 +128,12 @@ where
             .collect()
     }
 
-    fn apply_alg(&mut self, alg: &Algorithm) {
+    fn apply_alg(&mut self, alg: &Algorithm) -> bool {
         if self.can_apply_alg(alg) {
             self.apply_alg_unchecked(alg);
+            true
+        } else {
+            false
         }
     }
 }
