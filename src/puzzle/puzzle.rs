@@ -18,8 +18,8 @@ pub enum PuzzleError {
     #[error("Empty: grid is empty")]
     Empty,
 
-    #[error("MismatchedRowLengths: all row lengths must be equal")]
-    MismatchedRowLengths,
+    #[error("UnequalRowLengths: all row lengths must be equal")]
+    UnequalRowLengths,
 
     #[error("PieceOutOfRange: piece {0} is out of range")]
     PieceOutOfRange(u32),
@@ -52,7 +52,7 @@ impl Puzzle {
 
         // Check if all rows are the same length
         if grid.iter().any(|r| r.len() != w) {
-            return Err(PuzzleError::MismatchedRowLengths);
+            return Err(PuzzleError::UnequalRowLengths);
         }
 
         let mut gap = None;
