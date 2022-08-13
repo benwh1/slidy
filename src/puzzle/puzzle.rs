@@ -47,6 +47,10 @@ impl Puzzle {
             return Err(PuzzleError::Empty);
         }
 
+        if grid[0].is_empty() {
+            return Err(PuzzleError::Empty);
+        }
+
         let w = grid[0].len();
         let h = grid.len();
 
