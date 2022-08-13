@@ -118,7 +118,7 @@ mod tests {
         use crate::puzzle::{label::label::RowGrids, solvable::Solvable};
 
         #[test]
-        fn test_solvable_4x4() {
+        fn test_solvable() {
             for (w, h) in [(2, 2), (4, 4), (10, 2), (20, 20)] {
                 let mut p = Puzzle::new(w, h).unwrap();
                 let x = RandomState;
