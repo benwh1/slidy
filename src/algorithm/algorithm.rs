@@ -19,6 +19,10 @@ impl Algorithm {
         self.moves.iter().map(|m| m.amount).sum()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.moves.is_empty()
+    }
+
     pub fn push(&mut self, m: Move) {
         self.moves.push(m)
     }
