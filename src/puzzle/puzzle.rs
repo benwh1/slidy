@@ -15,6 +15,9 @@ pub struct Puzzle {
 
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum PuzzleError {
+    #[error("InvalidSize: width ({0}) and height ({1}) must be at least 1")]
+    InvalidSize(usize, usize),
+
     #[error("Empty: grid is empty")]
     Empty,
 
@@ -29,16 +32,20 @@ pub enum PuzzleError {
 }
 
 impl Puzzle {
-    pub fn new(width: usize, height: usize) -> Puzzle {
-        Puzzle {
-            pieces: {
-                let mut v: Vec<u32> = (1..(width * height) as u32).collect();
-                v.push(0);
-                v
-            },
-            width,
-            height,
-            gap: width * height - 1,
+    pub fn new(width: usize, height: usize) -> Result<Puzzle, PuzzleError> {
+        if width < 1 || height < 1 {
+            Err(PuzzleError::InvalidSize(width, height))
+        } else {
+            Ok(Puzzle {
+                pieces: {
+                    let mut v: Vec<u32> = (1..(width * height) as u32).collect();
+                    v.push(0);
+                    v
+                },
+                width,
+                height,
+                gap: width * height - 1,
+            })
         }
     }
 
@@ -151,7 +158,7 @@ impl SlidingPuzzle<u32> for Puzzle {
 
 impl Default for Puzzle {
     fn default() -> Self {
-        Puzzle::new(4, 4)
+        Puzzle::new(4, 4).unwrap()
     }
 }
 
