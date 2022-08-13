@@ -1,54 +1,55 @@
+use std::fmt::Display;
+
 use crate::algorithm::puzzle_move::Move;
-use std::{fmt::Display, marker::PhantomData};
 
-pub struct DisplayMove<'a, T> {
-    mv: &'a Move,
-    phantom: PhantomData<T>,
+/// Marker trait for structs that are used to display moves
+pub trait MoveDisplay {
+    fn new(mv: Move) -> Self;
 }
 
-impl<'a, T> DisplayMove<'a, T> {
-    pub fn new(mv: &'a Move) -> Self {
-        Self {
-            mv,
-            phantom: PhantomData,
+macro_rules! define_display {
+    ($name:ident) => {
+        pub struct $name(Move);
+
+        impl MoveDisplay for $name {
+            fn new(mv: Move) -> Self {
+                Self(mv)
+            }
         }
-    }
+    };
 }
 
-pub struct DisplayLongSpaced;
-pub struct DisplayLongUnspaced;
-pub struct DisplayShort;
+define_display!(DisplayLongSpaced);
+define_display!(DisplayLongUnspaced);
+define_display!(DisplayShort);
 
-impl Display for DisplayMove<'_, DisplayLongSpaced> {
+impl Display for DisplayLongSpaced {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut s = self.mv.direction.to_string();
+        let mut s = self.0.direction.to_string();
         s.push(' ');
-        s = s.repeat(self.mv.amount as usize);
+        s = s.repeat(self.0.amount as usize);
         s.pop();
 
         write!(f, "{}", s)
     }
 }
 
-impl Display for DisplayMove<'_, DisplayLongUnspaced> {
+impl Display for DisplayLongUnspaced {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "{}",
-            self.mv
-                .direction
-                .to_string()
-                .repeat(self.mv.amount as usize)
+            self.0.direction.to_string().repeat(self.0.amount as usize)
         )
     }
 }
 
-impl Display for DisplayMove<'_, DisplayShort> {
+impl Display for DisplayShort {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.mv.amount == 1 {
-            write!(f, "{}", self.mv.direction)
+        if self.0.amount == 1 {
+            write!(f, "{}", self.0.direction)
         } else {
-            write!(f, "{}{}", self.mv.direction, self.mv.amount)
+            write!(f, "{}{}", self.0.direction, self.0.amount)
         }
     }
 }
@@ -67,9 +68,9 @@ mod tests {
             direction: Direction::Up,
             amount: 1,
         };
-        assert_eq!(m.display::<DisplayLongSpaced>().to_string(), "U");
-        assert_eq!(m.display::<DisplayLongUnspaced>().to_string(), "U");
-        assert_eq!(m.display::<DisplayShort>().to_string(), "U");
+        assert_eq!(DisplayLongSpaced(m).to_string(), "U");
+        assert_eq!(DisplayLongUnspaced(m).to_string(), "U");
+        assert_eq!(DisplayShort(m).to_string(), "U");
     }
 
     #[test]
@@ -78,8 +79,8 @@ mod tests {
             direction: Direction::Up,
             amount: 3,
         };
-        assert_eq!(m.display::<DisplayLongSpaced>().to_string(), "U U U");
-        assert_eq!(m.display::<DisplayLongUnspaced>().to_string(), "UUU");
-        assert_eq!(m.display::<DisplayShort>().to_string(), "U3");
+        assert_eq!(DisplayLongSpaced(m).to_string(), "U U U");
+        assert_eq!(DisplayLongUnspaced(m).to_string(), "UUU");
+        assert_eq!(DisplayShort(m).to_string(), "U3");
     }
 }

@@ -1,56 +1,57 @@
-use super::puzzle_move::DisplayMove;
+use super::puzzle_move::MoveDisplay;
 use crate::algorithm::algorithm::Algorithm;
 use std::{fmt::Display, marker::PhantomData};
 
-pub struct DisplaySpaced;
-pub struct DisplayUnspaced;
-
-pub struct DisplayAlgorithm<'a, T1, T2> {
-    alg: &'a Algorithm,
-    phantom_t1: PhantomData<T1>,
-    phantom_t2: PhantomData<T2>,
+/// Marker trait for structs that are used to display algorithms
+pub trait AlgorithmDisplay<'a> {
+    fn new(algorithm: &'a Algorithm) -> Self;
 }
 
-impl<'a, T1, T2> DisplayAlgorithm<'a, T1, T2> {
-    pub fn new(alg: &'a Algorithm) -> Self {
-        Self {
-            alg,
-            phantom_t1: PhantomData,
-            phantom_t2: PhantomData,
+macro_rules! define_display {
+    ($name:ident) => {
+        pub struct $name<'a, T: MoveDisplay + Display> {
+            algorithm: &'a Algorithm,
+            phantom_t: PhantomData<T>,
         }
-    }
+
+        impl<'a, T: MoveDisplay + Display> AlgorithmDisplay<'a> for $name<'a, T> {
+            fn new(algorithm: &'a Algorithm) -> Self {
+                Self {
+                    algorithm,
+                    phantom_t: PhantomData,
+                }
+            }
+        }
+    };
 }
 
-impl<'a, T> Display for DisplayAlgorithm<'a, DisplaySpaced, T>
-where
-    DisplayMove<'a, T>: Display,
-{
+define_display!(DisplaySpaced);
+define_display!(DisplayUnspaced);
+
+impl<'a, T: MoveDisplay + Display> Display for DisplaySpaced<'a, T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "{}",
-            self.alg
+            self.algorithm
                 .moves
                 .iter()
-                .map(|m| m.display::<T>().to_string())
+                .map(|m| T::new(*m).to_string())
                 .intersperse(" ".to_string())
                 .collect::<String>()
         )
     }
 }
 
-impl<'a, T> Display for DisplayAlgorithm<'a, DisplayUnspaced, T>
-where
-    DisplayMove<'a, T>: Display,
-{
+impl<'a, T: MoveDisplay + Display> Display for DisplayUnspaced<'a, T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "{}",
-            self.alg
+            self.algorithm
                 .moves
                 .iter()
-                .map(|m| m.display::<T>().to_string())
+                .map(|m| T::new(*m).to_string())
                 .collect::<String>()
         )
     }
@@ -61,7 +62,7 @@ mod tests {
     use crate::algorithm::{
         algorithm::Algorithm,
         display::{
-            algorithm::{DisplayAlgorithm, DisplaySpaced, DisplayUnspaced},
+            algorithm::{AlgorithmDisplay, DisplaySpaced, DisplayUnspaced},
             puzzle_move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
         },
     };
@@ -70,12 +71,12 @@ mod tests {
     #[test]
     fn test_display() {
         let a = Algorithm::from_str("U2RDL3").unwrap();
-        let d1 = DisplayAlgorithm::<DisplaySpaced, DisplayLongSpaced>::new(&a).to_string();
-        let d2 = DisplayAlgorithm::<DisplaySpaced, DisplayLongUnspaced>::new(&a).to_string();
-        let d3 = DisplayAlgorithm::<DisplaySpaced, DisplayShort>::new(&a).to_string();
-        let d4 = DisplayAlgorithm::<DisplayUnspaced, DisplayLongSpaced>::new(&a).to_string();
-        let d5 = DisplayAlgorithm::<DisplayUnspaced, DisplayLongUnspaced>::new(&a).to_string();
-        let d6 = DisplayAlgorithm::<DisplayUnspaced, DisplayShort>::new(&a).to_string();
+        let d1 = DisplaySpaced::<DisplayLongSpaced>::new(&a).to_string();
+        let d2 = DisplaySpaced::<DisplayLongUnspaced>::new(&a).to_string();
+        let d3 = DisplaySpaced::<DisplayShort>::new(&a).to_string();
+        let d4 = DisplayUnspaced::<DisplayLongSpaced>::new(&a).to_string();
+        let d5 = DisplayUnspaced::<DisplayLongUnspaced>::new(&a).to_string();
+        let d6 = DisplayUnspaced::<DisplayShort>::new(&a).to_string();
         assert_eq!(d1, "U U R D L L L");
         assert_eq!(d2, "UU R D LLL");
         assert_eq!(d3, "U2 R D L3");

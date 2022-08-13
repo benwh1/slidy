@@ -1,4 +1,4 @@
-use super::{direction::Direction, display::puzzle_move::DisplayMove};
+use super::direction::Direction;
 use std::{cmp::Ordering, ops::Add};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -23,10 +23,6 @@ impl Move {
             direction: self.direction.inverse(),
             amount: self.amount,
         }
-    }
-
-    pub fn display<T>(&self) -> DisplayMove<'_, T> {
-        DisplayMove::<T>::new(self)
     }
 }
 
