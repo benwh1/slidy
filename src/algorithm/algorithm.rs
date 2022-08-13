@@ -15,7 +15,7 @@ impl Algorithm {
         Self { moves }
     }
 
-    pub fn length(&self) -> u32 {
+    pub fn len(&self) -> u32 {
         self.moves.iter().map(|m| m.amount).sum()
     }
 
