@@ -30,6 +30,15 @@ impl Move {
     }
 }
 
+impl From<Direction> for Move {
+    fn from(direction: Direction) -> Self {
+        Self {
+            direction,
+            amount: 1,
+        }
+    }
+}
+
 impl Add for Move {
     type Output = MoveSum;
 
