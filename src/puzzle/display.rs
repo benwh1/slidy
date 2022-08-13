@@ -87,7 +87,7 @@ mod tests {
 
     #[test]
     fn test_display_grid() {
-        let p = Puzzle::new(4, 4);
+        let p = Puzzle::new(4, 4).unwrap();
         let a = DisplayGrid::new(&p);
         let s = a.to_string();
         assert_eq!(s, " 1  2  3  4\n 5  6  7  8\n 9 10 11 12\n13 14 15  0");
@@ -95,7 +95,7 @@ mod tests {
 
     #[test]
     fn test_display_inline() {
-        let p = Puzzle::new(4, 4);
+        let p = Puzzle::new(4, 4).unwrap();
         let a = DisplayInline::new(&p);
         let s = a.to_string();
         assert_eq!(s, "1 2 3 4/5 6 7 8/9 10 11 12/13 14 15 0");
