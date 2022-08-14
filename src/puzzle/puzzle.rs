@@ -134,12 +134,12 @@ impl SlidingPuzzle<u32> for Puzzle {
     }
 
     fn swap_pieces(&mut self, idx1: usize, idx2: usize) {
-        self.pieces.swap(idx1, idx2)
+        self.pieces.swap(idx1, idx2);
     }
 
     fn swap_pieces_xy(&mut self, x1: usize, y1: usize, x2: usize, y2: usize) {
         let w = self.width();
-        self.swap_pieces(x1 + w * y1, x2 + w * y2)
+        self.swap_pieces(x1 + w * y1, x2 + w * y2);
     }
 
     fn move_dir_unchecked(&mut self, dir: Direction) {
@@ -152,7 +152,7 @@ impl SlidingPuzzle<u32> for Puzzle {
         };
 
         self.pieces.swap(gap, piece);
-        self.gap = piece
+        self.gap = piece;
     }
 }
 

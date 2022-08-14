@@ -24,7 +24,7 @@ impl Algorithm {
     }
 
     pub fn push(&mut self, m: Move) {
-        self.moves.push(m)
+        self.moves.push(m);
     }
 
     pub fn simplified(&self) -> Self {
