@@ -29,7 +29,7 @@ impl Algorithm {
 
     pub fn simplified(&self) -> Self {
         if self.moves.len() < 2 {
-            return Algorithm::new(self.moves.clone());
+            return Self::new(self.moves.clone());
         }
 
         let mut moves = Vec::new();
@@ -71,7 +71,7 @@ impl Algorithm {
             moves.push(mv);
         }
 
-        Algorithm::new(moves)
+        Self::new(moves)
     }
 
     pub fn simplify(&mut self) {
@@ -79,7 +79,7 @@ impl Algorithm {
     }
 
     pub fn inverse(&self) -> Self {
-        Algorithm {
+        Self {
             moves: self.moves.iter().rev().map(|m| m.inverse()).collect(),
         }
     }
@@ -169,7 +169,7 @@ impl Add for Algorithm {
         let mut moves = self.moves;
         let mut moves2 = rhs.moves;
         moves.append(&mut moves2);
-        Algorithm { moves }
+        Self { moves }
     }
 }
 

@@ -40,17 +40,17 @@ impl Add for Move {
 
     fn add(self, rhs: Self) -> Self::Output {
         if self.direction == rhs.direction {
-            MoveSum::Ok(Move {
+            MoveSum::Ok(Self {
                 direction: self.direction,
                 amount: self.amount + rhs.amount,
             })
         } else if self.direction == rhs.direction.inverse() {
             match self.amount.cmp(&rhs.amount) {
-                Ordering::Less => MoveSum::Ok(Move {
+                Ordering::Less => MoveSum::Ok(Self {
                     direction: rhs.direction,
                     amount: rhs.amount - self.amount,
                 }),
-                Ordering::Equal | Ordering::Greater => MoveSum::Ok(Move {
+                Ordering::Equal | Ordering::Greater => MoveSum::Ok(Self {
                     direction: self.direction,
                     amount: self.amount - rhs.amount,
                 }),

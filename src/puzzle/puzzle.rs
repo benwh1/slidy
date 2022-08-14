@@ -32,11 +32,11 @@ pub enum PuzzleError {
 }
 
 impl Puzzle {
-    pub fn new(width: usize, height: usize) -> Result<Puzzle, PuzzleError> {
+    pub fn new(width: usize, height: usize) -> Result<Self, PuzzleError> {
         if width < 1 || height < 1 {
             Err(PuzzleError::InvalidSize(width, height))
         } else {
-            Ok(Puzzle {
+            Ok(Self {
                 pieces: {
                     let mut v: Vec<u32> = (1..(width * height) as u32).collect();
                     v.push(0);
@@ -49,7 +49,7 @@ impl Puzzle {
         }
     }
 
-    pub fn new_from_grid(grid: Vec<Vec<u32>>) -> Result<Puzzle, PuzzleError> {
+    pub fn new_from_grid(grid: Vec<Vec<u32>>) -> Result<Self, PuzzleError> {
         if grid.is_empty() {
             return Err(PuzzleError::Empty);
         }
@@ -88,7 +88,7 @@ impl Puzzle {
         // At this point, `gap` is guaranteed to be Some because we found w * h non-negative
         // integers, all less than w * h, with no duplicates, so 0 must have occurred somewhere.
         // So it is safe to call unwrap.
-        Ok(Puzzle {
+        Ok(Self {
             pieces: grid.into_iter().flatten().collect(),
             width: w,
             height: h,
@@ -158,7 +158,7 @@ impl SlidingPuzzle<u32> for Puzzle {
 
 impl Default for Puzzle {
     fn default() -> Self {
-        Puzzle::new(4, 4).unwrap()
+        Self::new(4, 4).unwrap()
     }
 }
 
@@ -211,7 +211,7 @@ impl FromStr for Puzzle {
         // Append the last row
         grid.push(row);
 
-        Puzzle::new_from_grid(grid).map_err(ParsePuzzleError::PuzzleError)
+        Self::new_from_grid(grid).map_err(ParsePuzzleError::PuzzleError)
     }
 }
 

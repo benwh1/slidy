@@ -4,6 +4,7 @@
 #![feature(int_roundings)]
 #![feature(iter_intersperse)]
 #![feature(let_else)]
+#![warn(clippy::use_self)]
 
 pub mod algorithm;
 pub mod puzzle;
