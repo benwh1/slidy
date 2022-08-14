@@ -36,6 +36,6 @@ where
             })
             .sum::<usize>()
             .try_into()
-            .unwrap_or(T::zero())
+            .unwrap_or_else(|_| T::zero())
     }
 }
