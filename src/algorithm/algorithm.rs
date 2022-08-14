@@ -11,14 +11,17 @@ pub struct Algorithm {
 }
 
 impl Algorithm {
+    #[must_use]
     pub fn new(moves: Vec<Move>) -> Self {
         Self { moves }
     }
 
+    #[must_use]
     pub fn len(&self) -> u32 {
         self.moves.iter().map(|m| m.amount).sum()
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.moves.is_empty()
     }
@@ -27,6 +30,7 @@ impl Algorithm {
         self.moves.push(m);
     }
 
+    #[must_use]
     pub fn simplified(&self) -> Self {
         if self.moves.len() < 2 {
             return Self::new(self.moves.clone());
@@ -78,6 +82,7 @@ impl Algorithm {
         self.moves = self.simplified().moves;
     }
 
+    #[must_use]
     pub fn inverse(&self) -> Self {
         Self {
             moves: self.moves.iter().rev().map(|m| m.inverse()).collect(),
@@ -165,6 +170,7 @@ impl FromStr for Algorithm {
 impl Add for Algorithm {
     type Output = Self;
 
+    #[must_use]
     fn add(self, rhs: Self) -> Self::Output {
         let mut moves = self.moves;
         let mut moves2 = rhs.moves;

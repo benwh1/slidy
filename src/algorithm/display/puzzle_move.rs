@@ -4,6 +4,7 @@ use crate::algorithm::puzzle_move::Move;
 
 /// Marker trait for structs that are used to display moves
 pub trait MoveDisplay {
+    #[must_use]
     fn new(mv: Move) -> Self;
 }
 

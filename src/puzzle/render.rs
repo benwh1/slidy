@@ -9,6 +9,7 @@ use num_traits::PrimInt;
 use palette::rgb::Rgb as PaletteRgb;
 use std::{fmt::Display, marker::PhantomData};
 
+#[must_use]
 fn convert_rgb(c: PaletteRgb) -> Rgba<u8> {
     let (r, g, b) = c.into_format::<u8>().into_components();
     Rgba([r, g, b, 255])
@@ -105,6 +106,7 @@ where
     L: Label,
     S: ColorScheme,
 {
+    #[must_use]
     pub fn with_scheme_and_font(scheme: &'s S, font: &'f FontRef<'a>) -> Self {
         Self {
             phantom: PhantomData,
@@ -116,6 +118,7 @@ where
         }
     }
 
+    #[must_use]
     pub fn label(self, _: L) -> Self {
         // The purpose of this function is to allow the generic parameter `L` to be deduced, so
         // that we can write something like
@@ -125,21 +128,25 @@ where
         self
     }
 
+    #[must_use]
     pub fn borders(mut self, draw: bool) -> Self {
         self.draw_borders = draw;
         self
     }
 
+    #[must_use]
     pub fn tile_size(mut self, size: u32) -> Self {
         self.tile_size = size;
         self
     }
 
+    #[must_use]
     pub fn font_size(mut self, size: f32) -> Self {
         self.font_size = size;
         self
     }
 
+    #[must_use]
     pub fn render<Piece, P>(&self, puzzle: &P) -> ImageBuffer<Rgba<u8>, Vec<u8>>
     where
         Piece: PrimInt + Display,

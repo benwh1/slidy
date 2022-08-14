@@ -13,6 +13,7 @@ where
     Piece: PrimInt,
     Puzzle: SlidingPuzzle<Piece>,
 {
+    #[must_use]
     fn solvable(puzzle: &Puzzle) -> bool;
 }
 

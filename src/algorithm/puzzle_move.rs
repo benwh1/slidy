@@ -14,10 +14,12 @@ pub enum MoveSum {
 }
 
 impl Move {
+    #[must_use]
     pub fn new(direction: Direction, amount: u32) -> Self {
         Self { direction, amount }
     }
 
+    #[must_use]
     pub fn inverse(&self) -> Self {
         Self {
             direction: self.direction.inverse(),
@@ -27,6 +29,7 @@ impl Move {
 }
 
 impl From<Direction> for Move {
+    #[must_use]
     fn from(direction: Direction) -> Self {
         Self {
             direction,

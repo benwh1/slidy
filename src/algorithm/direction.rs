@@ -11,6 +11,7 @@ pub enum Direction {
 }
 
 impl Direction {
+    #[must_use]
     pub fn inverse(&self) -> Self {
         match self {
             Self::Up => Self::Down,

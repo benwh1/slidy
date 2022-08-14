@@ -1,7 +1,10 @@
 use std::cmp::Ordering;
 
 pub trait Label {
+    #[must_use]
     fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize;
+
+    #[must_use]
     fn num_labels(width: usize, height: usize) -> usize;
 }
 

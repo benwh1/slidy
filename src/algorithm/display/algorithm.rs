@@ -4,6 +4,7 @@ use std::{fmt::Display, marker::PhantomData};
 
 /// Marker trait for structs that are used to display algorithms
 pub trait AlgorithmDisplay<'a> {
+    #[must_use]
     fn new(algorithm: &'a Algorithm) -> Self;
 }
 

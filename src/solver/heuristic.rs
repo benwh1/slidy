@@ -9,6 +9,7 @@ where
     Puzzle: SlidingPuzzle<Piece>,
     T: PrimInt + Unsigned,
 {
+    #[must_use]
     fn bound(&self, puzzle: &Puzzle) -> T;
 }
 

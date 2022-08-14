@@ -28,12 +28,14 @@ impl ColorList {
 }
 
 impl ColorScheme for ColorList {
+    #[must_use]
     fn color(&self, label: usize, _num_labels: usize) -> Rgb {
         self.colors[label % self.colors.len()]
     }
 }
 
 impl ColorScheme for Rainbow {
+    #[must_use]
     fn color(&self, label: usize, num_labels: usize) -> Rgb {
         let colors = [
             Hsl::new(0.0, 1.0, 0.5),

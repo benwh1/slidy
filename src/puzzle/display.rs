@@ -19,6 +19,7 @@ macro_rules! define_display {
             Piece: PrimInt,
             Puzzle: SlidingPuzzle<Piece>,
         {
+            #[must_use]
             pub fn new(puzzle: &'a Puzzle) -> Self {
                 Self {
                     puzzle,
