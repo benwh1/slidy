@@ -41,6 +41,7 @@ impl From<Direction> for Move {
 impl Add for Move {
     type Output = MoveSum;
 
+    #[must_use]
     fn add(self, rhs: Self) -> Self::Output {
         if self.direction == rhs.direction {
             MoveSum::Ok(Self {

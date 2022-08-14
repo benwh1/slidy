@@ -3,6 +3,7 @@ use itertools::Itertools;
 use num_traits::PrimInt;
 
 pub trait SolvedState {
+    #[must_use]
     fn is_solved<Piece, Puzzle>(puzzle: &Puzzle) -> bool
     where
         Piece: PrimInt,
