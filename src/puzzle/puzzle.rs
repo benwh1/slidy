@@ -416,6 +416,7 @@ mod tests {
             assert!(!p.can_apply_move(Move::new(Direction::Right, 3)));
         }
 
+        #[test]
         fn test_can_apply_alg() {
             let p = Puzzle::new(4, 4).unwrap();
             let a = Algorithm::from_str("D3RU2RD2RU3L3").unwrap();
@@ -424,6 +425,7 @@ mod tests {
             assert!(p.can_apply_alg(&a));
         }
 
+        #[test]
         fn test_apply_alg() {
             let mut p = Puzzle::new(4, 4).unwrap();
             let a = Algorithm::from_str("D3RU2RD2RU3L3").unwrap();
