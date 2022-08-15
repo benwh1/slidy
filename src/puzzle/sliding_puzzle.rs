@@ -32,16 +32,6 @@ where
     #[must_use]
     fn gap_position_xy(&self) -> (usize, usize);
 
-    #[must_use]
-    fn gap_position_x(&self) -> usize {
-        self.gap_position_xy().0
-    }
-
-    #[must_use]
-    fn gap_position_y(&self) -> usize {
-        self.gap_position_xy().1
-    }
-
     fn reset(&mut self);
 
     #[must_use]
@@ -76,11 +66,12 @@ where
 
     #[must_use]
     fn can_move_dir(&self, dir: Direction) -> bool {
+        let (gx, gy) = self.gap_position_xy();
         match dir {
-            Direction::Up => self.gap_position_y() + 1 < self.height(),
-            Direction::Left => self.gap_position_x() + 1 < self.width(),
-            Direction::Down => self.gap_position_y() > 0,
-            Direction::Right => self.gap_position_x() > 0,
+            Direction::Up => gy + 1 < self.height(),
+            Direction::Left => gx + 1 < self.width(),
+            Direction::Down => gy > 0,
+            Direction::Right => gx > 0,
         }
     }
 
@@ -97,11 +88,13 @@ where
 
     #[must_use]
     fn can_apply_move(&self, mv: Move) -> bool {
+        let (gx, gy) = self.gap_position_xy();
+        let amount = mv.amount as usize;
         match mv.direction {
-            Direction::Up => self.gap_position_y() + (mv.amount as usize) < self.height(),
-            Direction::Left => self.gap_position_x() + (mv.amount as usize) < self.width(),
-            Direction::Down => self.gap_position_y() >= mv.amount as usize,
-            Direction::Right => self.gap_position_x() >= mv.amount as usize,
+            Direction::Up => gy + amount < self.height(),
+            Direction::Left => gx + amount < self.width(),
+            Direction::Down => gy >= amount,
+            Direction::Right => gx >= amount,
         }
     }
 
