@@ -55,7 +55,7 @@ impl Puzzle {
         }
 
         if grid[0].is_empty() {
-            return Err(PuzzleError::Empty);
+            return Err(PuzzleError::InvalidSize(0, 0));
         }
 
         let w = grid[0].len();
