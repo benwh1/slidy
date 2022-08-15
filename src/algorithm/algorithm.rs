@@ -2,7 +2,7 @@ use super::{
     direction::Direction,
     puzzle_move::{Move, MoveSum},
 };
-use std::{ops::Add, str::FromStr};
+use std::{cmp::Ordering, ops::Add, str::FromStr};
 use thiserror::Error;
 
 #[derive(Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -28,6 +28,37 @@ impl Algorithm {
 
     pub fn push(&mut self, m: Move) {
         self.moves.push(m);
+    }
+
+    pub fn push_combine(&mut self, m: Move) {
+        if let Some(other) = self.moves.last_mut() && m.direction == other.direction {
+            other.amount += m.amount;
+        } else {
+            self.moves.push(m);
+        }
+    }
+
+    pub fn push_simplify(&mut self, m: Move) {
+        match self.moves.last_mut() {
+            Some(other) if m.direction == other.direction => {
+                other.amount += m.amount;
+            }
+            Some(other) if m.direction == other.direction.inverse() => {
+                match m.amount.cmp(&other.amount) {
+                    Ordering::Less => other.amount -= m.amount,
+                    Ordering::Equal => {
+                        self.moves.pop();
+                    }
+                    Ordering::Greater => {
+                        *other = Move {
+                            direction: m.direction,
+                            amount: m.amount - other.amount,
+                        }
+                    }
+                }
+            }
+            _ => self.moves.push(m),
+        }
     }
 
     #[must_use]
