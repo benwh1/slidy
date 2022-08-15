@@ -280,7 +280,7 @@ mod tests {
     }
 
     mod sliding_puzzle {
-        use crate::algorithm::puzzle_move::Move;
+        use crate::algorithm::{algorithm::Algorithm, puzzle_move::Move};
 
         use super::*;
 
@@ -399,6 +399,39 @@ mod tests {
             assert!(p.can_move_dir(Direction::Left));
             assert!(!p.can_move_dir(Direction::Down));
             assert!(!p.can_move_dir(Direction::Right));
+        }
+
+        #[test]
+        fn test_can_apply_move() {
+            let mut p = Puzzle::new(4, 4).unwrap();
+            p.move_dir(Direction::Down);
+            p.move_dir(Direction::Right);
+            assert!(p.can_apply_move(Move::new(Direction::Up, 1)));
+            assert!(p.can_apply_move(Move::new(Direction::Left, 1)));
+            assert!(p.can_apply_move(Move::new(Direction::Down, 2)));
+            assert!(p.can_apply_move(Move::new(Direction::Right, 2)));
+            assert!(!p.can_apply_move(Move::new(Direction::Up, 2)));
+            assert!(!p.can_apply_move(Move::new(Direction::Left, 2)));
+            assert!(!p.can_apply_move(Move::new(Direction::Down, 3)));
+            assert!(!p.can_apply_move(Move::new(Direction::Right, 3)));
+        }
+
+        fn test_can_apply_alg() {
+            let p = Puzzle::new(4, 4).unwrap();
+            let a = Algorithm::from_str("D3RU2RD2RU3L3").unwrap();
+            assert!(p.can_apply_alg(&a));
+            let a = Algorithm::from_str("R2DL2UR2D2RU2LD3RULURDLDLU2RDLULD2RULDR2U").unwrap();
+            assert!(p.can_apply_alg(&a));
+        }
+
+        fn test_apply_alg() {
+            let mut p = Puzzle::new(4, 4).unwrap();
+            let a = Algorithm::from_str("D3RU2RD2RU3L3").unwrap();
+            p.apply_alg(&a);
+            assert_eq!(
+                p.pieces,
+                vec![5, 1, 7, 3, 9, 2, 11, 4, 13, 6, 10, 8, 14, 15, 12, 0]
+            );
         }
     }
 
