@@ -314,6 +314,14 @@ mod tests {
         assert_eq!(a.inverse(), b);
     }
 
+    #[test]
+    fn test_repeat() {
+        let a = Algorithm::from_str("U2LD3R").unwrap();
+        let b = a.repeat(3);
+        let expected = Algorithm::from_str(&"U2LD3R".repeat(3)).unwrap();
+        assert_eq!(b, expected);
+    }
+
     mod from_str {
         use crate::algorithm::{
             algorithm::{Algorithm, ParseAlgorithmError},
