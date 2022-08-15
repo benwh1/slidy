@@ -122,21 +122,24 @@ where
 
     #[must_use]
     fn can_apply_alg(&self, alg: &Algorithm) -> bool {
-        let (gx, gy) = self.gap_position_xy();
-        let (mut gx, mut gy) = (gx as isize, gy as isize);
+        let (mut gx, mut gy) = self.gap_position_xy();
 
         for m in &alg.moves {
-            let amount = m.amount as isize;
-            match m.direction {
-                Direction::Up => gy += amount,
-                Direction::Left => gx += amount,
-                Direction::Down => gy -= amount,
-                Direction::Right => gx -= amount,
-            }
-            if gx < 0 || gx >= self.width() as isize || gy < 0 || gy > self.height() as isize {
+            let amount = m.amount.try_into().unwrap();
+            let (new_gx, new_gy) = match m.direction {
+                Direction::Up => (Some(gx), gy.checked_add(amount)),
+                Direction::Left => (gx.checked_add(amount), Some(gy)),
+                Direction::Down => (Some(gx), gy.checked_sub(amount)),
+                Direction::Right => (gx.checked_sub(amount), Some(gy)),
+            };
+
+            if let (Some(new_gx), Some(new_gy)) = (new_gx, new_gy) {
+                (gx, gy) = (new_gx, new_gy);
+            } else {
                 return false;
             }
         }
+
         true
     }
 
