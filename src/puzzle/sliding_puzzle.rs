@@ -141,10 +141,9 @@ where
     }
 
     fn apply_alg_unchecked(&mut self, alg: &Algorithm) {
-        alg.moves
-            .iter()
-            .map(|&m| self.apply_move_unchecked(m))
-            .collect()
+        for &m in &alg.moves {
+            self.apply_move_unchecked(m);
+        }
     }
 
     fn apply_alg(&mut self, alg: &Algorithm) -> bool {
