@@ -22,6 +22,11 @@ where
     }
 
     #[must_use]
+    fn area(&self) -> usize {
+        self.width() * self.height()
+    }
+
+    #[must_use]
     fn num_pieces(&self) -> usize {
         self.width() * self.height() - 1
     }
