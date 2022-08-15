@@ -123,6 +123,13 @@ impl Algorithm {
     pub fn invert(&mut self) {
         self.moves = self.inverse().moves;
     }
+
+    #[must_use]
+    pub fn repeat(&self, n: usize) -> Self {
+        Self {
+            moves: self.moves.repeat(n),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
