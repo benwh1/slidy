@@ -266,3 +266,23 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod benchmarks {
+    extern crate test;
+
+    use std::str::FromStr;
+
+    use test::Bencher;
+
+    use crate::algorithm::algorithm::Algorithm;
+
+    use super::*;
+
+    #[bench]
+    fn bench_can_apply_alg(b: &mut Bencher) {
+        let p = Puzzle::default();
+        let a = Algorithm::from_str("D3RU2RD2RU3L3").unwrap().repeat(10);
+        b.iter(|| p.can_apply_alg(&a));
+    }
+}
