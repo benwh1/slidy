@@ -204,6 +204,81 @@ impl FromStr for Puzzle {
 mod tests {
     use super::*;
 
+    #[test]
+    fn test_new() {
+        let p = Puzzle::new(4, 4).unwrap();
+        assert_eq!(
+            p,
+            Puzzle {
+                pieces: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0],
+                width: 4,
+                height: 4,
+                gap: 15
+            }
+        );
+    }
+
+    #[test]
+    fn test_new_2() {
+        let p = Puzzle::new(0, 0);
+        assert!(p.is_err());
+
+        let p = Puzzle::new(3, 0);
+        assert!(p.is_err());
+
+        let p = Puzzle::new(0, 5);
+        assert!(p.is_err());
+    }
+
+    #[test]
+    fn test_new_from_grid() {
+        let v = [11, 0, 1, 10, 4, 5, 15, 6, 2, 3, 13, 8, 7, 12, 9, 14]
+            .chunks(4)
+            .map(|c| c.to_vec())
+            .collect();
+        let p = Puzzle::new_from_grid(v);
+        assert!(p.is_ok());
+    }
+
+    #[test]
+    fn test_new_from_grid_2() {
+        let p = Puzzle::new_from_grid(Vec::new());
+        assert_eq!(p, Err(PuzzleError::Empty));
+    }
+
+    #[test]
+    fn test_new_from_grid_3() {
+        let p = Puzzle::new_from_grid(vec![vec![]]);
+        assert_eq!(p, Err(PuzzleError::InvalidSize(0, 0)));
+    }
+
+    #[test]
+    fn test_new_from_grid_4() {
+        let v = [11, 0, 1, 10, 4, 7, 15, 6, 2, 3, 13, 8, 7, 12, 9, 14]
+            .chunks(4)
+            .map(|c| c.to_vec())
+            .collect();
+        let p = Puzzle::new_from_grid(v);
+        assert_eq!(p, Err(PuzzleError::DuplicatePiece(7)));
+    }
+
+    #[test]
+    fn test_new_from_grid_5() {
+        let v = [11, 16, 1, 10, 4, 5, 15, 6, 2, 3, 13, 8, 7, 12, 9, 14]
+            .chunks(4)
+            .map(|c| c.to_vec())
+            .collect();
+        let p = Puzzle::new_from_grid(v);
+        assert_eq!(p, Err(PuzzleError::PieceOutOfRange(16)));
+    }
+
+    #[test]
+    fn test_new_from_grid_6() {
+        let v = vec![vec![1, 2], vec![3, 4, 0]];
+        let p = Puzzle::new_from_grid(v);
+        assert_eq!(p, Err(PuzzleError::UnequalRowLengths));
+    }
+
     mod sliding_puzzle {
         use crate::algorithm::puzzle_move::Move;
 
