@@ -222,6 +222,24 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_len() {
+        let a = Algorithm::from_str("ULDR").unwrap();
+        assert_eq!(a.len(), 4);
+    }
+
+    #[test]
+    fn test_len_2() {
+        let a = Algorithm::from_str("U3L6D2R20").unwrap();
+        assert_eq!(a.len(), 31);
+    }
+
+    #[test]
+    fn test_len_3() {
+        let a = Algorithm::from_str("UUU3").unwrap();
+        assert_eq!(a.len(), 5);
+    }
+
+    #[test]
     fn test_push_combine() {
         let mut a = Algorithm::from_str("ULDR").unwrap();
         a.push_combine(Move::from(Direction::Right));
