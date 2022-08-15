@@ -32,14 +32,14 @@ where
             if x == w - 1 && y >= gy {
                 if y == h - 1 {
                     // Gap piece
-                    puzzle.piece_at_xy(gx, gy)
+                    puzzle.piece_at_xy_unchecked(gx, gy)
                 } else {
-                    puzzle.piece_at_xy(x, y + 1)
+                    puzzle.piece_at_xy_unchecked(x, y + 1)
                 }
             } else if y == gy && x >= gx {
-                puzzle.piece_at_xy(x + 1, y)
+                puzzle.piece_at_xy_unchecked(x + 1, y)
             } else {
-                puzzle.piece_at_xy(x, y)
+                puzzle.piece_at_xy_unchecked(x, y)
             }
         };
 
@@ -56,7 +56,7 @@ where
             while !seen[index] {
                 seen[index] = true;
                 cycle_len += 1;
-                index = puzzle.solved_pos(piece_at(index));
+                index = puzzle.solved_pos_unchecked(piece_at(index));
             }
 
             if cycle_len % 2 == 0 {

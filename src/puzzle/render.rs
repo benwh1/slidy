@@ -165,10 +165,10 @@ where
 
         for y in 0..h {
             for x in 0..w {
-                let piece = puzzle.piece_at_xy(x as usize, y as usize);
+                let piece = puzzle.piece_at_xy_unchecked(x as usize, y as usize);
 
                 if piece != Piece::zero() {
-                    let solved_pos = puzzle.solved_pos_xy(piece);
+                    let solved_pos = puzzle.solved_pos_xy_unchecked(piece);
                     let label =
                         L::position_label(w as usize, h as usize, solved_pos.0, solved_pos.1);
                     let num_labels = L::num_labels(w as usize, h as usize);

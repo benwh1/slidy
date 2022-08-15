@@ -110,12 +110,6 @@ impl SlidingPuzzle<u32> for Puzzle {
         self.gap
     }
 
-    fn gap_position_xy(&self) -> (usize, usize) {
-        let g = self.gap_position();
-        let w = self.width();
-        (g % w, g / w)
-    }
-
     fn reset(&mut self) {
         let n = self.num_pieces();
         for i in 0..n {
@@ -125,21 +119,12 @@ impl SlidingPuzzle<u32> for Puzzle {
         self.gap = n;
     }
 
-    fn piece_at(&self, idx: usize) -> u32 {
+    fn piece_at_unchecked(&self, idx: usize) -> u32 {
         self.pieces[idx]
-    }
-
-    fn piece_at_xy(&self, x: usize, y: usize) -> u32 {
-        self.piece_at(x + self.width() * y)
     }
 
     fn swap_pieces(&mut self, idx1: usize, idx2: usize) {
         self.pieces.swap(idx1, idx2);
-    }
-
-    fn swap_pieces_xy(&mut self, x1: usize, y1: usize, x2: usize, y2: usize) {
-        let w = self.width();
-        self.swap_pieces(x1 + w * y1, x2 + w * y2);
     }
 
     fn move_dir_unchecked(&mut self, dir: Direction) {

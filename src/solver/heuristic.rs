@@ -26,8 +26,8 @@ where
         (0..w)
             .cartesian_product(0..h)
             .map(|(x, y)| {
-                let piece = puzzle.piece_at_xy(x, y);
-                let (a, b) = puzzle.solved_pos_xy(piece);
+                let piece = puzzle.piece_at_xy_unchecked(x, y);
+                let (a, b) = puzzle.solved_pos_xy_unchecked(piece);
 
                 if piece == Piece::zero() {
                     0

@@ -30,7 +30,7 @@ where
             .take(w * h - 1)
             .all(|(x, y)| {
                 // Label of piece in position (x, y)
-                let (sx, sy) = puzzle.solved_pos_xy(puzzle.piece_at_xy(x, y));
+                let (sx, sy) = puzzle.solved_pos_xy_unchecked(puzzle.piece_at_xy_unchecked(x, y));
                 let piece_label = T::position_label(w, h, sx, sy);
 
                 // Label of piece in position (x, y) on a solved puzzle

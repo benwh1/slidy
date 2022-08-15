@@ -30,7 +30,11 @@ where
     fn gap_position(&self) -> usize;
 
     #[must_use]
-    fn gap_position_xy(&self) -> (usize, usize);
+    fn gap_position_xy(&self) -> (usize, usize) {
+        let pos = self.gap_position();
+        let w = self.width();
+        (pos % w, pos / w)
+    }
 
     fn reset(&mut self);
 
@@ -40,29 +44,70 @@ where
     }
 
     #[must_use]
-    fn solved_pos(&self, piece: Piece) -> usize {
+    fn solved_pos_unchecked(&self, piece: Piece) -> usize {
         if piece == Piece::zero() {
             self.num_pieces()
         } else {
-            piece.to_usize().expect("Failed to convert Piece to usize") - 1
+            piece.to_usize().unwrap() - 1
         }
     }
 
     #[must_use]
-    fn solved_pos_xy(&self, piece: Piece) -> (usize, usize) {
-        let p = self.solved_pos(piece);
+    fn solved_pos(&self, piece: Piece) -> Option<usize> {
+        let n = self.num_pieces();
+        match piece.to_usize() {
+            Some(p) if p <= n => Some(self.solved_pos_unchecked(piece)),
+            _ => None,
+        }
+    }
+
+    #[must_use]
+    fn solved_pos_xy_unchecked(&self, piece: Piece) -> (usize, usize) {
+        let p = self.solved_pos_unchecked(piece);
         let w = self.width();
         (p % w, p / w)
     }
 
     #[must_use]
-    fn piece_at(&self, idx: usize) -> Piece;
+    fn solved_pos_xy(&self, piece: Piece) -> Option<(usize, usize)> {
+        let n = self.num_pieces();
+        match piece.to_usize() {
+            Some(p) if p <= n => Some(self.solved_pos_xy_unchecked(piece)),
+            _ => None,
+        }
+    }
 
     #[must_use]
-    fn piece_at_xy(&self, x: usize, y: usize) -> Piece;
+    fn piece_at_unchecked(&self, idx: usize) -> Piece;
+
+    #[must_use]
+    fn piece_at(&self, idx: usize) -> Option<Piece> {
+        if idx <= self.num_pieces() {
+            Some(self.piece_at_unchecked(idx))
+        } else {
+            None
+        }
+    }
+
+    #[must_use]
+    fn piece_at_xy_unchecked(&self, x: usize, y: usize) -> Piece {
+        self.piece_at_unchecked(x + self.width() * y)
+    }
+
+    #[must_use]
+    fn piece_at_xy(&self, x: usize, y: usize) -> Option<Piece> {
+        if x < self.width() && y < self.height() {
+            Some(self.piece_at_xy_unchecked(x, y))
+        } else {
+            None
+        }
+    }
 
     fn swap_pieces(&mut self, idx1: usize, idx2: usize);
-    fn swap_pieces_xy(&mut self, x1: usize, y1: usize, x2: usize, y2: usize);
+    fn swap_pieces_xy(&mut self, x1: usize, y1: usize, x2: usize, y2: usize) {
+        let w = self.width();
+        self.swap_pieces(x1 + w * y1, x2 + w * y2);
+    }
 
     #[must_use]
     fn can_move_dir(&self, dir: Direction) -> bool {

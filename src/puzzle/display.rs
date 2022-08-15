@@ -45,7 +45,7 @@ where
         let mut s = String::new();
         for y in 0..h {
             for x in 0..w {
-                let n = self.puzzle.piece_at_xy(x, y);
+                let n = self.puzzle.piece_at_xy_unchecked(x, y);
                 let a = format!("{n: >num_digits$}");
                 s.push_str(&a);
                 s.push(' ');
@@ -68,7 +68,7 @@ where
         let mut s = String::new();
         for y in 0..h {
             for x in 0..w {
-                let n = self.puzzle.piece_at_xy(x, y);
+                let n = self.puzzle.piece_at_xy_unchecked(x, y);
                 s.push_str(&n.to_string());
                 s.push(' ');
             }
