@@ -212,8 +212,7 @@ impl Add for Algorithm {
 
 #[cfg(test)]
 mod tests {
-    use crate::algorithm::algorithm::Algorithm;
-    use std::str::FromStr;
+    use super::*;
 
     #[test]
     fn test_simplify() {
@@ -251,6 +250,41 @@ mod tests {
         )
         .unwrap();
         assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_push_combine() {
+        let mut a = Algorithm::from_str("ULDR").unwrap();
+        a.push_combine(Move::from(Direction::Right));
+        assert_eq!(a.moves.last(), Some(&Move::new(Direction::Right, 2)));
+    }
+
+    #[test]
+    fn test_push_combine_2() {
+        let mut a = Algorithm::from_str("ULDR").unwrap();
+        a.push_combine(Move::from(Direction::Left));
+        assert_eq!(a.moves.last(), Some(&Move::new(Direction::Left, 1)));
+    }
+
+    #[test]
+    fn test_push_simplify() {
+        let mut a = Algorithm::from_str("ULDR").unwrap();
+        a.push_simplify(Move::from(Direction::Right));
+        assert_eq!(a.moves.last(), Some(&Move::new(Direction::Right, 2)));
+    }
+
+    #[test]
+    fn test_push_simplify_2() {
+        let mut a = Algorithm::from_str("ULDR").unwrap();
+        a.push_simplify(Move::new(Direction::Left, 3));
+        assert_eq!(a.moves.last(), Some(&Move::new(Direction::Left, 2)));
+    }
+
+    #[test]
+    fn test_push_simplify_3() {
+        let mut a = Algorithm::from_str("ULDR").unwrap();
+        a.push_simplify(Move::from(Direction::Left));
+        assert_eq!(a.moves.last(), Some(&Move::new(Direction::Down, 1)));
     }
 
     #[test]
