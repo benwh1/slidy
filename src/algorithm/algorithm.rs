@@ -182,7 +182,7 @@ impl FromStr for Algorithm {
                 },
                 c if let Some(d) = c.to_digit(10) => {
                     // Must have a direction before an amount
-                    if dir == None {
+                    if dir.is_none() {
                         return Err(ParseAlgorithmError::MissingDirection);
                     }
 
