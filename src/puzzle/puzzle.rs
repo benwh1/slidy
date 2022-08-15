@@ -202,7 +202,130 @@ impl FromStr for Puzzle {
 
 #[cfg(test)]
 mod tests {
-    use super::Puzzle;
+    use super::*;
+
+    mod sliding_puzzle {
+        use crate::algorithm::puzzle_move::Move;
+
+        use super::*;
+
+        #[test]
+        fn test_size() {
+            let p = Puzzle::new(4, 6).unwrap();
+            assert_eq!(p.width(), 4);
+            assert_eq!(p.height(), 6);
+            assert_eq!(p.size(), (4, 6));
+        }
+
+        #[test]
+        fn test_area() {
+            let p = Puzzle::new(4, 6).unwrap();
+            assert_eq!(p.area(), 24);
+        }
+
+        #[test]
+        fn test_num_pieces() {
+            let p = Puzzle::new(4, 6).unwrap();
+            assert_eq!(p.num_pieces(), 23);
+        }
+
+        #[test]
+        fn test_gap_position() {
+            let mut p = Puzzle::new(4, 6).unwrap();
+            assert_eq!(p.gap_position(), 23);
+            assert_eq!(p.gap_position_xy(), (3, 5));
+            p.move_dir(Direction::Down);
+            assert_eq!(p.gap_position(), 19);
+            assert_eq!(p.gap_position_xy(), (3, 4));
+            p.move_dir(Direction::Right);
+            assert_eq!(p.gap_position(), 18);
+            assert_eq!(p.gap_position_xy(), (2, 4));
+        }
+
+        #[test]
+        fn test_reset() {
+            let mut p = Puzzle::new(4, 4).unwrap();
+            p.move_dir(Direction::Down);
+            p.reset();
+            assert_eq!(p, Puzzle::new(4, 4).unwrap());
+        }
+
+        #[test]
+        fn test_solved_pos() {
+            let p = Puzzle::new(4, 6).unwrap();
+            assert_eq!(p.solved_pos(0), Some(23));
+            assert_eq!(p.solved_pos_xy(0), Some((3, 5)));
+            assert_eq!(p.solved_pos(1), Some(0));
+            assert_eq!(p.solved_pos_xy(1), Some((0, 0)));
+            assert_eq!(p.solved_pos(23), Some(22));
+            assert_eq!(p.solved_pos_xy(23), Some((2, 5)));
+            assert_eq!(p.solved_pos(24), None);
+            assert_eq!(p.solved_pos_xy(24), None);
+        }
+
+        #[test]
+        fn test_piece_at() {
+            let mut p = Puzzle::new(4, 6).unwrap();
+            p.apply_move(Move::new(Direction::Down, 2));
+            p.apply_move(Move::new(Direction::Right, 3));
+            assert_eq!(p.piece_at(0), Some(1));
+            assert_eq!(p.piece_at_xy(0, 0), Some(1));
+            assert_eq!(p.piece_at(12), Some(0));
+            assert_eq!(p.piece_at_xy(0, 3), Some(0));
+            assert_eq!(p.piece_at(13), Some(13));
+            assert_eq!(p.piece_at_xy(1, 3), Some(13));
+            assert_eq!(p.piece_at(24), None);
+            assert_eq!(p.piece_at_xy(4, 0), None);
+            assert_eq!(p.piece_at_xy(0, 6), None);
+        }
+
+        #[test]
+        fn test_swap_pieces() {
+            let mut p = Puzzle::new(4, 4).unwrap();
+            p.swap_pieces(0, 6);
+            assert_eq!(p.piece_at(0), Some(7));
+            assert_eq!(p.piece_at(6), Some(1));
+            p.swap_pieces_xy(0, 0, 2, 1);
+            assert_eq!(p.piece_at(0), Some(1));
+            assert_eq!(p.piece_at(6), Some(7));
+        }
+
+        #[test]
+        fn test_swap_pieces_2() {
+            let mut p = Puzzle::new(4, 4).unwrap();
+            p.swap_pieces(0, 15);
+            assert_eq!(p.gap_position(), 0);
+        }
+
+        #[test]
+        fn test_can_move_dir() {
+            let mut p = Puzzle::new(4, 4).unwrap();
+            assert!(!p.can_move_dir(Direction::Up));
+            assert!(!p.can_move_dir(Direction::Left));
+            assert!(p.can_move_dir(Direction::Down));
+            assert!(p.can_move_dir(Direction::Right));
+            p.move_dir(Direction::Down);
+            assert!(p.can_move_dir(Direction::Up));
+            assert!(!p.can_move_dir(Direction::Left));
+            assert!(p.can_move_dir(Direction::Down));
+            assert!(p.can_move_dir(Direction::Right));
+            p.move_dir(Direction::Right);
+            assert!(p.can_move_dir(Direction::Up));
+            assert!(p.can_move_dir(Direction::Left));
+            assert!(p.can_move_dir(Direction::Down));
+            assert!(p.can_move_dir(Direction::Right));
+            p.apply_move(Move::new(Direction::Down, 2));
+            assert!(p.can_move_dir(Direction::Up));
+            assert!(p.can_move_dir(Direction::Left));
+            assert!(!p.can_move_dir(Direction::Down));
+            assert!(p.can_move_dir(Direction::Right));
+            p.apply_move(Move::new(Direction::Right, 2));
+            assert!(p.can_move_dir(Direction::Up));
+            assert!(p.can_move_dir(Direction::Left));
+            assert!(!p.can_move_dir(Direction::Down));
+            assert!(!p.can_move_dir(Direction::Right));
+        }
+    }
 
     mod from_str {
         use super::*;
