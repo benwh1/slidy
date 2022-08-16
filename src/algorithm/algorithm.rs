@@ -132,6 +132,13 @@ impl Algorithm {
     }
 
     #[must_use]
+    pub fn transpose(&self) -> Self {
+        Self {
+            moves: self.moves.iter().map(|m| m.transpose()).collect(),
+        }
+    }
+
+    #[must_use]
     pub fn repeat(&self, n: usize) -> Self {
         Self {
             moves: self.moves.repeat(n),

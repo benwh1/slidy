@@ -32,6 +32,14 @@ impl Move {
     }
 
     #[must_use]
+    pub fn transpose(&self) -> Self {
+        Self {
+            direction: self.direction.transpose(),
+            amount: self.amount,
+        }
+    }
+
+    #[must_use]
     pub fn display_long_spaced(&self) -> DisplayLongSpaced {
         DisplayLongSpaced::new(*self)
     }

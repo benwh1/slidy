@@ -20,6 +20,16 @@ impl Direction {
             Self::Right => Self::Left,
         }
     }
+
+    #[must_use]
+    pub fn transpose(&self) -> Self {
+        match self {
+            Self::Up => Self::Left,
+            Self::Left => Self::Up,
+            Self::Down => Self::Right,
+            Self::Right => Self::Down,
+        }
+    }
 }
 
 impl Display for Direction {
