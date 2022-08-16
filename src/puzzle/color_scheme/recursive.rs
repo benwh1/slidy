@@ -118,7 +118,7 @@ impl RectPartition {
                     }
                 }
             }
-            if height_map.data.values().find(|&&a| a == y).is_some() {
+            if height_map.data.values().any(|&a| a == y) {
                 return None;
             }
         }
