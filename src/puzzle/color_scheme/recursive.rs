@@ -94,6 +94,10 @@ struct RectPartition {
 
 impl RectPartition {
     fn new(mut rects: Vec<Rect>) -> Option<Self> {
+        if rects.is_empty() {
+            return None;
+        }
+
         rects.sort_by_key(|r| (r.top, r.left));
 
         let left = rects.iter().map(|r| r.left).min().unwrap();
