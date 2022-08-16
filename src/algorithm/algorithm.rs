@@ -195,16 +195,12 @@ impl FromStr for Algorithm {
         macro_rules! try_push {
             () => {
                 if let Some(prev_dir) = dir {
-                    // This is not the first move in the algorithm, so push the previous move
-                    let real_amount = if let Some(a) = amount {
-                        // No number after the previous move means the amount is actually 1
-                        a
-                    } else {
-                        1
-                    };
+                    // No number after the previous move means the amount is actually 1
+                    let amount = amount.unwrap_or(1);
 
+                    // This is not the first move in the algorithm, so push the previous move
                     alg.push(Move {
-                        amount: real_amount,
+                        amount,
                         direction: prev_dir,
                     });
                 }
