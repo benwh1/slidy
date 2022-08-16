@@ -125,6 +125,12 @@ impl SlidingPuzzle<u32> for Puzzle {
 
     fn swap_pieces(&mut self, idx1: usize, idx2: usize) {
         self.pieces.swap(idx1, idx2);
+
+        if self.gap == idx1 {
+            self.gap = idx2;
+        } else if self.gap == idx2 {
+            self.gap = idx1;
+        }
     }
 
     fn move_dir_unchecked(&mut self, dir: Direction) {
