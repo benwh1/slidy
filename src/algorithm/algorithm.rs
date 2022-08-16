@@ -89,7 +89,7 @@ impl Algorithm {
                             }
                         }
                     } else {
-                        // Moves can be added don't fully cancel, keep accumulating into mv.
+                        // Moves can be added, but don't fully cancel, keep accumulating into mv.
                         m
                     };
                 }
