@@ -130,3 +130,98 @@ impl RectPartition {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_rect_partition() {
+        assert!(RectPartition::new(vec![
+            Rect::new((0, 0), (3, 2)),
+            Rect::new((3, 0), (5, 3)),
+            Rect::new((0, 2), (2, 5)),
+            Rect::new((2, 2), (3, 3)),
+            Rect::new((2, 3), (5, 5)),
+        ])
+        .is_some());
+    }
+
+    #[test]
+    fn test_rect_partition_2() {
+        assert!(RectPartition::new(vec![Rect::new((0, 0), (1, 1))]).is_some());
+    }
+
+    #[test]
+    fn test_rect_partition_3() {
+        assert!(RectPartition::new(vec![
+            Rect::new((0, 0), (5, 1)),
+            Rect::new((0, 1), (1, 3)),
+            Rect::new((1, 1), (3, 2)),
+            Rect::new((2, 2), (4, 4)),
+            Rect::new((3, 1), (4, 2)),
+            Rect::new((4, 1), (5, 4)),
+            Rect::new((1, 2), (2, 5)),
+            Rect::new((0, 3), (1, 5)),
+            Rect::new((2, 4), (4, 5)),
+            Rect::new((4, 4), (5, 5)),
+        ])
+        .is_some());
+    }
+
+    #[test]
+    fn test_rect_partition_4() {
+        assert!(RectPartition::new(vec![]).is_none());
+    }
+
+    #[test]
+    fn test_rect_partition_5() {
+        assert!(RectPartition::new(vec![
+            Rect::new((0, 0), (3, 2)),
+            Rect::new((3, 0), (5, 3)),
+            Rect::new((0, 2), (2, 5)),
+            Rect::new((2, 2), (3, 3)),
+            Rect::new((2, 3), (5, 5)),
+            Rect::new((5, 0), (5, 5)),
+        ])
+        .is_none());
+    }
+
+    #[test]
+    fn test_rect_partition_6() {
+        assert!(RectPartition::new(vec![Rect::new((0, 0), (0, 0))]).is_none());
+    }
+
+    #[test]
+    fn test_rect_partition_7() {
+        assert!(RectPartition::new(vec![
+            Rect::new((0, 0), (2, 2)),
+            Rect::new((2, 0), (4, 1)),
+            Rect::new((3, 1), (4, 2)),
+        ])
+        .is_none());
+    }
+
+    #[test]
+    fn test_rect_partition_8() {
+        assert!(RectPartition::new(vec![
+            Rect::new((0, 0), (3, 3)),
+            Rect::new((2, 0), (6, 3)),
+            Rect::new((0, 3), (3, 6)),
+            Rect::new((3, 3), (6, 6)),
+        ])
+        .is_none());
+    }
+
+    #[test]
+    fn test_rect_partition_9() {
+        assert!(RectPartition::new(vec![
+            Rect::new((3, 2), (0, 0)),
+            Rect::new((3, 0), (5, 3)),
+            Rect::new((0, 2), (2, 5)),
+            Rect::new((2, 2), (3, 3)),
+            Rect::new((2, 3), (5, 5)),
+        ])
+        .is_none());
+    }
+}
