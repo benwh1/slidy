@@ -191,52 +191,42 @@ impl FromStr for Algorithm {
         let mut dir = None;
         let mut amount = None;
 
-        // Useful macro to try and push the last move that was read
-        macro_rules! try_push {
-            () => {
-                if let Some(prev_dir) = dir {
-                    // No number after the previous move means the amount is actually 1
-                    let amount = amount.unwrap_or(1);
-
-                    // This is not the first move in the algorithm, so push the previous move
-                    alg.push(Move {
-                        amount,
-                        direction: prev_dir,
-                    });
-                }
-            };
-        }
-
         for c in s.chars() {
-            match c {
-                // New direction
-                c if let Ok(d) = Direction::try_from(c) => {
-                    try_push!();
-
-                    // Set the new direction and default amount for the next move
-                    dir = Some(d);
-                    amount = None;
-                },
-                c if let Some(d) = c.to_digit(10) => {
-                    // Must have a direction before an amount
-                    if dir.is_none() {
-                        return Err(ParseAlgorithmError::MissingDirection);
-                    }
-
-                    if let Some(a) = amount {
-                        amount = Some(10 * a + d);
-                    }
-                    else {
-                        amount = Some(d);
-                    }
+            // Direction character is the start of a new move
+            if let Ok(d) = Direction::try_from(c) {
+                // Push the previous move, if there was one
+                if let Some(dir) = dir {
+                    alg.push(Move::new(dir, amount.unwrap_or(1)));
                 }
-                c if c.is_whitespace() => continue,
-                _ => return Err(ParseAlgorithmError::InvalidCharacter(c)),
+
+                // Set the new direction and default amount for the next move
+                dir = Some(d);
+                amount = None;
+            }
+            // The number after a move
+            else if let Some(d) = c.to_digit(10) {
+                // Must have a direction before an amount
+                if dir.is_none() {
+                    return Err(ParseAlgorithmError::MissingDirection);
+                }
+
+                // Append the next digit to the number
+                if let Some(a) = amount {
+                    amount = Some(10 * a + d);
+                } else {
+                    amount = Some(d);
+                }
+            }
+            // Any other character is invalid
+            else if !c.is_whitespace() {
+                return Err(ParseAlgorithmError::InvalidCharacter(c));
             }
         }
 
         // Push the last move
-        try_push!();
+        if let Some(dir) = dir {
+            alg.push(Move::new(dir, amount.unwrap_or(1)));
+        }
 
         Ok(alg)
     }
