@@ -182,7 +182,7 @@ impl FromStr for Algorithm {
                 },
                 c if let Some(d) = c.to_digit(10) => {
                     // Must have a direction before an amount
-                    if dir == None {
+                    if dir.is_none() {
                         return Err(ParseAlgorithmError::MissingDirection);
                     }
 
@@ -222,41 +222,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_simplify() {
-        let a = Algorithm::from_str("UD2U3DUDDDUUD2").unwrap().simplified();
-        assert_eq!(a, Algorithm::from_str("D").unwrap());
+    fn test_len() {
+        let a = Algorithm::from_str("ULDR").unwrap();
+        assert_eq!(a.len(), 4);
     }
 
     #[test]
-    fn test_simplify_2() {
-        let a = Algorithm::from_str("UDLRDRLU").unwrap().simplified();
-        assert_eq!(a, Algorithm::from_str("").unwrap());
+    fn test_len_2() {
+        let a = Algorithm::from_str("U3L6D2R20").unwrap();
+        assert_eq!(a.len(), 31);
     }
 
     #[test]
-    fn test_simplify_3() {
-        let a = Algorithm::from_str(
-            "DRLLURLURURURURULLDDDLLUDLLLDDRLURDLRUURULUDLDRDULURRRLUUUUDLRRLLRRULLRRLRDRDUDR
-            DDRLLLRULLUDULDDURRLDRURRRDRLUDLDDURRURUUULLDRLLDRDUDLLLLDLURLDRLDLDDULLDLDRRLRD
-            LRLUUUDDLUDULLDUDDLRRLUULRRLDLRRULULRDRULRLUDUDLRDURDLLRRDDURLULRRLDDRRRRUDDDULU
-            DRURURDULLRDUULLLURRUDUDDURURLUUDULRURLRLLRDRDLDRLRRDURUURLUULRRUURDUDDLRUDLDUUD
-            RLRURRRDDULDLLURLULLRLUDUDUDRUDLURURLLURRDRUUDURURLLRLDUUURUULUDLDDLLRRLRDRLRULU
-            LDDLDRRULUUDDDDDRRLURRULLDULUDLRUUDDDRULRRURUDLLUDDDDLULLDULLLDDRULURURUDDLRLULU
-            LRLDULLLUULLDLUURRRULLUDRRUUUULLRULLRDDLURULUDUULLLRDRLRUUDRRUDRRLRUUURRDLLDULRL
-            RLLLDDUUDDULUUDDRUDLLUDLRRLLRDDULLDULLRRURDRULUDLRLDRLRLUDDDUUDURUDULULLDLLDUDLL
-            LRRDDLDDLRLLLURUDLUDRDDRLRDLDRRDDDUDRRRDURDLDUDLURDUDLLRUDUUDULLRRDLLLLLDDULDRUD
-            LDLRLRLLRRULLDRULRRRULRDDLLRRDRUDDUULRRLRLLRUUUDDRDDLUDLRRULLDLDDLURDRDLRDRUUDUU",
-        )
-        .unwrap()
-        .simplified();
-        let b = Algorithm::from_str(
-            "DLU2RURURURUL2D3L5DRURU4R2DRD2LUL2ULDRDRUR3DLDR2URU3L2DLDRDL4DLDLDL2DLDR2DLULUL2
-            DRDR5U2L3UR3U3RDLDR3U4RU2RDR3DLDL2U2L2URULUR2DRU2RULU2RU2L2D3RULULD2LDR2ULD3RUR2
-            UL3DRURULD3LUL5D2RULURURDLULUL4U2L2DLU2R3U5LULD2LURULU2L2DRUR4U3R2DL5DL2DL2URDRU
-            L2DRULUL2DL2DLD2LD2L3URD2RDLDR2D3R4DLDLURDLUL5DLDL2DRUR2D2RU2RDL2DLD2LURDRD2RU3",
-        )
-        .unwrap();
-        assert_eq!(a, b);
+    fn test_len_3() {
+        let a = Algorithm::from_str("UUU3").unwrap();
+        assert_eq!(a.len(), 5);
     }
 
     #[test]
@@ -292,6 +272,44 @@ mod tests {
         let mut a = Algorithm::from_str("ULDR").unwrap();
         a.push_simplify(Move::from(Direction::Left));
         assert_eq!(a.moves.last(), Some(&Move::new(Direction::Down, 1)));
+    }
+
+    #[test]
+    fn test_simplify() {
+        let a = Algorithm::from_str("UD2U3DUDDDUUD2").unwrap().simplified();
+        assert_eq!(a, Algorithm::from_str("D").unwrap());
+    }
+
+    #[test]
+    fn test_simplify_2() {
+        let a = Algorithm::from_str("UDLRDRLU").unwrap().simplified();
+        assert_eq!(a, Algorithm::from_str("").unwrap());
+    }
+
+    #[test]
+    fn test_simplify_3() {
+        let a = Algorithm::from_str(
+            "DRLLURLURURURURULLDDDLLUDLLLDDRLURDLRUURULUDLDRDULURRRLUUUUDLRRLLRRULLRRLRDRDUDR
+            DDRLLLRULLUDULDDURRLDRURRRDRLUDLDDURRURUUULLDRLLDRDUDLLLLDLURLDRLDLDDULLDLDRRLRD
+            LRLUUUDDLUDULLDUDDLRRLUULRRLDLRRULULRDRULRLUDUDLRDURDLLRRDDURLULRRLDDRRRRUDDDULU
+            DRURURDULLRDUULLLURRUDUDDURURLUUDULRURLRLLRDRDLDRLRRDURUURLUULRRUURDUDDLRUDLDUUD
+            RLRURRRDDULDLLURLULLRLUDUDUDRUDLURURLLURRDRUUDURURLLRLDUUURUULUDLDDLLRRLRDRLRULU
+            LDDLDRRULUUDDDDDRRLURRULLDULUDLRUUDDDRULRRURUDLLUDDDDLULLDULLLDDRULURURUDDLRLULU
+            LRLDULLLUULLDLUURRRULLUDRRUUUULLRULLRDDLURULUDUULLLRDRLRUUDRRUDRRLRUUURRDLLDULRL
+            RLLLDDUUDDULUUDDRUDLLUDLRRLLRDDULLDULLRRURDRULUDLRLDRLRLUDDDUUDURUDULULLDLLDUDLL
+            LRRDDLDDLRLLLURUDLUDRDDRLRDLDRRDDDUDRRRDURDLDUDLURDUDLLRUDUUDULLRRDLLLLLDDULDRUD
+            LDLRLRLLRRULLDRULRRRULRDDLLRRDRUDDUULRRLRLLRUUUDDRDDLUDLRRULLDLDDLURDRDLRDRUUDUU",
+        )
+        .unwrap()
+        .simplified();
+        let b = Algorithm::from_str(
+            "DLU2RURURURUL2D3L5DRURU4R2DRD2LUL2ULDRDRUR3DLDR2URU3L2DLDRDL4DLDLDL2DLDR2DLULUL2
+            DRDR5U2L3UR3U3RDLDR3U4RU2RDR3DLDL2U2L2URULUR2DRU2RULU2RU2L2D3RULULD2LDR2ULD3RUR2
+            UL3DRURULD3LUL5D2RULURURDLULUL4U2L2DLU2R3U5LULD2LURULU2L2DRUR4U3R2DL5DL2DL2URDRU
+            L2DRULUL2DL2DLD2LD2L3URD2RDLDR2D3R4DLDLURDLUL5DLDL2DRUR2D2RU2RDL2DLD2LURDRD2RU3",
+        )
+        .unwrap();
+        assert_eq!(a, b);
     }
 
     #[test]

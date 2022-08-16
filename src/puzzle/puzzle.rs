@@ -55,7 +55,7 @@ impl Puzzle {
         }
 
         if grid[0].is_empty() {
-            return Err(PuzzleError::Empty);
+            return Err(PuzzleError::InvalidSize(0, 0));
         }
 
         let w = grid[0].len();
@@ -210,8 +210,83 @@ impl FromStr for Puzzle {
 mod tests {
     use super::*;
 
+    #[test]
+    fn test_new() {
+        let p = Puzzle::new(4, 4).unwrap();
+        assert_eq!(
+            p,
+            Puzzle {
+                pieces: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0],
+                width: 4,
+                height: 4,
+                gap: 15
+            }
+        );
+    }
+
+    #[test]
+    fn test_new_2() {
+        let p = Puzzle::new(0, 0);
+        assert!(p.is_err());
+
+        let p = Puzzle::new(3, 0);
+        assert!(p.is_err());
+
+        let p = Puzzle::new(0, 5);
+        assert!(p.is_err());
+    }
+
+    #[test]
+    fn test_new_from_grid() {
+        let v = [11, 0, 1, 10, 4, 5, 15, 6, 2, 3, 13, 8, 7, 12, 9, 14]
+            .chunks(4)
+            .map(|c| c.to_vec())
+            .collect();
+        let p = Puzzle::new_from_grid(v);
+        assert!(p.is_ok());
+    }
+
+    #[test]
+    fn test_new_from_grid_2() {
+        let p = Puzzle::new_from_grid(Vec::new());
+        assert_eq!(p, Err(PuzzleError::Empty));
+    }
+
+    #[test]
+    fn test_new_from_grid_3() {
+        let p = Puzzle::new_from_grid(vec![vec![]]);
+        assert_eq!(p, Err(PuzzleError::InvalidSize(0, 0)));
+    }
+
+    #[test]
+    fn test_new_from_grid_4() {
+        let v = [11, 0, 1, 10, 4, 7, 15, 6, 2, 3, 13, 8, 7, 12, 9, 14]
+            .chunks(4)
+            .map(|c| c.to_vec())
+            .collect();
+        let p = Puzzle::new_from_grid(v);
+        assert_eq!(p, Err(PuzzleError::DuplicatePiece(7)));
+    }
+
+    #[test]
+    fn test_new_from_grid_5() {
+        let v = [11, 16, 1, 10, 4, 5, 15, 6, 2, 3, 13, 8, 7, 12, 9, 14]
+            .chunks(4)
+            .map(|c| c.to_vec())
+            .collect();
+        let p = Puzzle::new_from_grid(v);
+        assert_eq!(p, Err(PuzzleError::PieceOutOfRange(16)));
+    }
+
+    #[test]
+    fn test_new_from_grid_6() {
+        let v = vec![vec![1, 2], vec![3, 4, 0]];
+        let p = Puzzle::new_from_grid(v);
+        assert_eq!(p, Err(PuzzleError::UnequalRowLengths));
+    }
+
     mod sliding_puzzle {
-        use crate::algorithm::puzzle_move::Move;
+        use crate::algorithm::{algorithm::Algorithm, puzzle_move::Move};
 
         use super::*;
 
@@ -330,6 +405,41 @@ mod tests {
             assert!(p.can_move_dir(Direction::Left));
             assert!(!p.can_move_dir(Direction::Down));
             assert!(!p.can_move_dir(Direction::Right));
+        }
+
+        #[test]
+        fn test_can_apply_move() {
+            let mut p = Puzzle::new(4, 4).unwrap();
+            p.move_dir(Direction::Down);
+            p.move_dir(Direction::Right);
+            assert!(p.can_apply_move(Move::new(Direction::Up, 1)));
+            assert!(p.can_apply_move(Move::new(Direction::Left, 1)));
+            assert!(p.can_apply_move(Move::new(Direction::Down, 2)));
+            assert!(p.can_apply_move(Move::new(Direction::Right, 2)));
+            assert!(!p.can_apply_move(Move::new(Direction::Up, 2)));
+            assert!(!p.can_apply_move(Move::new(Direction::Left, 2)));
+            assert!(!p.can_apply_move(Move::new(Direction::Down, 3)));
+            assert!(!p.can_apply_move(Move::new(Direction::Right, 3)));
+        }
+
+        #[test]
+        fn test_can_apply_alg() {
+            let p = Puzzle::new(4, 4).unwrap();
+            let a = Algorithm::from_str("D3RU2RD2RU3L3").unwrap();
+            assert!(p.can_apply_alg(&a));
+            let a = Algorithm::from_str("R2DL2UR2D2RU2LD3RULURDLDLU2RDLULD2RULDR2U").unwrap();
+            assert!(p.can_apply_alg(&a));
+        }
+
+        #[test]
+        fn test_apply_alg() {
+            let mut p = Puzzle::new(4, 4).unwrap();
+            let a = Algorithm::from_str("D3RU2RD2RU3L3").unwrap();
+            p.apply_alg(&a);
+            assert_eq!(
+                p.pieces,
+                vec![5, 1, 7, 3, 9, 2, 11, 4, 13, 6, 10, 8, 14, 15, 12, 0]
+            );
         }
     }
 
