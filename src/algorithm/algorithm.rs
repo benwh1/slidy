@@ -1,9 +1,16 @@
+use std::{cmp::Ordering, fmt::Display, ops::Add, str::FromStr};
+
+use thiserror::Error;
+
+use crate::algorithm::display::{
+    algorithm::{AlgorithmDisplay, DisplaySpaced, DisplayUnspaced},
+    puzzle_move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
+};
+
 use super::{
     direction::Direction,
     puzzle_move::{Move, MoveSum},
 };
-use std::{cmp::Ordering, ops::Add, str::FromStr};
-use thiserror::Error;
 
 #[derive(Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Algorithm {
@@ -129,6 +136,33 @@ impl Algorithm {
         Self {
             moves: self.moves.repeat(n),
         }
+    }
+
+    #[must_use]
+    pub fn display_long_spaced(&self) -> DisplaySpaced<DisplayLongSpaced> {
+        DisplaySpaced::<DisplayLongSpaced>::new(self)
+    }
+
+    #[must_use]
+    pub fn display_long_unspaced(&self) -> DisplayUnspaced<DisplayLongUnspaced> {
+        DisplayUnspaced::<DisplayLongUnspaced>::new(self)
+    }
+
+    #[must_use]
+    pub fn display_short_spaced(&self) -> DisplaySpaced<DisplayShort> {
+        DisplaySpaced::<DisplayShort>::new(self)
+    }
+
+    #[must_use]
+    pub fn display_short_unspaced(&self) -> DisplayUnspaced<DisplayShort> {
+        DisplayUnspaced::<DisplayShort>::new(self)
+    }
+}
+
+impl Display for Algorithm {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Default formatting is short, unspaced.
+        self.display_short_unspaced().fmt(f)
     }
 }
 

@@ -1,5 +1,9 @@
-use super::direction::Direction;
-use std::{cmp::Ordering, ops::Add};
+use std::{cmp::Ordering, fmt::Display, ops::Add};
+
+use crate::algorithm::{
+    direction::Direction,
+    display::puzzle_move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort, MoveDisplay},
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Move {
@@ -25,6 +29,28 @@ impl Move {
             direction: self.direction.inverse(),
             amount: self.amount,
         }
+    }
+
+    #[must_use]
+    pub fn display_long_spaced(&self) -> DisplayLongSpaced {
+        DisplayLongSpaced::new(*self)
+    }
+
+    #[must_use]
+    pub fn display_long_unspaced(&self) -> DisplayLongUnspaced {
+        DisplayLongUnspaced::new(*self)
+    }
+
+    #[must_use]
+    pub fn display_short(&self) -> DisplayShort {
+        DisplayShort::new(*self)
+    }
+}
+
+impl Display for Move {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Default formatting is short.
+        self.display_short().fmt(f)
     }
 }
 
