@@ -506,7 +506,10 @@ mod benchmarks {
     #[bench]
     fn bench_can_apply_alg(b: &mut Bencher) {
         let p = Puzzle::default();
-        let a = Algorithm::from_str("D3RU2RD2RU3L3").unwrap().repeat(10);
+        let a = Algorithm::from_str(
+            "DR2D2LULURUR2DL2DRU2RD2LDRULULDRDL2URDLU3RDLUR3DLDLU2RD3LU3R2DLD2LULU2R3D3",
+        )
+        .unwrap();
         b.iter(|| p.can_apply_alg(&a));
     }
 }
