@@ -19,20 +19,25 @@ impl Rect {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug)]
 struct PiecewiseConstant {
     data: BTreeMap<u32, u32>,
+    domain: Range<u32>,
 }
 
 impl PiecewiseConstant {
-    fn new() -> Self {
+    fn new(domain: Range<u32>) -> Self {
         let mut data = BTreeMap::new();
-        data.insert(0, 0);
-        Self { data }
+        data.insert(domain.start, 0);
+        Self { data, domain }
     }
 
     fn value(&self, x: u32) -> u32 {
-        self.data.range(..=x).last().map(|(_, &v)| v).unwrap()
+        self.data
+            .range(self.domain.start..=x)
+            .last()
+            .map(|(_, &v)| v)
+            .unwrap()
     }
 
     fn range_value(&self, range: Range<u32>) -> Option<u32> {
@@ -45,7 +50,11 @@ impl PiecewiseConstant {
     }
 
     fn set_range_value(&mut self, range: Range<u32>, value: u32) {
-        let next_point = self.data.range(range.end..).next().map(|(&k, &v)| (k, v));
+        let next_point = self
+            .data
+            .range(range.end..self.domain.end)
+            .next()
+            .map(|(&k, &v)| (k, v));
 
         let keys = self
             .data
@@ -73,7 +82,9 @@ impl PiecewiseConstant {
             _ => {}
         }
 
-        self.data.insert(range.end, end_value);
+        if self.domain.contains(&range.end) && value != end_value {
+            self.data.insert(range.end, end_value);
+        }
     }
 }
 
@@ -88,8 +99,8 @@ impl RectPartition {
         let left = rects.iter().map(|r| r.left).min().unwrap();
         let right = rects.iter().map(|r| r.right).max().unwrap();
 
-        let mut height_map = PiecewiseConstant::new();
-        height_map.data.insert(0, 0);
+        let mut height_map = PiecewiseConstant::new(left..right);
+        height_map.data.insert(left, 0);
 
         for slice in rects.group_by(|a, b| a.top == b.top) {
             let y = slice[0].top;
