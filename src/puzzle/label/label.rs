@@ -2,10 +2,14 @@ use std::cmp::Ordering;
 
 pub trait Label {
     #[must_use]
-    fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize;
+    fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize
+    where
+        Self: Sized;
 
     #[must_use]
-    fn num_labels(width: usize, height: usize) -> usize;
+    fn num_labels(width: usize, height: usize) -> usize
+    where
+        Self: Sized;
 }
 
 pub struct RowGrids;
