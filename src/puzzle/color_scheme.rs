@@ -1,4 +1,4 @@
-mod recursive;
+mod rect_partition;
 
 use palette::{rgb::Rgb, Gradient, Hsl, IntoColor};
 use thiserror::Error;
