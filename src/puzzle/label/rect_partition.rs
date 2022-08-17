@@ -1,5 +1,7 @@
 use std::{collections::BTreeMap, ops::Range};
 
+use thiserror::Error;
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Rect {
     left: u32,
@@ -109,11 +111,23 @@ pub struct RectPartition {
     rects: Vec<Rect>,
 }
 
+#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum RectPartitionError {
+    #[error("Empty: a partition must contain at least one `Rect`")]
+    Empty,
+
+    #[error("NotPartition: the square at ({x}, {y}) is not covered exactly once")]
+    NotPartition { x: u32, y: u32 },
+
+    #[error("InvalidRect: `Rect`s must have positive width and height")]
+    InvalidRect,
+}
+
 impl RectPartition {
     #[must_use]
-    pub fn new(mut rects: Vec<Rect>) -> Option<Self> {
+    pub fn new(mut rects: Vec<Rect>) -> Result<Self, RectPartitionError> {
         if rects.is_empty() {
-            return None;
+            return Err(RectPartitionError::Empty);
         }
 
         rects.sort_by_key(|r| (r.top, r.left));
@@ -127,24 +141,31 @@ impl RectPartition {
         for slice in rects.group_by(|a, b| a.top == b.top) {
             for rect in slice {
                 if rect.width() == 0 || rect.height() == 0 {
-                    return None;
+                    return Err(RectPartitionError::InvalidRect);
                 }
 
                 let height = height_map.range_value(rect.left..rect.right);
-                if let Some(height) = height {
-                    if height == rect.top {
-                        height_map.set_range_value(rect.left..rect.right, rect.bottom);
-                    } else {
-                        return None;
-                    }
+                if let Some(height) = height && height == rect.top {
+                    height_map.set_range_value(rect.left..rect.right, rect.bottom);
+                } else {
+                    return Err(RectPartitionError::NotPartition {
+                        x: rect.left,
+                        y: rect.top,
+                    });
                 }
             }
         }
 
-        if height_map.range_value(left..right).is_some() {
-            Some(Self { rects })
+        let max_value = height_map.data.values().max().unwrap().to_owned();
+        if let Some((key, value)) = height_map
+            .data
+            .iter()
+            .find(|(_, &v)| v != max_value)
+            .map(|(&k, &v)| (k, v))
+        {
+            Err(RectPartitionError::NotPartition { x: key, y: value })
         } else {
-            None
+            Ok(Self { rects })
         }
     }
 
@@ -181,12 +202,12 @@ mod tests {
             Rect::new((2, 2), (3, 3)),
             Rect::new((2, 3), (5, 5)),
         ])
-        .is_some());
+        .is_ok());
     }
 
     #[test]
     fn test_rect_partition_2() {
-        assert!(RectPartition::new(vec![Rect::new((0, 0), (1, 1))]).is_some());
+        assert!(RectPartition::new(vec![Rect::new((0, 0), (1, 1))]).is_ok());
     }
 
     #[test]
@@ -203,51 +224,60 @@ mod tests {
             Rect::new((2, 4), (4, 5)),
             Rect::new((4, 4), (5, 5)),
         ])
-        .is_some());
+        .is_ok());
     }
 
     #[test]
     fn test_rect_partition_4() {
-        assert!(RectPartition::new(vec![]).is_none());
+        assert_eq!(RectPartition::new(vec![]), Err(RectPartitionError::Empty));
     }
 
     #[test]
     fn test_rect_partition_5() {
-        assert!(RectPartition::new(vec![
-            Rect::new((0, 0), (3, 2)),
-            Rect::new((3, 0), (5, 3)),
-            Rect::new((0, 2), (2, 5)),
-            Rect::new((2, 2), (3, 3)),
-            Rect::new((2, 3), (5, 5)),
-            Rect::new((5, 0), (5, 5)),
-        ])
-        .is_none());
+        assert_eq!(
+            RectPartition::new(vec![
+                Rect::new((0, 0), (3, 2)),
+                Rect::new((3, 0), (5, 3)),
+                Rect::new((0, 2), (2, 5)),
+                Rect::new((2, 2), (3, 3)),
+                Rect::new((2, 3), (5, 5)),
+                Rect::new((5, 0), (5, 5)),
+            ]),
+            Err(RectPartitionError::InvalidRect)
+        );
     }
 
     #[test]
     fn test_rect_partition_6() {
-        assert!(RectPartition::new(vec![Rect::new((0, 0), (0, 0))]).is_none());
+        assert_eq!(
+            RectPartition::new(vec![Rect::new((0, 0), (0, 0))]),
+            Err(RectPartitionError::InvalidRect)
+        );
     }
 
     #[test]
     fn test_rect_partition_7() {
-        assert!(RectPartition::new(vec![
-            Rect::new((0, 0), (2, 2)),
-            Rect::new((2, 0), (4, 1)),
-            Rect::new((3, 1), (4, 2)),
-        ])
-        .is_none());
+        assert_eq!(
+            RectPartition::new(vec![
+                Rect::new((0, 0), (2, 2)),
+                Rect::new((2, 0), (4, 1)),
+                Rect::new((3, 1), (4, 2)),
+            ]),
+            Err(RectPartitionError::NotPartition { x: 2, y: 1 })
+        );
     }
 
     #[test]
     fn test_rect_partition_8() {
-        assert!(RectPartition::new(vec![
-            Rect::new((0, 0), (3, 3)),
-            Rect::new((2, 0), (6, 3)),
-            Rect::new((0, 3), (3, 6)),
-            Rect::new((3, 3), (6, 6)),
-        ])
-        .is_none());
+        assert_eq!(
+            RectPartition::new(vec![
+                Rect::new((0, 0), (3, 3)),
+                Rect::new((2, 0), (6, 3)),
+                Rect::new((0, 3), (3, 6)),
+                Rect::new((3, 3), (6, 6)),
+            ]),
+            Err(RectPartitionError::NotPartition { x: 2, y: 0 })
+        );
     }
 
     #[test]
@@ -259,17 +289,19 @@ mod tests {
             Rect::new((2, 2), (3, 3)),
             Rect::new((2, 3), (5, 5)),
         ])
-        .is_none());
+        .is_err());
     }
 
     #[test]
     fn test_rect_partition_10() {
-        assert!(RectPartition::new(vec![
-            Rect::new((0, 0), (4, 1)),
-            Rect::new((0, 1), (1, 4)),
-            Rect::new((1, 1), (4, 1)),
-            Rect::new((1, 1), (4, 4)),
-        ])
-        .is_none());
+        assert_eq!(
+            RectPartition::new(vec![
+                Rect::new((0, 0), (4, 1)),
+                Rect::new((0, 1), (1, 4)),
+                Rect::new((1, 1), (4, 1)),
+                Rect::new((1, 1), (4, 4)),
+            ]),
+            Err(RectPartitionError::InvalidRect)
+        );
     }
 }
