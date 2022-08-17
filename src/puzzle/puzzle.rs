@@ -15,8 +15,8 @@ pub struct Puzzle {
 
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum PuzzleError {
-    #[error("InvalidSize: width ({0}) and height ({1}) must be at least 1")]
-    InvalidSize(usize, usize),
+    #[error("InvalidSize: width ({width}) and height ({height}) must both be at least 1")]
+    InvalidSize { width: usize, height: usize },
 
     #[error("Empty: grid is empty")]
     Empty,
@@ -34,7 +34,7 @@ pub enum PuzzleError {
 impl Puzzle {
     pub fn new(width: usize, height: usize) -> Result<Self, PuzzleError> {
         if width < 1 || height < 1 {
-            Err(PuzzleError::InvalidSize(width, height))
+            Err(PuzzleError::InvalidSize { width, height })
         } else {
             Ok(Self {
                 pieces: {
@@ -55,7 +55,10 @@ impl Puzzle {
         }
 
         if grid[0].is_empty() {
-            return Err(PuzzleError::InvalidSize(0, 0));
+            return Err(PuzzleError::InvalidSize {
+                width: 0,
+                height: 0,
+            });
         }
 
         let w = grid[0].len();
@@ -255,7 +258,13 @@ mod tests {
     #[test]
     fn test_new_from_grid_3() {
         let p = Puzzle::new_from_grid(vec![vec![]]);
-        assert_eq!(p, Err(PuzzleError::InvalidSize(0, 0)));
+        assert_eq!(
+            p,
+            Err(PuzzleError::InvalidSize {
+                width: 0,
+                height: 0
+            })
+        );
     }
 
     #[test]
