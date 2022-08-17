@@ -88,12 +88,13 @@ fn draw_centered_text(
     }
 }
 
-pub struct Renderer<'s, 'f, 'a, L, S>
+pub struct Renderer<'l, 's, 'f, 'a, L, S>
 where
     L: Label,
     S: ColorScheme,
 {
     phantom: PhantomData<L>,
+    label: &'l L,
     scheme: &'s S,
     font: &'f FontRef<'a>,
     draw_borders: bool,
@@ -101,31 +102,22 @@ where
     font_size: f32,
 }
 
-impl<'s, 'f, 'a, L, S> Renderer<'s, 'f, 'a, L, S>
+impl<'l, 's, 'f, 'a, L, S> Renderer<'l, 's, 'f, 'a, L, S>
 where
     L: Label,
     S: ColorScheme,
 {
     #[must_use]
-    pub fn with_scheme_and_font(scheme: &'s S, font: &'f FontRef<'a>) -> Self {
+    pub fn with_label_scheme_font(label: &'l L, scheme: &'s S, font: &'f FontRef<'a>) -> Self {
         Self {
             phantom: PhantomData,
+            label,
             scheme,
             font,
             draw_borders: false,
             tile_size: 75,
             font_size: 30.0,
         }
-    }
-
-    #[must_use]
-    pub fn label(self, _: L) -> Self {
-        // The purpose of this function is to allow the generic parameter `L` to be deduced, so
-        // that we can write something like
-        // Renderer::with_scheme_and_font(&scheme, &font).label(L)
-        // instead of
-        // Renderer::<L, _>::with_scheme_and_font(&scheme, &font)
-        self
     }
 
     #[must_use]
@@ -169,9 +161,13 @@ where
 
                 if piece != Piece::zero() {
                     let solved_pos = puzzle.solved_pos_xy_unchecked(piece);
-                    let label =
-                        L::position_label(w as usize, h as usize, solved_pos.0, solved_pos.1);
-                    let num_labels = L::num_labels(w as usize, h as usize);
+                    let label = self.label.position_label(
+                        w as usize,
+                        h as usize,
+                        solved_pos.0,
+                        solved_pos.1,
+                    );
+                    let num_labels = self.label.num_labels(w as usize, h as usize);
                     let color = convert_rgb(self.scheme.color(label, num_labels));
                     let (rect_x, rect_y) = ((tile_size * x) as i32, (tile_size * y) as i32);
                     let rect = Rect::at(rect_x, rect_y).of_size(tile_size, tile_size);

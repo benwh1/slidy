@@ -1,121 +1,93 @@
 use super::label::Label;
-use std::marker::PhantomData;
 
-pub struct Id;
-pub struct RotateCw;
-pub struct RotateCcw;
-pub struct RotateHalf;
-pub struct ReflectVertical;
-pub struct ReflectHorizontal;
-pub struct ReflectDiagonal;
-pub struct ReflectAntidiagonal;
+pub struct Id<L: Label>(L);
+pub struct RotateCw<L: Label>(L);
+pub struct RotateCcw<L: Label>(L);
+pub struct RotateHalf<L: Label>(L);
+pub struct ReflectVertical<L: Label>(L);
+pub struct ReflectHorizontal<L: Label>(L);
+pub struct ReflectDiagonal<L: Label>(L);
+pub struct ReflectAntidiagonal<L: Label>(L);
 
-pub struct Symmetry<L, T> {
-    phantom_l: PhantomData<L>,
-    phantom_t: PhantomData<T>,
-}
-
-impl<L> Label for Symmetry<L, Id>
-where
-    L: Label,
-{
-    fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
-        L::position_label(width, height, x, y)
+impl<L: Label> Label for Id<L> {
+    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+        self.0.position_label(width, height, x, y)
     }
 
-    fn num_labels(width: usize, height: usize) -> usize {
-        L::num_labels(width, height)
+    fn num_labels(&self, width: usize, height: usize) -> usize {
+        self.0.num_labels(width, height)
     }
 }
 
-impl<L> Label for Symmetry<L, RotateCw>
-where
-    L: Label,
-{
-    fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
-        L::position_label(height, width, y, width - 1 - x)
+impl<L: Label> Label for RotateCw<L> {
+    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+        self.0.position_label(height, width, y, width - 1 - x)
     }
 
-    fn num_labels(width: usize, height: usize) -> usize {
-        L::num_labels(height, width)
+    fn num_labels(&self, width: usize, height: usize) -> usize {
+        self.0.num_labels(height, width)
     }
 }
 
-impl<L> Label for Symmetry<L, RotateCcw>
-where
-    L: Label,
-{
-    fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
-        L::position_label(height, width, height - 1 - y, x)
+impl<L: Label> Label for RotateCcw<L> {
+    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+        self.0.position_label(height, width, height - 1 - y, x)
     }
 
-    fn num_labels(width: usize, height: usize) -> usize {
-        L::num_labels(height, width)
+    fn num_labels(&self, width: usize, height: usize) -> usize {
+        self.0.num_labels(height, width)
     }
 }
 
-impl<L> Label for Symmetry<L, RotateHalf>
-where
-    L: Label,
-{
-    fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
-        L::position_label(width, height, width - 1 - x, height - 1 - y)
+impl<L: Label> Label for RotateHalf<L> {
+    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+        self.0
+            .position_label(width, height, width - 1 - x, height - 1 - y)
     }
 
-    fn num_labels(width: usize, height: usize) -> usize {
-        L::num_labels(width, height)
+    fn num_labels(&self, width: usize, height: usize) -> usize {
+        self.0.num_labels(width, height)
     }
 }
 
-impl<L> Label for Symmetry<L, ReflectVertical>
-where
-    L: Label,
-{
-    fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
-        L::position_label(width, height, x, height - 1 - y)
+impl<L: Label> Label for ReflectVertical<L> {
+    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+        self.0.position_label(width, height, x, height - 1 - y)
     }
 
-    fn num_labels(width: usize, height: usize) -> usize {
-        L::num_labels(width, height)
+    fn num_labels(&self, width: usize, height: usize) -> usize {
+        self.0.num_labels(width, height)
     }
 }
 
-impl<L> Label for Symmetry<L, ReflectHorizontal>
-where
-    L: Label,
-{
-    fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
-        L::position_label(width, height, width - 1 - x, y)
+impl<L: Label> Label for ReflectHorizontal<L> {
+    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+        self.0.position_label(width, height, width - 1 - x, y)
     }
 
-    fn num_labels(width: usize, height: usize) -> usize {
-        L::num_labels(width, height)
+    fn num_labels(&self, width: usize, height: usize) -> usize {
+        self.0.num_labels(width, height)
     }
 }
 
-impl<L> Label for Symmetry<L, ReflectDiagonal>
-where
-    L: Label,
-{
-    fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
-        L::position_label(height, width, y, x)
+impl<L: Label> Label for ReflectDiagonal<L> {
+    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+        self.0.position_label(height, width, y, x)
     }
 
-    fn num_labels(width: usize, height: usize) -> usize {
-        L::num_labels(height, width)
+    fn num_labels(&self, width: usize, height: usize) -> usize {
+        self.0.num_labels(height, width)
     }
 }
 
-impl<L> Label for Symmetry<L, ReflectAntidiagonal>
-where
-    L: Label,
-{
-    fn position_label(width: usize, height: usize, x: usize, y: usize) -> usize {
-        L::position_label(height, width, height - 1 - y, width - 1 - x)
+impl<L: Label> Label for ReflectAntidiagonal<L> {
+    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+        self.0
+            .position_label(height, width, height - 1 - y, width - 1 - x)
     }
 
-    fn num_labels(width: usize, height: usize) -> usize {
-        L::num_labels(height, width)
+    fn num_labels(&self, width: usize, height: usize) -> usize {
+        self.0.num_labels(height, width)
     }
 }
 
@@ -124,20 +96,20 @@ mod tests {
     use super::*;
 
     macro_rules! test_label {
-        (fn $name:ident, $label:ty, $w:literal x $h:literal, $pos_label:expr, $num_labels:expr) => {
+        (fn $name:ident, $label:expr, $w:literal x $h:literal, $pos_label:expr, $num_labels:expr) => {
             #[test]
             fn $name() {
                 let wh = $w * $h;
                 let pos = (0..wh)
-                    .map(|i| <Symmetry<RowGrids, $label> as Label>::position_label($w, $h, i % $w, i / $w))
+                    .map(|i| $label(RowGrids).position_label($w, $h, i % $w, i / $w))
                     .collect::<Vec<_>>();
-                let num = <Symmetry<RowGrids, $label>  as Label>::num_labels($w, $h);
+                let num = $label(RowGrids).num_labels($w, $h);
                 assert_eq!(pos, $pos_label);
                 assert_eq!(num, $num_labels);
             }
         };
 
-        (fn $name:ident, $label:ty, $w:literal x $h:literal, $pos_label:expr) => {
+        (fn $name:ident, $label:expr, $w:literal x $h:literal, $pos_label:expr) => {
             test_label!(fn $name, $label, $w x $h, $pos_label, $pos_label.iter().max().unwrap() + 1);
         };
 
@@ -145,7 +117,7 @@ mod tests {
             ::paste::paste! {
                 mod [< $label:snake >] {
                     use crate::puzzle::label::label::{Label, RowGrids};
-                    use super::{Symmetry, $label};
+                    use super::{$label};
 
                     $(test_label!( fn [< test_ $label:snake _ $w x $h >] , $label, $w x $h, $pos);)*
                 }

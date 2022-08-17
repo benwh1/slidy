@@ -5,6 +5,8 @@ use crate::{
     puzzle::solved_state::SolvedState,
 };
 
+use super::label::label::RowGrids;
+
 pub trait SlidingPuzzle<Piece>
 where
     Piece: PrimInt,
@@ -44,8 +46,8 @@ where
     fn reset(&mut self);
 
     #[must_use]
-    fn is_solved<T: SolvedState>(&self) -> bool {
-        T::is_solved::<Piece, Self>(self)
+    fn is_solved(&self) -> bool {
+        RowGrids.is_solved(self)
     }
 
     #[must_use]

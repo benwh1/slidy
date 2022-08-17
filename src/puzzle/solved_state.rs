@@ -4,7 +4,7 @@ use num_traits::PrimInt;
 
 pub trait SolvedState {
     #[must_use]
-    fn is_solved<Piece, Puzzle>(puzzle: &Puzzle) -> bool
+    fn is_solved<Piece, Puzzle>(&self, puzzle: &Puzzle) -> bool
     where
         Piece: PrimInt,
         Puzzle: SlidingPuzzle<Piece>,
@@ -15,7 +15,7 @@ impl<T> SolvedState for T
 where
     T: Label,
 {
-    fn is_solved<Piece, Puzzle>(puzzle: &Puzzle) -> bool
+    fn is_solved<Piece, Puzzle>(&self, puzzle: &Puzzle) -> bool
     where
         Piece: PrimInt,
         Puzzle: SlidingPuzzle<Piece>,
@@ -31,10 +31,10 @@ where
             .all(|(x, y)| {
                 // Label of piece in position (x, y)
                 let (sx, sy) = puzzle.solved_pos_xy_unchecked(puzzle.piece_at_xy_unchecked(x, y));
-                let piece_label = T::position_label(w, h, sx, sy);
+                let piece_label = self.position_label(w, h, sx, sy);
 
                 // Label of piece in position (x, y) on a solved puzzle
-                let solved_label = T::position_label(w, h, x, y);
+                let solved_label = self.position_label(w, h, x, y);
 
                 piece_label == solved_label
             })
@@ -43,18 +43,18 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::puzzle::{puzzle::Puzzle, sliding_puzzle::SlidingPuzzle};
+    use crate::puzzle::puzzle::Puzzle;
     use std::str::FromStr;
 
     macro_rules! test_solved_state {
-        (fn $name:ident, $i:literal, $label:ty, $ok:literal : $pos:literal) => {
+        (fn $name:ident, $i:literal, $label:expr, $ok:literal : $pos:literal) => {
             #[test]
             fn $name() {
                 let p = Puzzle::from_str($pos).unwrap();
                 if $ok {
-                    assert!(p.is_solved::<$label>());
+                    assert!($label.is_solved(&p));
                 } else {
-                    assert!(!p.is_solved::<$label>());
+                    assert!(!$label.is_solved(&p));
                 }
             }
         };
@@ -63,7 +63,7 @@ mod tests {
             ::paste::paste! {
                 mod [< $label:snake >] {
                     use super::*;
-                    use crate::puzzle::label::label::$label;
+                    use crate::puzzle::{label::label::$label, solved_state::SolvedState};
 
                     $(test_solved_state!(
                         fn [< test_ $label:snake _ $i >] , $i, $label, $ok : $pos);
