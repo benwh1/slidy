@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, ops::Range};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-struct Rect {
+pub struct Rect {
     left: u32,
     top: u32,
     right: u32,
@@ -9,7 +9,7 @@ struct Rect {
 }
 
 impl Rect {
-    fn new(top_left: (u32, u32), bottom_right: (u32, u32)) -> Self {
+    pub fn new(top_left: (u32, u32), bottom_right: (u32, u32)) -> Self {
         Self {
             top: top_left.1,
             left: top_left.0,
@@ -18,33 +18,33 @@ impl Rect {
         }
     }
 
-    fn width(&self) -> u32 {
+    pub fn width(&self) -> u32 {
         self.right - self.left
     }
 
-    fn height(&self) -> u32 {
+    pub fn height(&self) -> u32 {
         self.bottom - self.top
     }
 
-    fn top_left(&self) -> (u32, u32) {
+    pub fn top_left(&self) -> (u32, u32) {
         (self.left, self.top)
     }
 }
 
 #[derive(Debug)]
-struct PiecewiseConstant {
+pub(super) struct PiecewiseConstant {
     data: BTreeMap<u32, u32>,
     domain: Range<u32>,
 }
 
 impl PiecewiseConstant {
-    fn new(domain: Range<u32>) -> Self {
+    pub(super) fn new(domain: Range<u32>) -> Self {
         let mut data = BTreeMap::new();
         data.insert(domain.start, 0);
         Self { data, domain }
     }
 
-    fn value(&self, x: u32) -> u32 {
+    pub(super) fn value(&self, x: u32) -> u32 {
         self.data
             .range(self.domain.start..=x)
             .last()
@@ -52,7 +52,7 @@ impl PiecewiseConstant {
             .unwrap()
     }
 
-    fn range_value(&self, range: Range<u32>) -> Option<u32> {
+    pub(super) fn range_value(&self, range: Range<u32>) -> Option<u32> {
         let v = self.value(range.start);
         if self.data.range(range).map(|(_, &v)| v).all(|x| x == v) {
             Some(v)
@@ -61,7 +61,7 @@ impl PiecewiseConstant {
         }
     }
 
-    fn set_range_value(&mut self, range: Range<u32>, value: u32) {
+    pub(super) fn set_range_value(&mut self, range: Range<u32>, value: u32) {
         let next_point = self
             .data
             .range(range.end..self.domain.end)
@@ -101,12 +101,12 @@ impl PiecewiseConstant {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-struct RectPartition {
+pub struct RectPartition {
     rects: Vec<Rect>,
 }
 
 impl RectPartition {
-    fn new(mut rects: Vec<Rect>) -> Option<Self> {
+    pub fn new(mut rects: Vec<Rect>) -> Option<Self> {
         if rects.is_empty() {
             return None;
         }
@@ -143,7 +143,7 @@ impl RectPartition {
         }
     }
 
-    fn rect(&self) -> Rect {
+    pub(super) fn rect(&self) -> Rect {
         let left = self.rects.iter().map(|r| r.left).min().unwrap();
         let top = self.rects.iter().map(|r| r.top).min().unwrap();
         let right = self.rects.iter().map(|r| r.right).max().unwrap();
@@ -156,7 +156,7 @@ impl RectPartition {
         }
     }
 
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.rects.len()
     }
 }
