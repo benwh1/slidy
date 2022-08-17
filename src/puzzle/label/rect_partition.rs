@@ -125,8 +125,11 @@ impl RectPartition {
         height_map.data.insert(left, 0);
 
         for slice in rects.group_by(|a, b| a.top == b.top) {
-            let y = slice[0].top;
             for rect in slice {
+                if rect.width() == 0 || rect.height() == 0 {
+                    return None;
+                }
+
                 let height = height_map.range_value(rect.left..rect.right);
                 if let Some(height) = height {
                     if height == rect.top {
@@ -135,9 +138,6 @@ impl RectPartition {
                         return None;
                     }
                 }
-            }
-            if height_map.data.values().any(|&a| a == y) {
-                return None;
             }
         }
 
@@ -258,6 +258,17 @@ mod tests {
             Rect::new((0, 2), (2, 5)),
             Rect::new((2, 2), (3, 3)),
             Rect::new((2, 3), (5, 5)),
+        ])
+        .is_none());
+    }
+
+    #[test]
+    fn test_rect_partition_10() {
+        assert!(RectPartition::new(vec![
+            Rect::new((0, 0), (4, 1)),
+            Rect::new((0, 1), (1, 4)),
+            Rect::new((1, 1), (4, 1)),
+            Rect::new((1, 1), (4, 4)),
         ])
         .is_none());
     }
