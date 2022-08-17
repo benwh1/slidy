@@ -17,6 +17,18 @@ impl Rect {
             right: bottom_right.0,
         }
     }
+
+    fn width(&self) -> u32 {
+        self.right - self.left
+    }
+
+    fn height(&self) -> u32 {
+        self.bottom - self.top
+    }
+
+    fn top_left(&self) -> (u32, u32) {
+        (self.left, self.top)
+    }
 }
 
 #[derive(Debug)]
@@ -128,6 +140,23 @@ impl RectPartition {
         } else {
             None
         }
+    }
+
+    fn rect(&self) -> Rect {
+        let left = self.rects.iter().map(|r| r.left).min().unwrap();
+        let top = self.rects.iter().map(|r| r.top).min().unwrap();
+        let right = self.rects.iter().map(|r| r.right).max().unwrap();
+        let bottom = self.rects.iter().map(|r| r.bottom).max().unwrap();
+        Rect {
+            left,
+            top,
+            right,
+            bottom,
+        }
+    }
+
+    fn len(&self) -> usize {
+        self.rects.len()
     }
 }
 
