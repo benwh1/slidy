@@ -100,6 +100,7 @@ impl PiecewiseConstant {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct RectPartition {
     rects: Vec<Rect>,
 }
