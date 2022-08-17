@@ -9,6 +9,7 @@ pub struct Rect {
 }
 
 impl Rect {
+    #[must_use]
     pub fn new(top_left: (u32, u32), bottom_right: (u32, u32)) -> Self {
         Self {
             top: top_left.1,
@@ -18,14 +19,17 @@ impl Rect {
         }
     }
 
+    #[must_use]
     pub fn width(&self) -> u32 {
         self.right - self.left
     }
 
+    #[must_use]
     pub fn height(&self) -> u32 {
         self.bottom - self.top
     }
 
+    #[must_use]
     pub fn top_left(&self) -> (u32, u32) {
         (self.left, self.top)
     }
@@ -106,6 +110,7 @@ pub struct RectPartition {
 }
 
 impl RectPartition {
+    #[must_use]
     pub fn new(mut rects: Vec<Rect>) -> Option<Self> {
         if rects.is_empty() {
             return None;
@@ -143,6 +148,7 @@ impl RectPartition {
         }
     }
 
+    #[must_use]
     pub(super) fn rect(&self) -> Rect {
         let left = self.rects.iter().map(|r| r.left).min().unwrap();
         let top = self.rects.iter().map(|r| r.top).min().unwrap();
@@ -156,6 +162,7 @@ impl RectPartition {
         }
     }
 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.rects.len()
     }

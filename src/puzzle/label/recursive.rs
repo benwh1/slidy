@@ -27,7 +27,7 @@ impl RecursiveLabel {
     fn new<L: Label + 'static>(
         label: L,
         partition: RectPartition,
-        sublabels: Vec<RecursiveLabel>,
+        sublabels: Vec<Self>,
     ) -> Result<Self, RecursiveLabelError> {
         if partition.len() != sublabels.len() {
             Err(RecursiveLabelError::InvalidSublabels {
