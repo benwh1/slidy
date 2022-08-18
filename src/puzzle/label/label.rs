@@ -259,25 +259,21 @@ impl Label for Spiral {
 #[cfg(test)]
 mod tests {
     macro_rules! test_label {
-        (fn $name:ident, $label:expr, $w:literal x $h:literal, $labels:expr) => {
-            #[test]
-            fn $name() {
-                let labels = (0..$w * $h)
-                    .map(|i| $label.position_label_unchecked($w, $h, i % $w, i / $w))
-                    .collect::<Vec<_>>();
-                let num_labels = $label.num_labels_unchecked($w, $h);
-                let expected_num_labels = $labels.iter().max().unwrap() + 1;
-                assert_eq!(labels, $labels);
-                assert_eq!(num_labels, expected_num_labels);
-            }
-        };
-
         ($label:ty, $($w:literal x $h:literal : $labels:expr),+ $(,)?) => {
-            ::paste::paste! {
+            paste::paste! {
                 mod [< $label:snake >] {
                     use crate::puzzle::label::label::{Label, $label};
 
-                    $(test_label!( fn [< test_ $label:snake _ $w x $h >] , $label, $w x $h, $labels);)*
+                    $(#[test]
+                    fn [< test_ $label:snake _ $w x $h >] () {
+                        let labels = (0..$w * $h)
+                            .map(|i| $label.position_label_unchecked($w, $h, i % $w, i / $w))
+                            .collect::<Vec<_>>();
+                        let num_labels = $label.num_labels_unchecked($w, $h);
+                        let expected_num_labels = $labels.iter().max().unwrap() + 1;
+                        assert_eq!(labels, $labels);
+                        assert_eq!(num_labels, expected_num_labels);
+                    })*
                 }
             }
         };

@@ -100,30 +100,22 @@ mod tests {
     use super::*;
 
     macro_rules! test_label {
-        (fn $name:ident, $label:expr, $w:literal x $h:literal, $pos_label:expr, $num_labels:expr) => {
-            #[test]
-            fn $name() {
-                let wh = $w * $h;
-                let pos = (0..wh)
-                    .map(|i| $label(RowGrids).position_label_unchecked($w, $h, i % $w, i / $w))
-                    .collect::<Vec<_>>();
-                let num = $label(RowGrids).num_labels_unchecked($w, $h);
-                assert_eq!(pos, $pos_label);
-                assert_eq!(num, $num_labels);
-            }
-        };
-
-        (fn $name:ident, $label:expr, $w:literal x $h:literal, $pos_label:expr) => {
-            test_label!(fn $name, $label, $w x $h, $pos_label, $pos_label.iter().max().unwrap() + 1);
-        };
-
-        ($label:ty, $($w:literal x $h:literal : $pos:expr),+ $(,)?) => {
-            ::paste::paste! {
+        ($label:ty, $($w:literal x $h:literal : $labels:expr),+ $(,)?) => {
+            paste::paste! {
                 mod [< $label:snake >] {
                     use crate::puzzle::label::label::{Label, RowGrids};
                     use super::{$label};
 
-                    $(test_label!( fn [< test_ $label:snake _ $w x $h >] , $label, $w x $h, $pos);)*
+                    $(#[test]
+                    fn [< test_ $label:snake _ $w x $h >] () {
+                        let labels = (0..$w * $h)
+                            .map(|i| $label(RowGrids).position_label_unchecked($w, $h, i % $w, i / $w))
+                            .collect::<Vec<_>>();
+                        let num_labels = $label(RowGrids).num_labels_unchecked($w, $h);
+                        let expected_num_labels = $labels.iter().max().unwrap() + 1;
+                        assert_eq!(labels, $labels);
+                        assert_eq!(num_labels, expected_num_labels);
+                    })*
                 }
             }
         };
