@@ -147,7 +147,6 @@ where
         self
     }
 
-    #[must_use]
     pub fn render<Piece, P>(
         &self,
         puzzle: &P,

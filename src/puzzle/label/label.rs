@@ -17,7 +17,6 @@ pub trait Label {
     #[must_use]
     fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize;
 
-    #[must_use]
     fn position_label(
         &self,
         width: usize,
@@ -35,7 +34,6 @@ pub trait Label {
     #[must_use]
     fn num_labels_unchecked(&self, width: usize, height: usize) -> usize;
 
-    #[must_use]
     fn num_labels(&self, width: usize, height: usize) -> Result<usize, LabelError> {
         if self.is_valid_size(width, height) {
             Ok(self.num_labels_unchecked(width, height))

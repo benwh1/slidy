@@ -124,7 +124,6 @@ pub enum RectPartitionError {
 }
 
 impl RectPartition {
-    #[must_use]
     pub fn new(mut rects: Vec<Rect>) -> Result<Self, RectPartitionError> {
         if rects.is_empty() {
             return Err(RectPartitionError::Empty);
