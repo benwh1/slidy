@@ -1,11 +1,48 @@
 use std::cmp::Ordering;
 
+use thiserror::Error;
+
+#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum LabelError {
+    #[error("InvalidSize: {width}x{height} is not a valid size")]
+    InvalidSize { width: usize, height: usize },
+}
+
 pub trait Label {
     #[must_use]
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize;
+    fn is_valid_size(&self, width: usize, height: usize) -> bool {
+        true
+    }
 
     #[must_use]
-    fn num_labels(&self, width: usize, height: usize) -> usize;
+    fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize;
+
+    #[must_use]
+    fn position_label(
+        &self,
+        width: usize,
+        height: usize,
+        x: usize,
+        y: usize,
+    ) -> Result<usize, LabelError> {
+        if self.is_valid_size(width, height) {
+            Ok(self.position_label_unchecked(width, height, x, y))
+        } else {
+            Err(LabelError::InvalidSize { width, height })
+        }
+    }
+
+    #[must_use]
+    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize;
+
+    #[must_use]
+    fn num_labels(&self, width: usize, height: usize) -> Result<usize, LabelError> {
+        if self.is_valid_size(width, height) {
+            Ok(self.num_labels_unchecked(width, height))
+        } else {
+            Err(LabelError::InvalidSize { width, height })
+        }
+    }
 }
 
 pub struct RowGrids;
@@ -21,37 +58,43 @@ pub struct ConcentricRectangles;
 pub struct Spiral;
 
 impl Label for RowGrids {
-    fn position_label(&self, width: usize, _height: usize, x: usize, y: usize) -> usize {
+    fn position_label_unchecked(&self, width: usize, _height: usize, x: usize, y: usize) -> usize {
         x + width * y
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
+    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
         width * height
     }
 }
 
 impl Label for Rows {
-    fn position_label(&self, _width: usize, _height: usize, _x: usize, y: usize) -> usize {
+    fn position_label_unchecked(
+        &self,
+        _width: usize,
+        _height: usize,
+        _x: usize,
+        y: usize,
+    ) -> usize {
         y
     }
 
-    fn num_labels(&self, _width: usize, height: usize) -> usize {
+    fn num_labels_unchecked(&self, _width: usize, height: usize) -> usize {
         height
     }
 }
 
 impl Label for Fringe {
-    fn position_label(&self, _width: usize, _height: usize, x: usize, y: usize) -> usize {
+    fn position_label_unchecked(&self, _width: usize, _height: usize, x: usize, y: usize) -> usize {
         x.min(y)
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
+    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
         width.min(height)
     }
 }
 
 impl Label for SquareFringe {
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+    fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
         match width.cmp(&height) {
             // Puzzle is taller than it is wide
             Ordering::Less => {
@@ -62,21 +105,21 @@ impl Label for SquareFringe {
                 }
                 // Square part of the puzzle
                 else {
-                    diff + Fringe.position_label(width, width, x, y - diff)
+                    diff + Fringe.position_label_unchecked(width, width, x, y - diff)
                 }
             }
-            Ordering::Equal => Fringe.position_label(width, height, x, y),
-            Ordering::Greater => self.position_label(height, width, y, x),
+            Ordering::Equal => Fringe.position_label_unchecked(width, height, x, y),
+            Ordering::Greater => self.position_label_unchecked(height, width, y, x),
         }
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        Fringe.num_labels(width, height) + width.abs_diff(height)
+    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
+        Fringe.num_labels_unchecked(width, height) + width.abs_diff(height)
     }
 }
 
 impl Label for SplitFringe {
-    fn position_label(&self, _width: usize, _height: usize, x: usize, y: usize) -> usize {
+    fn position_label_unchecked(&self, _width: usize, _height: usize, x: usize, y: usize) -> usize {
         // Which (non-split) fringe is (x, y) in?
         let fringe = x.min(y);
 
@@ -86,13 +129,13 @@ impl Label for SplitFringe {
         2 * fringe + if vertical_part { 1 } else { 0 }
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
+    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
         2 * width.min(height) - if height > width { 0 } else { 1 }
     }
 }
 
 impl Label for SplitSquareFringe {
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+    fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
         let d = width.abs_diff(height);
 
         match width.cmp(&height) {
@@ -100,40 +143,40 @@ impl Label for SplitSquareFringe {
                 if y < d {
                     y
                 } else {
-                    d + SplitFringe.position_label(width, width, x, y - d)
+                    d + SplitFringe.position_label_unchecked(width, width, x, y - d)
                 }
             }
-            Ordering::Equal => SplitFringe.position_label(width, width, x, y),
+            Ordering::Equal => SplitFringe.position_label_unchecked(width, width, x, y),
             Ordering::Greater => {
                 if x < d {
                     x
                 } else {
-                    d + SplitFringe.position_label(height, height, x - d, y)
+                    d + SplitFringe.position_label_unchecked(height, height, x - d, y)
                 }
             }
         }
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
+    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
         let diff = width.abs_diff(height);
         let min = width.min(height);
 
-        diff + SplitFringe.num_labels(min, min)
+        diff + SplitFringe.num_labels_unchecked(min, min)
     }
 }
 
 impl Label for Diagonals {
-    fn position_label(&self, _width: usize, _height: usize, x: usize, y: usize) -> usize {
+    fn position_label_unchecked(&self, _width: usize, _height: usize, x: usize, y: usize) -> usize {
         x + y
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
+    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
         width + height - 1
     }
 }
 
 impl Label for LastTwoRows {
-    fn position_label(&self, _width: usize, height: usize, x: usize, y: usize) -> usize {
+    fn position_label_unchecked(&self, _width: usize, height: usize, x: usize, y: usize) -> usize {
         if y < height - 2 {
             y
         } else {
@@ -141,13 +184,13 @@ impl Label for LastTwoRows {
         }
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
+    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
         width + height - 2
     }
 }
 
 impl Label for SplitLastTwoRows {
-    fn position_label(&self, _width: usize, height: usize, x: usize, y: usize) -> usize {
+    fn position_label_unchecked(&self, _width: usize, height: usize, x: usize, y: usize) -> usize {
         if y < height - 2 {
             y
         } else {
@@ -155,24 +198,24 @@ impl Label for SplitLastTwoRows {
         }
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
+    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
         width.max(height - 2)
     }
 }
 
 impl Label for ConcentricRectangles {
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+    fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
         x.min(y).min(width - 1 - x).min(height - 1 - y)
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
+    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
         width.min(height).div_ceil(2)
     }
 }
 
 impl Label for Spiral {
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        let rect_label = ConcentricRectangles.position_label(width, height, x, y);
+    fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+        let rect_label = ConcentricRectangles.position_label_unchecked(width, height, x, y);
 
         // Calculate the values (x, y, width, height) if we were to strip off any outer rectangles
         // from the puzzle.
@@ -206,7 +249,7 @@ impl Label for Spiral {
         4 * rect_label + rect_side
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
+    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
         // 4 * number of rectangles of width and height > 1, plus 1 if the innermost rectangle has
         // width or height 1.
         4 * width.min(height).div_floor(2) + if width.min(height) % 2 == 1 { 1 } else { 0 }
@@ -220,9 +263,9 @@ mod tests {
             #[test]
             fn $name() {
                 let labels = (0..$w * $h)
-                    .map(|i| $label.position_label($w, $h, i % $w, i / $w))
+                    .map(|i| $label.position_label_unchecked($w, $h, i % $w, i / $w))
                     .collect::<Vec<_>>();
-                let num_labels = $label.num_labels($w, $h);
+                let num_labels = $label.num_labels_unchecked($w, $h);
                 let expected_num_labels = $labels.iter().max().unwrap() + 1;
                 assert_eq!(labels, $labels);
                 assert_eq!(num_labels, expected_num_labels);

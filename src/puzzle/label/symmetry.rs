@@ -10,84 +10,88 @@ pub struct ReflectDiagonal<L: Label>(L);
 pub struct ReflectAntidiagonal<L: Label>(L);
 
 impl<L: Label> Label for Id<L> {
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        self.0.position_label(width, height, x, y)
+    fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+        self.0.position_label_unchecked(width, height, x, y)
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        self.0.num_labels(width, height)
+    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
+        self.0.num_labels_unchecked(width, height)
     }
 }
 
 impl<L: Label> Label for RotateCw<L> {
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        self.0.position_label(height, width, y, width - 1 - x)
+    fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+        self.0
+            .position_label_unchecked(height, width, y, width - 1 - x)
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        self.0.num_labels(height, width)
+    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
+        self.0.num_labels_unchecked(height, width)
     }
 }
 
 impl<L: Label> Label for RotateCcw<L> {
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        self.0.position_label(height, width, height - 1 - y, x)
+    fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+        self.0
+            .position_label_unchecked(height, width, height - 1 - y, x)
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        self.0.num_labels(height, width)
+    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
+        self.0.num_labels_unchecked(height, width)
     }
 }
 
 impl<L: Label> Label for RotateHalf<L> {
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+    fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
         self.0
-            .position_label(width, height, width - 1 - x, height - 1 - y)
+            .position_label_unchecked(width, height, width - 1 - x, height - 1 - y)
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        self.0.num_labels(width, height)
+    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
+        self.0.num_labels_unchecked(width, height)
     }
 }
 
 impl<L: Label> Label for ReflectVertical<L> {
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        self.0.position_label(width, height, x, height - 1 - y)
+    fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+        self.0
+            .position_label_unchecked(width, height, x, height - 1 - y)
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        self.0.num_labels(width, height)
+    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
+        self.0.num_labels_unchecked(width, height)
     }
 }
 
 impl<L: Label> Label for ReflectHorizontal<L> {
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        self.0.position_label(width, height, width - 1 - x, y)
+    fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+        self.0
+            .position_label_unchecked(width, height, width - 1 - x, y)
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        self.0.num_labels(width, height)
+    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
+        self.0.num_labels_unchecked(width, height)
     }
 }
 
 impl<L: Label> Label for ReflectDiagonal<L> {
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        self.0.position_label(height, width, y, x)
+    fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+        self.0.position_label_unchecked(height, width, y, x)
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        self.0.num_labels(height, width)
+    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
+        self.0.num_labels_unchecked(height, width)
     }
 }
 
 impl<L: Label> Label for ReflectAntidiagonal<L> {
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+    fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
         self.0
-            .position_label(height, width, height - 1 - y, width - 1 - x)
+            .position_label_unchecked(height, width, height - 1 - y, width - 1 - x)
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        self.0.num_labels(height, width)
+    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
+        self.0.num_labels_unchecked(height, width)
     }
 }
 
@@ -101,9 +105,9 @@ mod tests {
             fn $name() {
                 let wh = $w * $h;
                 let pos = (0..wh)
-                    .map(|i| $label(RowGrids).position_label($w, $h, i % $w, i / $w))
+                    .map(|i| $label(RowGrids).position_label_unchecked($w, $h, i % $w, i / $w))
                     .collect::<Vec<_>>();
-                let num = $label(RowGrids).num_labels($w, $h);
+                let num = $label(RowGrids).num_labels_unchecked($w, $h);
                 assert_eq!(pos, $pos_label);
                 assert_eq!(num, $num_labels);
             }
