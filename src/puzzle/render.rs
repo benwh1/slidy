@@ -8,6 +8,7 @@ use itertools::Itertools;
 use num_traits::PrimInt;
 use palette::rgb::Rgb as PaletteRgb;
 use std::{fmt::Display, marker::PhantomData};
+use thiserror::Error;
 
 #[must_use]
 fn convert_rgb(c: PaletteRgb) -> Rgba<u8> {
@@ -88,6 +89,14 @@ fn draw_centered_text(
     }
 }
 
+#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum RendererError {
+    #[error(
+        "IncompatibleLabel: puzzle size ({width}x{height}) can not be used with the given label"
+    )]
+    IncompatibleLabel { width: usize, height: usize },
+}
+
 pub struct Renderer<'l, 's, 'f, 'a, L, S>
 where
     L: Label,
@@ -139,14 +148,25 @@ where
     }
 
     #[must_use]
-    pub fn render<Piece, P>(&self, puzzle: &P) -> ImageBuffer<Rgba<u8>, Vec<u8>>
+    pub fn render<Piece, P>(
+        &self,
+        puzzle: &P,
+    ) -> Result<ImageBuffer<Rgba<u8>, Vec<u8>>, RendererError>
     where
         Piece: PrimInt + Display,
         P: SlidingPuzzle<Piece>,
     {
+        let (w, h) = puzzle.size();
+
+        if !self.label.is_valid_size(w, h) {
+            return Err(RendererError::IncompatibleLabel {
+                width: w,
+                height: h,
+            });
+        }
+
         let tile_size = self.tile_size;
 
-        let (w, h) = puzzle.size();
         let (w, h) = (w as u32, h as u32);
         let (image_w, image_h) = {
             let a = if self.draw_borders { 1 } else { 0 };
@@ -161,13 +181,13 @@ where
 
                 if piece != Piece::zero() {
                     let solved_pos = puzzle.solved_pos_xy_unchecked(piece);
-                    let label = self.label.position_label(
+                    let label = self.label.position_label_unchecked(
                         w as usize,
                         h as usize,
                         solved_pos.0,
                         solved_pos.1,
                     );
-                    let num_labels = self.label.num_labels(w as usize, h as usize);
+                    let num_labels = self.label.num_labels_unchecked(w as usize, h as usize);
                     let color = convert_rgb(self.scheme.color(label, num_labels));
                     let (rect_x, rect_y) = ((tile_size * x) as i32, (tile_size * y) as i32);
                     let rect = Rect::at(rect_x, rect_y).of_size(tile_size, tile_size);
@@ -194,6 +214,6 @@ where
             }
         }
 
-        img
+        Ok(img)
     }
 }
