@@ -46,3 +46,20 @@ impl ColorScheme for Rainbow {
         g.get(label as f32 / num_labels as f32).into_color()
     }
 }
+
+pub struct AlternatingBrightness<'a, T: ColorScheme>(pub &'a T);
+
+impl<'a, T: ColorScheme> ColorScheme for AlternatingBrightness<'a, T> {
+    fn color(&self, label: usize, num_labels: usize) -> Rgb {
+        let l = (label / 2) * 2;
+        let color = self.0.color(l, num_labels);
+        if label == l {
+            let color: Hsl = color.into_color();
+            let (h, s, l) = color.into_components();
+            let l = 1.0 - (1.0 - l) / 2.0;
+            Hsl::new(h, s, l).into_color()
+        } else {
+            color
+        }
+    }
+}
