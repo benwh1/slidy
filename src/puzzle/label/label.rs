@@ -43,6 +43,7 @@ pub trait Label {
     }
 }
 
+pub struct Trivial;
 pub struct RowGrids;
 pub struct Rows;
 pub struct Fringe;
@@ -54,6 +55,16 @@ pub struct LastTwoRows;
 pub struct SplitLastTwoRows;
 pub struct ConcentricRectangles;
 pub struct Spiral;
+
+impl Label for Trivial {
+    fn position_label_unchecked(&self, _: usize, _: usize, _: usize, _: usize) -> usize {
+        0
+    }
+
+    fn num_labels_unchecked(&self, _: usize, _: usize) -> usize {
+        1
+    }
+}
 
 impl Label for RowGrids {
     fn position_label_unchecked(&self, width: usize, _height: usize, x: usize, y: usize) -> usize {
@@ -276,6 +287,16 @@ mod tests {
             }
         };
     }
+
+    test_label!(
+        Trivial,
+        4 x 4: vec![
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+        ],
+    );
 
     test_label!(
         RowGrids,
