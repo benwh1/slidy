@@ -11,11 +11,21 @@ pub enum ColorSchemeError {
     EmptyColorList,
 }
 
+pub struct Monochrome(Rgb);
+
 pub struct ColorList {
     colors: Vec<Rgb>,
 }
 
 pub struct Rainbow;
+
+pub struct AlternatingBrightness<'a, T: ColorScheme>(pub &'a T);
+
+impl ColorScheme for Monochrome {
+    fn color(&self, _label: usize, _num_labels: usize) -> Rgb {
+        self.0
+    }
+}
 
 impl ColorList {
     pub fn new(colors: Vec<Rgb>) -> Result<Self, ColorSchemeError> {
@@ -46,8 +56,6 @@ impl ColorScheme for Rainbow {
         g.get(label as f32 / num_labels as f32).into_color()
     }
 }
-
-pub struct AlternatingBrightness<'a, T: ColorScheme>(pub &'a T);
 
 impl<'a, T: ColorScheme> ColorScheme for AlternatingBrightness<'a, T> {
     fn color(&self, label: usize, num_labels: usize) -> Rgb {
