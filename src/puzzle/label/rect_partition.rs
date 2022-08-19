@@ -2,6 +2,8 @@ use std::{collections::BTreeMap, ops::Range};
 
 use thiserror::Error;
 
+use super::label::Label;
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Rect {
     left: u32,
@@ -31,9 +33,18 @@ impl Rect {
         self.bottom - self.top
     }
 
+    pub fn contains(&self, x: u32, y: u32) -> bool {
+        self.left <= x && x < self.right && self.top <= y && y < self.bottom
+    }
+
     #[must_use]
     pub fn top_left(&self) -> (u32, u32) {
         (self.left, self.top)
+    }
+
+    #[must_use]
+    pub fn size(&self) -> (u32, u32) {
+        (self.right - self.left, self.bottom - self.top)
     }
 }
 
@@ -185,6 +196,21 @@ impl RectPartition {
     #[must_use]
     pub fn num_rects(&self) -> usize {
         self.rects.len()
+    }
+}
+
+impl Label for RectPartition {
+    fn is_valid_size(&self, width: usize, height: usize) -> bool {
+        self.rect().size() == (width as u32, height as u32)
+    }
+
+    fn position_label_unchecked(&self, _width: usize, _height: usize, x: usize, y: usize) -> usize {
+        let (x, y) = (x as u32, y as u32);
+        self.rects.iter().position(|r| r.contains(x, y)).unwrap()
+    }
+
+    fn num_labels_unchecked(&self, _width: usize, _height: usize) -> usize {
+        self.num_rects()
     }
 }
 
