@@ -183,7 +183,7 @@ impl RectPartition {
     }
 
     #[must_use]
-    pub fn len(&self) -> usize {
+    pub fn num_rects(&self) -> usize {
         self.rects.len()
     }
 }

@@ -29,10 +29,10 @@ impl RecursiveLabel {
         partition: RectPartition,
         sublabels: Vec<Self>,
     ) -> Result<Self, RecursiveLabelError> {
-        if partition.len() != sublabels.len() {
+        if partition.num_rects() != sublabels.len() {
             Err(RecursiveLabelError::InvalidSublabels {
                 num_labels: sublabels.len(),
-                num_rects: partition.len(),
+                num_rects: partition.num_rects(),
             })
         } else if partition.rect().top_left() != (0, 0) {
             Err(RecursiveLabelError::InvalidPartitionRect {
