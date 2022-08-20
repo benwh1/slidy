@@ -34,7 +34,11 @@ where
     }
 
     #[must_use]
-    fn gap_position(&self) -> usize;
+    fn gap_position(&self) -> usize {
+        (0..self.area())
+            .position(|idx| self.piece_at_unchecked(idx) == Piece::zero())
+            .unwrap()
+    }
 
     #[must_use]
     fn gap_position_xy(&self) -> (usize, usize) {
