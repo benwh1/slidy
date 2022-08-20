@@ -97,27 +97,27 @@ pub enum RendererError {
     IncompatibleLabel { width: usize, height: usize },
 }
 
-pub struct Renderer<'l, 's, 'f, 'a, L, S>
+pub struct Renderer<'a, 'b, L, S>
 where
     L: Label,
     S: ColorScheme,
 {
     phantom: PhantomData<L>,
-    label: &'l L,
-    scheme: &'s S,
-    font: &'f FontRef<'a>,
+    label: &'a L,
+    scheme: &'a S,
+    font: &'a FontRef<'b>,
     draw_borders: bool,
     tile_size: u32,
     font_size: f32,
 }
 
-impl<'l, 's, 'f, 'a, L, S> Renderer<'l, 's, 'f, 'a, L, S>
+impl<'a, 'b, L, S> Renderer<'a, 'b, L, S>
 where
     L: Label,
     S: ColorScheme,
 {
     #[must_use]
-    pub fn with_label_scheme_font(label: &'l L, scheme: &'s S, font: &'f FontRef<'a>) -> Self {
+    pub fn with_label_scheme_font(label: &'a L, scheme: &'a S, font: &'a FontRef<'b>) -> Self {
         Self {
             phantom: PhantomData,
             label,
