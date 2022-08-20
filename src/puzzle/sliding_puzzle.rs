@@ -43,7 +43,13 @@ where
         (pos % w, pos / w)
     }
 
-    fn reset(&mut self);
+    fn reset(&mut self) {
+        let n = self.num_pieces();
+        for i in 0..n {
+            self.set_piece_unchecked(i, Piece::from(i + 1).unwrap());
+        }
+        self.set_piece(n, Piece::zero());
+    }
 
     #[must_use]
     fn is_solved(&self) -> bool {
@@ -166,7 +172,16 @@ where
         }
     }
 
-    fn move_dir_unchecked(&mut self, dir: Direction);
+    fn move_dir_unchecked(&mut self, dir: Direction) {
+        let gap = self.gap_position();
+        let piece = match dir {
+            Direction::Up => gap + self.width(),
+            Direction::Left => gap + 1,
+            Direction::Down => gap - self.width(),
+            Direction::Right => gap - 1,
+        };
+        self.swap_pieces(gap, piece);
+    }
 
     fn move_dir(&mut self, dir: Direction) -> bool {
         if self.can_move_dir(dir) {

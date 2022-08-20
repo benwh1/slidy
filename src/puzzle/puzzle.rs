@@ -123,19 +123,6 @@ impl SlidingPuzzle<u32> for Puzzle {
             self.gap = idx;
         }
     }
-
-    fn move_dir_unchecked(&mut self, dir: Direction) {
-        let gap = self.gap_position();
-        let piece = match dir {
-            Direction::Up => gap + self.width(),
-            Direction::Left => gap + 1,
-            Direction::Down => gap - self.width(),
-            Direction::Right => gap - 1,
-        };
-
-        self.pieces.swap(gap, piece);
-        self.gap = piece;
-    }
 }
 
 impl Default for Puzzle {
