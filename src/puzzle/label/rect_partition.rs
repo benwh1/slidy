@@ -33,6 +33,7 @@ impl Rect {
         self.bottom - self.top
     }
 
+    #[must_use]
     pub fn contains(&self, x: u32, y: u32) -> bool {
         self.left <= x && x < self.right && self.top <= y && y < self.bottom
     }

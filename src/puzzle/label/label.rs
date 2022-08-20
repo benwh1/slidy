@@ -10,7 +10,7 @@ pub enum LabelError {
 
 pub trait Label {
     #[must_use]
-    fn is_valid_size(&self, width: usize, height: usize) -> bool {
+    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
         true
     }
 

@@ -1,5 +1,4 @@
 use super::sliding_puzzle::SlidingPuzzle;
-use crate::algorithm::direction::Direction;
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::{collections::HashSet, num::ParseIntError, str::FromStr};
@@ -270,7 +269,7 @@ mod tests {
     }
 
     mod sliding_puzzle {
-        use crate::algorithm::{algorithm::Algorithm, puzzle_move::Move};
+        use crate::algorithm::{algorithm::Algorithm, direction::Direction, puzzle_move::Move};
 
         use super::*;
 
