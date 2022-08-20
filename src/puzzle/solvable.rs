@@ -3,7 +3,7 @@ use num_traits::PrimInt;
 use super::{
     label::label::{
         ConcentricRectangles, Diagonals, Fringe, LastTwoRows, RowGrids, Rows, Spiral, SplitFringe,
-        SplitLastTwoRows, SplitSquareFringe, SquareFringe,
+        SplitLastTwoRows, SplitSquareFringe, SquareFringe, Trivial,
     },
     sliding_puzzle::SlidingPuzzle,
 };
@@ -87,6 +87,7 @@ macro_rules! always_solvable {
 }
 
 always_solvable!(
+    Trivial,
     Rows,
     Fringe,
     SquareFringe,
