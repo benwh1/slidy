@@ -43,6 +43,10 @@ pub trait Label {
     }
 }
 
+/// Marker trait for [`Label`]s that assign exactly one piece to each label.
+/// These will always have `num_labels == width * height`.
+pub trait BijectiveLabel: Label {}
+
 pub struct Trivial;
 pub struct RowGrids;
 pub struct Rows;
@@ -56,6 +60,9 @@ pub struct LastTwoRows;
 pub struct SplitLastTwoRows;
 pub struct ConcentricRectangles;
 pub struct Spiral;
+
+impl BijectiveLabel for RowGrids {}
+impl BijectiveLabel for FringeGrids {}
 
 impl Label for Trivial {
     fn position_label_unchecked(&self, _: usize, _: usize, _: usize, _: usize) -> usize {
