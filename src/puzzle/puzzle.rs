@@ -113,26 +113,14 @@ impl SlidingPuzzle<u32> for Puzzle {
         self.gap
     }
 
-    fn reset(&mut self) {
-        let n = self.num_pieces();
-        for i in 0..n {
-            self.pieces[i] = i as u32 + 1;
-        }
-        self.pieces[n] = 0;
-        self.gap = n;
-    }
-
     fn piece_at_unchecked(&self, idx: usize) -> u32 {
         self.pieces[idx]
     }
 
-    fn swap_pieces(&mut self, idx1: usize, idx2: usize) {
-        self.pieces.swap(idx1, idx2);
-
-        if self.gap == idx1 {
-            self.gap = idx2;
-        } else if self.gap == idx2 {
-            self.gap = idx1;
+    fn set_piece_unchecked(&mut self, idx: usize, piece: u32) {
+        self.pieces[idx] = piece;
+        if piece == 0 {
+            self.gap = idx;
         }
     }
 

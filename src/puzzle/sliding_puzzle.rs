@@ -110,10 +110,49 @@ where
         }
     }
 
-    fn swap_pieces(&mut self, idx1: usize, idx2: usize);
-    fn swap_pieces_xy(&mut self, x1: usize, y1: usize, x2: usize, y2: usize) {
+    fn set_piece_unchecked(&mut self, idx: usize, piece: Piece);
+
+    fn set_piece(&mut self, idx: usize, piece: Piece) -> bool {
+        if idx < self.area() {
+            self.set_piece_unchecked(idx, piece);
+            true
+        } else {
+            false
+        }
+    }
+
+    fn set_piece_xy_unchecked(&mut self, x: usize, y: usize, piece: Piece) {
+        self.set_piece_unchecked(x + self.width() * y, piece);
+    }
+
+    fn set_piece_xy(&mut self, x: usize, y: usize, piece: Piece) -> bool {
+        self.set_piece(x + self.width() * y, piece)
+    }
+
+    fn swap_pieces_unchecked(&mut self, idx1: usize, idx2: usize) {
+        let piece = self.piece_at_unchecked(idx1);
+        self.set_piece_unchecked(idx1, self.piece_at_unchecked(idx2));
+        self.set_piece_unchecked(idx2, piece);
+    }
+
+    fn swap_pieces(&mut self, idx1: usize, idx2: usize) -> bool {
+        let area = self.area();
+        if idx1 < area && idx2 < area {
+            self.swap_pieces_unchecked(idx1, idx2);
+            true
+        } else {
+            false
+        }
+    }
+
+    fn swap_pieces_xy_unchecked(&mut self, x1: usize, y1: usize, x2: usize, y2: usize) {
         let w = self.width();
-        self.swap_pieces(x1 + w * y1, x2 + w * y2);
+        self.swap_pieces_unchecked(x1 + w * y1, x2 + w * y2);
+    }
+
+    fn swap_pieces_xy(&mut self, x1: usize, y1: usize, x2: usize, y2: usize) -> bool {
+        let w = self.width();
+        self.swap_pieces(x1 + w * y1, x2 + w * y2)
     }
 
     #[must_use]
