@@ -47,6 +47,7 @@ pub struct Trivial;
 pub struct RowGrids;
 pub struct Rows;
 pub struct Fringe;
+pub struct FringeGrids;
 pub struct SquareFringe;
 pub struct SplitFringe;
 pub struct SplitSquareFringe;
@@ -99,6 +100,32 @@ impl Label for Fringe {
 
     fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
         width.min(height)
+    }
+}
+
+impl Label for FringeGrids {
+    fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+        // Which (non-split) fringe is (x, y) in?
+        let fringe = x.min(y);
+
+        // Is it in the row part or the horizontal part?
+        let vertical_part = x < y;
+
+        // Sum w+h-1-2k, k=0..f-1 = f(w+h-f) = number of tiles in previous fringes
+        let previous_fringes = fringe * (width + height - fringe);
+
+        // How many pieces before this one in the current fringe?
+        let current_fringe = if vertical_part {
+            width - fringe + y - x - 1
+        } else {
+            x - y
+        };
+
+        previous_fringes + current_fringe
+    }
+
+    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
+        width * height
     }
 }
 
@@ -367,6 +394,30 @@ mod tests {
             0, 1, 1, 1, 1, 1,
             0, 1, 2, 2, 2, 2,
             0, 1, 2, 3, 3, 3
+        ],
+    );
+
+    test_label!(
+        FringeGrids,
+        4 x 4: vec![
+            0,  1,  2,  3,
+            4,  7,  8,  9,
+            5, 10, 12, 13,
+            6, 11, 14, 15,
+        ],
+        4 x 6: vec![
+            0,  1,  2,  3,
+            4,  9, 10, 11,
+            5, 12, 16, 17,
+            6, 13, 18, 21,
+            7, 14, 19, 22,
+            8, 15, 20, 23,
+        ],
+        6 x 4: vec![
+            0,  1,  2,  3,  4,  5,
+            6,  9, 10, 11, 12, 13,
+            7, 14, 16, 17, 18, 19,
+            8, 15, 20, 21, 22, 23,
         ],
     );
 
