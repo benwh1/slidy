@@ -2,7 +2,7 @@ use num_traits::PrimInt;
 
 use crate::{
     algorithm::{algorithm::Algorithm, direction::Direction, puzzle_move::Move},
-    puzzle::solved_state::SolvedState,
+    puzzle::{label::label::BijectiveLabel, solved_state::SolvedState},
 };
 
 use super::label::label::RowGrids;
@@ -48,11 +48,26 @@ where
     }
 
     fn reset(&mut self) {
-        let n = self.num_pieces();
-        for i in 0..n {
-            self.set_piece_unchecked(i, Piece::from(i + 1).unwrap());
+        self.reset_to_label(&RowGrids);
+    }
+
+    fn reset_to_label<L: BijectiveLabel>(&mut self, label: &L) {
+        let (w, h) = self.size();
+        let area = Piece::from(w * h).unwrap();
+        for y in 0..h {
+            for x in 0..w {
+                let label = label.position_label_unchecked(w, h, x, y);
+                let piece = {
+                    let a = Piece::from(label).unwrap() + Piece::one();
+                    if a == area {
+                        Piece::zero()
+                    } else {
+                        a
+                    }
+                };
+                self.set_piece_xy_unchecked(x, y, piece);
+            }
         }
-        self.set_piece(n, Piece::zero());
     }
 
     #[must_use]
