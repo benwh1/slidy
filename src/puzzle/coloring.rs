@@ -1,12 +1,12 @@
 use palette::{rgb::Rgb, Gradient, Hsl, IntoColor};
 use thiserror::Error;
 
-pub trait ColorScheme {
+pub trait Coloring {
     fn color(&self, label: usize, num_labels: usize) -> Rgb;
 }
 
 #[derive(Error, Debug)]
-pub enum ColorSchemeError {
+pub enum ColoringError {
     #[error("EmptyColorList: color list must be non-empty")]
     EmptyColorList,
 }
@@ -19,32 +19,32 @@ pub struct ColorList {
 
 pub struct Rainbow;
 
-pub struct AlternatingBrightness<'a, T: ColorScheme>(pub &'a T);
+pub struct AlternatingBrightness<'a, T: Coloring>(pub &'a T);
 
-impl ColorScheme for Monochrome {
+impl Coloring for Monochrome {
     fn color(&self, _label: usize, _num_labels: usize) -> Rgb {
         self.0
     }
 }
 
 impl ColorList {
-    pub fn new(colors: Vec<Rgb>) -> Result<Self, ColorSchemeError> {
+    pub fn new(colors: Vec<Rgb>) -> Result<Self, ColoringError> {
         if colors.is_empty() {
-            Err(ColorSchemeError::EmptyColorList)
+            Err(ColoringError::EmptyColorList)
         } else {
             Ok(Self { colors })
         }
     }
 }
 
-impl ColorScheme for ColorList {
+impl Coloring for ColorList {
     #[must_use]
     fn color(&self, label: usize, _num_labels: usize) -> Rgb {
         self.colors[label % self.colors.len()]
     }
 }
 
-impl ColorScheme for Rainbow {
+impl Coloring for Rainbow {
     #[must_use]
     fn color(&self, label: usize, num_labels: usize) -> Rgb {
         let colors = [
@@ -57,7 +57,7 @@ impl ColorScheme for Rainbow {
     }
 }
 
-impl<'a, T: ColorScheme> ColorScheme for AlternatingBrightness<'a, T> {
+impl<'a, T: Coloring> Coloring for AlternatingBrightness<'a, T> {
     fn color(&self, label: usize, num_labels: usize) -> Rgb {
         let l = (label / 2) * 2;
         let color = self.0.color(l, num_labels);

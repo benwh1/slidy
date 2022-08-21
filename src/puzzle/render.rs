@@ -1,6 +1,4 @@
-use crate::puzzle::{
-    color_scheme::ColorScheme, label::label::Label, sliding_puzzle::SlidingPuzzle,
-};
+use crate::puzzle::{coloring::Coloring, label::label::Label, sliding_puzzle::SlidingPuzzle};
 use ab_glyph::{point, Font, FontRef, ScaleFont};
 use image::{ImageBuffer, Pixel, Rgba, RgbaImage};
 use imageproc::{drawing, rect::Rect};
@@ -100,7 +98,7 @@ pub enum RendererError {
 pub struct Renderer<'a, 'b, L, S>
 where
     L: Label,
-    S: ColorScheme,
+    S: Coloring,
 {
     phantom: PhantomData<L>,
     label: &'a L,
@@ -114,7 +112,7 @@ where
 impl<'a, 'b, L, S> Renderer<'a, 'b, L, S>
 where
     L: Label,
-    S: ColorScheme,
+    S: Coloring,
 {
     #[must_use]
     pub fn with_label_scheme_font(label: &'a L, scheme: &'a S, font: &'a FontRef<'b>) -> Self {
