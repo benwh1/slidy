@@ -23,6 +23,12 @@ pub struct Scheme {
     coloring: Box<dyn Coloring>,
 }
 
+impl Scheme {
+    pub fn new(label: Box<dyn Label>, coloring: Box<dyn Coloring>) -> Self {
+        Self { label, coloring }
+    }
+}
+
 impl ColorScheme for Scheme {
     fn color_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> Rgb {
         let label = self.label.position_label_unchecked(width, height, x, y);
