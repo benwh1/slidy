@@ -56,13 +56,14 @@ pub(super) struct PiecewiseConstant {
 }
 
 impl PiecewiseConstant {
-    pub(super) fn new(domain: Range<u32>) -> Self {
+    pub(super) fn new(domain: Range<u32>, value: u32) -> Self {
         let mut data = BTreeMap::new();
-        data.insert(domain.start, 0);
+        data.insert(domain.start, value);
         Self { data, domain }
     }
 
     pub(super) fn value(&self, x: u32) -> u32 {
+        let x = x.clamp(self.domain.start, self.domain.end);
         self.data
             .range(self.domain.start..=x)
             .last()
@@ -80,38 +81,30 @@ impl PiecewiseConstant {
     }
 
     pub(super) fn set_range_value(&mut self, range: Range<u32>, value: u32) {
-        let next_point = self
-            .data
-            .range(range.end..self.domain.end)
-            .next()
-            .map(|(&k, &v)| (k, v));
-
+        // Keys that define values of the function within `range`
         let keys = self
             .data
             .range(range.clone())
             .map(|(&k, _)| k)
             .collect::<Vec<_>>();
 
-        let prev_value = range.start.checked_sub(1).map(|a| self.value(a));
+        // Value of the function just before and just after `range`
+        let prev_value = self.value(range.start.saturating_sub(1));
         let end_value = self.value(range.end);
 
+        // Remove all values of the function that are in `range`
         for k in keys {
             self.data.remove(&k);
         }
-        if let Some((k, v)) = next_point && v == end_value {
-            self.data.remove(&k);
+
+        // If the value of the function just before `range` is different than the new value we
+        // want to set, insert a new key.
+        if value != prev_value {
+            self.data.insert(range.start, value);
         }
 
-        match prev_value {
-            Some(v) if value != v => {
-                self.data.insert(range.start, value);
-            }
-            None => {
-                self.data.insert(range.start, value);
-            }
-            _ => {}
-        }
-
+        // If the value of the function just after `range` is different than the new value we
+        // want to set, insert a new key.
         if self.domain.contains(&range.end) && value != end_value {
             self.data.insert(range.end, end_value);
         }
@@ -143,11 +136,11 @@ impl RectPartition {
 
         rects.sort_by_key(|r| (r.top, r.left));
 
+        let top = rects.iter().map(|r| r.top).min().unwrap();
         let left = rects.iter().map(|r| r.left).min().unwrap();
         let right = rects.iter().map(|r| r.right).max().unwrap();
 
-        let mut height_map = PiecewiseConstant::new(left..right);
-        height_map.data.insert(left, 0);
+        let mut height_map = PiecewiseConstant::new(left..right, top);
 
         for slice in rects.group_by(|a, b| a.top == b.top) {
             for rect in slice {
@@ -329,5 +322,16 @@ mod tests {
             ]),
             Err(RectPartitionError::InvalidRect)
         );
+    }
+
+    #[test]
+    fn test_rect_partition_11() {
+        assert!(RectPartition::new(vec![
+            Rect::new((4, 1), (6, 3)),
+            Rect::new((4, 3), (6, 5)),
+            Rect::new((6, 1), (8, 3)),
+            Rect::new((6, 3), (8, 5)),
+        ])
+        .is_ok());
     }
 }
