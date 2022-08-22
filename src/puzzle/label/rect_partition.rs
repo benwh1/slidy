@@ -120,7 +120,7 @@ impl PiecewiseConstant {
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RectPartition {
-    rects: Vec<Rect>,
+    pub(in crate::puzzle) rects: Vec<Rect>,
 }
 
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
