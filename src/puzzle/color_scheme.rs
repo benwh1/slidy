@@ -85,12 +85,20 @@ impl RecursiveScheme {
             subschemes: Vec::new(),
         }
     }
+
+    pub fn height(&self) -> u32 {
+        if self.subschemes.is_empty() {
+            1
+        } else {
+            1 + self.subschemes[0].height()
+        }
+    }
 }
 
 impl RecursiveScheme {
     pub fn color_at_layer(
         &self,
-        layer: u8,
+        layer: u32,
         width: usize,
         height: usize,
         x: usize,
@@ -122,7 +130,7 @@ impl RecursiveScheme {
 
 pub struct IndexedRecursiveScheme {
     scheme: RecursiveScheme,
-    index: u8,
+    index: u32,
 }
 
 impl IndexedRecursiveScheme {
