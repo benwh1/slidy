@@ -7,6 +7,8 @@ use crate::puzzle::{
 };
 
 pub trait ColorScheme {
+    fn is_valid_size(&self, width: usize, height: usize) -> bool;
+
     fn color_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> Rgb;
 
     fn color(&self, width: usize, height: usize, x: usize, y: usize) -> Option<Rgb> {
@@ -30,6 +32,10 @@ impl Scheme {
 }
 
 impl ColorScheme for Scheme {
+    fn is_valid_size(&self, width: usize, height: usize) -> bool {
+        self.label.is_valid_size(width, height)
+    }
+
     fn color_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> Rgb {
         let label = self.label.position_label_unchecked(width, height, x, y);
         let num_labels = self.label.num_labels_unchecked(width, height);
@@ -125,6 +131,17 @@ impl From<RecursiveScheme> for IndexedRecursiveScheme {
 }
 
 impl ColorScheme for IndexedRecursiveScheme {
+    fn is_valid_size(&self, width: usize, height: usize) -> bool {
+        let partition_valid = if let Some(p) = &self.scheme.partition {
+            p.is_valid_size(width, height)
+        } else {
+            true
+        };
+        let scheme_valid = self.scheme.scheme.is_valid_size(width, height);
+
+        partition_valid && scheme_valid
+    }
+
     fn color_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> Rgb {
         self.scheme.color_at_layer(self.index, width, height, x, y)
     }
