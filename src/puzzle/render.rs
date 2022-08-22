@@ -1,15 +1,17 @@
-use crate::puzzle::{coloring::Coloring, label::label::Label, sliding_puzzle::SlidingPuzzle};
+use std::fmt::Display;
+
 use ab_glyph::{point, Font, FontRef, ScaleFont};
 use image::{ImageBuffer, Pixel, Rgba, RgbaImage};
 use imageproc::{drawing, rect::Rect};
 use itertools::Itertools;
 use num_traits::PrimInt;
-use palette::rgb::Rgb as PaletteRgb;
-use std::{fmt::Display, marker::PhantomData};
+use palette::rgb::Rgb;
 use thiserror::Error;
 
+use super::{color_scheme::ColorScheme, sliding_puzzle::SlidingPuzzle};
+
 #[must_use]
-fn convert_rgb(c: PaletteRgb) -> Rgba<u8> {
+fn convert_rgb(c: Rgb) -> Rgba<u8> {
     let (r, g, b) = c.into_format::<u8>().into_components();
     Rgba([r, g, b, 255])
 }
@@ -95,13 +97,10 @@ pub enum RendererError {
     IncompatibleLabel { width: usize, height: usize },
 }
 
-pub struct Renderer<'a, 'b, L, S>
+pub struct Renderer<'a, 'b, S>
 where
-    L: Label,
-    S: Coloring,
+    S: ColorScheme,
 {
-    phantom: PhantomData<L>,
-    label: &'a L,
     scheme: &'a S,
     font: &'a FontRef<'b>,
     draw_borders: bool,
@@ -109,16 +108,13 @@ where
     font_size: f32,
 }
 
-impl<'a, 'b, L, S> Renderer<'a, 'b, L, S>
+impl<'a, 'b, S> Renderer<'a, 'b, S>
 where
-    L: Label,
-    S: Coloring,
+    S: ColorScheme,
 {
     #[must_use]
-    pub fn with_label_scheme_font(label: &'a L, scheme: &'a S, font: &'a FontRef<'b>) -> Self {
+    pub fn with_scheme_and_font(scheme: &'a S, font: &'a FontRef<'b>) -> Self {
         Self {
-            phantom: PhantomData,
-            label,
             scheme,
             font,
             draw_borders: false,
@@ -155,7 +151,7 @@ where
     {
         let (w, h) = puzzle.size();
 
-        if !self.label.is_valid_size(w, h) {
+        if !self.scheme.is_valid_size(w, h) {
             return Err(RendererError::IncompatibleLabel {
                 width: w,
                 height: h,
@@ -178,14 +174,13 @@ where
 
                 if piece != Piece::zero() {
                     let solved_pos = puzzle.solved_pos_xy_unchecked(piece);
-                    let label = self.label.position_label_unchecked(
+                    let color = self.scheme.color_unchecked(
                         w as usize,
                         h as usize,
                         solved_pos.0,
                         solved_pos.1,
                     );
-                    let num_labels = self.label.num_labels_unchecked(w as usize, h as usize);
-                    let color = convert_rgb(self.scheme.color(label, num_labels));
+                    let color = convert_rgb(color);
                     let (rect_x, rect_y) = ((tile_size * x) as i32, (tile_size * y) as i32);
                     let rect = Rect::at(rect_x, rect_y).of_size(tile_size, tile_size);
 
