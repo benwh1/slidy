@@ -137,6 +137,16 @@ impl IndexedRecursiveScheme {
     pub fn new(scheme: RecursiveScheme) -> Self {
         Self { scheme, index: 0 }
     }
+
+    pub fn ascend(&mut self) {
+        self.index = self.index.saturating_sub(1);
+    }
+
+    pub fn descend(&mut self) {
+        if self.index + 1 < self.scheme.height() {
+            self.index += 1;
+        }
+    }
 }
 
 impl From<RecursiveScheme> for IndexedRecursiveScheme {
