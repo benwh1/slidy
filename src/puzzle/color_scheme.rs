@@ -99,15 +99,22 @@ impl RecursiveScheme {
         if layer == 0 || self.partition.is_none() {
             self.scheme.color_unchecked(width, height, x, y)
         } else {
-            let position = self
+            let (pos, rect) = self
                 .partition
                 .as_ref()
                 .unwrap()
                 .rects
                 .iter()
-                .position(|r| r.contains(x as u32, y as u32))
+                .enumerate()
+                .find(|(_, rect)| rect.contains(x as u32, y as u32))
                 .unwrap();
-            let subscheme = &self.subschemes[position];
+            let subscheme = &self.subschemes[pos];
+
+            // Map the coordinates to the subscheme (so top left of the rect goes to (0, 0), etc.)
+            let (width, height) = (rect.width() as usize, rect.height() as usize);
+            let (left, top) = rect.top_left();
+            let (x, y) = (x - left as usize, y - top as usize);
+
             subscheme.color_at_layer(layer - 1, width, height, x, y)
         }
     }
