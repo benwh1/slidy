@@ -7,10 +7,13 @@ use crate::puzzle::{
 };
 
 pub trait ColorScheme {
+    #[must_use]
     fn is_valid_size(&self, width: usize, height: usize) -> bool;
 
+    #[must_use]
     fn color_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> Rgb;
 
+    #[must_use]
     fn color(&self, width: usize, height: usize, x: usize, y: usize) -> Option<Rgb> {
         if x < width && y < height {
             Some(self.color_unchecked(width, height, x, y))
@@ -26,6 +29,7 @@ pub struct Scheme {
 }
 
 impl Scheme {
+    #[must_use]
     pub fn new(label: Box<dyn Label>, coloring: Box<dyn Coloring>) -> Self {
         Self { label, coloring }
     }
@@ -78,6 +82,7 @@ impl RecursiveScheme {
         }
     }
 
+    #[must_use]
     pub fn new_leaf(scheme: Scheme) -> Self {
         Self {
             scheme,
@@ -86,6 +91,7 @@ impl RecursiveScheme {
         }
     }
 
+    #[must_use]
     pub fn height(&self) -> u32 {
         if self.subschemes.is_empty() {
             1
@@ -96,6 +102,7 @@ impl RecursiveScheme {
 }
 
 impl RecursiveScheme {
+    #[must_use]
     pub fn color_at_layer(
         &self,
         layer: u32,
@@ -134,6 +141,7 @@ pub struct IndexedRecursiveScheme {
 }
 
 impl IndexedRecursiveScheme {
+    #[must_use]
     pub fn new(scheme: RecursiveScheme) -> Self {
         Self { scheme, index: 0 }
     }
