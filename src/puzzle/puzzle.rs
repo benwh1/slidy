@@ -269,7 +269,10 @@ mod tests {
     }
 
     mod sliding_puzzle {
-        use crate::algorithm::{algorithm::Algorithm, direction::Direction, puzzle_move::Move};
+        use crate::{
+            algorithm::{algorithm::Algorithm, direction::Direction, puzzle_move::Move},
+            puzzle::label::label::FringeGrids,
+        };
 
         use super::*;
 
@@ -315,6 +318,16 @@ mod tests {
         }
 
         #[test]
+        fn test_reset_to_label() {
+            let mut p = Puzzle::new(4, 4).unwrap();
+            p.reset_to_label(&FringeGrids);
+            assert_eq!(
+                p.pieces,
+                vec![1, 2, 3, 4, 5, 8, 9, 10, 6, 11, 13, 14, 7, 12, 15, 0,]
+            )
+        }
+
+        #[test]
         fn test_solved_pos() {
             let p = Puzzle::new(4, 6).unwrap();
             assert_eq!(p.solved_pos(0), Some(23));
@@ -341,6 +354,29 @@ mod tests {
             assert_eq!(p.piece_at(24), None);
             assert_eq!(p.piece_at_xy(4, 0), None);
             assert_eq!(p.piece_at_xy(0, 6), None);
+        }
+
+        #[test]
+        fn test_set_piece() {
+            let mut p = Puzzle::new(4, 4).unwrap();
+            p.set_piece(0, 6);
+            p.set_piece_xy(1, 1, 1);
+            assert_eq!(
+                p.pieces,
+                vec![6, 2, 3, 4, 5, 1, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0]
+            );
+        }
+
+        #[test]
+        fn test_set_piece_2() {
+            let mut p = Puzzle::new(4, 4).unwrap();
+            p.set_piece(0, 0);
+            p.set_piece_xy(3, 3, 1);
+            assert_eq!(
+                p.pieces,
+                vec![0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 1,]
+            );
+            assert_eq!(p.gap, 0);
         }
 
         #[test]
@@ -391,6 +427,20 @@ mod tests {
         }
 
         #[test]
+        fn test_move_dir() {
+            let mut p = Puzzle::new(4, 4).unwrap();
+            assert!(p.move_dir(Direction::Down));
+            assert!(!p.move_dir(Direction::Left));
+            assert!(p.move_dir(Direction::Right));
+            assert!(p.move_dir(Direction::Up));
+            assert!(!p.move_dir(Direction::Up));
+            assert_eq!(
+                p.pieces,
+                vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 11, 13, 14, 0, 12]
+            );
+        }
+
+        #[test]
         fn test_can_apply_move() {
             let mut p = Puzzle::new(4, 4).unwrap();
             p.move_dir(Direction::Down);
@@ -403,6 +453,22 @@ mod tests {
             assert!(!p.can_apply_move(Move::new(Direction::Left, 2)));
             assert!(!p.can_apply_move(Move::new(Direction::Down, 3)));
             assert!(!p.can_apply_move(Move::new(Direction::Right, 3)));
+        }
+
+        #[test]
+        fn test_apply_move() {
+            let mut p = Puzzle::new(4, 4).unwrap();
+            assert!(p.apply_move(Move::new(Direction::Down, 2)));
+            assert!(!p.apply_move(Move::new(Direction::Down, 2)));
+            assert!(!p.apply_move(Move::new(Direction::Left, 1)));
+            assert!(!p.apply_move(Move::new(Direction::Right, 4)));
+            assert!(p.apply_move(Move::new(Direction::Right, 3)));
+            assert!(!p.apply_move(Move::new(Direction::Up, 3)));
+            assert!(p.apply_move(Move::new(Direction::Up, 1)));
+            assert_eq!(
+                p.pieces,
+                vec![1, 2, 3, 4, 9, 5, 6, 7, 0, 10, 11, 8, 13, 14, 15, 12]
+            );
         }
 
         #[test]

@@ -71,3 +71,65 @@ impl<'a, T: Coloring> Coloring for AlternatingBrightness<'a, T> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_monochrome() {
+        let c = Rgb::new(0.2718, 0.3141, 0.6931);
+        let a = Monochrome(c);
+        assert_eq!(a.color(1, 3), c);
+    }
+
+    mod color_list {
+        use super::*;
+
+        #[test]
+        fn test_new() {
+            let a = ColorList::new(Vec::new());
+            assert_eq!(a, Err(ColoringError::EmptyColorList));
+        }
+
+        #[test]
+        fn test_new_2() {
+            let a = ColorList::new(vec![
+                Rgb::new(0.1, 0.2, 0.3),
+                Rgb::new(0.1, 0.3, 0.6),
+                Rgb::new(0.6, 0.3, 0.4),
+            ]);
+            assert!(a.is_ok());
+        }
+
+        #[test]
+        fn test_color_list() {
+            let c = vec![
+                Rgb::new(0.1, 0.2, 0.3),
+                Rgb::new(0.1, 0.3, 0.6),
+                Rgb::new(0.6, 0.3, 0.4),
+            ];
+            let a = ColorList::new(c.clone()).unwrap();
+            assert_eq!(a.color(0, 10), c[0]);
+            assert_eq!(a.color(1, 10), c[1]);
+            assert_eq!(a.color(2, 10), c[2]);
+            assert_eq!(a.color(3, 10), c[0]);
+            assert_eq!(a.color(4, 10), c[1]);
+            assert_eq!(a.color(5, 10), c[2]);
+            assert_eq!(a.color(6, 10), c[0]);
+        }
+    }
+
+    #[test]
+    fn test_rainbow() {
+        assert_eq!(Rainbow.color(0, 1), Hsl::new(0.0, 1.0, 0.5).into_color());
+
+        assert_eq!(Rainbow.color(0, 2), Hsl::new(0.0, 1.0, 0.5).into_color());
+        assert_eq!(Rainbow.color(1, 2), Hsl::new(165.0, 1.0, 0.5).into_color());
+
+        assert_eq!(Rainbow.color(0, 4), Hsl::new(0.0, 1.0, 0.5).into_color());
+        assert_eq!(Rainbow.color(1, 4), Hsl::new(82.5, 1.0, 0.5).into_color());
+        assert_eq!(Rainbow.color(2, 4), Hsl::new(165.0, 1.0, 0.5).into_color());
+        assert_eq!(Rainbow.color(3, 4), Hsl::new(247.5, 1.0, 0.5).into_color());
+    }
+}

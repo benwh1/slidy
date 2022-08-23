@@ -340,20 +340,6 @@ mod tests {
     }
 
     #[test]
-    fn test_from_str_to_string() {
-        let algs = [
-            "",
-            "ULDRULDRULDR",
-            "UD2U3DUDD2DUUD2",
-            "UDLRLDULUDRLURDLURRULRUDRRUDLLDDUDURLURLRLUDURLUDR",
-            "DLULD2RU2LDLDRDRU2LULD3RU3R2D3LU2RDLU2LDLDR2ULURDLUL",
-        ];
-        for a in algs {
-            assert_eq!(Algorithm::from_str(a).unwrap().to_string(), a);
-        }
-    }
-
-    #[test]
     fn test_inverse() {
         let a = Algorithm::from_str("ULDR").unwrap();
         let b = Algorithm::from_str("LURD").unwrap();
@@ -371,6 +357,13 @@ mod tests {
         let a = Algorithm::from_str("DL3ULU3R2DLD2RUL2U").unwrap();
         let b = Algorithm::from_str("DR2DLU2RUL2D3RDR3U").unwrap();
         assert_eq!(a.inverse(), b);
+    }
+
+    #[test]
+    fn test_transpose() {
+        let a = Algorithm::from_str("D2RUR2D2L3URU").unwrap();
+        let b = Algorithm::from_str("R2DLD2R2U3LDL").unwrap();
+        assert_eq!(a.transpose(), b);
     }
 
     #[test]
@@ -513,6 +506,20 @@ mod tests {
                     ]
                 })
             );
+        }
+
+        #[test]
+        fn test_from_str_to_string() {
+            let algs = [
+                "",
+                "ULDRULDRULDR",
+                "UD2U3DUDD2DUUD2",
+                "UDLRLDULUDRLURDLURRULRUDRRUDLLDDUDURLURLRLUDURLUDR",
+                "DLULD2RU2LDLDRDRU2LULD3RU3R2D3LU2RDLU2LDLDR2ULURDLUL",
+            ];
+            for a in algs {
+                assert_eq!(Algorithm::from_str(a).unwrap().to_string(), a);
+            }
         }
     }
 

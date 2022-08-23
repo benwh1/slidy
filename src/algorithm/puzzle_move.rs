@@ -110,38 +110,38 @@ impl Add for Move {
 
 #[cfg(test)]
 mod tests {
-    use super::Move;
-    use crate::algorithm::direction::Direction;
+    use super::*;
 
     #[test]
     fn test_inverse() {
-        let m = Move {
-            direction: Direction::Up,
-            amount: 3,
-        };
-        assert_eq!(
-            m.inverse(),
-            Move {
-                direction: Direction::Down,
-                amount: 3
-            }
-        );
+        let a = Move::new(Direction::Up, 3);
+        let b = Move::new(Direction::Down, 3);
+        assert_eq!(a.inverse(), b);
+    }
+
+    #[test]
+    fn test_transpose() {
+        let a = Move::new(Direction::Up, 3);
+        let b = Move::new(Direction::Left, 3);
+        assert_eq!(a.transpose(), b);
+    }
+
+    mod from_direction {
+        use super::*;
+
+        #[test]
+        fn test_from_direction() {
+            assert_eq!(Move::from(Direction::Up), Move::new(Direction::Up, 1));
+        }
     }
 
     mod add {
         use super::*;
-        use crate::algorithm::puzzle_move::MoveSum;
 
         #[test]
         fn test_add() {
-            let m1 = Move {
-                direction: Direction::Up,
-                amount: 3,
-            };
-            let m2 = Move {
-                direction: Direction::Up,
-                amount: 4,
-            };
+            let m1 = Move::new(Direction::Up, 3);
+            let m2 = Move::new(Direction::Up, 4);
             assert_eq!(
                 m1 + m2,
                 MoveSum::Ok(Move {
