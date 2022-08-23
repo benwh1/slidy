@@ -1,4 +1,4 @@
-use palette::{rgb::Rgb, Gradient, Hsl, IntoColor};
+use palette::{rgb::Rgb, Hsl, IntoColor};
 use thiserror::Error;
 
 pub trait Coloring {
@@ -54,13 +54,8 @@ impl Coloring for ColorList {
 impl Coloring for Rainbow {
     #[must_use]
     fn color(&self, label: usize, num_labels: usize) -> Rgb {
-        let colors = [
-            Hsl::new(0.0, 1.0, 0.5),
-            Hsl::new(165.0, 1.0, 0.5),
-            Hsl::new(330.0, 1.0, 0.5),
-        ];
-        let g = Gradient::new(colors);
-        g.get(label as f32 / num_labels as f32).into_color()
+        let frac = label as f32 / num_labels as f32;
+        Hsl::new(330.0 * frac, 1.0, 0.5).into_color()
     }
 }
 
@@ -70,13 +65,8 @@ impl Coloring for RainbowFull {
         if num_labels <= 1 {
             Hsl::new(0.0, 1.0, 0.5).into_color()
         } else {
-            let colors = [
-                Hsl::new(0.0, 1.0, 0.5),
-                Hsl::new(165.0, 1.0, 0.5),
-                Hsl::new(330.0, 1.0, 0.5),
-            ];
-            let g = Gradient::new(colors);
-            g.get(label as f32 / (num_labels - 1) as f32).into_color()
+            let frac = label as f32 / (num_labels - 1) as f32;
+            Hsl::new(330.0 * frac, 1.0, 0.5).into_color()
         }
     }
 }
