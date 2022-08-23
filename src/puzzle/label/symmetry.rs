@@ -1,4 +1,4 @@
-use super::label::Label;
+use super::label::{BijectiveLabel, Label};
 
 pub struct Id<L: Label>(L);
 pub struct RotateCw<L: Label>(L);
@@ -94,6 +94,15 @@ impl<L: Label> Label for ReflectAntidiagonal<L> {
         self.0.num_labels_unchecked(height, width)
     }
 }
+
+impl<L: BijectiveLabel> BijectiveLabel for Id<L> {}
+impl<L: BijectiveLabel> BijectiveLabel for RotateCw<L> {}
+impl<L: BijectiveLabel> BijectiveLabel for RotateCcw<L> {}
+impl<L: BijectiveLabel> BijectiveLabel for RotateHalf<L> {}
+impl<L: BijectiveLabel> BijectiveLabel for ReflectVertical<L> {}
+impl<L: BijectiveLabel> BijectiveLabel for ReflectHorizontal<L> {}
+impl<L: BijectiveLabel> BijectiveLabel for ReflectDiagonal<L> {}
+impl<L: BijectiveLabel> BijectiveLabel for ReflectAntidiagonal<L> {}
 
 #[cfg(test)]
 mod tests {
