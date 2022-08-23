@@ -5,20 +5,24 @@ pub trait Coloring {
     fn color(&self, label: usize, num_labels: usize) -> Rgb;
 }
 
-#[derive(Error, Debug)]
+#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ColoringError {
     #[error("EmptyColorList: color list must be non-empty")]
     EmptyColorList,
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct Monochrome(Rgb);
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct ColorList {
     colors: Vec<Rgb>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Rainbow;
 
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AlternatingBrightness<'a, T: Coloring>(pub &'a T);
 
 impl Coloring for Monochrome {

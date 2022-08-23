@@ -2,6 +2,7 @@ use palette::{rgb::Rgb, Hsl, IntoColor};
 
 use super::coloring::Coloring;
 
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub struct AddLightness<'a, C: Coloring> {
     coloring: &'a C,
     lightness: f32,

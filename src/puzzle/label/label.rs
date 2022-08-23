@@ -47,19 +47,28 @@ pub trait Label {
 /// These will always have `num_labels == width * height`.
 pub trait BijectiveLabel: Label {}
 
-pub struct Trivial;
-pub struct RowGrids;
-pub struct Rows;
-pub struct Fringe;
-pub struct FringeGrids;
-pub struct SquareFringe;
-pub struct SplitFringe;
-pub struct SplitSquareFringe;
-pub struct Diagonals;
-pub struct LastTwoRows;
-pub struct SplitLastTwoRows;
-pub struct ConcentricRectangles;
-pub struct Spiral;
+macro_rules! define_label {
+    ($($name:ident),* $(,)?) => {
+        $(#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        pub struct $name;)*
+    };
+}
+
+define_label!(
+    Trivial,
+    RowGrids,
+    Rows,
+    Fringe,
+    FringeGrids,
+    SquareFringe,
+    SplitFringe,
+    SplitSquareFringe,
+    Diagonals,
+    LastTwoRows,
+    SplitLastTwoRows,
+    ConcentricRectangles,
+    Spiral,
+);
 
 impl BijectiveLabel for RowGrids {}
 impl BijectiveLabel for FringeGrids {}
