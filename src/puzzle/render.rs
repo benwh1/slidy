@@ -8,7 +8,12 @@ use num_traits::PrimInt;
 use palette::rgb::Rgb;
 use thiserror::Error;
 
-use super::{color_scheme::ColorScheme, sliding_puzzle::SlidingPuzzle};
+use super::{
+    color_scheme::{ColorScheme, Scheme},
+    coloring::coloring::Monochrome,
+    label::label::Trivial,
+    sliding_puzzle::SlidingPuzzle,
+};
 
 #[must_use]
 fn convert_rgb(c: Rgb) -> Rgba<u8> {
@@ -22,6 +27,7 @@ fn draw_centered_text(
     size: f32,
     pos: (f32, f32),
     text: &str,
+    text_color: Rgba<u8>,
 ) {
     // Calculate the bounding box of the text if we were to draw it with the bottom left corner
     // at the point (0, 0)
@@ -82,7 +88,13 @@ fn draw_centered_text(
         outline.draw(|x, y, c| {
             let (px, py) = (top_left.0 + x, top_left.1 + y);
             if let Some(pixel) = image.get_pixel_mut_checked(px, py) {
-                let base_color = Rgba([0u8, 0u8, 0u8, (c * 255.0).floor() as u8]);
+                let channels = text_color.channels();
+                let base_color = Rgba([
+                    channels[0],
+                    channels[1],
+                    channels[2],
+                    (c * 255.0).floor() as u8,
+                ]);
                 pixel.blend(&base_color);
             }
         });
@@ -99,6 +111,7 @@ pub enum RendererError {
 
 pub struct Renderer<'a, 'b> {
     scheme: Box<dyn ColorScheme>,
+    text_scheme: Box<dyn ColorScheme>,
     font: &'a FontRef<'b>,
     draw_borders: bool,
     tile_size: u32,
@@ -110,11 +123,21 @@ impl<'a, 'b> Renderer<'a, 'b> {
     pub fn with_scheme_and_font(scheme: Box<dyn ColorScheme>, font: &'a FontRef<'b>) -> Self {
         Self {
             scheme,
+            text_scheme: Box::new(Scheme::new(
+                Box::new(Trivial),
+                Box::new(Monochrome::new(Rgb::new(0.0, 0.0, 0.0))),
+            )),
             font,
             draw_borders: false,
             tile_size: 75,
             font_size: 30.0,
         }
+    }
+
+    #[must_use]
+    pub fn text_scheme(mut self, text_scheme: Box<dyn ColorScheme>) -> Self {
+        self.text_scheme = text_scheme;
+        self
     }
 
     #[must_use]
@@ -168,6 +191,7 @@ impl<'a, 'b> Renderer<'a, 'b> {
 
                 if piece != Piece::zero() {
                     let solved_pos = puzzle.solved_pos_xy_unchecked(piece);
+
                     let color = self.scheme.color_unchecked(
                         w as usize,
                         h as usize,
@@ -175,6 +199,15 @@ impl<'a, 'b> Renderer<'a, 'b> {
                         solved_pos.1,
                     );
                     let color = convert_rgb(color);
+
+                    let text_color = self.text_scheme.color_unchecked(
+                        w as usize,
+                        h as usize,
+                        solved_pos.0,
+                        solved_pos.1,
+                    );
+                    let text_color = convert_rgb(text_color);
+
                     let (rect_x, rect_y) = ((tile_size * x) as i32, (tile_size * y) as i32);
                     let rect = Rect::at(rect_x, rect_y).of_size(tile_size, tile_size);
 
@@ -195,6 +228,7 @@ impl<'a, 'b> Renderer<'a, 'b> {
                         self.font_size,
                         (tile_size as f32 * (x + 0.5), tile_size as f32 * (y + 0.5)),
                         &text,
+                        text_color,
                     );
                 }
             }
