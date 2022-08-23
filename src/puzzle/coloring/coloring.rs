@@ -2,6 +2,7 @@ use palette::{rgb::Rgb, Hsl, IntoColor};
 use thiserror::Error;
 
 pub trait Coloring {
+    #[must_use]
     fn color(&self, label: usize, num_labels: usize) -> Rgb;
 }
 
@@ -31,6 +32,7 @@ pub struct RainbowFull;
 pub struct AlternatingBrightness<'a, T: Coloring>(pub &'a T);
 
 impl Monochrome {
+    #[must_use]
     pub fn new(color: Rgb) -> Self {
         Self { color }
     }
@@ -53,14 +55,12 @@ impl ColorList {
 }
 
 impl Coloring for ColorList {
-    #[must_use]
     fn color(&self, label: usize, _num_labels: usize) -> Rgb {
         self.colors[label % self.colors.len()]
     }
 }
 
 impl Coloring for Rainbow {
-    #[must_use]
     fn color(&self, label: usize, num_labels: usize) -> Rgb {
         let frac = label as f32 / num_labels as f32;
         Hsl::new(330.0 * frac, 1.0, 0.5).into_color()
@@ -68,7 +68,6 @@ impl Coloring for Rainbow {
 }
 
 impl Coloring for RainbowFull {
-    #[must_use]
     fn color(&self, label: usize, num_labels: usize) -> Rgb {
         if num_labels <= 1 {
             Hsl::new(0.0, 1.0, 0.5).into_color()
