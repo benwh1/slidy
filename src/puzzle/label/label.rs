@@ -68,10 +68,12 @@ define_label!(
     SplitLastTwoRows,
     ConcentricRectangles,
     Spiral,
+    SpiralGrids,
 );
 
 impl BijectiveLabel for RowGrids {}
 impl BijectiveLabel for FringeGrids {}
+impl BijectiveLabel for SpiralGrids {}
 
 impl Label for Trivial {
     fn position_label_unchecked(&self, _: usize, _: usize, _: usize, _: usize) -> usize {
@@ -305,6 +307,45 @@ impl Label for Spiral {
         // 4 * number of rectangles of width and height > 1, plus 1 if the innermost rectangle has
         // width or height 1.
         4 * width.min(height).div_floor(2) + if width.min(height) % 2 == 1 { 1 } else { 0 }
+    }
+}
+
+impl Label for SpiralGrids {
+    fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+        let rect_label = ConcentricRectangles.position_label_unchecked(width, height, x, y);
+
+        // See `Spiral::position_label_unchecked`
+        let (rx, ry, rw, rh) = (
+            x - rect_label,
+            y - rect_label,
+            width - 2 * rect_label,
+            height - 2 * rect_label,
+        );
+
+        // Number of pieces in the outer rectangles that we removed.
+        // Number of pieces in rect k = 2(w+h-2) - 8k, so sum this from k = 0..rect_label-1
+        let num_outer_pieces = 2 * rect_label * (width + height - 2 * rect_label);
+
+        // Find which side of the rectangle the piece is on, and count how many pieces came before
+        let rect_pieces = if rw.min(rh) == 1 || (ry == 0 && rx < rw - 1) {
+            // Top row
+            rx
+        } else if rx == rw - 1 && ry < rh - 1 {
+            // Right column
+            rw - 1 + ry
+        } else if ry == rh - 1 && rx > 0 {
+            // Bottom row
+            2 * (rw + rh - 2) - (rh - 1 + rx)
+        } else {
+            // Left column
+            2 * (rw + rh - 2) - ry
+        };
+
+        num_outer_pieces + rect_pieces
+    }
+
+    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
+        width * height
     }
 }
 
@@ -663,6 +704,30 @@ mod tests {
             3, 4, 4, 4, 5, 1,
             3, 7, 6, 6, 6, 1,
             3, 2, 2, 2, 2, 2,
+        ],
+    );
+
+    test_label!(
+        SpiralGrids,
+        4 x 4: vec![
+             0,  1,  2,  3,
+            11, 12, 13,  4,
+            10, 15, 14,  5,
+             9,  8,  7,  6,
+        ],
+        4 x 6: vec![
+             0,  1,  2,  3,
+            15, 16, 17,  4,
+            14, 23, 18,  5,
+            13, 22, 19,  6,
+            12, 21, 20,  7,
+            11, 10,  9,  8,
+        ],
+        6 x 4: vec![
+             0,  1,  2,  3,  4,  5,
+            15, 16, 17, 18, 19,  6,
+            14, 23, 22, 21, 20,  7,
+            13, 12, 11, 10,  9,  8,
         ],
     );
 }
