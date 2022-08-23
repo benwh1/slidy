@@ -12,7 +12,9 @@ pub enum ColoringError {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Monochrome(Rgb);
+pub struct Monochrome {
+    color: Rgb,
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ColorList {
@@ -28,9 +30,15 @@ pub struct RainbowFull;
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AlternatingBrightness<'a, T: Coloring>(pub &'a T);
 
+impl Monochrome {
+    pub fn new(color: Rgb) -> Self {
+        Self { color }
+    }
+}
+
 impl Coloring for Monochrome {
     fn color(&self, _label: usize, _num_labels: usize) -> Rgb {
-        self.0
+        self.color
     }
 }
 
@@ -93,7 +101,7 @@ mod tests {
     #[test]
     fn test_monochrome() {
         let c = Rgb::new(0.2718, 0.3141, 0.6931);
-        let a = Monochrome(c);
+        let a = Monochrome::new(c);
         assert_eq!(a.color(1, 3), c);
     }
 
