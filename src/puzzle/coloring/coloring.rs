@@ -23,6 +23,9 @@ pub struct ColorList {
 pub struct Rainbow;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct RainbowFull;
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AlternatingBrightness<'a, T: Coloring>(pub &'a T);
 
 impl Coloring for Monochrome {
@@ -58,6 +61,23 @@ impl Coloring for Rainbow {
         ];
         let g = Gradient::new(colors);
         g.get(label as f32 / num_labels as f32).into_color()
+    }
+}
+
+impl Coloring for RainbowFull {
+    #[must_use]
+    fn color(&self, label: usize, num_labels: usize) -> Rgb {
+        if num_labels <= 1 {
+            Hsl::new(0.0, 1.0, 0.5).into_color()
+        } else {
+            let colors = [
+                Hsl::new(0.0, 1.0, 0.5),
+                Hsl::new(165.0, 1.0, 0.5),
+                Hsl::new(330.0, 1.0, 0.5),
+            ];
+            let g = Gradient::new(colors);
+            g.get(label as f32 / (num_labels - 1) as f32).into_color()
+        }
     }
 }
 
@@ -135,5 +155,21 @@ mod tests {
         assert_eq!(Rainbow.color(1, 4), Hsl::new(82.5, 1.0, 0.5).into_color());
         assert_eq!(Rainbow.color(2, 4), Hsl::new(165.0, 1.0, 0.5).into_color());
         assert_eq!(Rainbow.color(3, 4), Hsl::new(247.5, 1.0, 0.5).into_color());
+    }
+
+    #[test]
+    fn test_rainbow_full() {
+        use RainbowFull as RF;
+
+        assert_eq!(RF.color(0, 1), Hsl::new(0.0, 1.0, 0.5).into_color());
+
+        assert_eq!(RF.color(0, 2), Hsl::new(0.0, 1.0, 0.5).into_color());
+        assert_eq!(RF.color(1, 2), Hsl::new(330.0, 1.0, 0.5).into_color());
+
+        assert_eq!(RF.color(0, 5), Hsl::new(0.0, 1.0, 0.5).into_color());
+        assert_eq!(RF.color(1, 5), Hsl::new(82.5, 1.0, 0.5).into_color());
+        assert_eq!(RF.color(2, 5), Hsl::new(165.0, 1.0, 0.5).into_color());
+        assert_eq!(RF.color(3, 5), Hsl::new(247.5, 1.0, 0.5).into_color());
+        assert_eq!(RF.color(4, 5), Hsl::new(330.0, 1.0, 0.5).into_color());
     }
 }
