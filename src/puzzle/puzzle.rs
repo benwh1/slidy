@@ -546,11 +546,78 @@ mod benchmarks {
 
     use std::str::FromStr;
 
-    use test::Bencher;
+    use test::{black_box, Bencher};
 
     use crate::algorithm::algorithm::Algorithm;
 
     use super::*;
+
+    #[bench]
+    fn bench_reset(b: &mut Bencher) {
+        let mut p = Puzzle::default();
+        b.iter(|| {
+            for _ in 0..100 {
+                p.reset();
+            }
+        });
+        black_box(p);
+    }
+
+    #[bench]
+    fn bench_is_solved(b: &mut Bencher) {
+        let p = Puzzle::default();
+        b.iter(|| {
+            for _ in 0..100 {
+                black_box(p.is_solved());
+            }
+        });
+    }
+
+    #[bench]
+    fn bench_is_solved_100(b: &mut Bencher) {
+        let p = Puzzle::new(100, 100).unwrap();
+        b.iter(|| black_box(p.is_solved()));
+    }
+
+    #[bench]
+    fn bench_solved_pos_unchecked(b: &mut Bencher) {
+        let p = Puzzle::new(4, 4).unwrap();
+        b.iter(|| {
+            for _ in 0..1000 {
+                black_box(p.solved_pos_unchecked(10));
+            }
+        });
+    }
+
+    #[bench]
+    fn bench_solved_pos(b: &mut Bencher) {
+        let p = Puzzle::new(4, 4).unwrap();
+        b.iter(|| {
+            for _ in 0..1000 {
+                black_box(p.solved_pos(10).unwrap());
+            }
+        });
+    }
+
+    #[bench]
+    fn bench_solved_pos_xy_unchecked(b: &mut Bencher) {
+        let p = Puzzle::new(4, 4).unwrap();
+        b.iter(|| {
+            for _ in 0..1000 {
+                black_box(p.solved_pos_xy_unchecked(10));
+            }
+        });
+    }
+
+    #[bench]
+    fn bench_solved_pos_xy(b: &mut Bencher) {
+        let p = Puzzle::new(4, 4).unwrap();
+        b.iter(|| {
+            for _ in 0..1000 {
+                black_box(p.solved_pos_xy(10).unwrap());
+            }
+        });
+    }
 
     #[bench]
     fn bench_can_apply_alg(b: &mut Bencher) {
@@ -559,6 +626,6 @@ mod benchmarks {
             "DR2D2LULURUR2DL2DRU2RD2LDRULULDRDL2URDLU3RDLUR3DLDLU2RD3LU3R2DLD2LULU2R3D3",
         )
         .unwrap();
-        b.iter(|| p.can_apply_alg(&a));
+        b.iter(|| black_box(p.can_apply_alg(&a)));
     }
 }
