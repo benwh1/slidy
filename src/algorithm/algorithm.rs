@@ -220,8 +220,19 @@ impl FromStr for Algorithm {
                     amount = Some(d);
                 }
             }
+            // A whitespace character signals the end of a move
+            else if c.is_whitespace() {
+                // Push the previous move, if there was one
+                if let Some(dir) = dir {
+                    alg.push(Move::new(dir, amount.unwrap_or(1)));
+                }
+
+                // Direction and amount for the next move are unknown
+                dir = None;
+                amount = None;
+            }
             // Any other character is invalid
-            else if !c.is_whitespace() {
+            else {
                 return Err(ParseAlgorithmError::InvalidCharacter(c));
             }
         }
@@ -340,6 +351,12 @@ mod tests {
         )
         .unwrap();
         assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_simplify_4() {
+        let a = Algorithm::from_str("LRL").unwrap().simplified();
+        assert_eq!(a, Algorithm::from_str("L").unwrap());
     }
 
     #[test]
@@ -468,6 +485,17 @@ mod tests {
                         Move::new(Direction::Left, 0),
                         Move::new(Direction::Up, 2),
                     ]
+                })
+            );
+        }
+
+        #[test]
+        fn test_from_str_9() {
+            let a = Algorithm::from_str("L0");
+            assert_eq!(
+                a,
+                Ok(Algorithm {
+                    moves: vec![Move::new(Direction::Left, 0),]
                 })
             );
         }
