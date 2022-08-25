@@ -1,7 +1,10 @@
-use super::sliding_puzzle::SlidingPuzzle;
+use super::{
+    display::{DisplayGrid, DisplayInline},
+    sliding_puzzle::SlidingPuzzle,
+};
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::{collections::HashSet, num::ParseIntError, str::FromStr};
+use std::{collections::HashSet, fmt::Display, num::ParseIntError, str::FromStr};
 use thiserror::Error;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -97,6 +100,14 @@ impl Puzzle {
             gap: gap.unwrap(),
         })
     }
+
+    pub fn display_inline(&self) -> DisplayInline<u32, Self> {
+        DisplayInline::new(self)
+    }
+
+    pub fn display_grid(&self) -> DisplayGrid<u32, Self> {
+        DisplayGrid::new(self)
+    }
 }
 
 impl SlidingPuzzle<u32> for Puzzle {
@@ -127,6 +138,12 @@ impl SlidingPuzzle<u32> for Puzzle {
 impl Default for Puzzle {
     fn default() -> Self {
         Self::new(4, 4).unwrap()
+    }
+}
+
+impl Display for Puzzle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.display_inline().fmt(f)
     }
 }
 
