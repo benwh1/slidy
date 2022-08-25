@@ -501,6 +501,32 @@ mod tests {
         }
 
         #[test]
+        fn test_from_str_10() {
+            let a = Algorithm::from_str(" U L D R ");
+            let b = Algorithm::from_str("ULDR");
+            assert_eq!(a, b);
+        }
+
+        #[test]
+        fn test_from_str_11() {
+            let a = Algorithm::from_str(" U2 L3  D4\t R1");
+            let b = Algorithm::from_str("U2L3D4R");
+            assert_eq!(a, b);
+        }
+
+        #[test]
+        fn test_from_str_12() {
+            let a = Algorithm::from_str("D3 R U2 R D2 R U3 L3 a");
+            assert_eq!(a, Err(ParseAlgorithmError::InvalidCharacter('a')));
+        }
+
+        #[test]
+        fn test_from_str_13() {
+            let a = Algorithm::from_str("D 3L");
+            assert_eq!(a, Err(ParseAlgorithmError::MissingDirection));
+        }
+
+        #[test]
         fn test_from_str_to_string() {
             let algs = [
                 "",
