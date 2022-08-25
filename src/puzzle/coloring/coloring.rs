@@ -7,7 +7,7 @@ pub trait Coloring {
 }
 
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum ColoringError {
+pub enum ColorListError {
     #[error("EmptyColorList: color list must be non-empty")]
     EmptyColorList,
 }
@@ -45,9 +45,9 @@ impl Coloring for Monochrome {
 }
 
 impl ColorList {
-    pub fn new(colors: Vec<Rgb>) -> Result<Self, ColoringError> {
+    pub fn new(colors: Vec<Rgb>) -> Result<Self, ColorListError> {
         if colors.is_empty() {
-            Err(ColoringError::EmptyColorList)
+            Err(ColorListError::EmptyColorList)
         } else {
             Ok(Self { colors })
         }
@@ -110,7 +110,7 @@ mod tests {
         #[test]
         fn test_new() {
             let a = ColorList::new(Vec::new());
-            assert_eq!(a, Err(ColoringError::EmptyColorList));
+            assert_eq!(a, Err(ColorListError::EmptyColorList));
         }
 
         #[test]
