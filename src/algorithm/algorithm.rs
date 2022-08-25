@@ -90,11 +90,7 @@ impl Algorithm {
                             // Try and pop a move off `moves`, because the next move might cancel.
                             // e.g. consider URLD where `next` is the L move. We pop the U move
                             // from `moves` so that the following D move can cancel with it.
-                            if let Some(last) = moves.pop() {
-                                Some(last)
-                            } else {
-                                None
-                            }
+                            moves.pop()
                         }
                         // Moves can be added but don't fully cancel, keep accumulating into mv.
                         else {
