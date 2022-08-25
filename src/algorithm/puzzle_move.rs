@@ -31,7 +31,6 @@ impl Move {
         Self { direction, amount }
     }
 
-    #[must_use]
     pub fn new_nonzero(direction: Direction, amount: u32) -> Result<Self, MoveError> {
         if amount == 0 {
             Err(MoveError::ZeroAmount)

@@ -101,10 +101,12 @@ impl Puzzle {
         })
     }
 
+    #[must_use]
     pub fn display_inline(&self) -> DisplayInline<u32, Self> {
         DisplayInline::new(self)
     }
 
+    #[must_use]
     pub fn display_grid(&self) -> DisplayGrid<u32, Self> {
         DisplayGrid::new(self)
     }
