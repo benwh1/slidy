@@ -74,42 +74,45 @@ impl Algorithm {
             return Self::new(self.moves.clone());
         }
 
+        // List of simplified moves
         let mut moves = Vec::new();
-        let mut mv = Move {
-            direction: Direction::Up,
-            amount: 0,
-        };
-        for i in 0..self.moves.len() {
-            match mv + self.moves[i] {
-                MoveSum::Ok(m) => {
-                    mv = if m.amount == 0 {
+
+        // Current move that we are accumulating into. This will be pushed to `moves` when we
+        // reach a move that can't be added to it.
+        let mut acc_move = None;
+
+        for &next_mv in self.moves.iter() {
+            match acc_move {
+                Some(m) => match m + next_mv {
+                    MoveSum::Ok(m) => {
                         // Moves completely cancel.
-                        // Try and pop a move off `moves` (the next move might cancel with it,
-                        // e.g. URLD after the L move).
-                        // If there is no move in moves, just restart from an empty move.
-                        if let Some(last) = moves.pop() {
-                            last
-                        } else {
-                            Move {
-                                direction: Direction::Up,
-                                amount: 0,
+                        acc_move = if m.amount == 0 {
+                            // Try and pop a move off `moves`, because the next move might cancel.
+                            // e.g. consider URLD where `next_mv` is the L move. We pop the U move
+                            // from `moves` so that the following D move can cancel with it.
+                            if let Some(last) = moves.pop() {
+                                Some(last)
+                            } else {
+                                None
                             }
                         }
-                    } else {
-                        // Moves can be added, but don't fully cancel, keep accumulating into mv.
-                        m
-                    };
-                }
-                // If the moves can't be added, there is no more simplification at this point, so
-                // push mv and go to the next move
-                MoveSum::Invalid => {
-                    moves.push(mv);
-                    mv = self.moves[i];
-                }
+                        // Moves can be added but don't fully cancel, keep accumulating into mv.
+                        else {
+                            Some(m)
+                        };
+                    }
+                    // Moves can't be added, there is no more simplification at this point.
+                    MoveSum::Invalid => {
+                        // Push mv and go to the next move.
+                        moves.push(m);
+                        acc_move = Some(next_mv);
+                    }
+                },
+                None => acc_move = Some(next_mv),
             }
         }
 
-        if mv.amount != 0 {
+        if let Some(mv) = acc_move && mv.amount != 0 {
             moves.push(mv);
         }
 
