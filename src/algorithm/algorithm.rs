@@ -392,22 +392,10 @@ mod tests {
                 a,
                 Ok(Algorithm {
                     moves: vec![
-                        Move {
-                            direction: Direction::Up,
-                            amount: 2,
-                        },
-                        Move {
-                            direction: Direction::Left,
-                            amount: 3,
-                        },
-                        Move {
-                            direction: Direction::Down,
-                            amount: 1,
-                        },
-                        Move {
-                            direction: Direction::Right,
-                            amount: 4,
-                        },
+                        Move::new(Direction::Up, 2),
+                        Move::new(Direction::Left, 3),
+                        Move::new(Direction::Down, 1),
+                        Move::new(Direction::Right, 4)
                     ],
                 })
             );
@@ -425,10 +413,7 @@ mod tests {
             assert_eq!(
                 a,
                 Ok(Algorithm {
-                    moves: vec![Move {
-                        direction: Direction::Up,
-                        amount: 1
-                    }]
+                    moves: vec![Move::new(Direction::Up, 1)]
                 })
             );
         }
@@ -439,10 +424,7 @@ mod tests {
             assert_eq!(
                 a,
                 Ok(Algorithm {
-                    moves: vec![Move {
-                        direction: Direction::Left,
-                        amount: 1234567890
-                    }]
+                    moves: vec![Move::new(Direction::Left, 1234567890)]
                 })
             );
         }
@@ -454,22 +436,10 @@ mod tests {
                 a,
                 Ok(Algorithm {
                     moves: vec![
-                        Move {
-                            direction: Direction::Up,
-                            amount: 1
-                        },
-                        Move {
-                            direction: Direction::Left,
-                            amount: 1
-                        },
-                        Move {
-                            direction: Direction::Down,
-                            amount: 1
-                        },
-                        Move {
-                            direction: Direction::Right,
-                            amount: 1
-                        }
+                        Move::new(Direction::Up, 1),
+                        Move::new(Direction::Left, 1),
+                        Move::new(Direction::Down, 1),
+                        Move::new(Direction::Right, 1)
                     ]
                 })
             );
@@ -494,18 +464,9 @@ mod tests {
                 a,
                 Ok(Algorithm {
                     moves: vec![
-                        Move {
-                            direction: Direction::Right,
-                            amount: 3
-                        },
-                        Move {
-                            direction: Direction::Left,
-                            amount: 0
-                        },
-                        Move {
-                            direction: Direction::Up,
-                            amount: 2
-                        },
+                        Move::new(Direction::Right, 3),
+                        Move::new(Direction::Left, 0),
+                        Move::new(Direction::Up, 2),
                     ]
                 })
             );
