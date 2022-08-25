@@ -81,14 +81,14 @@ impl Algorithm {
         // reach a move that can't be added to it.
         let mut acc_move = None;
 
-        for &next_mv in self.moves.iter() {
+        for &next in self.moves.iter() {
             match acc_move {
-                Some(m) => match m + next_mv {
+                Some(sum) => match sum + next {
                     MoveSum::Ok(m) => {
                         // Moves completely cancel.
                         acc_move = if m.amount == 0 {
                             // Try and pop a move off `moves`, because the next move might cancel.
-                            // e.g. consider URLD where `next_mv` is the L move. We pop the U move
+                            // e.g. consider URLD where `next` is the L move. We pop the U move
                             // from `moves` so that the following D move can cancel with it.
                             if let Some(last) = moves.pop() {
                                 Some(last)
@@ -104,16 +104,16 @@ impl Algorithm {
                     // Moves can't be added, there is no more simplification at this point.
                     MoveSum::Invalid => {
                         // Push mv and go to the next move.
-                        moves.push(m);
-                        acc_move = Some(next_mv);
+                        moves.push(sum);
+                        acc_move = Some(next);
                     }
                 },
-                None => acc_move = Some(next_mv),
+                None => acc_move = Some(next),
             }
         }
 
-        if let Some(mv) = acc_move && mv.amount != 0 {
-            moves.push(mv);
+        if let Some(m) = acc_move && m.amount != 0 {
+            moves.push(m);
         }
 
         Self::new(moves)
