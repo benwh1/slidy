@@ -1,5 +1,7 @@
 use std::{cmp::Ordering, fmt::Display, ops::Add};
 
+use thiserror::Error;
+
 use crate::algorithm::{
     direction::Direction,
     display::puzzle_move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort, MoveDisplay},
@@ -17,10 +19,25 @@ pub enum MoveSum {
     Invalid,
 }
 
+#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum MoveError {
+    #[error("ZeroAmount: move amount must be greater than 0")]
+    ZeroAmount,
+}
+
 impl Move {
     #[must_use]
     pub fn new(direction: Direction, amount: u32) -> Self {
         Self { direction, amount }
+    }
+
+    #[must_use]
+    pub fn new_nonzero(direction: Direction, amount: u32) -> Result<Self, MoveError> {
+        if amount == 0 {
+            Err(MoveError::ZeroAmount)
+        } else {
+            Ok(Self { direction, amount })
+        }
     }
 
     #[must_use]
@@ -111,6 +128,48 @@ impl Add for Move {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_new() {
+        let a = Move::new(Direction::Up, 2);
+        assert_eq!(
+            a,
+            Move {
+                direction: Direction::Up,
+                amount: 2
+            }
+        );
+    }
+
+    #[test]
+    fn test_new_2() {
+        let a = Move::new(Direction::Up, 0);
+        assert_eq!(
+            a,
+            Move {
+                direction: Direction::Up,
+                amount: 0
+            }
+        );
+    }
+
+    #[test]
+    fn test_new_nonzero() {
+        let a = Move::new_nonzero(Direction::Up, 2);
+        assert_eq!(
+            a,
+            Ok(Move {
+                direction: Direction::Up,
+                amount: 2
+            })
+        );
+    }
+
+    #[test]
+    fn test_new_nonzero_2() {
+        let a = Move::new_nonzero(Direction::Up, 0);
+        assert_eq!(a, Err(MoveError::ZeroAmount));
+    }
 
     #[test]
     fn test_inverse() {
