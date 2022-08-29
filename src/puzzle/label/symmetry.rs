@@ -1,13 +1,13 @@
 use super::label::{BijectiveLabel, Label};
 
-pub struct Id<L: Label>(L);
-pub struct RotateCw<L: Label>(L);
-pub struct RotateCcw<L: Label>(L);
-pub struct RotateHalf<L: Label>(L);
-pub struct ReflectVertical<L: Label>(L);
-pub struct ReflectHorizontal<L: Label>(L);
-pub struct ReflectDiagonal<L: Label>(L);
-pub struct ReflectAntidiagonal<L: Label>(L);
+pub struct Id<L: Label>(pub L);
+pub struct RotateCw<L: Label>(pub L);
+pub struct RotateCcw<L: Label>(pub L);
+pub struct RotateHalf<L: Label>(pub L);
+pub struct ReflectVertical<L: Label>(pub L);
+pub struct ReflectHorizontal<L: Label>(pub L);
+pub struct ReflectDiagonal<L: Label>(pub L);
+pub struct ReflectAntidiagonal<L: Label>(pub L);
 
 impl<L: Label> Label for Id<L> {
     fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
