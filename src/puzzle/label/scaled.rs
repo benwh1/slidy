@@ -30,6 +30,12 @@ impl<'a, L: Label> Scaled<'a, L> {
 }
 
 impl<'a, L: Label> Label for Scaled<'a, L> {
+    fn is_valid_size(&self, width: usize, height: usize) -> bool {
+        let width = width.div_ceil(self.horizontal as usize);
+        let height = height.div_ceil(self.vertical as usize);
+        self.label.is_valid_size(width, height)
+    }
+
     fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
         let width = width.div_ceil(self.horizontal as usize);
         let height = height.div_ceil(self.vertical as usize);

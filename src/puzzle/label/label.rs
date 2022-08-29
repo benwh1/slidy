@@ -10,9 +10,7 @@ pub enum LabelError {
 
 pub trait Label {
     #[must_use]
-    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
-        true
-    }
+    fn is_valid_size(&self, width: usize, height: usize) -> bool;
 
     #[must_use]
     fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize;
@@ -76,6 +74,10 @@ impl BijectiveLabel for FringeGrids {}
 impl BijectiveLabel for SpiralGrids {}
 
 impl Label for Trivial {
+    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+        true
+    }
+
     fn position_label_unchecked(&self, _: usize, _: usize, _: usize, _: usize) -> usize {
         0
     }
@@ -86,6 +88,10 @@ impl Label for Trivial {
 }
 
 impl Label for RowGrids {
+    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+        true
+    }
+
     fn position_label_unchecked(&self, width: usize, _height: usize, x: usize, y: usize) -> usize {
         x + width * y
     }
@@ -96,6 +102,10 @@ impl Label for RowGrids {
 }
 
 impl Label for Rows {
+    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+        true
+    }
+
     fn position_label_unchecked(
         &self,
         _width: usize,
@@ -112,6 +122,10 @@ impl Label for Rows {
 }
 
 impl Label for Fringe {
+    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+        true
+    }
+
     fn position_label_unchecked(&self, _width: usize, _height: usize, x: usize, y: usize) -> usize {
         x.min(y)
     }
@@ -122,6 +136,10 @@ impl Label for Fringe {
 }
 
 impl Label for FringeGrids {
+    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+        true
+    }
+
     fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
         // Which (non-split) fringe is (x, y) in?
         let fringe = x.min(y);
@@ -148,6 +166,10 @@ impl Label for FringeGrids {
 }
 
 impl Label for SquareFringe {
+    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+        true
+    }
+
     fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
         match width.cmp(&height) {
             // Puzzle is taller than it is wide
@@ -173,6 +195,10 @@ impl Label for SquareFringe {
 }
 
 impl Label for SplitFringe {
+    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+        true
+    }
+
     fn position_label_unchecked(&self, _width: usize, _height: usize, x: usize, y: usize) -> usize {
         // Which (non-split) fringe is (x, y) in?
         let fringe = x.min(y);
@@ -189,6 +215,10 @@ impl Label for SplitFringe {
 }
 
 impl Label for SplitSquareFringe {
+    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+        true
+    }
+
     fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
         let d = width.abs_diff(height);
 
@@ -220,6 +250,10 @@ impl Label for SplitSquareFringe {
 }
 
 impl Label for Diagonals {
+    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+        true
+    }
+
     fn position_label_unchecked(&self, _width: usize, _height: usize, x: usize, y: usize) -> usize {
         x + y
     }
@@ -230,6 +264,10 @@ impl Label for Diagonals {
 }
 
 impl Label for LastTwoRows {
+    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+        true
+    }
+
     fn position_label_unchecked(&self, _width: usize, height: usize, x: usize, y: usize) -> usize {
         if y < height - 2 {
             y
@@ -244,6 +282,10 @@ impl Label for LastTwoRows {
 }
 
 impl Label for SplitLastTwoRows {
+    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+        true
+    }
+
     fn position_label_unchecked(&self, _width: usize, height: usize, x: usize, y: usize) -> usize {
         if y < height - 2 {
             y
@@ -258,6 +300,10 @@ impl Label for SplitLastTwoRows {
 }
 
 impl Label for ConcentricRectangles {
+    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+        true
+    }
+
     fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
         x.min(y).min(width - 1 - x).min(height - 1 - y)
     }
@@ -268,6 +314,10 @@ impl Label for ConcentricRectangles {
 }
 
 impl Label for Spiral {
+    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+        true
+    }
+
     fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
         let rect_label = ConcentricRectangles.position_label_unchecked(width, height, x, y);
 
@@ -311,6 +361,10 @@ impl Label for Spiral {
 }
 
 impl Label for SpiralGrids {
+    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+        true
+    }
+
     fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
         let rect_label = ConcentricRectangles.position_label_unchecked(width, height, x, y);
 

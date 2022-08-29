@@ -10,6 +10,10 @@ pub struct ReflectDiagonal<L: Label>(pub L);
 pub struct ReflectAntidiagonal<L: Label>(pub L);
 
 impl<L: Label> Label for Id<L> {
+    fn is_valid_size(&self, width: usize, height: usize) -> bool {
+        self.0.is_valid_size(width, height)
+    }
+
     fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
         self.0.position_label_unchecked(width, height, x, y)
     }
@@ -20,6 +24,10 @@ impl<L: Label> Label for Id<L> {
 }
 
 impl<L: Label> Label for RotateCw<L> {
+    fn is_valid_size(&self, width: usize, height: usize) -> bool {
+        self.0.is_valid_size(height, width)
+    }
+
     fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
         self.0
             .position_label_unchecked(height, width, y, width - 1 - x)
@@ -31,6 +39,10 @@ impl<L: Label> Label for RotateCw<L> {
 }
 
 impl<L: Label> Label for RotateCcw<L> {
+    fn is_valid_size(&self, width: usize, height: usize) -> bool {
+        self.0.is_valid_size(height, width)
+    }
+
     fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
         self.0
             .position_label_unchecked(height, width, height - 1 - y, x)
@@ -42,6 +54,10 @@ impl<L: Label> Label for RotateCcw<L> {
 }
 
 impl<L: Label> Label for RotateHalf<L> {
+    fn is_valid_size(&self, width: usize, height: usize) -> bool {
+        self.0.is_valid_size(width, height)
+    }
+
     fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
         self.0
             .position_label_unchecked(width, height, width - 1 - x, height - 1 - y)
@@ -53,6 +69,10 @@ impl<L: Label> Label for RotateHalf<L> {
 }
 
 impl<L: Label> Label for ReflectVertical<L> {
+    fn is_valid_size(&self, width: usize, height: usize) -> bool {
+        self.0.is_valid_size(height, width)
+    }
+
     fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
         self.0
             .position_label_unchecked(width, height, x, height - 1 - y)
@@ -64,6 +84,10 @@ impl<L: Label> Label for ReflectVertical<L> {
 }
 
 impl<L: Label> Label for ReflectHorizontal<L> {
+    fn is_valid_size(&self, width: usize, height: usize) -> bool {
+        self.0.is_valid_size(width, height)
+    }
+
     fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
         self.0
             .position_label_unchecked(width, height, width - 1 - x, y)
@@ -75,6 +99,10 @@ impl<L: Label> Label for ReflectHorizontal<L> {
 }
 
 impl<L: Label> Label for ReflectDiagonal<L> {
+    fn is_valid_size(&self, width: usize, height: usize) -> bool {
+        self.0.is_valid_size(height, width)
+    }
+
     fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
         self.0.position_label_unchecked(height, width, y, x)
     }
@@ -85,6 +113,10 @@ impl<L: Label> Label for ReflectDiagonal<L> {
 }
 
 impl<L: Label> Label for ReflectAntidiagonal<L> {
+    fn is_valid_size(&self, width: usize, height: usize) -> bool {
+        self.0.is_valid_size(height, width)
+    }
+
     fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
         self.0
             .position_label_unchecked(height, width, height - 1 - y, width - 1 - x)
