@@ -39,9 +39,12 @@ pub struct Renderer {
 
 impl Renderer {
     #[must_use]
-    pub fn with_scheme(scheme: Box<dyn ColorScheme>) -> Self {
+    pub fn new() -> Self {
         Self {
-            scheme,
+            scheme: Box::new(Scheme::new(
+                Box::new(Trivial),
+                Box::new(Monochrome::new(Rgb::new(1.0, 1.0, 1.0))),
+            )),
             text_scheme: Box::new(Scheme::new(
                 Box::new(Trivial),
                 Box::new(Monochrome::new(Rgb::new(0.0, 0.0, 0.0))),
@@ -53,6 +56,12 @@ impl Renderer {
             font_size: 30.0,
             text_position: (0.5, 0.5),
         }
+    }
+
+    #[must_use]
+    pub fn scheme(mut self, scheme: Box<dyn ColorScheme>) -> Self {
+        self.scheme = scheme;
+        self
     }
 
     #[must_use]
