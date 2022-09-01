@@ -115,6 +115,8 @@ pub struct Renderer<'a, 'b> {
     font: &'a FontRef<'b>,
     draw_borders: bool,
     tile_size: u32,
+    tile_rounding: u32,
+    tile_gap: u32,
     font_size: f32,
 }
 
@@ -130,6 +132,8 @@ impl<'a, 'b> Renderer<'a, 'b> {
             font,
             draw_borders: false,
             tile_size: 75,
+            tile_rounding: 0,
+            tile_gap: 0,
             font_size: 30.0,
         }
     }
@@ -149,6 +153,18 @@ impl<'a, 'b> Renderer<'a, 'b> {
     #[must_use]
     pub fn tile_size(mut self, size: u32) -> Self {
         self.tile_size = size;
+        self
+    }
+
+    #[must_use]
+    pub fn tile_rounding(mut self, rounding: u32) -> Self {
+        self.tile_rounding = rounding;
+        self
+    }
+
+    #[must_use]
+    pub fn tile_gap(mut self, gap: u32) -> Self {
+        self.tile_gap = gap;
         self
     }
 
