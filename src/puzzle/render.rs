@@ -128,7 +128,23 @@ impl Renderer {
         );
 
         let mut doc = Document::new()
-            .add(Style::new("text { font-family: 'DejaVu Sans'; }"))
+            .add(Style::new(format!(
+                "text {{\
+                    text-anchor: middle;\
+                    dominant-baseline: central;\
+                    font-size: {fs}px;\
+                    font-family: 'DejaVu Sans';\
+                }}\
+                rect {{\
+                    width: {ts}px;\
+                    height: {ts}px;\
+                    rx: {tr}px;\
+                    ry: {tr}px;\
+                }}",
+                fs = self.font_size,
+                ts = self.tile_size,
+                tr = self.tile_rounding,
+            )))
             .set("width", image_w)
             .set("height", image_h);
 
@@ -154,10 +170,6 @@ impl Renderer {
                         let mut r = Rectangle::new()
                             .set("x", borders / 2.0 + rect_pos.0)
                             .set("y", borders / 2.0 + rect_pos.1)
-                            .set("rx", self.tile_rounding)
-                            .set("ry", self.tile_rounding)
-                            .set("width", tile_size)
-                            .set("height", tile_size)
                             .set("fill", color_str);
 
                         if self.draw_borders {
@@ -179,9 +191,6 @@ impl Renderer {
                         Text::new()
                             .set("x", (borders / 2.0 + rect_pos.0) + tile_size * tx)
                             .set("y", (borders / 2.0 + rect_pos.1) + tile_size * ty)
-                            .set("font-size", self.font_size)
-                            .set("dominant-baseline", "central")
-                            .set("text-anchor", "middle")
                             .set("fill", color_str)
                             .add(TextNode::new(piece.to_string()))
                     };
