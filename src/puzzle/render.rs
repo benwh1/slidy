@@ -30,9 +30,9 @@ pub struct Renderer {
     scheme: Box<dyn ColorScheme>,
     text_scheme: Box<dyn ColorScheme>,
     draw_borders: bool,
-    tile_size: u32,
-    tile_rounding: u32,
-    tile_gap: u32,
+    tile_size: f32,
+    tile_rounding: f32,
+    tile_gap: f32,
     font_size: f32,
     text_position: (f32, f32),
 }
@@ -50,9 +50,9 @@ impl Renderer {
                 Box::new(Monochrome::new(Rgb::new(0.0, 0.0, 0.0))),
             )),
             draw_borders: false,
-            tile_size: 75,
-            tile_rounding: 0,
-            tile_gap: 0,
+            tile_size: 75.0,
+            tile_rounding: 0.0,
+            tile_gap: 0.0,
             font_size: 30.0,
             text_position: (0.5, 0.5),
         }
@@ -77,19 +77,19 @@ impl Renderer {
     }
 
     #[must_use]
-    pub fn tile_size(mut self, size: u32) -> Self {
+    pub fn tile_size(mut self, size: f32) -> Self {
         self.tile_size = size;
         self
     }
 
     #[must_use]
-    pub fn tile_rounding(mut self, rounding: u32) -> Self {
+    pub fn tile_rounding(mut self, rounding: f32) -> Self {
         self.tile_rounding = rounding;
         self
     }
 
     #[must_use]
-    pub fn tile_gap(mut self, gap: u32) -> Self {
+    pub fn tile_gap(mut self, gap: f32) -> Self {
         self.tile_gap = gap;
         self
     }
