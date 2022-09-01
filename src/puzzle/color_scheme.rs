@@ -157,12 +157,6 @@ impl IndexedRecursiveScheme {
     }
 }
 
-impl From<RecursiveScheme> for IndexedRecursiveScheme {
-    fn from(scheme: RecursiveScheme) -> Self {
-        Self::new(scheme)
-    }
-}
-
 impl ColorScheme for IndexedRecursiveScheme {
     fn is_valid_size(&self, width: usize, height: usize) -> bool {
         let partition_valid = if let Some(p) = &self.scheme.partition {
@@ -177,5 +171,23 @@ impl ColorScheme for IndexedRecursiveScheme {
 
     fn color_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> Rgb {
         self.scheme.color_at_layer(self.index, width, height, x, y)
+    }
+}
+
+impl From<Scheme> for RecursiveScheme {
+    fn from(scheme: Scheme) -> Self {
+        Self::new_leaf(scheme)
+    }
+}
+
+impl From<RecursiveScheme> for IndexedRecursiveScheme {
+    fn from(scheme: RecursiveScheme) -> Self {
+        Self::new(scheme)
+    }
+}
+
+impl From<Scheme> for IndexedRecursiveScheme {
+    fn from(scheme: Scheme) -> Self {
+        Self::from(RecursiveScheme::from(scheme))
     }
 }
