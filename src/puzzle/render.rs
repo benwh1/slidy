@@ -339,8 +339,8 @@ impl<'a, 'b> Renderer<'a, 'b> {
                         let (tx, ty) = self.text_position;
 
                         Text::new()
-                            .set("x", (borders + rect_pos.0) + tile_size * tx)
-                            .set("y", (borders + rect_pos.1) + tile_size * ty)
+                            .set("x", (borders / 2.0 + rect_pos.0) + tile_size * tx)
+                            .set("y", (borders / 2.0 + rect_pos.1) + tile_size * ty)
                             .set("font-size", self.font_size)
                             .set("dominant-baseline", "central")
                             .set("text-anchor", "middle")
