@@ -199,7 +199,7 @@ where
             Direction::Down => gap - self.width(),
             Direction::Right => gap - 1,
         };
-        self.swap_pieces(gap, piece);
+        self.swap_pieces_unchecked(gap, piece);
     }
 
     fn move_dir(&mut self, dir: Direction) -> bool {
