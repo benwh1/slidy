@@ -6,6 +6,13 @@ use imageproc::{drawing, rect::Rect};
 use itertools::Itertools;
 use num_traits::PrimInt;
 use palette::rgb::Rgb;
+use svg::{
+    node::{
+        element::{Rectangle, Style, Text},
+        Text as TextNode,
+    },
+    Document,
+};
 use thiserror::Error;
 
 use super::{
@@ -251,5 +258,91 @@ impl<'a, 'b> Renderer<'a, 'b> {
         }
 
         Ok(img)
+    }
+
+    pub fn svg<Piece, P>(&self, puzzle: &P) -> Result<Document, RendererError>
+    where
+        Piece: PrimInt + Display,
+        P: SlidingPuzzle<Piece>,
+    {
+        let (width, height) = puzzle.size();
+
+        if !self.scheme.is_valid_size(width, height) {
+            return Err(RendererError::IncompatibleLabel { width, height });
+        }
+
+        let tile_size = self.tile_size as f32;
+        let tile_gap = self.tile_gap as f32;
+        let borders = if self.draw_borders { 1.0 } else { 0.0 };
+
+        let (w, h) = (width as f32, height as f32);
+        let (image_w, image_h) = (
+            w * tile_size + (w - 1.0) * tile_gap + borders,
+            h * tile_size + (h - 1.0) * tile_gap + borders,
+        );
+
+        let mut doc = Document::new()
+            .add(Style::new("text { font-family: 'DejaVu Sans'; }"))
+            .set("width", image_w)
+            .set("height", image_h);
+
+        for y in 0..height {
+            for x in 0..width {
+                let piece = puzzle.piece_at_xy_unchecked(x, y);
+
+                if piece != Piece::zero() {
+                    let solved_pos = puzzle.solved_pos_xy_unchecked(piece);
+
+                    let rect_pos = (
+                        (tile_size + tile_gap) * x as f32,
+                        (tile_size + tile_gap) * y as f32,
+                    );
+
+                    let rect = {
+                        let color: Rgb<_, u8> = self
+                            .scheme
+                            .color_unchecked(w as usize, h as usize, solved_pos.0, solved_pos.1)
+                            .into_format();
+                        let color_str = format!("#{color:x}");
+
+                        let mut r = Rectangle::new()
+                            .set("x", borders / 2.0 + rect_pos.0)
+                            .set("y", borders / 2.0 + rect_pos.1)
+                            .set("rx", self.tile_rounding)
+                            .set("ry", self.tile_rounding)
+                            .set("width", tile_size)
+                            .set("height", tile_size)
+                            .set("fill", color_str);
+
+                        if self.draw_borders {
+                            r = r.set("stroke", "black");
+                        }
+
+                        r
+                    };
+
+                    let text = {
+                        let color: Rgb<_, u8> = self
+                            .text_scheme
+                            .color_unchecked(w as usize, h as usize, solved_pos.0, solved_pos.1)
+                            .into_format();
+                        let color_str = format!("#{color:x}");
+
+                        Text::new()
+                            .set("x", (borders + rect_pos.0) + tile_size * 0.5)
+                            .set("y", (borders + rect_pos.1) + tile_size * 0.5)
+                            .set("font-size", self.font_size)
+                            .set("dominant-baseline", "central")
+                            .set("text-anchor", "middle")
+                            .set("fill", color_str)
+                            .add(TextNode::new(piece.to_string()))
+                    };
+
+                    doc = doc.add(rect).add(text);
+                }
+            }
+        }
+
+        Ok(doc)
     }
 }

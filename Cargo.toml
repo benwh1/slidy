@@ -15,6 +15,7 @@ num-traits = "0.2.15"
 palette = "0.6.1"
 rand = "0.8.5"
 regex = "1.6.0"
+svg = "0.10.0"
 thiserror = "1.0.32"
 
 [dev-dependencies]
