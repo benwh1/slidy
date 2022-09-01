@@ -140,10 +140,16 @@ impl Renderer {
                     height: {ts}px;\
                     rx: {tr}px;\
                     ry: {tr}px;\
+                    {stroke}\
                 }}",
                 fs = self.font_size,
                 ts = self.tile_size,
                 tr = self.tile_rounding,
+                stroke = if self.draw_borders {
+                    "stroke: black;"
+                } else {
+                    ""
+                }
             )))
             .set("width", image_w)
             .set("height", image_h);
@@ -167,16 +173,10 @@ impl Renderer {
                             .into_format();
                         let color_str = format!("#{color:x}");
 
-                        let mut r = Rectangle::new()
+                        Rectangle::new()
                             .set("x", borders / 2.0 + rect_pos.0)
                             .set("y", borders / 2.0 + rect_pos.1)
-                            .set("fill", color_str);
-
-                        if self.draw_borders {
-                            r = r.set("stroke", "black");
-                        }
-
-                        r
+                            .set("fill", color_str)
                     };
 
                     let text = {
