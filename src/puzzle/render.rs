@@ -78,25 +78,25 @@ impl Renderer {
 
     #[must_use]
     pub fn tile_size(mut self, size: f32) -> Self {
-        self.tile_size = size;
+        self.tile_size = size.max(0.0);
         self
     }
 
     #[must_use]
     pub fn tile_rounding(mut self, rounding: f32) -> Self {
-        self.tile_rounding = rounding;
+        self.tile_rounding = rounding.max(0.0);
         self
     }
 
     #[must_use]
     pub fn tile_gap(mut self, gap: f32) -> Self {
-        self.tile_gap = gap;
+        self.tile_gap = gap.max(0.0);
         self
     }
 
     #[must_use]
     pub fn font_size(mut self, size: f32) -> Self {
-        self.font_size = size;
+        self.font_size = size.max(0.0);
         self
     }
 
