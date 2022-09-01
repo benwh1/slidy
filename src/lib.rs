@@ -2,6 +2,7 @@
 #![feature(int_log)]
 #![feature(int_roundings)]
 #![feature(iter_intersperse)]
+#![feature(let_chains)]
 #![feature(let_else)]
 #![feature(slice_group_by)]
 #![feature(test)]
