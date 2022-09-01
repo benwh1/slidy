@@ -125,6 +125,7 @@ pub struct Renderer<'a, 'b> {
     tile_rounding: u32,
     tile_gap: u32,
     font_size: f32,
+    text_position: (f32, f32),
 }
 
 impl<'a, 'b> Renderer<'a, 'b> {
@@ -142,6 +143,7 @@ impl<'a, 'b> Renderer<'a, 'b> {
             tile_rounding: 0,
             tile_gap: 0,
             font_size: 30.0,
+            text_position: (0.5, 0.5),
         }
     }
 
@@ -178,6 +180,12 @@ impl<'a, 'b> Renderer<'a, 'b> {
     #[must_use]
     pub fn font_size(mut self, size: f32) -> Self {
         self.font_size = size;
+        self
+    }
+
+    #[must_use]
+    pub fn text_position(mut self, pos: (f32, f32)) -> Self {
+        self.text_position = pos;
         self
     }
 
@@ -328,9 +336,11 @@ impl<'a, 'b> Renderer<'a, 'b> {
                             .into_format();
                         let color_str = format!("#{color:x}");
 
+                        let (tx, ty) = self.text_position;
+
                         Text::new()
-                            .set("x", (borders + rect_pos.0) + tile_size * 0.5)
-                            .set("y", (borders + rect_pos.1) + tile_size * 0.5)
+                            .set("x", (borders + rect_pos.0) + tile_size * tx)
+                            .set("y", (borders + rect_pos.1) + tile_size * ty)
                             .set("font-size", self.font_size)
                             .set("dominant-baseline", "central")
                             .set("text-anchor", "middle")
