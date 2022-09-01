@@ -170,12 +170,12 @@ where
         }
     }
 
-    fn swap_pieces_xy_unchecked(&mut self, x1: usize, y1: usize, x2: usize, y2: usize) {
+    fn swap_pieces_xy_unchecked(&mut self, (x1, y1): (usize, usize), (x2, y2): (usize, usize)) {
         let w = self.width();
         self.swap_pieces_unchecked(x1 + w * y1, x2 + w * y2);
     }
 
-    fn swap_pieces_xy(&mut self, x1: usize, y1: usize, x2: usize, y2: usize) -> bool {
+    fn swap_pieces_xy(&mut self, (x1, y1): (usize, usize), (x2, y2): (usize, usize)) -> bool {
         let w = self.width();
         self.swap_pieces(x1 + w * y1, x2 + w * y2)
     }

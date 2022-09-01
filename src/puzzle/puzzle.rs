@@ -404,7 +404,7 @@ mod tests {
             p.swap_pieces(0, 6);
             assert_eq!(p.piece_at(0), Some(7));
             assert_eq!(p.piece_at(6), Some(1));
-            p.swap_pieces_xy(0, 0, 2, 1);
+            p.swap_pieces_xy((0, 0), (2, 1));
             assert_eq!(p.piece_at(0), Some(1));
             assert_eq!(p.piece_at(6), Some(7));
         }
