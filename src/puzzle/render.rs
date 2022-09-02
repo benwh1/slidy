@@ -180,8 +180,14 @@ impl<'a> Renderer<'a> {
 
         let (w, h) = (width as f32, height as f32);
         let (image_w, image_h) = (
-            w * self.tile_size + (w - 1.0) * self.tile_gap + border_thickness + 2.0 * self.padding,
-            h * self.tile_size + (h - 1.0) * self.tile_gap + border_thickness + 2.0 * self.padding,
+            w * self.tile_size
+                + (w - 1.0) * self.tile_gap
+                + w * border_thickness
+                + 2.0 * self.padding,
+            h * self.tile_size
+                + (h - 1.0) * self.tile_gap
+                + h * border_thickness
+                + 2.0 * self.padding,
         );
 
         let style_str = {
@@ -267,8 +273,12 @@ impl<'a> Renderer<'a> {
         let (x, y) = (x as f32, y as f32);
 
         let rect_pos = (
-            self.padding + border_thickness / 2.0 + (self.tile_size + self.tile_gap) * x,
-            self.padding + border_thickness / 2.0 + (self.tile_size + self.tile_gap) * y,
+            self.padding
+                + border_thickness / 2.0
+                + (self.tile_size + self.tile_gap + border_thickness) * x,
+            self.padding
+                + border_thickness / 2.0
+                + (self.tile_size + self.tile_gap + border_thickness) * y,
         );
 
         let rect = {
