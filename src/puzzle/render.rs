@@ -75,6 +75,7 @@ pub struct Renderer<'a> {
     tile_gap: f32,
     font_size: f32,
     text_position: (f32, f32),
+    padding: f32,
 }
 
 impl<'a> Renderer<'a> {
@@ -96,6 +97,7 @@ impl<'a> Renderer<'a> {
             tile_gap: 0.0,
             font_size: 30.0,
             text_position: (0.5, 0.5),
+            padding: 0.0,
         }
     }
 
@@ -153,6 +155,12 @@ impl<'a> Renderer<'a> {
         self
     }
 
+    #[must_use]
+    pub fn padding(mut self, padding: f32) -> Self {
+        self.padding = padding;
+        self
+    }
+
     pub fn svg<Piece, P>(&self, puzzle: &P) -> Result<Document, RendererError>
     where
         Piece: PrimInt + Display,
@@ -172,8 +180,8 @@ impl<'a> Renderer<'a> {
 
         let (w, h) = (width as f32, height as f32);
         let (image_w, image_h) = (
-            w * self.tile_size + (w - 1.0) * self.tile_gap + border_thickness,
-            h * self.tile_size + (h - 1.0) * self.tile_gap + border_thickness,
+            w * self.tile_size + (w - 1.0) * self.tile_gap + border_thickness + 2.0 * self.padding,
+            h * self.tile_size + (h - 1.0) * self.tile_gap + border_thickness + 2.0 * self.padding,
         );
 
         let style_str = {
@@ -259,8 +267,8 @@ impl<'a> Renderer<'a> {
         let (x, y) = (x as f32, y as f32);
 
         let rect_pos = (
-            border_thickness / 2.0 + (self.tile_size + self.tile_gap) * x,
-            border_thickness / 2.0 + (self.tile_size + self.tile_gap) * y,
+            self.padding + border_thickness / 2.0 + (self.tile_size + self.tile_gap) * x,
+            self.padding + border_thickness / 2.0 + (self.tile_size + self.tile_gap) * y,
         );
 
         let rect = {
