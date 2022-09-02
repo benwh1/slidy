@@ -131,15 +131,13 @@ impl<'a> Renderer<'a> {
             return Err(RendererError::IncompatibleLabel { width, height });
         }
 
-        let tile_size = self.tile_size as f32;
-        let tile_gap = self.tile_gap as f32;
         let draw_borders = self.border_scheme.is_some();
         let border_thickness = if draw_borders { 1.0 } else { 0.0 };
 
         let (w, h) = (width as f32, height as f32);
         let (image_w, image_h) = (
-            w * tile_size + (w - 1.0) * tile_gap + border_thickness,
-            h * tile_size + (h - 1.0) * tile_gap + border_thickness,
+            w * self.tile_size + (w - 1.0) * self.tile_gap + border_thickness,
+            h * self.tile_size + (h - 1.0) * self.tile_gap + border_thickness,
         );
 
         let style_str = {
@@ -195,37 +193,34 @@ impl<'a> Renderer<'a> {
             for x in 0..width {
                 let piece = puzzle.piece_at_xy_unchecked(x, y);
 
+                let (x, y) = (x as f32, y as f32);
+
                 if piece != Piece::zero() {
                     let solved_pos = puzzle.solved_pos_xy_unchecked(piece);
 
                     let rect_pos = (
-                        (tile_size + tile_gap) * x as f32,
-                        (tile_size + tile_gap) * y as f32,
+                        border_thickness / 2.0 + (self.tile_size + self.tile_gap) * x,
+                        border_thickness / 2.0 + (self.tile_size + self.tile_gap) * y,
                     );
 
                     let rect = {
                         let fill = {
                             let color: Rgb<_, u8> = self
                                 .scheme
-                                .color_unchecked(w as usize, h as usize, solved_pos.0, solved_pos.1)
+                                .color_unchecked(width, height, solved_pos.0, solved_pos.1)
                                 .into_format();
                             format!("#{color:x}")
                         };
 
                         let mut r = Rectangle::new()
-                            .set("x", border_thickness / 2.0 + rect_pos.0)
-                            .set("y", border_thickness / 2.0 + rect_pos.1)
+                            .set("x", rect_pos.0)
+                            .set("y", rect_pos.1)
                             .set("fill", fill);
 
                         if let Some(s) = &self.border_scheme {
                             let stroke = {
                                 let color: Rgb<_, u8> = s
-                                    .color_unchecked(
-                                        w as usize,
-                                        h as usize,
-                                        solved_pos.0,
-                                        solved_pos.1,
-                                    )
+                                    .color_unchecked(width, height, solved_pos.0, solved_pos.1)
                                     .into_format();
                                 format!("#{color:x}")
                             };
@@ -240,7 +235,7 @@ impl<'a> Renderer<'a> {
                         let fill = {
                             let color: Rgb<_, u8> = self
                                 .text_scheme
-                                .color_unchecked(w as usize, h as usize, solved_pos.0, solved_pos.1)
+                                .color_unchecked(width, height, solved_pos.0, solved_pos.1)
                                 .into_format();
                             format!("#{color:x}")
                         };
@@ -248,8 +243,8 @@ impl<'a> Renderer<'a> {
                         let (tx, ty) = self.text_position;
 
                         Text::new()
-                            .set("x", border_thickness / 2.0 + rect_pos.0 + tile_size * tx)
-                            .set("y", border_thickness / 2.0 + rect_pos.1 + tile_size * ty)
+                            .set("x", rect_pos.0 + self.tile_size * tx)
+                            .set("y", rect_pos.1 + self.tile_size * ty)
                             .set("fill", fill)
                             .add(TextNode::new(piece.to_string()))
                     };
