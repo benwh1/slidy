@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use num_traits::PrimInt;
-use palette::rgb::Rgb;
+use palette::rgb::Rgba;
 use svg::{
     node::{
         element::{Group, Rectangle, Style, Text},
@@ -50,11 +50,11 @@ impl<'a> Renderer<'a> {
         Self {
             scheme: Box::new(Scheme::new(
                 Box::new(Trivial),
-                Box::new(Monochrome::new(Rgb::new(1.0, 1.0, 1.0))),
+                Box::new(Monochrome::new(Rgba::new(1.0, 1.0, 1.0, 1.0))),
             )),
             text_scheme: Box::new(Scheme::new(
                 Box::new(Trivial),
-                Box::new(Monochrome::new(Rgb::new(0.0, 0.0, 0.0))),
+                Box::new(Monochrome::new(Rgba::new(0.0, 0.0, 0.0, 1.0))),
             )),
             border_scheme: None,
             font: Font::Family("sans-serif"),
@@ -224,7 +224,7 @@ impl<'a> Renderer<'a> {
 
         let rect = {
             let fill = {
-                let color: Rgb<_, u8> = self
+                let color: Rgba<_, u8> = self
                     .scheme
                     .color_unchecked(width, height, solved_pos.0, solved_pos.1)
                     .into_format();
@@ -238,7 +238,7 @@ impl<'a> Renderer<'a> {
 
             if let Some(s) = &self.border_scheme {
                 let stroke = {
-                    let color: Rgb<_, u8> = s
+                    let color: Rgba<_, u8> = s
                         .color_unchecked(width, height, solved_pos.0, solved_pos.1)
                         .into_format();
                     format!("#{color:x}")
@@ -252,7 +252,7 @@ impl<'a> Renderer<'a> {
 
         let text = {
             let fill = {
-                let color: Rgb<_, u8> = self
+                let color: Rgba<_, u8> = self
                     .text_scheme
                     .color_unchecked(width, height, solved_pos.0, solved_pos.1)
                     .into_format();

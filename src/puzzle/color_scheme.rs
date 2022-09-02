@@ -1,4 +1,4 @@
-use palette::rgb::Rgb;
+use palette::rgb::Rgba;
 use thiserror::Error;
 
 use crate::puzzle::{
@@ -11,10 +11,10 @@ pub trait ColorScheme {
     fn is_valid_size(&self, width: usize, height: usize) -> bool;
 
     #[must_use]
-    fn color_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> Rgb;
+    fn color_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> Rgba;
 
     #[must_use]
-    fn color(&self, width: usize, height: usize, x: usize, y: usize) -> Option<Rgb> {
+    fn color(&self, width: usize, height: usize, x: usize, y: usize) -> Option<Rgba> {
         if x < width && y < height {
             Some(self.color_unchecked(width, height, x, y))
         } else {
@@ -40,7 +40,7 @@ impl ColorScheme for Scheme {
         self.label.is_valid_size(width, height)
     }
 
-    fn color_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> Rgb {
+    fn color_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> Rgba {
         let label = self.label.position_label_unchecked(width, height, x, y);
         let num_labels = self.label.num_labels_unchecked(width, height);
         self.coloring.color(label, num_labels)
@@ -110,7 +110,7 @@ impl RecursiveScheme {
         height: usize,
         x: usize,
         y: usize,
-    ) -> Rgb {
+    ) -> Rgba {
         if layer == 0 || self.partition.is_none() {
             self.scheme.color_unchecked(width, height, x, y)
         } else {
@@ -169,7 +169,7 @@ impl ColorScheme for IndexedRecursiveScheme {
         partition_valid && scheme_valid
     }
 
-    fn color_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> Rgb {
+    fn color_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> Rgba {
         self.scheme.color_at_layer(self.index, width, height, x, y)
     }
 }

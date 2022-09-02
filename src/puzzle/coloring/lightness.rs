@@ -1,4 +1,4 @@
-use palette::{rgb::Rgb, Hsl, IntoColor};
+use palette::{rgb::Rgba, Hsla, IntoColor};
 
 use super::coloring::Coloring;
 
@@ -18,12 +18,12 @@ impl<'a, C: Coloring> AddLightness<'a, C> {
 }
 
 impl<'a, C: Coloring> Coloring for AddLightness<'a, C> {
-    fn color(&self, label: usize, num_labels: usize) -> Rgb {
+    fn color(&self, label: usize, num_labels: usize) -> Rgba {
         let color = self.coloring.color(label, num_labels);
-        let color: Hsl = color.into_color();
-        let (h, s, l) = color.into_components();
+        let color: Hsla = color.into_color();
+        let (h, s, l, a) = color.into_components();
         let l = (l + self.lightness).clamp(0.0, 1.0);
 
-        Hsl::new(h, s, l).into_color()
+        Hsla::new(h, s, l, a).into_color()
     }
 }

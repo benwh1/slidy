@@ -1,9 +1,9 @@
-use palette::{rgb::Rgb, Hsl, IntoColor};
+use palette::{rgb::Rgba, Hsl, Hsla, IntoColor};
 use thiserror::Error;
 
 pub trait Coloring {
     #[must_use]
-    fn color(&self, label: usize, num_labels: usize) -> Rgb;
+    fn color(&self, label: usize, num_labels: usize) -> Rgba;
 }
 
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -14,12 +14,12 @@ pub enum ColorListError {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Monochrome {
-    color: Rgb,
+    color: Rgba,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ColorList {
-    colors: Vec<Rgb>,
+    colors: Vec<Rgba>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -33,19 +33,19 @@ pub struct AlternatingBrightness<'a, T: Coloring>(pub &'a T);
 
 impl Monochrome {
     #[must_use]
-    pub fn new(color: Rgb) -> Self {
+    pub fn new(color: Rgba) -> Self {
         Self { color }
     }
 }
 
 impl Coloring for Monochrome {
-    fn color(&self, _label: usize, _num_labels: usize) -> Rgb {
+    fn color(&self, _label: usize, _num_labels: usize) -> Rgba {
         self.color
     }
 }
 
 impl ColorList {
-    pub fn new(colors: Vec<Rgb>) -> Result<Self, ColorListError> {
+    pub fn new(colors: Vec<Rgba>) -> Result<Self, ColorListError> {
         if colors.is_empty() {
             Err(ColorListError::EmptyColorList)
         } else {
@@ -55,20 +55,20 @@ impl ColorList {
 }
 
 impl Coloring for ColorList {
-    fn color(&self, label: usize, _num_labels: usize) -> Rgb {
+    fn color(&self, label: usize, _num_labels: usize) -> Rgba {
         self.colors[label % self.colors.len()]
     }
 }
 
 impl Coloring for Rainbow {
-    fn color(&self, label: usize, num_labels: usize) -> Rgb {
+    fn color(&self, label: usize, num_labels: usize) -> Rgba {
         let frac = label as f32 / num_labels as f32;
         Hsl::new(330.0 * frac, 1.0, 0.5).into_color()
     }
 }
 
 impl Coloring for RainbowFull {
-    fn color(&self, label: usize, num_labels: usize) -> Rgb {
+    fn color(&self, label: usize, num_labels: usize) -> Rgba {
         if num_labels <= 1 {
             Hsl::new(0.0, 1.0, 0.5).into_color()
         } else {
@@ -79,14 +79,14 @@ impl Coloring for RainbowFull {
 }
 
 impl<'a, T: Coloring> Coloring for AlternatingBrightness<'a, T> {
-    fn color(&self, label: usize, num_labels: usize) -> Rgb {
+    fn color(&self, label: usize, num_labels: usize) -> Rgba {
         let l = (label / 2) * 2;
         let color = self.0.color(l, num_labels);
         if label == l {
-            let color: Hsl = color.into_color();
-            let (h, s, l) = color.into_components();
+            let color: Hsla = color.into_color();
+            let (h, s, l, a) = color.into_components();
             let l = 1.0 - (1.0 - l) / 2.0;
-            Hsl::new(h, s, l).into_color()
+            Hsla::new(h, s, l, a).into_color()
         } else {
             color
         }
@@ -99,7 +99,7 @@ mod tests {
 
     #[test]
     fn test_monochrome() {
-        let c = Rgb::new(0.2718, 0.3141, 0.6931);
+        let c = Rgba::new(0.2718, 0.3141, 0.6931, 0.4142);
         let a = Monochrome::new(c);
         assert_eq!(a.color(1, 3), c);
     }
@@ -116,9 +116,9 @@ mod tests {
         #[test]
         fn test_new_2() {
             let a = ColorList::new(vec![
-                Rgb::new(0.1, 0.2, 0.3),
-                Rgb::new(0.1, 0.3, 0.6),
-                Rgb::new(0.6, 0.3, 0.4),
+                Rgba::new(0.1, 0.2, 0.3, 1.0),
+                Rgba::new(0.1, 0.3, 0.6, 1.0),
+                Rgba::new(0.6, 0.3, 0.4, 1.0),
             ]);
             assert!(a.is_ok());
         }
@@ -126,9 +126,9 @@ mod tests {
         #[test]
         fn test_color_list() {
             let c = vec![
-                Rgb::new(0.1, 0.2, 0.3),
-                Rgb::new(0.1, 0.3, 0.6),
-                Rgb::new(0.6, 0.3, 0.4),
+                Rgba::new(0.1, 0.2, 0.3, 1.0),
+                Rgba::new(0.1, 0.3, 0.6, 1.0),
+                Rgba::new(0.6, 0.3, 0.4, 1.0),
             ];
             let a = ColorList::new(c.clone()).unwrap();
             assert_eq!(a.color(0, 10), c[0]);
