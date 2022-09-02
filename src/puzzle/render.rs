@@ -4,7 +4,7 @@ use num_traits::PrimInt;
 use palette::rgb::Rgb;
 use svg::{
     node::{
-        element::{Rectangle, Style, Text},
+        element::{Group, Rectangle, Style, Text},
         Text as TextNode,
     },
     Document,
@@ -193,67 +193,81 @@ impl<'a> Renderer<'a> {
             for x in 0..width {
                 let piece = puzzle.piece_at_xy_unchecked(x, y);
 
-                let (x, y) = (x as f32, y as f32);
-
                 if piece != Piece::zero() {
-                    let solved_pos = puzzle.solved_pos_xy_unchecked(piece);
-
-                    let rect_pos = (
-                        border_thickness / 2.0 + (self.tile_size + self.tile_gap) * x,
-                        border_thickness / 2.0 + (self.tile_size + self.tile_gap) * y,
-                    );
-
-                    let rect = {
-                        let fill = {
-                            let color: Rgb<_, u8> = self
-                                .scheme
-                                .color_unchecked(width, height, solved_pos.0, solved_pos.1)
-                                .into_format();
-                            format!("#{color:x}")
-                        };
-
-                        let mut r = Rectangle::new()
-                            .set("x", rect_pos.0)
-                            .set("y", rect_pos.1)
-                            .set("fill", fill);
-
-                        if let Some(s) = &self.border_scheme {
-                            let stroke = {
-                                let color: Rgb<_, u8> = s
-                                    .color_unchecked(width, height, solved_pos.0, solved_pos.1)
-                                    .into_format();
-                                format!("#{color:x}")
-                            };
-
-                            r = r.set("stroke", stroke)
-                        }
-
-                        r
-                    };
-
-                    let text = {
-                        let fill = {
-                            let color: Rgb<_, u8> = self
-                                .text_scheme
-                                .color_unchecked(width, height, solved_pos.0, solved_pos.1)
-                                .into_format();
-                            format!("#{color:x}")
-                        };
-
-                        let (tx, ty) = self.text_position;
-
-                        Text::new()
-                            .set("x", rect_pos.0 + self.tile_size * tx)
-                            .set("y", rect_pos.1 + self.tile_size * ty)
-                            .set("fill", fill)
-                            .add(TextNode::new(piece.to_string()))
-                    };
-
-                    doc = doc.add(rect).add(text);
+                    doc = doc.add(self.render_piece(puzzle, x, y));
                 }
             }
         }
 
         Ok(doc)
+    }
+
+    fn render_piece<Piece, P>(&self, puzzle: &P, x: usize, y: usize) -> Group
+    where
+        Piece: PrimInt + Display,
+        P: SlidingPuzzle<Piece>,
+    {
+        let (width, height) = puzzle.size();
+
+        let draw_borders = self.border_scheme.is_some();
+        let border_thickness = if draw_borders { 1.0 } else { 0.0 };
+
+        let piece = puzzle.piece_at_xy_unchecked(x, y);
+        let solved_pos = puzzle.solved_pos_xy_unchecked(piece);
+
+        let (x, y) = (x as f32, y as f32);
+
+        let rect_pos = (
+            border_thickness / 2.0 + (self.tile_size + self.tile_gap) * x,
+            border_thickness / 2.0 + (self.tile_size + self.tile_gap) * y,
+        );
+
+        let rect = {
+            let fill = {
+                let color: Rgb<_, u8> = self
+                    .scheme
+                    .color_unchecked(width, height, solved_pos.0, solved_pos.1)
+                    .into_format();
+                format!("#{color:x}")
+            };
+
+            let mut r = Rectangle::new()
+                .set("x", rect_pos.0)
+                .set("y", rect_pos.1)
+                .set("fill", fill);
+
+            if let Some(s) = &self.border_scheme {
+                let stroke = {
+                    let color: Rgb<_, u8> = s
+                        .color_unchecked(width, height, solved_pos.0, solved_pos.1)
+                        .into_format();
+                    format!("#{color:x}")
+                };
+
+                r = r.set("stroke", stroke)
+            }
+
+            r
+        };
+
+        let text = {
+            let fill = {
+                let color: Rgb<_, u8> = self
+                    .text_scheme
+                    .color_unchecked(width, height, solved_pos.0, solved_pos.1)
+                    .into_format();
+                format!("#{color:x}")
+            };
+
+            let (tx, ty) = self.text_position;
+
+            Text::new()
+                .set("x", rect_pos.0 + self.tile_size * tx)
+                .set("y", rect_pos.1 + self.tile_size * ty)
+                .set("fill", fill)
+                .add(TextNode::new(piece.to_string()))
+        };
+
+        Group::new().add(rect).add(text)
     }
 }
