@@ -134,12 +134,12 @@ impl<'a> Renderer<'a> {
         let tile_size = self.tile_size as f32;
         let tile_gap = self.tile_gap as f32;
         let draw_borders = self.border_scheme.is_some();
-        let borders = if draw_borders { 1.0 } else { 0.0 };
+        let border_thickness = if draw_borders { 1.0 } else { 0.0 };
 
         let (w, h) = (width as f32, height as f32);
         let (image_w, image_h) = (
-            w * tile_size + (w - 1.0) * tile_gap + borders,
-            h * tile_size + (h - 1.0) * tile_gap + borders,
+            w * tile_size + (w - 1.0) * tile_gap + border_thickness,
+            h * tile_size + (h - 1.0) * tile_gap + border_thickness,
         );
 
         let style_str = {
@@ -213,8 +213,8 @@ impl<'a> Renderer<'a> {
                         };
 
                         let mut r = Rectangle::new()
-                            .set("x", borders / 2.0 + rect_pos.0)
-                            .set("y", borders / 2.0 + rect_pos.1)
+                            .set("x", border_thickness / 2.0 + rect_pos.0)
+                            .set("y", border_thickness / 2.0 + rect_pos.1)
                             .set("fill", fill);
 
                         if let Some(s) = &self.border_scheme {
@@ -248,8 +248,8 @@ impl<'a> Renderer<'a> {
                         let (tx, ty) = self.text_position;
 
                         Text::new()
-                            .set("x", (borders / 2.0 + rect_pos.0) + tile_size * tx)
-                            .set("y", (borders / 2.0 + rect_pos.1) + tile_size * ty)
+                            .set("x", border_thickness / 2.0 + rect_pos.0 + tile_size * tx)
+                            .set("y", border_thickness / 2.0 + rect_pos.1 + tile_size * ty)
                             .set("fill", fill)
                             .add(TextNode::new(piece.to_string()))
                     };
