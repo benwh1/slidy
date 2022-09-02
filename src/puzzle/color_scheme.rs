@@ -154,6 +154,11 @@ impl IndexedRecursiveScheme {
             self.index += 1;
         }
     }
+
+    pub fn subscheme_color(&self, width: usize, height: usize, x: usize, y: usize) -> Option<Rgba> {
+        self.scheme
+            .color_at_layer(self.index + 1, width, height, x, y)
+    }
 }
 
 impl ColorScheme for IndexedRecursiveScheme {
