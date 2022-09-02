@@ -32,10 +32,43 @@ pub enum Font<'a> {
     Base64 { data: &'a str, format: &'a str },
 }
 
+pub struct Borders {
+    scheme: Box<dyn ColorScheme>,
+    thickness: f32,
+}
+
+impl Borders {
+    pub fn new() -> Self {
+        Self {
+            scheme: Box::new(Scheme::new(
+                Box::new(Trivial),
+                Box::new(Monochrome::new(Rgba::new(1.0, 1.0, 1.0, 1.0))),
+            )),
+            thickness: 1.0,
+        }
+    }
+
+    pub fn scheme(mut self, scheme: Box<dyn ColorScheme>) -> Self {
+        self.scheme = scheme;
+        self
+    }
+
+    pub fn thickness(mut self, thickness: f32) -> Self {
+        self.thickness = thickness;
+        self
+    }
+}
+
+impl Default for Borders {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct Renderer<'a> {
     scheme: Box<dyn ColorScheme>,
     text_scheme: Box<dyn ColorScheme>,
-    border_scheme: Option<Box<dyn ColorScheme>>,
+    borders: Option<Borders>,
     font: Font<'a>,
     tile_size: f32,
     tile_rounding: f32,
@@ -56,7 +89,7 @@ impl<'a> Renderer<'a> {
                 Box::new(Trivial),
                 Box::new(Monochrome::new(Rgba::new(0.0, 0.0, 0.0, 1.0))),
             )),
-            border_scheme: None,
+            borders: None,
             font: Font::Family("sans-serif"),
             tile_size: 75.0,
             tile_rounding: 0.0,
@@ -79,8 +112,8 @@ impl<'a> Renderer<'a> {
     }
 
     #[must_use]
-    pub fn border_scheme(mut self, border_scheme: Box<dyn ColorScheme>) -> Self {
-        self.border_scheme = Some(border_scheme);
+    pub fn borders(mut self, borders: Borders) -> Self {
+        self.borders = Some(borders);
         self
     }
 
@@ -131,8 +164,11 @@ impl<'a> Renderer<'a> {
             return Err(RendererError::IncompatibleLabel { width, height });
         }
 
-        let draw_borders = self.border_scheme.is_some();
-        let border_thickness = if draw_borders { 1.0 } else { 0.0 };
+        let border_thickness = self
+            .borders
+            .as_ref()
+            .map(|a| a.thickness)
+            .unwrap_or_default();
 
         let (w, h) = (width as f32, height as f32);
         let (image_w, image_h) = (
@@ -176,11 +212,13 @@ impl<'a> Renderer<'a> {
                     height: {ts}px;\
                     rx: {tr}px;\
                     ry: {tr}px;\
+                    stroke-width: {sw}px;\
                 }}\
                 {font}",
                 fs = self.font_size,
                 ts = self.tile_size,
                 tr = self.tile_rounding,
+                sw = border_thickness,
             )
         };
 
@@ -209,8 +247,11 @@ impl<'a> Renderer<'a> {
     {
         let (width, height) = puzzle.size();
 
-        let draw_borders = self.border_scheme.is_some();
-        let border_thickness = if draw_borders { 1.0 } else { 0.0 };
+        let border_thickness = self
+            .borders
+            .as_ref()
+            .map(|a| a.thickness)
+            .unwrap_or_default();
 
         let piece = puzzle.piece_at_xy_unchecked(x, y);
         let solved_pos = puzzle.solved_pos_xy_unchecked(piece);
@@ -236,9 +277,10 @@ impl<'a> Renderer<'a> {
                 .set("y", rect_pos.1)
                 .set("fill", fill);
 
-            if let Some(s) = &self.border_scheme {
+            if let Some(s) = &self.borders {
                 let stroke = {
                     let color: Rgba<_, u8> = s
+                        .scheme
                         .color_unchecked(width, height, solved_pos.0, solved_pos.1)
                         .into_format();
                     format!("#{color:x}")
