@@ -271,3 +271,9 @@ impl<'a> Renderer<'a> {
         Group::new().add(rect).add(text)
     }
 }
+
+impl Default for Renderer<'_> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
