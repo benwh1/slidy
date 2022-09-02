@@ -38,6 +38,7 @@ pub struct Borders {
 }
 
 impl Borders {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             scheme: Scheme::new(
@@ -49,11 +50,13 @@ impl Borders {
         }
     }
 
+    #[must_use]
     pub fn scheme<S: Into<IndexedRecursiveScheme>>(mut self, scheme: S) -> Self {
         self.scheme = scheme.into();
         self
     }
 
+    #[must_use]
     pub fn thickness(mut self, thickness: f32) -> Self {
         self.thickness = thickness;
         self
