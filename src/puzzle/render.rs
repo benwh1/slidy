@@ -35,7 +35,7 @@ pub enum Font<'a> {
 pub struct Renderer<'a> {
     scheme: Box<dyn ColorScheme>,
     text_scheme: Box<dyn ColorScheme>,
-    draw_borders: bool,
+    border_scheme: Option<Box<dyn ColorScheme>>,
     font: Font<'a>,
     tile_size: f32,
     tile_rounding: f32,
@@ -56,7 +56,7 @@ impl<'a> Renderer<'a> {
                 Box::new(Trivial),
                 Box::new(Monochrome::new(Rgb::new(0.0, 0.0, 0.0))),
             )),
-            draw_borders: false,
+            border_scheme: None,
             font: Font::Family("sans-serif"),
             tile_size: 75.0,
             tile_rounding: 0.0,
@@ -79,8 +79,8 @@ impl<'a> Renderer<'a> {
     }
 
     #[must_use]
-    pub fn borders(mut self, draw: bool) -> Self {
-        self.draw_borders = draw;
+    pub fn border_scheme(mut self, border_scheme: Box<dyn ColorScheme>) -> Self {
+        self.border_scheme = Some(border_scheme);
         self
     }
 
@@ -133,7 +133,8 @@ impl<'a> Renderer<'a> {
 
         let tile_size = self.tile_size as f32;
         let tile_gap = self.tile_gap as f32;
-        let borders = if self.draw_borders { 1.0 } else { 0.0 };
+        let draw_borders = self.border_scheme.is_some();
+        let borders = if draw_borders { 1.0 } else { 0.0 };
 
         let (w, h) = (width as f32, height as f32);
         let (image_w, image_h) = (
@@ -177,17 +178,11 @@ impl<'a> Renderer<'a> {
                     height: {ts}px;\
                     rx: {tr}px;\
                     ry: {tr}px;\
-                    {stroke}\
                 }}\
                 {font}",
                 fs = self.font_size,
                 ts = self.tile_size,
                 tr = self.tile_rounding,
-                stroke = if self.draw_borders {
-                    "stroke: black;"
-                } else {
-                    ""
-                },
             )
         };
 
@@ -209,31 +204,53 @@ impl<'a> Renderer<'a> {
                     );
 
                     let rect = {
-                        let color: Rgb<_, u8> = self
-                            .scheme
-                            .color_unchecked(w as usize, h as usize, solved_pos.0, solved_pos.1)
-                            .into_format();
-                        let color_str = format!("#{color:x}");
+                        let fill = {
+                            let color: Rgb<_, u8> = self
+                                .scheme
+                                .color_unchecked(w as usize, h as usize, solved_pos.0, solved_pos.1)
+                                .into_format();
+                            format!("#{color:x}")
+                        };
 
-                        Rectangle::new()
+                        let mut r = Rectangle::new()
                             .set("x", borders / 2.0 + rect_pos.0)
                             .set("y", borders / 2.0 + rect_pos.1)
-                            .set("fill", color_str)
+                            .set("fill", fill);
+
+                        if let Some(s) = &self.border_scheme {
+                            let stroke = {
+                                let color: Rgb<_, u8> = s
+                                    .color_unchecked(
+                                        w as usize,
+                                        h as usize,
+                                        solved_pos.0,
+                                        solved_pos.1,
+                                    )
+                                    .into_format();
+                                format!("#{color:x}")
+                            };
+
+                            r = r.set("stroke", stroke)
+                        }
+
+                        r
                     };
 
                     let text = {
-                        let color: Rgb<_, u8> = self
-                            .text_scheme
-                            .color_unchecked(w as usize, h as usize, solved_pos.0, solved_pos.1)
-                            .into_format();
-                        let color_str = format!("#{color:x}");
+                        let fill = {
+                            let color: Rgb<_, u8> = self
+                                .text_scheme
+                                .color_unchecked(w as usize, h as usize, solved_pos.0, solved_pos.1)
+                                .into_format();
+                            format!("#{color:x}")
+                        };
 
                         let (tx, ty) = self.text_position;
 
                         Text::new()
                             .set("x", (borders / 2.0 + rect_pos.0) + tile_size * tx)
                             .set("y", (borders / 2.0 + rect_pos.1) + tile_size * ty)
-                            .set("fill", color_str)
+                            .set("fill", fill)
                             .add(TextNode::new(piece.to_string()))
                     };
 
