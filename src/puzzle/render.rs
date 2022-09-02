@@ -12,7 +12,7 @@ use svg::{
 use thiserror::Error;
 
 use super::{
-    color_scheme::{ColorScheme, Scheme},
+    color_scheme::{ColorScheme, IndexedRecursiveScheme, Scheme},
     coloring::coloring::Monochrome,
     label::label::Trivial,
     sliding_puzzle::SlidingPuzzle,
@@ -33,23 +33,24 @@ pub enum Font<'a> {
 }
 
 pub struct Borders {
-    scheme: Box<dyn ColorScheme>,
+    scheme: IndexedRecursiveScheme,
     thickness: f32,
 }
 
 impl Borders {
     pub fn new() -> Self {
         Self {
-            scheme: Box::new(Scheme::new(
+            scheme: Scheme::new(
                 Box::new(Trivial),
                 Box::new(Monochrome::new(Rgba::new(1.0, 1.0, 1.0, 1.0))),
-            )),
+            )
+            .into(),
             thickness: 1.0,
         }
     }
 
-    pub fn scheme(mut self, scheme: Box<dyn ColorScheme>) -> Self {
-        self.scheme = scheme;
+    pub fn scheme<S: Into<IndexedRecursiveScheme>>(mut self, scheme: S) -> Self {
+        self.scheme = scheme.into();
         self
     }
 
@@ -66,8 +67,8 @@ impl Default for Borders {
 }
 
 pub struct Renderer<'a> {
-    scheme: Box<dyn ColorScheme>,
-    text_scheme: Box<dyn ColorScheme>,
+    scheme: IndexedRecursiveScheme,
+    text_scheme: IndexedRecursiveScheme,
     borders: Option<Borders>,
     font: Font<'a>,
     tile_size: f32,
@@ -76,20 +77,23 @@ pub struct Renderer<'a> {
     font_size: f32,
     text_position: (f32, f32),
     padding: f32,
+    subscheme_style: Option<SubschemeStyle>,
 }
 
 impl<'a> Renderer<'a> {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            scheme: Box::new(Scheme::new(
+            scheme: Scheme::new(
                 Box::new(Trivial),
                 Box::new(Monochrome::new(Rgba::new(1.0, 1.0, 1.0, 1.0))),
-            )),
-            text_scheme: Box::new(Scheme::new(
+            )
+            .into(),
+            text_scheme: Scheme::new(
                 Box::new(Trivial),
                 Box::new(Monochrome::new(Rgba::new(0.0, 0.0, 0.0, 1.0))),
-            )),
+            )
+            .into(),
             borders: None,
             font: Font::Family("sans-serif"),
             tile_size: 75.0,
@@ -102,14 +106,14 @@ impl<'a> Renderer<'a> {
     }
 
     #[must_use]
-    pub fn scheme(mut self, scheme: Box<dyn ColorScheme>) -> Self {
-        self.scheme = scheme;
+    pub fn scheme<S: Into<IndexedRecursiveScheme>>(mut self, scheme: S) -> Self {
+        self.scheme = scheme.into();
         self
     }
 
     #[must_use]
-    pub fn text_scheme(mut self, text_scheme: Box<dyn ColorScheme>) -> Self {
-        self.text_scheme = text_scheme;
+    pub fn text_scheme<S: Into<IndexedRecursiveScheme>>(mut self, scheme: S) -> Self {
+        self.text_scheme = scheme.into();
         self
     }
 
