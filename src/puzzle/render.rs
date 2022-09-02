@@ -85,6 +85,7 @@ pub struct Renderer<'a> {
     text_position: (f32, f32),
     padding: f32,
     subscheme_style: Option<SubschemeStyle>,
+    background_color: Rgba,
 }
 
 impl<'a> Renderer<'a> {
@@ -110,6 +111,7 @@ impl<'a> Renderer<'a> {
             text_position: (0.5, 0.5),
             padding: 0.0,
             subscheme_style: Some(SubschemeStyle::Rectangle),
+            background_color: Rgba::new(1.0, 1.0, 1.0, 0.0),
         }
     }
 
@@ -173,6 +175,12 @@ impl<'a> Renderer<'a> {
         self
     }
 
+    #[must_use]
+    pub fn background_color(mut self, color: Rgba) -> Self {
+        self.background_color = color;
+        self
+    }
+
     pub fn svg<Piece, P>(&self, puzzle: &P) -> Result<Document, RendererError>
     where
         Piece: PrimInt + Display,
@@ -227,8 +235,14 @@ impl<'a> Renderer<'a> {
                 )
             };
 
+            let bg = {
+                let color: Rgba<_, u8> = self.background_color.into_format();
+                format!("#{color:x}")
+            };
+
             format!(
-                "text {{\
+                "svg {{ background-color: {bg}; }}\
+                text {{\
                     text-anchor: middle;\
                     dominant-baseline: central;\
                     font-size: {fs}px;\
