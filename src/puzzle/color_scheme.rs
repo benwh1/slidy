@@ -110,14 +110,11 @@ impl RecursiveScheme {
         height: usize,
         x: usize,
         y: usize,
-    ) -> Rgba {
-        if layer == 0 || self.partition.is_none() {
-            self.scheme.color_unchecked(width, height, x, y)
-        } else {
-            let (pos, rect) = self
-                .partition
-                .as_ref()
-                .unwrap()
+    ) -> Option<Rgba> {
+        if layer == 0 {
+            Some(self.scheme.color_unchecked(width, height, x, y))
+        } else if let Some(partition) = &self.partition {
+            let (pos, rect) = partition
                 .rects
                 .iter()
                 .enumerate()
@@ -131,6 +128,8 @@ impl RecursiveScheme {
             let (x, y) = (x - left as usize, y - top as usize);
 
             subscheme.color_at_layer(layer - 1, width, height, x, y)
+        } else {
+            None
         }
     }
 }
@@ -170,7 +169,9 @@ impl ColorScheme for IndexedRecursiveScheme {
     }
 
     fn color_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> Rgba {
-        self.scheme.color_at_layer(self.index, width, height, x, y)
+        self.scheme
+            .color_at_layer(self.index, width, height, x, y)
+            .unwrap()
     }
 }
 
