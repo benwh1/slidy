@@ -66,6 +66,10 @@ impl Default for Borders {
     }
 }
 
+pub enum SubschemeStyle {
+    Rectangle,
+}
+
 pub struct Renderer<'a> {
     scheme: IndexedRecursiveScheme,
     text_scheme: IndexedRecursiveScheme,
@@ -102,6 +106,7 @@ impl<'a> Renderer<'a> {
             font_size: 30.0,
             text_position: (0.5, 0.5),
             padding: 0.0,
+            subscheme_style: Some(SubschemeStyle::Rectangle),
         }
     }
 
@@ -225,18 +230,24 @@ impl<'a> Renderer<'a> {
                     dominant-baseline: central;\
                     font-size: {fs}px;\
                 }}\
-                rect {{\
+                rect.piece {{\
                     width: {ts}px;\
                     height: {ts}px;\
                     rx: {tr}px;\
                     ry: {tr}px;\
                     stroke-width: {sw}px;\
                 }}\
+                rect.sub {{\
+                    width: {srw}px;\
+                    height: {srh}px;\
+                }}\
                 {font}",
                 fs = self.font_size,
                 ts = self.tile_size,
                 tr = self.tile_rounding,
                 sw = border_thickness,
+                srw = self.tile_size * 0.7,
+                srh = self.tile_size * 0.1,
             )
         };
 
@@ -297,6 +308,7 @@ impl<'a> Renderer<'a> {
             let mut r = Rectangle::new()
                 .set("x", rect_pos.0)
                 .set("y", rect_pos.1)
+                .set("class", "piece")
                 .set("fill", fill);
 
             if let Some(s) = &self.borders {
@@ -332,7 +344,36 @@ impl<'a> Renderer<'a> {
                 .add(TextNode::new(piece.to_string()))
         };
 
-        Group::new().add(rect).add(text)
+        let subscheme_render =
+            if let Some(subcolor) = self.scheme.subscheme_color(width, height, solved_pos.0, solved_pos.1)
+                && let Some(style) = &self.subscheme_style {
+                let fill = {
+                    let color: Rgba<_, u8> = subcolor.into_format();
+                    format!("#{color:x}")
+                };
+
+                Some(match style {
+                    SubschemeStyle::Rectangle => {
+                        let subrect_pos = (0.15, 0.8);
+
+                        Rectangle::new()
+                            .set("x", rect_pos.0 + self.tile_size * subrect_pos.0)
+                            .set("y", rect_pos.1 + self.tile_size * subrect_pos.1)
+                            .set("class", "sub")
+                            .set("fill", fill)
+                    }
+                })
+            } else {
+                None
+            };
+
+        let mut group = Group::new().add(rect).add(text);
+
+        if let Some(s) = subscheme_render {
+            group = group.add(s);
+        }
+
+        group
     }
 }
 
