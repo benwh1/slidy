@@ -26,10 +26,17 @@ pub enum RendererError {
     IncompatibleLabel { width: usize, height: usize },
 }
 
-pub struct Renderer {
+pub enum Font<'a> {
+    Family(&'a str),
+    Url { path: &'a str, format: &'a str },
+    Base64 { data: &'a str, format: &'a str },
+}
+
+pub struct Renderer<'a> {
     scheme: Box<dyn ColorScheme>,
     text_scheme: Box<dyn ColorScheme>,
     draw_borders: bool,
+    font: Font<'a>,
     tile_size: f32,
     tile_rounding: f32,
     tile_gap: f32,
@@ -37,7 +44,7 @@ pub struct Renderer {
     text_position: (f32, f32),
 }
 
-impl Renderer {
+impl<'a> Renderer<'a> {
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -50,6 +57,7 @@ impl Renderer {
                 Box::new(Monochrome::new(Rgb::new(0.0, 0.0, 0.0))),
             )),
             draw_borders: false,
+            font: Font::Family("sans-serif"),
             tile_size: 75.0,
             tile_rounding: 0.0,
             tile_gap: 0.0,
@@ -73,6 +81,12 @@ impl Renderer {
     #[must_use]
     pub fn borders(mut self, draw: bool) -> Self {
         self.draw_borders = draw;
+        self
+    }
+
+    #[must_use]
+    pub fn font(mut self, font: Font<'a>) -> Self {
+        self.font = font;
         self
     }
 
@@ -127,13 +141,36 @@ impl Renderer {
             h * tile_size + (h - 1.0) * tile_gap + borders,
         );
 
-        let mut doc = Document::new()
-            .add(Style::new(format!(
+        let style_str = {
+            let font = if let Font::Family(f) = self.font {
+                format!("text {{ font-family: {f}; }}")
+            } else {
+                let src = match self.font {
+                    Font::Family(_) => unreachable!(),
+                    Font::Url { path, format } => {
+                        format!(r#"url({path}) format("{format}")"#)
+                    }
+                    Font::Base64 { data, format } => {
+                        format!(r#"url(data:font/ttf;base64,{data}) format("{format}")"#)
+                    }
+                };
+
+                format!(
+                    "@font-face {{\
+                        font-family: f;\
+                        src: {src};\
+                    }}\
+                    text {{\
+                        font-family: f;\
+                    }}"
+                )
+            };
+
+            format!(
                 "text {{\
                     text-anchor: middle;\
                     dominant-baseline: central;\
                     font-size: {fs}px;\
-                    font-family: 'DejaVu Sans';\
                 }}\
                 rect {{\
                     width: {ts}px;\
@@ -141,7 +178,8 @@ impl Renderer {
                     rx: {tr}px;\
                     ry: {tr}px;\
                     {stroke}\
-                }}",
+                }}\
+                {font}",
                 fs = self.font_size,
                 ts = self.tile_size,
                 tr = self.tile_rounding,
@@ -149,8 +187,12 @@ impl Renderer {
                     "stroke: black;"
                 } else {
                     ""
-                }
-            )))
+                },
+            )
+        };
+
+        let mut doc = Document::new()
+            .add(Style::new(&style_str))
             .set("width", image_w)
             .set("height", image_h);
 
