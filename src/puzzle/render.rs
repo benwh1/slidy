@@ -69,8 +69,11 @@ impl Default for Borders {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum SubschemeStyle {
     Rectangle,
+    TextColor,
+    BorderColor,
 }
 
 pub struct Renderer<'a> {
@@ -172,6 +175,12 @@ impl<'a> Renderer<'a> {
     #[must_use]
     pub fn padding(mut self, padding: f32) -> Self {
         self.padding = padding;
+        self
+    }
+
+    #[must_use]
+    pub fn subscheme_style(mut self, style: SubschemeStyle) -> Self {
+        self.subscheme_style = Some(style);
         self
     }
 
@@ -313,6 +322,30 @@ impl<'a> Renderer<'a> {
                 + (self.tile_size + self.tile_gap + border_thickness) * y,
         );
 
+        let subscheme_color =
+            self.scheme
+                .subscheme_color(width, height, solved_pos.0, solved_pos.1);
+
+        // Macro to get the color that we want for text and border colors, as a hex string.
+        // If `self.subscheme_style` is TextColor or BorderColor, then this will override the
+        // schemes that we have in self.text_scheme and self.borders.unwrap().scheme.
+        macro_rules! color {
+            ($scheme:expr, $subscheme:expr) => {{
+                let color = if let Some(c) = subscheme_color && self.subscheme_style == Some($subscheme) {
+                    // There is a subscheme color, and the subscheme style overrides the other
+                    // scheme (text or border scheme).
+                    c
+                } else {
+                    // If no override, then we use the text or border scheme color.
+                    $scheme.color_unchecked(width, height, solved_pos.0, solved_pos.1)
+                };
+
+                // Format as hex string
+                let color: Rgba<_, u8> = color.into_format();
+                format!("#{color:x}")
+            }};
+        }
+
         let rect = {
             let fill = {
                 let color: Rgba<_, u8> = self
@@ -329,14 +362,7 @@ impl<'a> Renderer<'a> {
                 .set("fill", fill);
 
             if let Some(s) = &self.borders {
-                let stroke = {
-                    let color: Rgba<_, u8> = s
-                        .scheme
-                        .color_unchecked(width, height, solved_pos.0, solved_pos.1)
-                        .into_format();
-                    format!("#{color:x}")
-                };
-
+                let stroke = color!(s.scheme, SubschemeStyle::BorderColor);
                 r = r.set("stroke", stroke)
             }
 
@@ -344,14 +370,7 @@ impl<'a> Renderer<'a> {
         };
 
         let text = {
-            let fill = {
-                let color: Rgba<_, u8> = self
-                    .text_scheme
-                    .color_unchecked(width, height, solved_pos.0, solved_pos.1)
-                    .into_format();
-                format!("#{color:x}")
-            };
-
+            let fill = color!(self.text_scheme, SubschemeStyle::TextColor);
             let (tx, ty) = self.text_position;
 
             Text::new()
@@ -361,28 +380,26 @@ impl<'a> Renderer<'a> {
                 .add(TextNode::new(piece.to_string()))
         };
 
-        let subscheme_render =
-            if let Some(subcolor) = self.scheme.subscheme_color(width, height, solved_pos.0, solved_pos.1)
-                && let Some(style) = &self.subscheme_style {
-                let fill = {
-                    let color: Rgba<_, u8> = subcolor.into_format();
-                    format!("#{color:x}")
-                };
-
-                Some(match style {
-                    SubschemeStyle::Rectangle => {
-                        let subrect_pos = (0.15, 0.8);
-
-                        Rectangle::new()
-                            .set("x", rect_pos.0 + self.tile_size * subrect_pos.0)
-                            .set("y", rect_pos.1 + self.tile_size * subrect_pos.1)
-                            .set("class", "sub")
-                            .set("fill", fill)
-                    }
-                })
-            } else {
-                None
+        let subscheme_render = if let Some(subcolor) = subscheme_color
+            && self.subscheme_style == Some(SubschemeStyle::Rectangle)
+        {
+            let fill = {
+                let color: Rgba<_, u8> = subcolor.into_format();
+                format!("#{color:x}")
             };
+
+            let subrect_pos = (0.15, 0.8);
+
+            Some(
+                Rectangle::new()
+                    .set("x", rect_pos.0 + self.tile_size * subrect_pos.0)
+                    .set("y", rect_pos.1 + self.tile_size * subrect_pos.1)
+                    .set("class", "sub")
+                    .set("fill", fill),
+            )
+        } else {
+            None
+        };
 
         let mut group = Group::new().add(rect).add(text);
 
