@@ -78,8 +78,7 @@ impl Coloring for RainbowFull {
         if num_labels <= 1 {
             Hsl::new(0.0, 1.0, 0.5).into_color()
         } else {
-            let frac = label as f32 / (num_labels - 1) as f32;
-            Hsl::new(330.0 * frac, 1.0, 0.5).into_color()
+            Rainbow.color(label, num_labels - 1)
         }
     }
 }
