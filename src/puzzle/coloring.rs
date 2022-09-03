@@ -5,7 +5,7 @@ pub mod colorings {
     pub use super::{
         coloring::{
             AlternatingBrightness, ColorList, ColorListError, Coloring, Monochrome, Rainbow,
-            RainbowFull,
+            RainbowBright, RainbowBrightFull, RainbowFull,
         },
         lightness::AddLightness,
     };

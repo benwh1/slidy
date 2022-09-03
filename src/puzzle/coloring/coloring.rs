@@ -29,6 +29,12 @@ pub struct Rainbow;
 pub struct RainbowFull;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct RainbowBright;
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct RainbowBrightFull;
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AlternatingBrightness<'a, T: Coloring>(pub &'a T);
 
 impl Monochrome {
@@ -74,6 +80,27 @@ impl Coloring for RainbowFull {
         } else {
             let frac = label as f32 / (num_labels - 1) as f32;
             Hsl::new(330.0 * frac, 1.0, 0.5).into_color()
+        }
+    }
+}
+
+impl Coloring for RainbowBright {
+    fn color(&self, label: usize, num_labels: usize) -> Rgba {
+        let frac = label as f32 / num_labels as f32;
+        let hue = 330.0 * frac;
+        let lum = 0.5
+            + 0.25 * f32::cos(std::f32::consts::TAU * (0.65 + hue / 720.0))
+            + 0.35 * f32::exp(-hue / 100.0);
+        Hsl::new(hue, 1.0, lum).into_color()
+    }
+}
+
+impl Coloring for RainbowBrightFull {
+    fn color(&self, label: usize, num_labels: usize) -> Rgba {
+        if num_labels <= 1 {
+            Hsl::new(0.0, 1.0, 0.5).into_color()
+        } else {
+            RainbowBright.color(label, num_labels - 1)
         }
     }
 }
