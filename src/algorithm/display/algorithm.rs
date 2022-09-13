@@ -31,30 +31,24 @@ define_display!(DisplayUnspaced);
 
 impl<'a, T: MoveDisplay + Display> Display for DisplaySpaced<'a, T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            self.algorithm
+        f.write_str(
+            &self
+                .algorithm
                 .moves
                 .iter()
                 .map(|m| T::new(*m).to_string())
                 .intersperse(" ".to_string())
-                .collect::<String>()
+                .collect::<String>(),
         )
     }
 }
 
 impl<'a, T: MoveDisplay + Display> Display for DisplayUnspaced<'a, T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            self.algorithm
-                .moves
-                .iter()
-                .map(|m| T::new(*m).to_string())
-                .collect::<String>()
-        )
+        for &m in self.algorithm.moves.iter() {
+            T::new(m).fmt(f)?;
+        }
+        Ok(())
     }
 }
 

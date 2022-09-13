@@ -1,5 +1,5 @@
 use rand::{distributions::Standard, prelude::Distribution};
-use std::fmt::Display;
+use std::fmt::{Display, Write};
 use thiserror::Error;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -34,16 +34,12 @@ impl Direction {
 
 impl Display for Direction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::Up => "U",
-                Self::Left => "L",
-                Self::Down => "D",
-                Self::Right => "R",
-            }
-        )
+        f.write_char(match self {
+            Self::Up => 'U',
+            Self::Left => 'L',
+            Self::Down => 'D',
+            Self::Right => 'R',
+        })
     }
 }
 
