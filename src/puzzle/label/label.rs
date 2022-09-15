@@ -18,13 +18,25 @@ pub enum LabelError {
     },
 }
 
+/// Provides a function mapping an `(x, y)` coordinate on a puzzle to a number which we call the
+/// label of `(x, y)`.
 pub trait Label {
+    /// Checks if this `Label` can be used with a given puzzle size.
     #[must_use]
     fn is_valid_size(&self, width: usize, height: usize) -> bool;
 
+    /// See also: [`Self::position_label`].
+    ///
+    /// This function may not check whether `width x height` is a valid puzzle size for the label,
+    /// or whether `(x, y)` is within the bounds of the puzzle. If these conditions are not
+    /// satisfied, the function may panic or return an invalid label, e.g. an integer greater than
+    /// or equal to `self.num_labels_unchecked(width, height)`.
     #[must_use]
     fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize;
 
+    /// Returns the label of `(x, y)` on a `width x height` puzzle.
+    ///
+    /// The label must be an integer from 0 to `self.num_labels_unchecked(width, height) - 1`.
     fn position_label(
         &self,
         width: usize,
@@ -46,9 +58,14 @@ pub trait Label {
         }
     }
 
+    /// See also: [`Self::num_labels`].
+    ///
+    /// This function may not check whether `width x height` is a valid puzzle size for the label.
+    /// If it is not, the function may panic or return an invalid number.
     #[must_use]
     fn num_labels_unchecked(&self, width: usize, height: usize) -> usize;
 
+    /// Returns the total number of distinct labels across all `(x, y)` positions in the puzzle.
     fn num_labels(&self, width: usize, height: usize) -> Result<usize, LabelError> {
         if self.is_valid_size(width, height) {
             Ok(self.num_labels_unchecked(width, height))
@@ -58,31 +75,57 @@ pub trait Label {
     }
 }
 
-/// Marker trait for [`Label`]s that assign exactly one piece to each label.
-/// These will always have `num_labels == width * height`.
+/// Marker trait for [`Label`]s that assign distinct labels to every position.
+/// These will always have `num_labels(width, height) == width * height`.
 pub trait BijectiveLabel: Label {}
 
 macro_rules! define_label {
-    ($($name:ident),* $(,)?) => {
-        $(#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-        pub struct $name;)*
+    ($($(#[$annot:meta])* $name:ident),* $(,)?) => {
+        $(
+            $(#[$annot])*
+            ///
+            /// Valid with all puzzle sizes.
+            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+            pub struct $name;
+        )*
     };
 }
 
 define_label!(
+    /// Assigns 0 to every position.
     Trivial,
+    /// Assigns distinct labels in left-to-right reading order: left to right along the top row,
+    /// then left to right along the second row, etc.
     RowGrids,
+    /// Assigns a label to each row.
     Rows,
+    /// Assigns a label to each fringe (combined row and column, starting from the top left).
     Fringe,
+    /// Assigns distinct labels in fringe order: left to right along the top row, then top to
+    /// bottom down the first column, then left to right along the second row, etc.
     FringeGrids,
+    /// Assigns labels to each row or column, until the remaining unlabelled part of the puzzle is
+    /// a square, and then labels the rest with [`Fringe`].
     SquareFringe,
+    /// Same as [`Fringe`], but the row and column parts of the fringe are given different labels.
     SplitFringe,
+    /// Same as [`SquareFringe`], but uses [`SplitFringe`] for the square part.
     SplitSquareFringe,
+    /// Assigns labels to each bottom-left to top-right diagonal, starting from the top left.
     Diagonals,
+    /// Assigns labels to each of the first `height - 2` rows, then assigns labels to the last two
+    /// rows in columns.
     LastTwoRows,
+    /// Same as [`LastTwoRows`], but the labels of the last two rows restart from 0 (so for
+    /// example, the top row and the bottom left piece are given the same label).
     SplitLastTwoRows,
+    /// Assigns a label to each concentric rectangle around the puzzle.
     ConcentricRectangles,
+    /// Assigns labels in a spiral pattern: the top row (minus the top right piece) gets label 0,
+    /// then the right column (minus the bottom right piece) gets label 1, then the bottom row
+    /// (minus the bottom left piece) gets label 2, etc.
     Spiral,
+    /// Same as [`Spiral`] but every piece gets a distinct label.
     SpiralGrids,
 );
 

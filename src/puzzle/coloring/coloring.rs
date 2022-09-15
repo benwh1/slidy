@@ -1,43 +1,57 @@
 use palette::{rgb::Rgba, Hsl, Hsla, IntoColor};
 use thiserror::Error;
 
+/// Provides a function mapping labels to colors.
+///
+/// See also: [`crate::puzzle::label::label::Label`].
 pub trait Coloring {
+    /// Returns a color based on a label and the total number of labels.
     #[must_use]
     fn color(&self, label: usize, num_labels: usize) -> Rgba;
 }
 
+/// Error type for [`ColorList`]
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ColorListError {
+    /// Returned when [`ColorList::new`] is given an empty list.
     #[error("EmptyColorList: color list must be non-empty")]
     EmptyColorList,
 }
 
+/// A [`Coloring`] that always produces the same color.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Monochrome {
     color: Rgba,
 }
 
+/// A [`Coloring`] that cycles through a given list of colors.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ColorList {
     colors: Vec<Rgba>,
 }
 
+/// A [`Coloring`] that produces rainbow colors.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Rainbow;
 
+/// Similar to [`Rainbow`] but produces slightly different colors.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RainbowFull;
 
+/// Similar to [`Rainbow`] but produces brighter, more pastel-like colors.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RainbowBright;
 
+/// Combination of [`RainbowBright`] and [`RainbowFull`].
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RainbowBrightFull;
 
+/// Given a [`Coloring`] `T`, makes the colors brighter when `label` is even.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AlternatingBrightness<'a, T: Coloring>(pub &'a T);
 
 impl Monochrome {
+    /// Creates a new [`Monochrome`] that always produces `color`.
     #[must_use]
     pub fn new(color: Rgba) -> Self {
         Self { color }
@@ -51,6 +65,7 @@ impl Coloring for Monochrome {
 }
 
 impl ColorList {
+    /// Create a new [`ColorList`] from a vector of colors.
     pub fn new(colors: Vec<Rgba>) -> Result<Self, ColorListError> {
         if colors.is_empty() {
             Err(ColorListError::EmptyColorList)
