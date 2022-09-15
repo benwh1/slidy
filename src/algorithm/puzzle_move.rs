@@ -7,30 +7,39 @@ use crate::algorithm::{
     display::puzzle_move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort, MoveDisplay},
 };
 
+/// A (possibly multi-tile) move of a puzzle. Contains a direction and an amount.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Move {
     pub direction: Direction,
     pub amount: u32,
 }
 
+/// Represents the sum of two moves.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum MoveSum {
+    /// The sum of two moves that are in the same or opposite directions is another move.
     Ok(Move),
+
+    /// If two moves are not in the same or opposite directions, they can not be added.
     Invalid,
 }
 
+/// Error type for [`Move`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum MoveError {
+    /// Returned when the amount 0 is passed to [`Move::new_nonzero`].
     #[error("ZeroAmount: move amount must be greater than 0")]
     ZeroAmount,
 }
 
 impl Move {
+    /// Creates a new [`Move`].
     #[must_use]
     pub fn new(direction: Direction, amount: u32) -> Self {
         Self { direction, amount }
     }
 
+    /// Creates a new [`Move`] with the requirement that `amount` must be non-zero.
     pub fn new_nonzero(direction: Direction, amount: u32) -> Result<Self, MoveError> {
         if amount == 0 {
             Err(MoveError::ZeroAmount)
@@ -39,6 +48,8 @@ impl Move {
         }
     }
 
+    /// Returns the inverse of a move. This is given by taking the inverse of the direction and
+    /// leaving the amount unchanged.
     #[must_use]
     pub fn inverse(&self) -> Self {
         Self {
@@ -47,6 +58,8 @@ impl Move {
         }
     }
 
+    /// Returns the transpose of a move. This is given by taking the transpose of the direction and
+    /// leaving the amount unchanged.
     #[must_use]
     pub fn transpose(&self) -> Self {
         Self {
@@ -55,16 +68,19 @@ impl Move {
         }
     }
 
+    /// Helper function for creating a [`DisplayLongSpaced`] around `self`.
     #[must_use]
     pub fn display_long_spaced(&self) -> DisplayLongSpaced {
         DisplayLongSpaced::new(*self)
     }
 
+    /// Helper function for creating a [`DisplayLongUnspaced`] around `self`.
     #[must_use]
     pub fn display_long_unspaced(&self) -> DisplayLongUnspaced {
         DisplayLongUnspaced::new(*self)
     }
 
+    /// Helper function for creating a [`DisplayShort`] around `self`.
     #[must_use]
     pub fn display_short(&self) -> DisplayShort {
         DisplayShort::new(*self)
@@ -72,13 +88,14 @@ impl Move {
 }
 
 impl Display for Move {
+    /// Uses [`Move::display_short`] as the default formatting.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // Default formatting is short.
         self.display_short().fmt(f)
     }
 }
 
 impl From<Direction> for Move {
+    /// Creates a [`Move`] from a [`Direction`] with `amount = 1`.
     #[must_use]
     fn from(direction: Direction) -> Self {
         Self {

@@ -25,6 +25,20 @@ define_display!(DisplayLongUnspaced);
 define_display!(DisplayShort);
 
 impl Display for DisplayLongSpaced {
+    /// Formats the move using one character per tile move, with spaces between them.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use slidy::algorithm::{
+    /// #     direction::Direction,
+    /// #     display::puzzle_move::{DisplayLongSpaced, MoveDisplay},
+    /// #     puzzle_move::Move,
+    /// # };
+    /// # use std::str::FromStr;
+    /// let a = Move::new(Direction::Up, 5);
+    /// assert_eq!(&DisplayLongSpaced::new(a).to_string(), "U U U U U");
+    /// ```
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut s = self.0.direction.to_string();
         s.push(' ');
@@ -36,6 +50,20 @@ impl Display for DisplayLongSpaced {
 }
 
 impl Display for DisplayLongUnspaced {
+    /// Formats the move using one character per tile move.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use slidy::algorithm::{
+    /// #     direction::Direction,
+    /// #     display::puzzle_move::{DisplayLongUnspaced, MoveDisplay},
+    /// #     puzzle_move::Move,
+    /// # };
+    /// # use std::str::FromStr;
+    /// let a = Move::new(Direction::Up, 5);
+    /// assert_eq!(&DisplayLongUnspaced::new(a).to_string(), "UUUUU");
+    /// ```
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -46,6 +74,20 @@ impl Display for DisplayLongUnspaced {
 }
 
 impl Display for DisplayShort {
+    /// Formats the move as a direction followed by a number.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use slidy::algorithm::{
+    /// #     direction::Direction,
+    /// #     display::puzzle_move::{DisplayShort, MoveDisplay},
+    /// #     puzzle_move::Move,
+    /// # };
+    /// # use std::str::FromStr;
+    /// let a = Move::new(Direction::Up, 5);
+    /// assert_eq!(&DisplayShort::new(a).to_string(), "U5");
+    /// ```
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.0.amount == 1 {
             write!(f, "{}", self.0.direction)

@@ -30,6 +30,7 @@ define_display!(DisplaySpaced);
 define_display!(DisplayUnspaced);
 
 impl<'a, T: MoveDisplay + Display> Display for DisplaySpaced<'a, T> {
+    /// Formats each move of the algorithm using `T` and adds a space between moves.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(
             &self
@@ -44,6 +45,7 @@ impl<'a, T: MoveDisplay + Display> Display for DisplaySpaced<'a, T> {
 }
 
 impl<'a, T: MoveDisplay + Display> Display for DisplayUnspaced<'a, T> {
+    /// Formats each move of the algorithm using `T`.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for &m in self.algorithm.moves.iter() {
             T::new(m).fmt(f)?;

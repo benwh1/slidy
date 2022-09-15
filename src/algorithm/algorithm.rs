@@ -12,31 +12,40 @@ use super::{
     puzzle_move::{Move, MoveSum},
 };
 
+/// A sequence of moves.
 #[derive(Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Algorithm {
     pub moves: Vec<Move>,
 }
 
 impl Algorithm {
+    /// Create a new [`Algorithm`] from a list of [`Move`]s.
     #[must_use]
     pub fn new(moves: Vec<Move>) -> Self {
         Self { moves }
     }
 
+    /// The length of the algorithm in single tile moves.
     #[must_use]
     pub fn len(&self) -> u32 {
         self.moves.iter().map(|m| m.amount).sum()
     }
 
+    /// Checks if the algorithm is empty.
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.moves.is_empty()
     }
 
+    /// Appends a move to the end of the algorithm.
     pub fn push(&mut self, m: Move) {
         self.moves.push(m);
     }
 
+    /// Appends a move to the end of the algorithm.
+    ///
+    /// If the previous move is in the same direction as the appended move, they are combined into
+    /// a single move.
     pub fn push_combine(&mut self, m: Move) {
         if let Some(other) = self.moves.last_mut() && m.direction == other.direction {
             other.amount += m.amount;
@@ -45,6 +54,10 @@ impl Algorithm {
         }
     }
 
+    /// Appends a move to the end of the algorithm.
+    ///
+    /// If the previous move is in the same or opposite direction as the appended move, they are
+    /// combined into a single move (or removed if the two moves cancel completely).
     pub fn push_simplify(&mut self, m: Move) {
         match self.moves.last_mut() {
             Some(other) if m.direction == other.direction => {
@@ -68,6 +81,8 @@ impl Algorithm {
         }
     }
 
+    /// Combines all consecutive moves along the same axis into a single move, and removes any moves
+    /// that cancel completely.
     #[must_use]
     pub fn simplified(&self) -> Self {
         if self.moves.len() < 2 {
@@ -115,10 +130,15 @@ impl Algorithm {
         Self::new(moves)
     }
 
+    /// Simplifies the algorithm.
+    ///
+    /// See [`Algorithm::simplified`]
     pub fn simplify(&mut self) {
         self.moves = self.simplified().moves;
     }
 
+    /// Returns the algorithm `a` such that concatenating `a` with `self` (in either order), the
+    /// result would simplify to the empty algorithm.
     #[must_use]
     pub fn inverse(&self) -> Self {
         Self {
@@ -126,10 +146,14 @@ impl Algorithm {
         }
     }
 
+    /// Inverts the algorithm.
+    ///
+    /// See [`Algorithm::inverse`]
     pub fn invert(&mut self) {
         self.moves = self.inverse().moves;
     }
 
+    /// Returns the algorithm obtained by reflecting the algorithm through the main diagonal.
     #[must_use]
     pub fn transpose(&self) -> Self {
         Self {
@@ -137,6 +161,7 @@ impl Algorithm {
         }
     }
 
+    /// Returns the algorithm obtained by concatenating `n` copies of `self`.
     #[must_use]
     pub fn repeat(&self, n: usize) -> Self {
         Self {
@@ -144,21 +169,25 @@ impl Algorithm {
         }
     }
 
+    /// Helper function for creating a [`DisplaySpaced<DisplayLongSpaced>`] around `self`.
     #[must_use]
     pub fn display_long_spaced(&self) -> DisplaySpaced<DisplayLongSpaced> {
         DisplaySpaced::<DisplayLongSpaced>::new(self)
     }
 
+    /// Helper function for creating a [`DisplayUnspaced<DisplayLongUnspaced>`] around `self`.
     #[must_use]
     pub fn display_long_unspaced(&self) -> DisplayUnspaced<DisplayLongUnspaced> {
         DisplayUnspaced::<DisplayLongUnspaced>::new(self)
     }
 
+    /// Helper function for creating a [`DisplaySpaced<DisplayShort>`] around `self`.
     #[must_use]
     pub fn display_short_spaced(&self) -> DisplaySpaced<DisplayShort> {
         DisplaySpaced::<DisplayShort>::new(self)
     }
 
+    /// Helper function for creating a [`DisplayUnspaced<DisplayShort>`] around `self`.
     #[must_use]
     pub fn display_short_unspaced(&self) -> DisplayUnspaced<DisplayShort> {
         DisplayUnspaced::<DisplayShort>::new(self)
@@ -172,11 +201,14 @@ impl Display for Algorithm {
     }
 }
 
+/// The error type for [`Algorithm::from_str`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ParseAlgorithmError {
+    /// Found a character that can not appear in an algorithm, e.g. "U2 R3 a D"
     #[error("InvalidCharacter: character {0} is invalid")]
     InvalidCharacter(char),
 
+    /// Read a number with no direction, e.g. "U2 R3 5 D"
     #[error("MissingDirection: a number must be preceded by a direction")]
     MissingDirection,
 }
@@ -245,6 +277,7 @@ impl FromStr for Algorithm {
 impl Add for Algorithm {
     type Output = Self;
 
+    /// Concatenates the algorithms.
     #[must_use]
     fn add(self, rhs: Self) -> Self::Output {
         let mut moves = self.moves;

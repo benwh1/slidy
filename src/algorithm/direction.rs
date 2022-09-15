@@ -2,6 +2,7 @@ use rand::{distributions::Standard, prelude::Distribution};
 use std::fmt::{Display, Write};
 use thiserror::Error;
 
+/// The directions in which a piece can be moved.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Direction {
     Up,
@@ -11,6 +12,7 @@ pub enum Direction {
 }
 
 impl Direction {
+    /// The opposite directon. Swaps `Up` with `Down` and `Left` with `Right`.
     #[must_use]
     pub fn inverse(&self) -> Self {
         match self {
@@ -21,6 +23,7 @@ impl Direction {
         }
     }
 
+    /// Reflection in the main diagonal. Swaps `Up` with `Left` and `Down` with `Right`.
     #[must_use]
     pub fn transpose(&self) -> Self {
         match self {
@@ -33,6 +36,7 @@ impl Direction {
 }
 
 impl Display for Direction {
+    /// Formats the direction as an upper case character: U, L, D, R
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_char(match self {
             Self::Up => 'U',
@@ -43,8 +47,10 @@ impl Display for Direction {
     }
 }
 
+/// The error type for [`TryFrom<char>`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TryDirectionFromCharError {
+    /// Found a character other than U, L, D, R.
     #[error("InvalidCharacter: character {0} must be 'U', 'L', 'D', or 'R'")]
     InvalidCharacter(char),
 }
@@ -52,6 +58,7 @@ pub enum TryDirectionFromCharError {
 impl TryFrom<char> for Direction {
     type Error = TryDirectionFromCharError;
 
+    /// Maps the characters U, L, D, R to directions.
     fn try_from(value: char) -> Result<Self, Self::Error> {
         match value {
             'U' => Ok(Self::Up),
