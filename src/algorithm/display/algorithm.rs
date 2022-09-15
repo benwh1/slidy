@@ -87,3 +87,36 @@ mod tests {
         assert_eq!(d6, "U2RDL3");
     }
 }
+
+#[cfg(test)]
+mod benchmarks {
+    extern crate test;
+
+    use std::str::FromStr;
+
+    use test::Bencher;
+
+    use crate::algorithm::display::puzzle_move::DisplayShort;
+
+    use super::*;
+
+    #[bench]
+    fn bench_display_spaced_display_short(b: &mut Bencher) {
+        let a = Algorithm::from_str(
+            "DR2D2LULURUR2DL2DRU2RD2LDRULULDRDL2URDLU3RDLUR3DLDLU2RD3LU3R2DLD2LULU2R3D3",
+        )
+        .unwrap();
+
+        b.iter(|| DisplaySpaced::<DisplayShort>::new(&a).to_string());
+    }
+
+    #[bench]
+    fn bench_display_unspaced_display_short(b: &mut Bencher) {
+        let a = Algorithm::from_str(
+            "DR2D2LULURUR2DL2DRU2RD2LDRULULDRDL2URDLU3RDLUR3DLDLU2RD3LU3R2DLD2LULU2R3D3",
+        )
+        .unwrap();
+
+        b.iter(|| DisplayUnspaced::<DisplayShort>::new(&a).to_string());
+    }
+}
