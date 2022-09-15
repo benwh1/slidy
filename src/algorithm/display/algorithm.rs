@@ -9,28 +9,34 @@ pub trait AlgorithmDisplay<'a> {
 }
 
 macro_rules! define_display {
-    ($name:ident) => {
-        pub struct $name<'a, T: MoveDisplay + Display> {
-            algorithm: &'a Algorithm,
-            phantom_t: PhantomData<T>,
-        }
+    ($(#[$annot:meta] $name:ident),* $(,)?) => {
+        $(
+            #[$annot]
+            pub struct $name<'a, T: MoveDisplay + Display> {
+                algorithm: &'a Algorithm,
+                phantom_t: PhantomData<T>,
+            }
 
-        impl<'a, T: MoveDisplay + Display> AlgorithmDisplay<'a> for $name<'a, T> {
-            fn new(algorithm: &'a Algorithm) -> Self {
-                Self {
-                    algorithm,
-                    phantom_t: PhantomData,
+            impl<'a, T: MoveDisplay + Display> AlgorithmDisplay<'a> for $name<'a, T> {
+                fn new(algorithm: &'a Algorithm) -> Self {
+                    Self {
+                        algorithm,
+                        phantom_t: PhantomData,
+                    }
                 }
             }
-        }
+        )*
     };
 }
 
-define_display!(DisplaySpaced);
-define_display!(DisplayUnspaced);
+define_display!(
+    /// Formats each move of the algorithm using `T` and adds a space between moves.
+    DisplaySpaced,
+    /// Formats each move of the algorithm using `T`.
+    DisplayUnspaced
+);
 
 impl<'a, T: MoveDisplay + Display> Display for DisplaySpaced<'a, T> {
-    /// Formats each move of the algorithm using `T` and adds a space between moves.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(
             &self
@@ -45,7 +51,6 @@ impl<'a, T: MoveDisplay + Display> Display for DisplaySpaced<'a, T> {
 }
 
 impl<'a, T: MoveDisplay + Display> Display for DisplayUnspaced<'a, T> {
-    /// Formats each move of the algorithm using `T`.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for &m in self.algorithm.moves.iter() {
             T::new(m).fmt(f)?;

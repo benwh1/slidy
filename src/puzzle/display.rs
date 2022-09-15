@@ -4,29 +4,32 @@ use crate::puzzle::sliding_puzzle::SlidingPuzzle;
 use std::{fmt::Display, marker::PhantomData};
 
 macro_rules! define_display {
-    ($name:ident) => {
-        pub struct $name<'a, Piece, Puzzle>
-        where
-            Piece: PrimInt,
-            Puzzle: SlidingPuzzle<Piece>,
-        {
-            puzzle: &'a Puzzle,
-            phantom_piece: PhantomData<Piece>,
-        }
+    ($($(#[$annot:meta])* $name:ident),* $(,)?) => {
+        $(
+            $(#[$annot])*
+            pub struct $name<'a, Piece, Puzzle>
+            where
+                Piece: PrimInt,
+                Puzzle: SlidingPuzzle<Piece>,
+            {
+                puzzle: &'a Puzzle,
+                phantom_piece: PhantomData<Piece>,
+            }
 
-        impl<'a, Piece, Puzzle> $name<'a, Piece, Puzzle>
-        where
-            Piece: PrimInt,
-            Puzzle: SlidingPuzzle<Piece>,
-        {
-            #[must_use]
-            pub fn new(puzzle: &'a Puzzle) -> Self {
-                Self {
-                    puzzle,
-                    phantom_piece: PhantomData,
+            impl<'a, Piece, Puzzle> $name<'a, Piece, Puzzle>
+            where
+                Piece: PrimInt,
+                Puzzle: SlidingPuzzle<Piece>,
+            {
+                #[must_use]
+                pub fn new(puzzle: &'a Puzzle) -> Self {
+                    Self {
+                        puzzle,
+                        phantom_piece: PhantomData,
+                    }
                 }
             }
-        }
+        )*
     };
 }
 

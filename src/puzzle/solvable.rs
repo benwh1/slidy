@@ -69,21 +69,19 @@ where
 }
 
 macro_rules! always_solvable {
-    ($t:ty) => {
-        impl<Piece, Puzzle> Solvable<Piece, Puzzle> for $t
-        where
-            Piece: PrimInt,
-            Puzzle: SlidingPuzzle<Piece>,
-        {
-            fn solvable(_puzzle: &Puzzle) -> bool {
-                true
+    ($($t:ty),* $(,)?) => {
+        $(
+            impl<Piece, Puzzle> Solvable<Piece, Puzzle> for $t
+            where
+                Piece: PrimInt,
+                Puzzle: SlidingPuzzle<Piece>,
+            {
+                fn solvable(_puzzle: &Puzzle) -> bool {
+                    true
+                }
             }
-        }
+        )*
     };
-    ($t:ty, $($t2:ty),+ $(,)?) => {
-        always_solvable!($t);
-        always_solvable!($($t2),+);
-    }
 }
 
 always_solvable!(

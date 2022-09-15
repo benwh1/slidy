@@ -9,22 +9,21 @@ pub trait MoveDisplay {
 }
 
 macro_rules! define_display {
-    ($name:ident) => {
-        pub struct $name(Move);
+    ($($(#[$annot:meta])* $name:ident),* $(,)?) => {
+        $(
+            $(#[$annot])*
+            pub struct $name(Move);
 
-        impl MoveDisplay for $name {
-            fn new(mv: Move) -> Self {
-                Self(mv)
+            impl MoveDisplay for $name {
+                fn new(mv: Move) -> Self {
+                    Self(mv)
+                }
             }
-        }
+        )*
     };
 }
 
-define_display!(DisplayLongSpaced);
-define_display!(DisplayLongUnspaced);
-define_display!(DisplayShort);
-
-impl Display for DisplayLongSpaced {
+define_display!(
     /// Formats the move using one character per tile move, with spaces between them.
     ///
     /// # Example
@@ -39,17 +38,7 @@ impl Display for DisplayLongSpaced {
     /// let a = Move::new(Direction::Up, 5);
     /// assert_eq!(&DisplayLongSpaced::new(a).to_string(), "U U U U U");
     /// ```
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut s = self.0.direction.to_string();
-        s.push(' ');
-        s = s.repeat(self.0.amount as usize);
-        s.pop();
-
-        f.write_str(&s)
-    }
-}
-
-impl Display for DisplayLongUnspaced {
+    DisplayLongSpaced,
     /// Formats the move using one character per tile move.
     ///
     /// # Example
@@ -64,12 +53,7 @@ impl Display for DisplayLongUnspaced {
     /// let a = Move::new(Direction::Up, 5);
     /// assert_eq!(&DisplayLongUnspaced::new(a).to_string(), "UUUUU");
     /// ```
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0.direction.to_string().repeat(self.0.amount as usize))
-    }
-}
-
-impl Display for DisplayShort {
+    DisplayLongUnspaced,
     /// Formats the move as a direction followed by a number.
     ///
     /// # Example
@@ -84,6 +68,27 @@ impl Display for DisplayShort {
     /// let a = Move::new(Direction::Up, 5);
     /// assert_eq!(&DisplayShort::new(a).to_string(), "U5");
     /// ```
+    DisplayShort
+);
+
+impl Display for DisplayLongSpaced {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut s = self.0.direction.to_string();
+        s.push(' ');
+        s = s.repeat(self.0.amount as usize);
+        s.pop();
+
+        f.write_str(&s)
+    }
+}
+
+impl Display for DisplayLongUnspaced {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0.direction.to_string().repeat(self.0.amount as usize))
+    }
+}
+
+impl Display for DisplayShort {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.0.amount == 1 {
             write!(f, "{}", self.0.direction)
