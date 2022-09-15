@@ -320,3 +320,42 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod benchmarks {
+    extern crate test;
+
+    use test::Bencher;
+
+    use super::*;
+
+    #[bench]
+    fn bench_display_long_spaced(b: &mut Bencher) {
+        let m = Move::new(Direction::Up, 10);
+        b.iter(|| {
+            for _ in 0..100 {
+                DisplayLongSpaced::new(m).to_string();
+            }
+        });
+    }
+
+    #[bench]
+    fn bench_display_long_unspaced(b: &mut Bencher) {
+        let m = Move::new(Direction::Up, 10);
+        b.iter(|| {
+            for _ in 0..100 {
+                DisplayLongUnspaced::new(m).to_string();
+            }
+        });
+    }
+
+    #[bench]
+    fn bench_display_short(b: &mut Bencher) {
+        let m = Move::new(Direction::Up, 10);
+        b.iter(|| {
+            for _ in 0..100 {
+                DisplayShort::new(m).to_string();
+            }
+        });
+    }
+}
