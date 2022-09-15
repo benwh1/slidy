@@ -6,6 +6,16 @@ use thiserror::Error;
 pub enum LabelError {
     #[error("InvalidSize: {width}x{height} is not a valid size")]
     InvalidSize { width: usize, height: usize },
+
+    #[error(
+        "PositionOutOfBounds: position ({x}, {y}) is out of bounds on a {width}x{height} puzzle."
+    )]
+    PositionOutOfBounds {
+        width: usize,
+        height: usize,
+        x: usize,
+        y: usize,
+    },
 }
 
 pub trait Label {
@@ -22,10 +32,17 @@ pub trait Label {
         x: usize,
         y: usize,
     ) -> Result<usize, LabelError> {
-        if self.is_valid_size(width, height) {
-            Ok(self.position_label_unchecked(width, height, x, y))
-        } else {
+        if !self.is_valid_size(width, height) {
             Err(LabelError::InvalidSize { width, height })
+        } else if x >= width || y >= height {
+            Err(LabelError::PositionOutOfBounds {
+                width,
+                height,
+                x,
+                y,
+            })
+        } else {
+            Ok(self.position_label_unchecked(width, height, x, y))
         }
     }
 
