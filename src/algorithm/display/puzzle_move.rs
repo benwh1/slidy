@@ -45,7 +45,7 @@ impl Display for DisplayLongSpaced {
         s = s.repeat(self.0.amount as usize);
         s.pop();
 
-        write!(f, "{}", s)
+        f.write_str(&s)
     }
 }
 
@@ -65,11 +65,7 @@ impl Display for DisplayLongUnspaced {
     /// assert_eq!(&DisplayLongUnspaced::new(a).to_string(), "UUUUU");
     /// ```
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            self.0.direction.to_string().repeat(self.0.amount as usize)
-        )
+        f.write_str(&self.0.direction.to_string().repeat(self.0.amount as usize))
     }
 }
 
