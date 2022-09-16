@@ -43,7 +43,7 @@ impl ColorScheme for Scheme {
     fn color_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> Rgba {
         let label = self.label.position_label_unchecked(width, height, x, y);
         let num_labels = self.label.num_labels_unchecked(width, height);
-        self.coloring.color(label, num_labels)
+        self.coloring.color_unchecked(label, num_labels)
     }
 }
 
