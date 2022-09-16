@@ -4,6 +4,9 @@ use thiserror::Error;
 
 use super::label::Label;
 
+/// A rectangle on a grid of squares, with x increasing to the right and y increasing downwards.
+///
+/// Used to define a [`RectPartition`].
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Rect {
     left: u32,
@@ -13,6 +16,7 @@ pub struct Rect {
 }
 
 impl Rect {
+    /// Creates a new [`Rect`] given the coordinates of the top left and bottom right points.
     #[must_use]
     pub fn new(top_left: (u32, u32), bottom_right: (u32, u32)) -> Self {
         Self {
@@ -23,26 +27,33 @@ impl Rect {
         }
     }
 
+    /// Width of the rectangle.
     #[must_use]
     pub fn width(&self) -> u32 {
         self.right - self.left
     }
 
+    /// Height of the rectangle.
     #[must_use]
     pub fn height(&self) -> u32 {
         self.bottom - self.top
     }
 
+    /// Checks if `(x, y)` is contained in the rectangle. The rectangle contains the top and left
+    /// edges, but does not contain the bottom and right edges or the top right and bottom left
+    /// corners.
     #[must_use]
     pub fn contains(&self, x: u32, y: u32) -> bool {
         self.left <= x && x < self.right && self.top <= y && y < self.bottom
     }
 
+    /// The top left corner
     #[must_use]
     pub fn top_left(&self) -> (u32, u32) {
         (self.left, self.top)
     }
 
+    /// Size of the rectangle in the form `(width, height)`.
     #[must_use]
     pub fn size(&self) -> (u32, u32) {
         (self.right - self.left, self.bottom - self.top)
@@ -111,24 +122,32 @@ impl PiecewiseConstant {
     }
 }
 
+/// A partition of a rectangle into smaller rectangles.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RectPartition {
     pub(in crate::puzzle) rects: Vec<Rect>,
 }
 
+/// Error type for [`RectPartition`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum RectPartitionError {
+    /// Returned from [`RectPartition::new`] when given an empty vector.
     #[error("Empty: a partition must contain at least one `Rect`")]
     Empty,
 
+    /// Returned from [`RectPartition::new`] when the given vector of [`Rect`]s is not a partition
+    /// of a large rectangle.
     #[error("NotPartition: the square at ({x}, {y}) is not covered exactly once")]
     NotPartition { x: u32, y: u32 },
 
+    /// Returned from [`RectPartition::new`] when one of the [`Rect`]s has non-positive width or
+    /// height.
     #[error("InvalidRect: `Rect`s must have positive width and height")]
     InvalidRect,
 }
 
 impl RectPartition {
+    /// Creates a new [`RectPartition`] from a list of [`Rect`]s that partition a larger rectangle.
     pub fn new(mut rects: Vec<Rect>) -> Result<Self, RectPartitionError> {
         if rects.is_empty() {
             return Err(RectPartitionError::Empty);
@@ -173,6 +192,7 @@ impl RectPartition {
         }
     }
 
+    /// Returns the large rectangle that is being partitioned.
     #[must_use]
     pub(super) fn rect(&self) -> Rect {
         let left = self.rects.iter().map(|r| r.left).min().unwrap();
@@ -187,6 +207,7 @@ impl RectPartition {
         }
     }
 
+    /// Returns the number of rectangles in the partition.
     #[must_use]
     pub fn num_rects(&self) -> usize {
         self.rects.len()
@@ -194,6 +215,8 @@ impl RectPartition {
 }
 
 impl Label for RectPartition {
+    /// [`RectPartition`] is only a valid label when the puzzle size equals the size of the
+    /// partitioned rectangle.
     fn is_valid_size(&self, width: usize, height: usize) -> bool {
         self.rect().size() == (width as u32, height as u32)
     }
