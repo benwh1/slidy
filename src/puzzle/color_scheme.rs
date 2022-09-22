@@ -15,7 +15,7 @@ pub trait ColorScheme {
 
     #[must_use]
     fn color(&self, width: usize, height: usize, x: usize, y: usize) -> Option<Rgba> {
-        if x < width && y < height {
+        if x < width && y < height && self.is_valid_size(width, height) {
             Some(self.color_unchecked(width, height, x, y))
         } else {
             None
