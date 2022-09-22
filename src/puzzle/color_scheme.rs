@@ -6,6 +6,25 @@ use crate::puzzle::{
     label::{label::Label, rect_partition::RectPartition},
 };
 
+/// Error type for [`ColorScheme`].
+#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ColorSchemeError {
+    /// Returned from [`ColorScheme::color`] when [`ColorScheme::is_valid_size`] returns false.
+    #[error("InvalidSize: {width}x{height} is not a valid size")]
+    InvalidSize { width: usize, height: usize },
+
+    /// Returned from [`ColorScheme::color`] when [`ColorScheme::is_valid_size`] returns false.
+    #[error(
+        "PositionOutOfBounds: position ({x}, {y}) is out of bounds on a {width}x{height} puzzle."
+    )]
+    PositionOutOfBounds {
+        width: usize,
+        height: usize,
+        x: usize,
+        y: usize,
+    },
+}
+
 pub trait ColorScheme {
     #[must_use]
     fn is_valid_size(&self, width: usize, height: usize) -> bool;
@@ -14,11 +33,24 @@ pub trait ColorScheme {
     fn color_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> Rgba;
 
     #[must_use]
-    fn color(&self, width: usize, height: usize, x: usize, y: usize) -> Option<Rgba> {
-        if x < width && y < height && self.is_valid_size(width, height) {
-            Some(self.color_unchecked(width, height, x, y))
+    fn color(
+        &self,
+        width: usize,
+        height: usize,
+        x: usize,
+        y: usize,
+    ) -> Result<Rgba, ColorSchemeError> {
+        if !self.is_valid_size(width, height) {
+            Err(ColorSchemeError::InvalidSize { width, height })
+        } else if x >= width || y >= height {
+            Err(ColorSchemeError::PositionOutOfBounds {
+                width,
+                height,
+                x,
+                y,
+            })
         } else {
-            None
+            Ok(self.color_unchecked(width, height, x, y))
         }
     }
 }
