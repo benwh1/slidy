@@ -86,6 +86,15 @@ pub enum RecursiveSchemeError {
         num_rects: usize,
         num_subschemes: usize,
     },
+
+    #[error("InvalidSubschemeSize: puzzle size {w}x{h} is not valid for subscheme at index {subscheme_idx}",
+        w = rect_size.0,
+        h = rect_size.1
+    )]
+    InvalidSubschemeSize {
+        subscheme_idx: usize,
+        rect_size: (u32, u32),
+    },
 }
 
 pub struct RecursiveScheme {
@@ -100,16 +109,25 @@ impl RecursiveScheme {
         partition: RectPartition,
         subschemes: Vec<Self>,
     ) -> Result<Self, RecursiveSchemeError> {
-        if partition.num_rects() == subschemes.len() {
+        if partition.num_rects() != subschemes.len() {
+            Err(RecursiveSchemeError::IncompatiblePartitionAndSubschemes {
+                num_rects: partition.num_rects(),
+                num_subschemes: subschemes.len(),
+            })
+        } else if let Some(idx) = subschemes
+            .iter()
+            .zip(partition.rects.iter())
+            .position(|(s, r)| !s.is_valid_size(r.width() as usize, r.height() as usize))
+        {
+            Err(RecursiveSchemeError::InvalidSubschemeSize {
+                subscheme_idx: idx,
+                rect_size: partition.rects[idx].size(),
+            })
+        } else {
             Ok(Self {
                 scheme,
                 partition: Some(partition),
                 subschemes,
-            })
-        } else {
-            Err(RecursiveSchemeError::IncompatiblePartitionAndSubschemes {
-                num_rects: partition.num_rects(),
-                num_subschemes: subschemes.len(),
             })
         }
     }
@@ -163,6 +181,16 @@ impl RecursiveScheme {
         } else {
             None
         }
+    }
+}
+
+impl ColorScheme for RecursiveScheme {
+    fn is_valid_size(&self, width: usize, height: usize) -> bool {
+        self.scheme.is_valid_size(width, height)
+    }
+
+    fn color_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> Rgba {
+        self.scheme.color_unchecked(width, height, x, y)
     }
 }
 
