@@ -150,9 +150,7 @@ impl RecursiveScheme {
             .max()
             .unwrap_or_default()
     }
-}
 
-impl RecursiveScheme {
     #[must_use]
     pub fn color_at_layer(
         &self,
