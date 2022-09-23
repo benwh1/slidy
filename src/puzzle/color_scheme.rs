@@ -143,11 +143,12 @@ impl RecursiveScheme {
 
     #[must_use]
     pub fn height(&self) -> u32 {
-        if self.subschemes.is_empty() {
-            1
-        } else {
-            1 + self.subschemes[0].height()
-        }
+        1 + self
+            .subschemes
+            .iter()
+            .map(|s| s.height())
+            .max()
+            .unwrap_or_default()
     }
 }
 
