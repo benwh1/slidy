@@ -1,7 +1,9 @@
 [package]
+authors = ["Ben Whitmore"]
 name = "slidy"
 version = "0.1.0"
 edition = "2021"
+repository = "https://github.com/benwh1/slidy/"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
