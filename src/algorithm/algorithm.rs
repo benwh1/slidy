@@ -206,7 +206,7 @@ impl Display for Algorithm {
     }
 }
 
-/// The error type for [`Algorithm::from_str`].
+/// Error type for [`Algorithm::from_str`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ParseAlgorithmError {
     /// Found a character that can not appear in an algorithm, e.g. "U2 R3 a D"

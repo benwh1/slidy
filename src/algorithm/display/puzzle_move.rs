@@ -1,9 +1,12 @@
+//! Defines ways in which a [`Move`] can be displayed.
+
 use std::fmt::Display;
 
 use crate::algorithm::puzzle_move::Move;
 
 /// Marker trait for structs that are used to display moves
 pub trait MoveDisplay {
+    /// Create a new [`MoveDisplay`] for displaying `mv`.
     #[must_use]
     fn new(mv: Move) -> Self;
 }

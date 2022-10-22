@@ -5,9 +5,13 @@ use thiserror::Error;
 /// The directions in which a piece can be moved.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Direction {
+    /// Moving a piece below the gap upwards.
     Up,
+    /// Moving a piece right of the gap to the left.
     Left,
+    /// Moving a piece above the gap downwards.
     Down,
+    /// Moving a piece left of the gap to the right.
     Right,
 }
 
@@ -47,11 +51,11 @@ impl Display for Direction {
     }
 }
 
-/// The error type for [`TryFrom<char>`].
+/// Error type for [`TryFrom<char>`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TryDirectionFromCharError {
     /// Found a character other than U, L, D, R.
-    #[error("InvalidCharacter: character {0} must be 'U', 'L', 'D', or 'R'")]
+    #[error("InvalidCharacter: character {0} must be one of 'U', 'L', 'D', 'R'")]
     InvalidCharacter(char),
 }
 

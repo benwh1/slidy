@@ -2,18 +2,30 @@ use std::cmp::Ordering;
 
 use thiserror::Error;
 
+/// Error type for [`Label`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum LabelError {
+    /// Returned when the given puzzle size is incompatible with the label.
     #[error("InvalidSize: {width}x{height} is not a valid size")]
-    InvalidSize { width: usize, height: usize },
+    InvalidSize {
+        /// Width of the puzzle.
+        width: usize,
+        /// Height of the puzzle.
+        height: usize,
+    },
 
+    /// Returned when the `(x, y)` position is outside the bounds of the puzzle.
     #[error(
         "PositionOutOfBounds: position ({x}, {y}) is out of bounds on a {width}x{height} puzzle."
     )]
     PositionOutOfBounds {
+        /// Width of the puzzle.
         width: usize,
+        /// Height of the puzzle.
         height: usize,
+        /// x coordinate of the position.
         x: usize,
+        /// y coordinate of the position.
         y: usize,
     },
 }

@@ -4,8 +4,10 @@ use thiserror::Error;
 
 use super::label::Label;
 
+/// Error type for [`Rect`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum RectError {
+    /// Returned when the width (`right - left`) or height (`bottom - top`) are negative.
     #[error("InvalidSize: width and height of the rectangle must be positive")]
     InvalidSize,
 }
@@ -149,7 +151,12 @@ pub enum RectPartitionError {
     /// Returned from [`RectPartition::new`] when the given vector of [`Rect`]s is not a partition
     /// of a large rectangle.
     #[error("NotPartition: the square at ({x}, {y}) is not covered exactly once")]
-    NotPartition { x: u32, y: u32 },
+    NotPartition {
+        /// x coordinate of a position that is not covered by exactly one rectangle.
+        x: u32,
+        /// y coordinate of a position that is not covered by exactly one rectangle.
+        y: u32,
+    },
 }
 
 impl RectPartition {

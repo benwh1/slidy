@@ -1,9 +1,12 @@
+//! Defines ways in which an [`Algorithm`] can be displayed.
+
 use super::puzzle_move::MoveDisplay;
 use crate::algorithm::algorithm::Algorithm;
 use std::{fmt::Display, marker::PhantomData};
 
 /// Marker trait for structs that are used to display algorithms
 pub trait AlgorithmDisplay<'a> {
+    /// Create a new [`AlgorithmDisplay`] for displaying `algorithm`.
     #[must_use]
     fn new(algorithm: &'a Algorithm) -> Self;
 }
