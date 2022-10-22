@@ -337,7 +337,7 @@ where
     fn can_apply_alg(&self, alg: &Algorithm) -> bool {
         let (mut gx, mut gy) = self.gap_position_xy();
 
-        for m in &alg.moves {
+        for m in alg.iter_moves() {
             let amount = m.amount.try_into().unwrap();
             let (new_gx, new_gy) = match m.direction {
                 Direction::Up => (Some(gx), gy.checked_add(amount)),
@@ -361,7 +361,7 @@ where
     /// This function does not check whether the algorithm is valid. If it is not, the function may
     /// panic or the puzzle may be transformed in an invalid way.
     fn apply_alg_unchecked(&mut self, alg: &Algorithm) {
-        for &m in &alg.moves {
+        for m in alg.iter_moves() {
             self.apply_move_unchecked(m);
         }
     }

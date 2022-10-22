@@ -15,7 +15,7 @@ use super::{
 /// A sequence of moves.
 #[derive(Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Algorithm {
-    pub moves: Vec<Move>,
+    moves: Vec<Move>,
 }
 
 impl Algorithm {
@@ -167,6 +167,11 @@ impl Algorithm {
         Self {
             moves: self.moves.repeat(n),
         }
+    }
+
+    /// Returns an iterator over the moves.
+    pub fn iter_moves(&self) -> impl Iterator<Item = Move> + '_ {
+        self.moves.iter().copied()
     }
 
     /// Helper function for creating a [`DisplaySpaced<DisplayLongSpaced>`] around `self`.

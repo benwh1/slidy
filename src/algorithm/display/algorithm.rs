@@ -41,9 +41,8 @@ impl<'a, T: MoveDisplay + Display> Display for DisplaySpaced<'a, T> {
         f.write_str(
             &self
                 .algorithm
-                .moves
-                .iter()
-                .map(|m| T::new(*m).to_string())
+                .iter_moves()
+                .map(|m| T::new(m).to_string())
                 .intersperse(" ".to_string())
                 .collect::<String>(),
         )
@@ -52,7 +51,7 @@ impl<'a, T: MoveDisplay + Display> Display for DisplaySpaced<'a, T> {
 
 impl<'a, T: MoveDisplay + Display> Display for DisplayUnspaced<'a, T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for &m in self.algorithm.moves.iter() {
+        for m in self.algorithm.iter_moves() {
             T::new(m).fmt(f)?;
         }
         Ok(())
