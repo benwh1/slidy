@@ -10,8 +10,8 @@ use crate::algorithm::{
 /// A (possibly multi-tile) move of a puzzle. Contains a direction and an amount.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Move {
-    pub direction: Direction,
-    pub amount: u32,
+    pub(crate) direction: Direction,
+    pub(crate) amount: u32,
 }
 
 /// Represents the sum of two moves.
@@ -46,6 +46,18 @@ impl Move {
         } else {
             Ok(Self { direction, amount })
         }
+    }
+
+    /// Returns the direction of the move.
+    #[must_use]
+    pub fn direction(&self) -> Direction {
+        self.direction
+    }
+
+    /// Returns the number of pieces moved.
+    #[must_use]
+    pub fn amount(&self) -> u32 {
+        self.amount
     }
 
     /// Returns the inverse of a move. This is given by taking the inverse of the direction and
