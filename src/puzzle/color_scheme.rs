@@ -2,7 +2,7 @@ use palette::rgb::Rgba;
 use thiserror::Error;
 
 use crate::puzzle::{
-    coloring::coloring::Coloring,
+    coloring::Coloring,
     label::{label::Label, rect_partition::RectPartition},
 };
 

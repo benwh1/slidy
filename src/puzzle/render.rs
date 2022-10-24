@@ -13,7 +13,7 @@ use thiserror::Error;
 
 use super::{
     color_scheme::{ColorScheme, IndexedRecursiveScheme, Scheme},
-    coloring::coloring::Monochrome,
+    coloring::Monochrome,
     label::label::Trivial,
     sliding_puzzle::SlidingPuzzle,
 };
