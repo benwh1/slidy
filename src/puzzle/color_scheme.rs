@@ -6,6 +6,25 @@ use crate::puzzle::{
     label::{label::Label, rect_partition::RectPartition},
 };
 
+/// Error type for [`ColorScheme`].
+#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ColorSchemeError {
+    /// Returned from [`ColorScheme::color`] when [`ColorScheme::is_valid_size`] returns false.
+    #[error("InvalidSize: {width}x{height} is not a valid size")]
+    InvalidSize { width: usize, height: usize },
+
+    /// Returned from [`ColorScheme::color`] when [`ColorScheme::is_valid_size`] returns false.
+    #[error(
+        "PositionOutOfBounds: position ({x}, {y}) is out of bounds on a {width}x{height} puzzle."
+    )]
+    PositionOutOfBounds {
+        width: usize,
+        height: usize,
+        x: usize,
+        y: usize,
+    },
+}
+
 pub trait ColorScheme {
     #[must_use]
     fn is_valid_size(&self, width: usize, height: usize) -> bool;
@@ -14,11 +33,24 @@ pub trait ColorScheme {
     fn color_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> Rgba;
 
     #[must_use]
-    fn color(&self, width: usize, height: usize, x: usize, y: usize) -> Option<Rgba> {
-        if x < width && y < height {
-            Some(self.color_unchecked(width, height, x, y))
+    fn color(
+        &self,
+        width: usize,
+        height: usize,
+        x: usize,
+        y: usize,
+    ) -> Result<Rgba, ColorSchemeError> {
+        if !self.is_valid_size(width, height) {
+            Err(ColorSchemeError::InvalidSize { width, height })
+        } else if x >= width || y >= height {
+            Err(ColorSchemeError::PositionOutOfBounds {
+                width,
+                height,
+                x,
+                y,
+            })
         } else {
-            None
+            Ok(self.color_unchecked(width, height, x, y))
         }
     }
 }
@@ -54,6 +86,15 @@ pub enum RecursiveSchemeError {
         num_rects: usize,
         num_subschemes: usize,
     },
+
+    #[error("InvalidSubschemeSize: puzzle size {w}x{h} is not valid for subscheme at index {subscheme_idx}",
+        w = rect_size.0,
+        h = rect_size.1
+    )]
+    InvalidSubschemeSize {
+        subscheme_idx: usize,
+        rect_size: (u32, u32),
+    },
 }
 
 pub struct RecursiveScheme {
@@ -68,16 +109,25 @@ impl RecursiveScheme {
         partition: RectPartition,
         subschemes: Vec<Self>,
     ) -> Result<Self, RecursiveSchemeError> {
-        if partition.num_rects() == subschemes.len() {
+        if partition.num_rects() != subschemes.len() {
+            Err(RecursiveSchemeError::IncompatiblePartitionAndSubschemes {
+                num_rects: partition.num_rects(),
+                num_subschemes: subschemes.len(),
+            })
+        } else if let Some(idx) = subschemes
+            .iter()
+            .zip(partition.rects.iter())
+            .position(|(s, r)| !s.is_valid_size(r.width() as usize, r.height() as usize))
+        {
+            Err(RecursiveSchemeError::InvalidSubschemeSize {
+                subscheme_idx: idx,
+                rect_size: partition.rects[idx].size(),
+            })
+        } else {
             Ok(Self {
                 scheme,
                 partition: Some(partition),
                 subschemes,
-            })
-        } else {
-            Err(RecursiveSchemeError::IncompatiblePartitionAndSubschemes {
-                num_rects: partition.num_rects(),
-                num_subschemes: subschemes.len(),
             })
         }
     }
@@ -93,15 +143,14 @@ impl RecursiveScheme {
 
     #[must_use]
     pub fn height(&self) -> u32 {
-        if self.subschemes.is_empty() {
-            1
-        } else {
-            1 + self.subschemes[0].height()
-        }
+        1 + self
+            .subschemes
+            .iter()
+            .map(|s| s.height())
+            .max()
+            .unwrap_or_default()
     }
-}
 
-impl RecursiveScheme {
     #[must_use]
     pub fn color_at_layer(
         &self,
@@ -131,6 +180,16 @@ impl RecursiveScheme {
         } else {
             None
         }
+    }
+}
+
+impl ColorScheme for RecursiveScheme {
+    fn is_valid_size(&self, width: usize, height: usize) -> bool {
+        self.scheme.is_valid_size(width, height)
+    }
+
+    fn color_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> Rgba {
+        self.scheme.color_unchecked(width, height, x, y)
     }
 }
 
