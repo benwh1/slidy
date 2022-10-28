@@ -32,7 +32,6 @@ pub trait ColorScheme {
     #[must_use]
     fn color_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> Rgba;
 
-    #[must_use]
     fn color(
         &self,
         width: usize,

@@ -278,7 +278,7 @@ impl<'a> Renderer<'a> {
         };
 
         let mut doc = Document::new()
-            .add(Style::new(&style_str))
+            .add(Style::new(style_str))
             .set("width", image_w)
             .set("height", image_h);
 

@@ -25,7 +25,6 @@ pub struct Rect {
 
 impl Rect {
     /// Creates a new [`Rect`] given the coordinates of the top left and bottom right points.
-    #[must_use]
     pub fn new(top_left: (u32, u32), bottom_right: (u32, u32)) -> Result<Self, RectError> {
         let (top, left, bottom, right) = (top_left.1, top_left.0, bottom_right.1, bottom_right.0);
         if bottom > top && right > left {

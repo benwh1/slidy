@@ -278,11 +278,11 @@ impl Label for SplitFringe {
         // Is it in the row part or the horizontal part?
         let vertical_part = x < y;
 
-        2 * fringe + if vertical_part { 1 } else { 0 }
+        2 * fringe + usize::from(vertical_part)
     }
 
     fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
-        2 * width.min(height) - if height > width { 0 } else { 1 }
+        2 * width.min(height) - usize::from(height <= width)
     }
 }
 
@@ -428,7 +428,7 @@ impl Label for Spiral {
     fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
         // 4 * number of rectangles of width and height > 1, plus 1 if the innermost rectangle has
         // width or height 1.
-        4 * width.min(height).div_floor(2) + if width.min(height) % 2 == 1 { 1 } else { 0 }
+        4 * width.min(height).div_floor(2) + width.min(height) % 2
     }
 }
 

@@ -3,7 +3,6 @@
 #![feature(int_roundings)]
 #![feature(iter_intersperse)]
 #![feature(let_chains)]
-#![feature(let_else)]
 #![feature(slice_group_by)]
 #![feature(test)]
 #![allow(clippy::module_inception)]
