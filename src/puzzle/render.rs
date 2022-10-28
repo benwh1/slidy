@@ -43,7 +43,7 @@ impl Borders {
         Self {
             scheme: Scheme::new(
                 Box::new(Trivial),
-                Box::new(Monochrome::new(Rgba::new(1.0, 1.0, 1.0, 1.0))),
+                Box::new(Monochrome::new(Rgba::new(0.0, 0.0, 0.0, 1.0))),
             )
             .into(),
             thickness: 1.0,
