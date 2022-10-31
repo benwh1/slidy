@@ -8,11 +8,14 @@ use super::{
     sliding_puzzle::SlidingPuzzle,
 };
 
+/// Trait for defining whether a puzzle is solvable with respect to a [`Label`]. Any puzzle that
+/// has at least two pieces with the same label is always solvable.
 pub trait Solvable<Piece, Puzzle>
 where
     Piece: PrimInt,
     Puzzle: SlidingPuzzle<Piece>,
 {
+    /// Checks if the puzzle is solvable.
     #[must_use]
     fn solvable(puzzle: &Puzzle) -> bool;
 }

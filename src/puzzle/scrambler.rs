@@ -3,19 +3,24 @@ use crate::algorithm::{direction::Direction, puzzle_move::Move};
 use num_traits::PrimInt;
 use rand::Rng;
 
+/// Trait defining a scrambling algorithm.
 pub trait Scrambler<P, Piece>
 where
     P: SlidingPuzzle<Piece>,
     Piece: PrimInt,
 {
+    /// Scrambles the puzzle using [`rand::thread_rng`].
     fn scramble(&self, puzzle: &mut P) {
         let mut rng = rand::thread_rng();
         self.scramble_with_rng(puzzle, &mut rng);
     }
 
+    /// Scrambles the puzzle using a given [`Rng`].
     fn scramble_with_rng<R: Rng>(&self, puzzle: &mut P, rng: &mut R);
 }
 
+/// Random state scrambler. Scrambles the puzzle in such a way that every solvable state is equally
+/// likely to occur.
 pub struct RandomState;
 
 impl<P, Piece> Scrambler<P, Piece> for RandomState
@@ -53,9 +58,16 @@ where
     }
 }
 
+/// Scrambles the puzzle by applying a fixed number of random single-tile moves.
 pub struct RandomMoves {
+    /// Number of random moves to apply.
     pub moves: u64,
+    /// Are cancelling moves allowed? E.g. If one move of the scramble is R, is the next move
+    /// allowed to be L? If `allow_cancellation` is false, the L move will not be allowed.
     pub allow_cancellation: bool,
+    /// Are unapplyable moves counted? E.g. If the first generated move of the scramble is L (which
+    /// can not be applied to the puzzle), should this be counted towards the total move count? If
+    /// `require_applyable` is true, the L move will not be counted.
     pub require_applyable: bool,
 }
 
@@ -83,7 +95,10 @@ where
     }
 }
 
+/// Scrambler that applies a single cycle of pieces to the puzzle. If `length` is even, the last
+/// two pieces in the puzzle will also be swapped to make it solvable.
 pub struct Cycle {
+    /// Length of the cycle.
     pub length: u64,
 }
 

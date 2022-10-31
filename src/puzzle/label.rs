@@ -4,6 +4,8 @@ pub mod scaled;
 pub mod symmetry;
 
 pub mod labels {
+    //! Re-exports the [`Label`] trait and all implementations.
+
     pub use super::{
         label::{
             BijectiveLabel, ConcentricRectangles, Diagonals, Fringe, FringeGrids, Label,

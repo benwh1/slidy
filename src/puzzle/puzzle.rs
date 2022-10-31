@@ -7,6 +7,7 @@ use regex::Regex;
 use std::{collections::HashSet, fmt::Display, num::ParseIntError, str::FromStr};
 use thiserror::Error;
 
+/// A sliding puzzle, with an implementation of the [`SlidingPuzzle`] trait.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Puzzle {
     pieces: Vec<u32>,
@@ -15,25 +16,37 @@ pub struct Puzzle {
     gap: usize,
 }
 
+/// Error type for [`Puzzle`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum PuzzleError {
+    /// Returned when the width and height are not both greater than zero.
     #[error("InvalidSize: width ({width}) and height ({height}) must both be at least 1")]
-    InvalidSize { width: usize, height: usize },
+    InvalidSize {
+        /// Width of the puzzle.
+        width: usize,
+        /// Height of the puzzle.
+        height: usize,
+    },
 
+    /// Returned from [`Puzzle::new_from_grid`] when the given grid is empty.
     #[error("Empty: grid is empty")]
     Empty,
 
+    /// Returned when the puzzle has rows of different lengths.
     #[error("UnequalRowLengths: all row lengths must be equal")]
     UnequalRowLengths,
 
+    /// Returned when the puzzle has a piece out of range (0 to `width * height - 1`).
     #[error("PieceOutOfRange: piece {0} is out of range")]
     PieceOutOfRange(u32),
 
+    /// Returned when the puzzle has multiple pieces with the same number.
     #[error("DuplicatePiece: piece {0} appears more than once")]
     DuplicatePiece(u32),
 }
 
 impl Puzzle {
+    /// Create a new [`Puzzle`] of a given size in the solved state.
     pub fn new(width: usize, height: usize) -> Result<Self, PuzzleError> {
         if width < 1 || height < 1 {
             Err(PuzzleError::InvalidSize { width, height })
@@ -51,6 +64,7 @@ impl Puzzle {
         }
     }
 
+    /// Create a new [`Puzzle`] from a 2D grid of numbers.
     pub fn new_from_grid(grid: Vec<Vec<u32>>) -> Result<Self, PuzzleError> {
         if grid.is_empty() {
             return Err(PuzzleError::Empty);
@@ -101,11 +115,13 @@ impl Puzzle {
         })
     }
 
+    /// Equivalent to [`DisplayInline::new`].
     #[must_use]
     pub fn display_inline(&self) -> DisplayInline<u32, Self> {
         DisplayInline::new(self)
     }
 
+    /// Equivalent to [`DisplayGrid::new`].
     #[must_use]
     pub fn display_grid(&self) -> DisplayGrid<u32, Self> {
         DisplayGrid::new(self)
@@ -149,14 +165,18 @@ impl Display for Puzzle {
     }
 }
 
+/// Error type for [`Puzzle::from_str`].
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 pub enum ParsePuzzleError {
+    /// Returned when an unexpected character is found.
     #[error("InvalidCharacter: character {0} is invalid")]
     InvalidCharacter(char),
 
+    /// Returned when an integer parse fails.
     #[error("ParseIntError: {0}")]
     ParseIntError(ParseIntError),
 
+    /// Returned when the string is parsed successfully, but creating a [`Puzzle`] fails.
     #[error("PuzzleError: {0}")]
     PuzzleError(PuzzleError),
 }

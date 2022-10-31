@@ -1,3 +1,5 @@
+//! Defines the [`Scaled`] label modifier.
+
 use thiserror::Error;
 
 use super::label::Label;

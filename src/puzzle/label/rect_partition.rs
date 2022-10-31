@@ -1,3 +1,5 @@
+//! Defines the [`RectPartition`] label.
+
 use std::{collections::BTreeMap, ops::Range};
 
 use thiserror::Error;

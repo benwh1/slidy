@@ -1,3 +1,5 @@
+//! Defines the [`Label`] trait and several implementations.
+
 use std::cmp::Ordering;
 
 use thiserror::Error;

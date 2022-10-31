@@ -2,7 +2,9 @@ use crate::puzzle::{label::label::Label, sliding_puzzle::SlidingPuzzle};
 use itertools::Itertools;
 use num_traits::PrimInt;
 
+/// Defines a solved state.
 pub trait SolvedState {
+    /// Checks if `puzzle` is solved.
     #[must_use]
     fn is_solved<Piece, Puzzle>(&self, puzzle: &Puzzle) -> bool
     where

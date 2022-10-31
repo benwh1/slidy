@@ -1,3 +1,5 @@
+//! Defines ways in which implementations of [`SlidingPuzzle`] can be displayed.
+
 use num_traits::PrimInt;
 
 use crate::puzzle::sliding_puzzle::SlidingPuzzle;
@@ -21,6 +23,7 @@ macro_rules! define_display {
                 Piece: PrimInt,
                 Puzzle: SlidingPuzzle<Piece>,
             {
+                #[doc = concat!("Create a new [`", stringify!($name), "`] for displaying `puzzle`.")]
                 #[must_use]
                 pub fn new(puzzle: &'a Puzzle) -> Self {
                     Self {
@@ -33,8 +36,47 @@ macro_rules! define_display {
     };
 }
 
-define_display!(DisplayGrid);
-define_display!(DisplayInline);
+define_display!(
+    /// Displays the puzzle in a two dimensional grid with the numbers right-aligned.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// #![feature(iter_intersperse)]
+    ///
+    /// use slidy::puzzle::{display::DisplayGrid, puzzle::Puzzle};
+    ///
+    /// fn main() {
+    ///     let p = Puzzle::default();
+    ///     let s = DisplayGrid::new(&p).to_string();
+    ///     let rows = [
+    ///         " 1  2  3  4",
+    ///         " 5  6  7  8",
+    ///         " 9 10 11 12",
+    ///         "13 14 15  0",
+    ///     ];
+    ///     // Combine `rows` into a `String`, separated by new lines.
+    ///     let expected = rows.into_iter().intersperse("\n").collect::<String>();
+    ///     assert_eq!(s, expected);
+    /// }
+    /// ```
+    DisplayGrid,
+    /// Displays the puzzle on a single line with numbers separated by spaces, and rows separated
+    /// by forward slashes.
+    /// # Example
+    ///
+    /// ```
+    /// use slidy::puzzle::{display::DisplayInline, puzzle::Puzzle};
+    ///
+    /// fn main() {
+    ///     let p = Puzzle::default();
+    ///     let s = DisplayInline::new(&p).to_string();
+    ///     let expected = "1 2 3 4/5 6 7 8/9 10 11 12/13 14 15 0".to_string();
+    ///     assert_eq!(s, expected);
+    /// }
+    /// ```
+    DisplayInline,
+);
 
 impl<Piece, Puzzle> Display for DisplayGrid<'_, Piece, Puzzle>
 where

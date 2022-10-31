@@ -1,3 +1,5 @@
+//! Defines the 8 symmetries of a square as label modifiers.
+
 use super::label::{BijectiveLabel, Label};
 
 /// The identity symmetry. This does nothing and is only included for completeness.

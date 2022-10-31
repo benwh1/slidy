@@ -18,26 +18,49 @@ use super::{
     sliding_puzzle::SlidingPuzzle,
 };
 
+/// Error type for [`Renderer`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum RendererError {
+    /// Returned when the given puzzle size is incompatible with the label.
     #[error(
         "IncompatibleLabel: puzzle size ({width}x{height}) can not be used with the given label"
     )]
-    IncompatibleLabel { width: usize, height: usize },
+    IncompatibleLabel {
+        /// Width of the puzzle.
+        width: usize,
+        /// Height of the puzzle.
+        height: usize,
+    },
 }
 
+/// A font that can be used with [`Renderer`].
 pub enum Font<'a> {
+    /// A font installed on the system, specified by the font name.
     Family(&'a str),
-    Url { path: &'a str, format: &'a str },
-    Base64 { data: &'a str, format: &'a str },
+    /// A font defined by a URL (including a local file path) and a font format.
+    Url {
+        /// Path to the font
+        path: &'a str,
+        /// Format of the font file.
+        format: &'a str,
+    },
+    /// A font defined by base 64 data and a font format.
+    Base64 {
+        /// Base 64 font data.
+        data: &'a str,
+        /// Format of the font data.
+        format: &'a str,
+    },
 }
 
+/// Struct containing the information needed to draw the borders of the puzzle.
 pub struct Borders {
     scheme: IndexedRecursiveScheme,
     thickness: f32,
 }
 
 impl Borders {
+    /// Create a new [`Borders`] instance. The default is a 1 pixel wide black border.
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -50,12 +73,18 @@ impl Borders {
         }
     }
 
+    /// Set the border color scheme.
+    ///
+    /// If the main color scheme (see [`Renderer::scheme`]) has a subscheme, and the subscheme
+    /// style (see [`Renderer::subscheme_style`]) is [`SubschemeStyle::BorderColor`], then the
+    /// subscheme color will override the border scheme.
     #[must_use]
     pub fn scheme<S: Into<IndexedRecursiveScheme>>(mut self, scheme: S) -> Self {
         self.scheme = scheme.into();
         self
     }
 
+    /// Set the border thickness.
     #[must_use]
     pub fn thickness(mut self, thickness: f32) -> Self {
         self.thickness = thickness;
@@ -69,13 +98,18 @@ impl Default for Borders {
     }
 }
 
+/// Ways that the subscheme can be displayed on the puzzle.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum SubschemeStyle {
+    /// Draw the subscheme as a small rectangle at the bottom of each piece.
     Rectangle,
+    /// Display the subscheme using the text color.
     TextColor,
+    /// Display the subscheme using the border color.
     BorderColor,
 }
 
+/// Draws a [`SlidingPuzzle`] as an SVG image.
 pub struct Renderer<'a> {
     scheme: IndexedRecursiveScheme,
     text_scheme: IndexedRecursiveScheme,
@@ -92,6 +126,7 @@ pub struct Renderer<'a> {
 }
 
 impl<'a> Renderer<'a> {
+    /// Create a new [`Renderer`].
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -118,78 +153,95 @@ impl<'a> Renderer<'a> {
         }
     }
 
+    /// Set the color scheme.
     #[must_use]
     pub fn scheme<S: Into<IndexedRecursiveScheme>>(mut self, scheme: S) -> Self {
         self.scheme = scheme.into();
         self
     }
 
+    /// Set the text color scheme.
+    ///
+    /// If the main color scheme (see [`Renderer::scheme`]) has a subscheme, and the subscheme
+    /// style (see [`Renderer::subscheme_style`]) is [`SubschemeStyle::TextColor`], then the
+    /// subscheme color will override the text scheme.
     #[must_use]
     pub fn text_scheme<S: Into<IndexedRecursiveScheme>>(mut self, scheme: S) -> Self {
         self.text_scheme = scheme.into();
         self
     }
 
+    /// Set the borders.
     #[must_use]
     pub fn borders(mut self, borders: Borders) -> Self {
         self.borders = Some(borders);
         self
     }
 
+    /// Set the font.
     #[must_use]
     pub fn font(mut self, font: Font<'a>) -> Self {
         self.font = font;
         self
     }
 
+    /// Set the tile size in pixels.
     #[must_use]
     pub fn tile_size(mut self, size: f32) -> Self {
         self.tile_size = size.max(0.0);
         self
     }
 
+    /// Set the rounding radius of the tile corners in pixels.
     #[must_use]
     pub fn tile_rounding(mut self, rounding: f32) -> Self {
         self.tile_rounding = rounding.max(0.0);
         self
     }
 
+    /// Set the gap between tiles in pixels.
     #[must_use]
     pub fn tile_gap(mut self, gap: f32) -> Self {
         self.tile_gap = gap.max(0.0);
         self
     }
 
+    /// Set the font size.
     #[must_use]
     pub fn font_size(mut self, size: f32) -> Self {
         self.font_size = size.max(0.0);
         self
     }
 
+    /// Set the position of the text within each tile, as a fraction of the tile size
     #[must_use]
     pub fn text_position(mut self, pos: (f32, f32)) -> Self {
         self.text_position = pos;
         self
     }
 
+    /// Set the padding around the edge of the puzzle in pixels.
     #[must_use]
     pub fn padding(mut self, padding: f32) -> Self {
         self.padding = padding;
         self
     }
 
+    /// Set the subscheme style.
     #[must_use]
     pub fn subscheme_style(mut self, style: SubschemeStyle) -> Self {
         self.subscheme_style = Some(style);
         self
     }
 
+    /// Set the background color.
     #[must_use]
     pub fn background_color(mut self, color: Rgba) -> Self {
         self.background_color = color;
         self
     }
 
+    /// Draws `puzzle` as an SVG image.
     pub fn svg<Piece, P>(&self, puzzle: &P) -> Result<Document, RendererError>
     where
         Piece: PrimInt + Display,

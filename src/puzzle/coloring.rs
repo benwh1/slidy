@@ -1,3 +1,5 @@
+//! Defines the [`Coloring`] trait and several implementations.
+
 use palette::{rgb::Rgba, Hsl, Hsla, IntoColor};
 use thiserror::Error;
 
