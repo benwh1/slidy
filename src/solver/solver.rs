@@ -57,25 +57,28 @@ impl From<&Stack> for Algorithm {
 }
 
 /// An optimal puzzle solver.
-pub struct Solver<'a, Piece, Puzzle>
+pub struct Solver<Piece, Puzzle>
 where
     Piece: PrimInt,
     Puzzle: SlidingPuzzle<Piece>,
 {
-    puzzle: &'a mut Puzzle,
+    puzzle: Puzzle,
     stack: Stack,
     phantom_piece: PhantomData<Piece>,
 }
 
-impl<'a, Piece, Puzzle> Solver<'a, Piece, Puzzle>
+impl<Piece, Puzzle> Solver<Piece, Puzzle>
 where
     Piece: PrimInt,
     Puzzle: SlidingPuzzle<Piece>,
 {
     /// Constructs a new [`Solver`] for solving `puzzle`.
-    pub fn new(puzzle: &'a mut Puzzle) -> Self {
+    pub fn new(puzzle: &Puzzle) -> Self
+    where
+        Puzzle: Clone,
+    {
         Self {
-            puzzle,
+            puzzle: puzzle.clone(),
             stack: Stack::default(),
             phantom_piece: PhantomData,
         }
@@ -89,7 +92,7 @@ where
             return false;
         }
 
-        let bound: u8 = ManhattanDistance.bound(self.puzzle);
+        let bound: u8 = ManhattanDistance.bound(&self.puzzle);
 
         if bound > depth {
             return false;
@@ -120,7 +123,7 @@ where
 
     /// Solves the puzzle.
     pub fn solve(&mut self) -> Option<Algorithm> {
-        let bound: u8 = ManhattanDistance.bound(self.puzzle);
+        let bound: u8 = ManhattanDistance.bound(&self.puzzle);
         for b in (bound..u8::MAX).step_by(2) {
             if self.dfs(b) {
                 let mut solution: Algorithm = (&self.stack).into();
