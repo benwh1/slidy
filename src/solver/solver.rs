@@ -3,6 +3,7 @@
 use std::marker::PhantomData;
 
 use num_traits::{AsPrimitive, PrimInt, Unsigned};
+use thiserror::Error;
 
 use crate::{
     algorithm::{algorithm::Algorithm, direction::Direction, puzzle_move::Move},
@@ -54,6 +55,14 @@ impl From<&Stack> for Algorithm {
                 .collect(),
         )
     }
+}
+
+/// Error type for [`Solver`].
+#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum SolverError {
+    /// Returned when the search finished without finding a solution.
+    #[error("NoSolutionFound: no solution was found within the range searched.")]
+    NoSolutionFound,
 }
 
 /// An optimal puzzle solver using a [`Heuristic`] `H` to speed up the search. The type parameter
@@ -149,19 +158,19 @@ where
     }
 
     /// Solves the puzzle.
-    pub fn solve(&mut self) -> Option<Algorithm> {
+    pub fn solve(&mut self) -> Result<Algorithm, SolverError> {
         let mut depth = self.heuristic.bound(&self.puzzle);
         loop {
             if self.dfs(depth) {
                 let mut solution: Algorithm = (&self.stack).into();
                 solution.simplify();
-                return Some(solution);
+                return Ok(solution);
             }
 
             if let Some(d) = depth.checked_add(&2u8.as_()) {
                 depth = d;
             } else {
-                return None;
+                return Err(SolverError::NoSolutionFound);
             }
         }
     }
