@@ -90,7 +90,6 @@ where
     fn dfs(&mut self, depth: u8) -> bool {
         if depth == 0 {
             if self.puzzle.is_solved() {
-                println!("{}", Algorithm::from(&self.stack));
                 return true;
             }
             return false;
@@ -126,12 +125,15 @@ where
     }
 
     /// Solves the puzzle.
-    pub fn solve(&mut self) {
+    pub fn solve(&mut self) -> Option<Algorithm> {
         let bound: u8 = ManhattanDistance.bound(self.puzzle);
         for b in (bound..u8::MAX).step_by(2) {
             if self.dfs(b) {
-                break;
+                let mut solution: Algorithm = (&self.stack).into();
+                solution.simplify();
+                return Some(solution);
             }
         }
+        None
     }
 }
