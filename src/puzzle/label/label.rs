@@ -99,7 +99,7 @@ macro_rules! define_label {
             $(#[$annot])*
             ///
             /// Valid with all puzzle sizes.
-            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+            #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
             pub struct $name;
         )*
     };

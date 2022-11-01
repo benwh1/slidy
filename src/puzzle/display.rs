@@ -9,6 +9,7 @@ macro_rules! define_display {
     ($($(#[$annot:meta])* $name:ident),* $(,)?) => {
         $(
             $(#[$annot])*
+            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
             pub struct $name<'a, Piece, Puzzle>
             where
                 Piece: PrimInt,

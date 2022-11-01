@@ -35,7 +35,7 @@ pub enum ColorListError {
 }
 
 /// A [`Coloring`] that always produces the same color.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Monochrome {
     color: Rgba,
 }
@@ -47,19 +47,19 @@ pub struct ColorList {
 }
 
 /// A [`Coloring`] that produces rainbow colors.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Rainbow;
 
 /// Similar to [`Rainbow`] but produces slightly different colors.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RainbowFull;
 
 /// Similar to [`Rainbow`] but produces brighter, more pastel-like colors.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RainbowBright;
 
 /// Combination of [`RainbowBright`] and [`RainbowFull`].
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RainbowBrightFull;
 
 /// Given a [`Coloring`] `T`, makes the colors brighter when `label` is even.
@@ -101,6 +101,14 @@ impl ColorList {
 impl Coloring for ColorList {
     fn color_unchecked(&self, label: usize, _num_labels: usize) -> Rgba {
         self.colors[label % self.colors.len()]
+    }
+}
+
+impl Default for ColorList {
+    fn default() -> Self {
+        Self {
+            colors: vec![Rgba::default()],
+        }
     }
 }
 

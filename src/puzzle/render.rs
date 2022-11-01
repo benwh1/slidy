@@ -36,6 +36,7 @@ pub enum RendererError {
 }
 
 /// A font that can be used with [`Renderer`].
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Font<'a> {
     /// A font installed on the system, specified by the font name.
     Family(&'a str),
@@ -101,9 +102,12 @@ impl Default for Borders {
 }
 
 /// Ways that the subscheme can be displayed on the puzzle.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+///
+/// The default value is [`SubschemeStyle::Rectangle`].
+#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum SubschemeStyle {
     /// Draw the subscheme as a small rectangle at the bottom of each piece.
+    #[default]
     Rectangle,
     /// Display the subscheme using the text color.
     TextColor,

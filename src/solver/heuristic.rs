@@ -18,6 +18,7 @@ where
 }
 
 /// Manhattan distance heuristic.
+#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ManhattanDistance;
 
 impl<Piece, Puzzle, T> Heuristic<Piece, Puzzle, T> for ManhattanDistance

@@ -12,6 +12,7 @@ use crate::{
 
 use super::heuristic::Heuristic;
 
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct Stack {
     stack: [Direction; 256],
     idx: usize,
@@ -68,6 +69,7 @@ pub enum SolverError {
 /// An optimal puzzle solver using a [`Heuristic`] `H` to speed up the search. The type parameter
 /// `T` should be chosen such that the maximum length of a potential solution is less than the
 /// maximum value of a `T`. In almost all cases, `T = u8` should be used.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Solver<'a, Piece, Puzzle, T, H>
 where
     Piece: PrimInt,

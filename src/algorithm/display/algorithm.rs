@@ -15,6 +15,7 @@ macro_rules! define_display {
     ($(#[$annot:meta] $name:ident),* $(,)?) => {
         $(
             #[$annot]
+            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
             pub struct $name<'a, T: MoveDisplay + Display> {
                 algorithm: &'a Algorithm,
                 phantom_t: PhantomData<T>,

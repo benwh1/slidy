@@ -2,22 +2,34 @@
 
 use super::label::{BijectiveLabel, Label};
 
-/// The identity symmetry. This does nothing and is only included for completeness.
-pub struct Id<L: Label>(pub L);
-/// Rotation clockwise by 90 degrees.
-pub struct RotateCw<L: Label>(pub L);
-/// Rotation anticlockwise by 90 degrees.
-pub struct RotateCcw<L: Label>(pub L);
-/// Rotation by 180 degrees.
-pub struct RotateHalf<L: Label>(pub L);
-/// Reflection in a vertical line.
-pub struct ReflectVertical<L: Label>(pub L);
-/// Reflection in a horizontal line.
-pub struct ReflectHorizontal<L: Label>(pub L);
-/// Reflection in the diagonal line from top left to bottom right.
-pub struct ReflectDiagonal<L: Label>(pub L);
-/// Reflection in the diagonal line from bottom left to top right.
-pub struct ReflectAntidiagonal<L: Label>(pub L);
+macro_rules! define_sym {
+    ($($(#[$annot:meta])* $name:ident),* $(,)?) => {
+        $(
+            $(#[$annot])*
+            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+            pub struct $name<L: Label>(pub L);
+        )*
+    };
+}
+
+define_sym!(
+    /// The identity symmetry. This does nothing and is only included for completeness.
+    Id,
+    /// Rotation clockwise by 90 degrees.
+    RotateCw,
+    /// Rotation anticlockwise by 90 degrees.
+    RotateCcw,
+    /// Rotation by 180 degrees.
+    RotateHalf,
+    /// Reflection in a vertical line.
+    ReflectVertical,
+    /// Reflection in a horizontal line.
+    ReflectHorizontal,
+    /// Reflection in the diagonal line from top left to bottom right.
+    ReflectDiagonal,
+    /// Reflection in the diagonal line from bottom left to top right.
+    ReflectAntidiagonal,
+);
 
 impl<L: Label> Label for Id<L> {
     fn is_valid_size(&self, width: usize, height: usize) -> bool {

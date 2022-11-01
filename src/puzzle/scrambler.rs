@@ -23,6 +23,7 @@ where
 
 /// Random state scrambler. Scrambles the puzzle in such a way that every solvable state is equally
 /// likely to occur.
+#[derive(Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RandomState;
 
 impl<P, Piece> Scrambler<P, Piece> for RandomState
@@ -61,6 +62,7 @@ where
 }
 
 /// Scrambles the puzzle by applying a fixed number of random single-tile moves.
+#[derive(Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RandomMoves {
     /// Number of random moves to apply.
     pub moves: u64,
@@ -99,6 +101,7 @@ where
 
 /// Scrambler that applies a single cycle of pieces to the puzzle. If `length` is even, the last
 /// two pieces in the puzzle will also be swapped to make it solvable.
+#[derive(Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Cycle {
     /// Length of the cycle.
     pub length: u64,
