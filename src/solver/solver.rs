@@ -2,14 +2,14 @@
 
 use std::marker::PhantomData;
 
-use num_traits::PrimInt;
+use num_traits::{AsPrimitive, PrimInt, Unsigned};
 
 use crate::{
     algorithm::{algorithm::Algorithm, direction::Direction, puzzle_move::Move},
     puzzle::sliding_puzzle::SlidingPuzzle,
 };
 
-use super::heuristic::{Heuristic, ManhattanDistance};
+use super::heuristic::Heuristic;
 
 struct Stack {
     stack: [Direction; 256],
@@ -56,43 +56,52 @@ impl From<&Stack> for Algorithm {
     }
 }
 
-/// An optimal puzzle solver.
-pub struct Solver<Piece, Puzzle>
+/// An optimal puzzle solver using a [`Heuristic`] `H` to speed up the search. The type parameter
+/// `T` should be chosen such that the maximum length of a potential solution is less than the
+/// maximum value of a `T`. In almost all cases, `T = u8` should be used.
+pub struct Solver<'a, Piece, Puzzle, T, H>
 where
     Piece: PrimInt,
-    Puzzle: SlidingPuzzle<Piece>,
+    Puzzle: SlidingPuzzle<Piece> + Clone,
+    T: PrimInt + Unsigned + 'static,
+    H: Heuristic<Piece, Puzzle, T>,
+    u8: AsPrimitive<T>,
 {
     puzzle: Puzzle,
     stack: Stack,
     phantom_piece: PhantomData<Piece>,
+    heuristic: &'a H,
+    phantom_t: PhantomData<T>,
 }
 
-impl<Piece, Puzzle> Solver<Piece, Puzzle>
+impl<'a, Piece, Puzzle, T, H> Solver<'a, Piece, Puzzle, T, H>
 where
     Piece: PrimInt,
-    Puzzle: SlidingPuzzle<Piece>,
+    Puzzle: SlidingPuzzle<Piece> + Clone,
+    T: PrimInt + Unsigned + 'static,
+    H: Heuristic<Piece, Puzzle, T>,
+    u8: AsPrimitive<T>,
 {
     /// Constructs a new [`Solver`] for solving `puzzle`.
-    pub fn new(puzzle: &Puzzle) -> Self
-    where
-        Puzzle: Clone,
-    {
+    pub fn new(puzzle: &Puzzle, heuristic: &'a H) -> Self {
         Self {
             puzzle: puzzle.clone(),
             stack: Stack::default(),
             phantom_piece: PhantomData,
+            heuristic,
+            phantom_t: PhantomData::<T>,
         }
     }
 
-    fn dfs(&mut self, depth: u8) -> bool {
-        if depth == 0 {
+    fn dfs(&mut self, depth: T) -> bool {
+        if depth == T::zero() {
             if self.puzzle.is_solved() {
                 return true;
             }
             return false;
         }
 
-        let bound: u8 = ManhattanDistance.bound(&self.puzzle);
+        let bound = self.heuristic.bound(&self.puzzle);
 
         if bound > depth {
             return false;
@@ -110,7 +119,7 @@ where
 
             self.stack.push(d);
 
-            if self.dfs(depth - 1) {
+            if self.dfs(depth - T::one()) {
                 return true;
             }
 
@@ -123,14 +132,19 @@ where
 
     /// Solves the puzzle.
     pub fn solve(&mut self) -> Option<Algorithm> {
-        let bound: u8 = ManhattanDistance.bound(&self.puzzle);
-        for b in (bound..u8::MAX).step_by(2) {
-            if self.dfs(b) {
+        let mut depth = self.heuristic.bound(&self.puzzle);
+        loop {
+            if self.dfs(depth) {
                 let mut solution: Algorithm = (&self.stack).into();
                 solution.simplify();
                 return Some(solution);
             }
+
+            if let Some(d) = depth.checked_add(&2u8.as_()) {
+                depth = d;
+            } else {
+                return None;
+            }
         }
-        None
     }
 }
