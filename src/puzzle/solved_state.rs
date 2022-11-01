@@ -1,5 +1,7 @@
-//! Defines the [`SolvedState` trait and implements it on some of the labels defined in
-//! [`crate::label::label`].
+//! Defines the [`SolvedState`] trait and implements it on some of the labels defined in
+//! [`slidy::label::label`].
+//!
+//! [`slidy::label::label`]: ../label/label/index.html
 
 use crate::puzzle::{label::label::Label, sliding_puzzle::SlidingPuzzle};
 use itertools::Itertools;

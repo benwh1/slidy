@@ -132,6 +132,7 @@
 #![deny(clippy::iter_not_returning_iterator)]
 #![deny(clippy::mod_module_files)]
 #![deny(missing_docs)]
+#![deny(rustdoc::broken_intra_doc_links)]
 
 pub mod algorithm;
 pub mod puzzle;

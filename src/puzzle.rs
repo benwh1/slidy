@@ -1,5 +1,7 @@
 //! Contains the main definition of a sliding puzzle as the [`SlidingPuzzle`] trait, and defines
 //! many properties of sliding puzzles.
+//!
+//! [`SlidingPuzzle`]: sliding_puzzle/trait.SlidingPuzzle.html
 
 pub mod color_scheme;
 pub mod coloring;
