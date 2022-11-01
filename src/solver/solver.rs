@@ -11,32 +11,6 @@ use crate::{
 
 use super::heuristic::{Heuristic, ManhattanDistance};
 
-/// An optimal puzzle solver.
-pub struct Solver<'a, Piece, Puzzle>
-where
-    Piece: PrimInt,
-    Puzzle: SlidingPuzzle<Piece>,
-{
-    puzzle: &'a mut Puzzle,
-    stack: Stack,
-    phantom_piece: PhantomData<Piece>,
-}
-
-impl<'a, Piece, Puzzle> Solver<'a, Piece, Puzzle>
-where
-    Piece: PrimInt,
-    Puzzle: SlidingPuzzle<Piece>,
-{
-    /// Constructs a new [`Solver`] for solving `puzzle`.
-    pub fn new(puzzle: &'a mut Puzzle) -> Self {
-        Self {
-            puzzle,
-            stack: Stack::default(),
-            phantom_piece: PhantomData,
-        }
-    }
-}
-
 struct Stack {
     stack: [Direction; 256],
     idx: usize,
@@ -82,11 +56,31 @@ impl From<&Stack> for Algorithm {
     }
 }
 
+/// An optimal puzzle solver.
+pub struct Solver<'a, Piece, Puzzle>
+where
+    Piece: PrimInt,
+    Puzzle: SlidingPuzzle<Piece>,
+{
+    puzzle: &'a mut Puzzle,
+    stack: Stack,
+    phantom_piece: PhantomData<Piece>,
+}
+
 impl<'a, Piece, Puzzle> Solver<'a, Piece, Puzzle>
 where
     Piece: PrimInt,
     Puzzle: SlidingPuzzle<Piece>,
 {
+    /// Constructs a new [`Solver`] for solving `puzzle`.
+    pub fn new(puzzle: &'a mut Puzzle) -> Self {
+        Self {
+            puzzle,
+            stack: Stack::default(),
+            phantom_piece: PhantomData,
+        }
+    }
+
     fn dfs(&mut self, depth: u8) -> bool {
         if depth == 0 {
             if self.puzzle.is_solved() {
