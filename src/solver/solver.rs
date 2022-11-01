@@ -74,6 +74,24 @@ where
     phantom_t: PhantomData<T>,
 }
 
+impl<'a, Piece, Puzzle, H> Solver<'a, Piece, Puzzle, u8, H>
+where
+    Piece: PrimInt,
+    Puzzle: SlidingPuzzle<Piece> + Clone,
+    H: Heuristic<Piece, Puzzle, u8>,
+{
+    /// Constructs a new [`Solver`] for solving `puzzle`.
+    pub fn new(puzzle: &Puzzle, heuristic: &'a H) -> Self {
+        Self {
+            puzzle: puzzle.clone(),
+            stack: Stack::default(),
+            phantom_piece: PhantomData,
+            heuristic,
+            phantom_t: PhantomData,
+        }
+    }
+}
+
 impl<'a, Piece, Puzzle, T, H> Solver<'a, Piece, Puzzle, T, H>
 where
     Piece: PrimInt,
@@ -83,7 +101,7 @@ where
     u8: AsPrimitive<T>,
 {
     /// Constructs a new [`Solver`] for solving `puzzle`.
-    pub fn new(puzzle: &Puzzle, heuristic: &'a H) -> Self {
+    pub fn new_with_t(puzzle: &Puzzle, heuristic: &'a H) -> Self {
         Self {
             puzzle: puzzle.clone(),
             stack: Stack::default(),
