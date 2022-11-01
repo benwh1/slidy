@@ -26,28 +26,28 @@
 //! }
 //! ```
 //!
-//! ## Generate an optimal random state scramble
+//! ## Find an optimal solution
 //!
 //! ```
+//! use std::str::FromStr;
+//!
 //! use slidy::{
-//!     puzzle::{
-//!         puzzle::Puzzle,
-//!         scrambler::{RandomState, Scrambler},
-//!     },
-//!     solver::solver::Solver,
+//!     puzzle::{puzzle::Puzzle, sliding_puzzle::SlidingPuzzle},
+//!     solver::{heuristic::ManhattanDistance, solver::Solver},
 //! };
 //!
-//! fn main() {
-//!     let mut puzzle = Puzzle::default();
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let mut puzzle = Puzzle::from_str("0 10 6 4/1 5 14 15/13 11 8 7/3 2 9 12")?;
 //!
-//!     let scrambler = RandomState;
-//!     scrambler.scramble(&mut puzzle);
+//!     let mut solver = Solver::new(&puzzle, &ManhattanDistance);
+//!     let solution = solver.solve()?;
 //!
-//!     let mut solver = Solver::new(&mut puzzle);
-//!     let solution = solver.solve().unwrap();
+//!     println!("Solution: {} ({} moves)", solution, solution.len());
 //!
-//!     println!("State: {}", puzzle);
-//!     println!("Scramble : {}", solution.inverse());
+//!     puzzle.apply_alg(&solution);
+//!     assert!(puzzle.is_solved());
+//!
+//!     Ok(())
 //! }
 //! ```
 //!
