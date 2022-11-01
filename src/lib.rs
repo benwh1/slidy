@@ -26,6 +26,26 @@
 //! }
 //! ```
 //!
+//! ## Generate random state scrambles
+//!
+//! ```
+//! use slidy::puzzle::{
+//!     puzzle::Puzzle,
+//!     scrambler::{RandomState, Scrambler},
+//! };
+//!
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let mut p = Puzzle::new(5, 5)?;
+//!
+//!     for _ in 0..10 {
+//!         RandomState.scramble(&mut p);
+//!         println!("{p}");
+//!     }
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
 //! ## Find an optimal solution
 //!
 //! ```
