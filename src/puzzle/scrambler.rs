@@ -1,3 +1,5 @@
+//! Defines the [`Scrambler`] trait and several implementations.
+
 use super::sliding_puzzle::SlidingPuzzle;
 use crate::algorithm::{direction::Direction, puzzle_move::Move};
 use num_traits::PrimInt;

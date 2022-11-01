@@ -1,3 +1,6 @@
+//! Defines the [`SlidingPuzzle`] trait, which is the main trait defining the properties of a
+//! sliding puzzle.
+
 use num_traits::PrimInt;
 
 use crate::{

@@ -1,3 +1,5 @@
+//! Defines the [`Move`] type.
+
 use std::{cmp::Ordering, fmt::Display, ops::Add};
 
 use thiserror::Error;

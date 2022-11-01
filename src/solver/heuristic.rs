@@ -1,18 +1,23 @@
+//! Defines the [`Heuristic`] trait and the [`ManhattanDistance`] heuristic.
+
 use itertools::Itertools;
 use num_traits::{PrimInt, Unsigned};
 
 use crate::puzzle::sliding_puzzle::SlidingPuzzle;
 
+/// Provides a function returning a lower bound on the number of moves needed to solve a puzzle.
 pub trait Heuristic<Piece, Puzzle, T>
 where
     Piece: PrimInt,
     Puzzle: SlidingPuzzle<Piece>,
     T: PrimInt + Unsigned,
 {
+    /// Returns a lower bound on the number of moves needed to solve `puzzle`.
     #[must_use]
     fn bound(&self, puzzle: &Puzzle) -> T;
 }
 
+/// Manhattan distance heuristic.
 pub struct ManhattanDistance;
 
 impl<Piece, Puzzle, T> Heuristic<Piece, Puzzle, T> for ManhattanDistance

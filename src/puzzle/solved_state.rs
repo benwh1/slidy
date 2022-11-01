@@ -1,3 +1,6 @@
+//! Defines the [`SolvedState` trait and implements it on some of the labels defined in
+//! [`crate::label::label`].
+
 use crate::puzzle::{label::label::Label, sliding_puzzle::SlidingPuzzle};
 use itertools::Itertools;
 use num_traits::PrimInt;

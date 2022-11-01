@@ -1,3 +1,5 @@
+//! Defines the [`Solver`] struct for computing optimal solutions.
+
 use std::marker::PhantomData;
 
 use num_traits::PrimInt;
@@ -9,6 +11,7 @@ use crate::{
 
 use super::heuristic::{Heuristic, ManhattanDistance};
 
+/// An optimal puzzle solver.
 pub struct Solver<'a, Piece, Puzzle>
 where
     Piece: PrimInt,
@@ -24,6 +27,7 @@ where
     Piece: PrimInt,
     Puzzle: SlidingPuzzle<Piece>,
 {
+    /// Constructs a new [`Solver`] for solving `puzzle`.
     pub fn new(puzzle: &'a mut Puzzle) -> Self {
         Self {
             puzzle,
@@ -121,6 +125,7 @@ where
         false
     }
 
+    /// Solves the puzzle.
     pub fn solve(&mut self) {
         let bound: u8 = ManhattanDistance.bound(self.puzzle);
         for b in (bound..u8::MAX).step_by(2) {

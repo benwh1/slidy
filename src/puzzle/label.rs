@@ -1,3 +1,5 @@
+//! Defines the [`Label`] trait and all implementations.
+
 pub mod label;
 pub mod rect_partition;
 pub mod scaled;

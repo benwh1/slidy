@@ -1,3 +1,6 @@
+//! Defines the [`Solvable`] trait and implements it on some of the labels defined in
+//! [`crate::label::label`].
+
 use num_traits::PrimInt;
 
 use super::{

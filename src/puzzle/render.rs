@@ -1,3 +1,5 @@
+//! Defines the [`Renderer`] struct for creating SVG images of [`SlidingPuzzle`]s.
+
 use std::fmt::Display;
 
 use num_traits::PrimInt;

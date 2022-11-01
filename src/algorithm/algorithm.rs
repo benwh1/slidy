@@ -1,3 +1,5 @@
+//! Defines the [`Algorithm`] type as a sequence of moves.
+
 use std::{cmp::Ordering, fmt::Display, ops::Add, str::FromStr};
 
 use thiserror::Error;

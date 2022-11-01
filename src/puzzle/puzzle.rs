@@ -1,3 +1,5 @@
+//! Defines an implementation of the [`SlidingPuzzle`] trait.
+
 use super::{
     display::{DisplayGrid, DisplayInline},
     sliding_puzzle::SlidingPuzzle,

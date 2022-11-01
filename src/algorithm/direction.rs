@@ -1,3 +1,5 @@
+//! Defines the [`Direction`] type.
+
 use rand::{distributions::Standard, prelude::Distribution};
 use std::fmt::{Display, Write};
 use thiserror::Error;
