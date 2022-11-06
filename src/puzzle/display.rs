@@ -148,3 +148,26 @@ mod tests {
         assert_eq!(s, "1 2 3 4/5 6 7 8/9 10 11 12/13 14 15 0");
     }
 }
+
+#[cfg(test)]
+mod benchmarks {
+    extern crate test;
+
+    use test::Bencher;
+
+    use crate::puzzle::puzzle::Puzzle;
+
+    use super::*;
+
+    #[bench]
+    fn bench_display_inline(b: &mut Bencher) {
+        let p = Puzzle::default();
+        b.iter(|| DisplayInline::new(&p).to_string());
+    }
+
+    #[bench]
+    fn bench_display_grid(b: &mut Bencher) {
+        let p = Puzzle::default();
+        b.iter(|| DisplayGrid::new(&p).to_string());
+    }
+}
