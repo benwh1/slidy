@@ -3,7 +3,10 @@
 use num_traits::PrimInt;
 
 use crate::puzzle::sliding_puzzle::SlidingPuzzle;
-use std::{fmt::Display, marker::PhantomData};
+use std::{
+    fmt::{Display, Write},
+    marker::PhantomData,
+};
 
 macro_rules! define_display {
     ($($(#[$annot:meta])* $name:ident),* $(,)?) => {
@@ -88,19 +91,20 @@ where
         let max_number = self.puzzle.num_pieces();
         let num_digits = max_number.ilog10() as usize + 1;
         let (w, h) = self.puzzle.size();
-        let mut s = String::new();
         for y in 0..h {
             for x in 0..w {
                 let n = self.puzzle.piece_at_xy_unchecked(x, y);
                 let a = format!("{n: >num_digits$}");
-                s.push_str(&a);
-                s.push(' ');
+                f.write_str(&a)?;
+                if x != w - 1 {
+                    f.write_char(' ')?;
+                }
             }
-            s.pop();
-            s.push('\n');
+            if y != h - 1 {
+                f.write_char('\n')?;
+            }
         }
-        s.pop();
-        f.write_str(&s)
+        Ok(())
     }
 }
 
@@ -111,18 +115,19 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         let (w, h) = self.puzzle.size();
-        let mut s = String::new();
         for y in 0..h {
             for x in 0..w {
                 let n = self.puzzle.piece_at_xy_unchecked(x, y);
-                s.push_str(&n.to_string());
-                s.push(' ');
+                f.write_str(&n.to_string())?;
+                if x != w - 1 {
+                    f.write_char(' ')?;
+                }
             }
-            s.pop();
-            s.push('/');
+            if y != h - 1 {
+                f.write_char('/')?;
+            }
         }
-        s.pop();
-        write!(f, "{}", &s)
+        Ok(())
     }
 }
 
