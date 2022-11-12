@@ -118,7 +118,6 @@
 //! ```
 
 #![feature(if_let_guard)]
-#![feature(int_log)]
 #![feature(int_roundings)]
 #![feature(iter_intersperse)]
 #![feature(let_chains)]
