@@ -522,6 +522,13 @@ mod tests {
         }
 
         #[test]
+        fn test_can_apply_alg_2() {
+            let p = Puzzle::from_str("1 2 3 4/5 6 7 8/9 10 11 12/0 13 14 15").unwrap();
+            let a = Algorithm::from_str("L4").unwrap();
+            assert!(!p.can_apply_alg(&a));
+        }
+
+        #[test]
         fn test_apply_alg() {
             let mut p = Puzzle::new(4, 4).unwrap();
             let a = Algorithm::from_str("D3RU2RD2RU3L3").unwrap();

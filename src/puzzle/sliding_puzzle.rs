@@ -338,6 +338,7 @@ where
     /// Checks if it is possible to apply the given [`Algorithm`].
     #[must_use]
     fn can_apply_alg(&self, alg: &Algorithm) -> bool {
+        let (width, height) = self.size();
         let (mut gx, mut gy) = self.gap_position_xy();
 
         for m in alg.iter_moves() {
@@ -349,7 +350,7 @@ where
                 Direction::Right => (gx.checked_sub(amount), Some(gy)),
             };
 
-            if let (Some(new_gx), Some(new_gy)) = (new_gx, new_gy) {
+            if let (Some(new_gx), Some(new_gy)) = (new_gx, new_gy) && new_gx < width && new_gy < height {
                 (gx, gy) = (new_gx, new_gy);
             } else {
                 return false;
