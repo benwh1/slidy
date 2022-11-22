@@ -1,6 +1,9 @@
 //! Defines the [`Coloring`] trait and several implementations.
 
-use palette::{rgb::Rgba, Hsl, Hsla, IntoColor};
+use std::ops::Div;
+
+use num_traits::AsPrimitive;
+use palette::{rgb::Rgba, Gradient, Hsl, Hsla, IntoColor, Mix};
 use thiserror::Error;
 
 /// Provides a function mapping labels to colors.
@@ -185,6 +188,24 @@ impl<'a, C: Coloring> Coloring for AddLightness<'a, C> {
         let l = (l + self.lightness).clamp(0.0, 1.0);
 
         Hsla::new(h, s, l, a).into_color()
+    }
+}
+
+impl<C, T> Coloring for Gradient<C, T>
+where
+    C: Mix + Clone + IntoColor<Rgba>,
+    T: AsRef<[(C::Scalar, C)]>,
+    usize: AsPrimitive<C::Scalar>,
+    C::Scalar: Div + 'static,
+{
+    fn color_unchecked(&self, label: usize, num_labels: usize) -> Rgba {
+        let point = if num_labels < 2 {
+            0.as_()
+        } else {
+            label.as_() / (num_labels - 1).as_()
+        };
+
+        self.get(point).into_color()
     }
 }
 
