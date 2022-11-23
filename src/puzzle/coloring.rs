@@ -211,6 +211,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use palette::LinSrgba;
+
     use super::*;
 
     #[test]
@@ -296,5 +298,29 @@ mod tests {
         assert_eq!(a.color(3, 5), Some(Hsl::new(247.5, 1.0, 0.5).into_color()));
         assert_eq!(a.color(4, 5), Some(Hsl::new(330.0, 1.0, 0.5).into_color()));
         assert_eq!(a.color(5, 5), None);
+    }
+
+    #[test]
+    fn test_gradient() {
+        let g = Gradient::with_domain(vec![
+            (0.0, LinSrgba::new(1.0, 0.0, 0.5, 1.0)),
+            (0.5, LinSrgba::new(0.5, 0.25, 1.0, 0.5)),
+            (0.8, LinSrgba::new(0.5, 0.75, 0.5, 1.0)),
+            (1.0, LinSrgba::new(0.0, 0.5, 0.2, 1.0)),
+        ]);
+
+        let expected = vec![
+            Some(LinSrgba::new(1.0, 0.0, 0.5, 1.0).into_color()),
+            Some(LinSrgba::new(0.8, 0.10, 0.7, 0.8).into_color()),
+            Some(LinSrgba::new(0.6, 0.20, 0.9, 0.6).into_color()),
+            Some(LinSrgba::new(0.5, 5.0 / 12.0, 5.0 / 6.0, 2.0 / 3.0).into_color()),
+            Some(LinSrgba::new(0.5, 0.75, 0.5, 1.0).into_color()),
+            Some(LinSrgba::new(0.0, 0.5, 0.2, 1.0).into_color()),
+            None,
+        ];
+
+        for i in 0..7 {
+            assert_eq!(g.color(i, 6), expected[i]);
+        }
     }
 }
