@@ -1,7 +1,7 @@
 //! Defines the [`Heuristic`] trait and the [`ManhattanDistance`] heuristic.
 
 use itertools::Itertools;
-use num_traits::{PrimInt, Unsigned};
+use num_traits::{AsPrimitive, PrimInt, Unsigned};
 
 use crate::puzzle::sliding_puzzle::SlidingPuzzle;
 
@@ -25,7 +25,8 @@ impl<Piece, Puzzle, T> Heuristic<Piece, Puzzle, T> for ManhattanDistance
 where
     Piece: PrimInt,
     Puzzle: SlidingPuzzle<Piece>,
-    T: PrimInt + Unsigned + TryFrom<usize>,
+    T: PrimInt + Unsigned + 'static,
+    usize: AsPrimitive<T>,
 {
     fn bound(&self, puzzle: &Puzzle) -> T {
         let (w, h) = puzzle.size();
@@ -42,7 +43,6 @@ where
                 }
             })
             .sum::<usize>()
-            .try_into()
-            .unwrap_or_else(|_| T::zero())
+            .as_()
     }
 }
