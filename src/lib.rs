@@ -80,7 +80,7 @@
 //!     coloring::{Monochrome, RainbowBrightFull},
 //!     label::labels::{SplitFringe, Trivial},
 //!     puzzle::Puzzle,
-//!     render::{Borders, Renderer},
+//!     render::{Borders, Renderer, Text},
 //! };
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -97,15 +97,18 @@
 //!                 ))
 //!                 .thickness(5.0),
 //!         )
-//!         .text_scheme(Scheme::new(
-//!             Box::new(Trivial),
-//!             Box::new(Monochrome::new(Rgba::new(1.0, 1.0, 1.0, 1.0))),
-//!         ))
+//!         .text(
+//!             Text::new()
+//!                 .scheme(Scheme::new(
+//!                     Box::new(Trivial),
+//!                     Box::new(Monochrome::new(Rgba::new(1.0, 1.0, 1.0, 1.0))),
+//!                 ))
+//!                 .font_size(40.0),
+//!         )
 //!         .background_color(Rgba::new(0.05, 0.05, 0.05, 1.0))
 //!         .tile_size(75.0)
 //!         .tile_gap(5.0)
 //!         .tile_rounding(10.0)
-//!         .font_size(40.0)
 //!         .padding(10.0);
 //!
 //!     let puzzle = Puzzle::default();
