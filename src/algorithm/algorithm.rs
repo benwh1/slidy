@@ -317,10 +317,23 @@ mod tests {
     }
 
     #[test]
+    fn test_is_empty() {
+        let a = Algorithm::from_str("ULDR").unwrap();
+        assert!(!a.is_empty());
+    }
+
+    #[test]
+    fn test_is_empty_2() {
+        let a = Algorithm::new(Vec::new());
+        assert!(a.is_empty());
+    }
+
+    #[test]
     fn test_push_combine() {
         let mut a = Algorithm::from_str("ULDR").unwrap();
         a.push_combine(Move::from(Direction::Right));
         assert_eq!(a.moves.last(), Some(&Move::new(Direction::Right, 2)));
+        assert_eq!(a.to_string(), "ULDR2");
     }
 
     #[test]
@@ -328,6 +341,7 @@ mod tests {
         let mut a = Algorithm::from_str("ULDR").unwrap();
         a.push_combine(Move::from(Direction::Left));
         assert_eq!(a.moves.last(), Some(&Move::new(Direction::Left, 1)));
+        assert_eq!(a.to_string(), "ULDRL");
     }
 
     #[test]
@@ -335,6 +349,7 @@ mod tests {
         let mut a = Algorithm::from_str("ULDR").unwrap();
         a.push_simplify(Move::from(Direction::Right));
         assert_eq!(a.moves.last(), Some(&Move::new(Direction::Right, 2)));
+        assert_eq!(a.to_string(), "ULDR2");
     }
 
     #[test]
@@ -342,6 +357,7 @@ mod tests {
         let mut a = Algorithm::from_str("ULDR").unwrap();
         a.push_simplify(Move::new(Direction::Left, 3));
         assert_eq!(a.moves.last(), Some(&Move::new(Direction::Left, 2)));
+        assert_eq!(a.to_string(), "ULDL2");
     }
 
     #[test]
@@ -349,23 +365,42 @@ mod tests {
         let mut a = Algorithm::from_str("ULDR").unwrap();
         a.push_simplify(Move::from(Direction::Left));
         assert_eq!(a.moves.last(), Some(&Move::new(Direction::Down, 1)));
+        assert_eq!(a.to_string(), "ULD");
+    }
+
+    #[test]
+    fn test_push_simplify_4() {
+        let mut a = Algorithm::from_str("ULDR").unwrap();
+        a.push_simplify(Move::from(Direction::Up));
+        assert_eq!(a.moves.last(), Some(&Move::from(Direction::Up)));
+        assert_eq!(a.to_string(), "ULDRU");
+    }
+
+    #[test]
+    fn test_push_simplify_5() {
+        let mut a = Algorithm::from_str("ULDR5").unwrap();
+        a.push_simplify(Move::new(Direction::Left, 3));
+        assert_eq!(a.moves.last(), Some(&Move::new(Direction::Right, 2)));
+        assert_eq!(a.to_string(), "ULDR2");
     }
 
     #[test]
     fn test_simplify() {
-        let a = Algorithm::from_str("UD2U3DUDDDUUD2").unwrap().simplified();
+        let mut a = Algorithm::from_str("UD2U3DUDDDUUD2").unwrap();
+        a.simplify();
         assert_eq!(a, Algorithm::from_str("D").unwrap());
     }
 
     #[test]
     fn test_simplify_2() {
-        let a = Algorithm::from_str("UDLRDRLU").unwrap().simplified();
+        let mut a = Algorithm::from_str("UDLRDRLU").unwrap();
+        a.simplify();
         assert_eq!(a, Algorithm::from_str("").unwrap());
     }
 
     #[test]
     fn test_simplify_3() {
-        let a = Algorithm::from_str(
+        let mut a = Algorithm::from_str(
             "DRLLURLURURURURULLDDDLLUDLLLDDRLURDLRUURULUDLDRDULURRRLUUUUDLRRLLRRULLRRLRDRDUDR
             DDRLLLRULLUDULDDURRLDRURRRDRLUDLDDURRURUUULLDRLLDRDUDLLLLDLURLDRLDLDDULLDLDRRLRD
             LRLUUUDDLUDULLDUDDLRRLUULRRLDLRRULULRDRULRLUDUDLRDURDLLRRDDURLULRRLDDRRRRUDDDULU
@@ -377,8 +412,7 @@ mod tests {
             LRRDDLDDLRLLLURUDLUDRDDRLRDLDRRDDDUDRRRDURDLDUDLURDUDLLRUDUUDULLRRDLLLLLDDULDRUD
             LDLRLRLLRRULLDRULRRRULRDDLLRRDRUDDUULRRLRLLRUUUDDRDDLUDLRRULLDLDDLURDRDLRDRUUDUU",
         )
-        .unwrap()
-        .simplified();
+        .unwrap();
         let b = Algorithm::from_str(
             "DLU2RURURURUL2D3L5DRURU4R2DRD2LUL2ULDRDRUR3DLDR2URU3L2DLDRDL4DLDLDL2DLDR2DLULUL2
             DRDR5U2L3UR3U3RDLDR3U4RU2RDR3DLDL2U2L2URULUR2DRU2RULU2RU2L2D3RULULD2LDR2ULD3RUR2
@@ -386,33 +420,55 @@ mod tests {
             L2DRULUL2DL2DLD2LD2L3URD2RDLDR2D3R4DLDLURDLUL5DLDL2DRUR2D2RU2RDL2DLD2LURDRD2RU3",
         )
         .unwrap();
+        a.simplify();
         assert_eq!(a, b);
     }
 
     #[test]
     fn test_simplify_4() {
-        let a = Algorithm::from_str("LRL").unwrap().simplified();
+        let mut a = Algorithm::from_str("LRL").unwrap();
+        a.simplify();
         assert_eq!(a, Algorithm::from_str("L").unwrap());
     }
 
     #[test]
-    fn test_inverse() {
-        let a = Algorithm::from_str("ULDR").unwrap();
+    fn test_simplify_5() {
+        let mut a = Algorithm::from_str("U10").unwrap();
+        let b = a.clone();
+        a.simplify();
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_simplify_6() {
+        let mut a = Algorithm::new(Vec::new());
+        let b = a.clone();
+        a.simplify();
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_invert() {
+        let mut a = Algorithm::from_str("ULDR").unwrap();
         let b = Algorithm::from_str("LURD").unwrap();
-        assert_eq!(a.inverse(), b);
+        a.invert();
+        assert_eq!(a, b);
     }
 
     #[test]
-    fn test_inverse_2() {
-        let a = Algorithm::from_str("").unwrap();
-        assert_eq!(a.inverse(), a);
+    fn test_invert_2() {
+        let mut a = Algorithm::from_str("").unwrap();
+        let b = a.clone();
+        a.invert();
+        assert_eq!(a, b);
     }
 
     #[test]
-    fn test_inverse_3() {
-        let a = Algorithm::from_str("DL3ULU3R2DLD2RUL2U").unwrap();
+    fn test_invert_3() {
+        let mut a = Algorithm::from_str("DL3ULU3R2DLD2RUL2U").unwrap();
         let b = Algorithm::from_str("DR2DLU2RUL2D3RDR3U").unwrap();
-        assert_eq!(a.inverse(), b);
+        a.invert();
+        assert_eq!(a, b);
     }
 
     #[test]

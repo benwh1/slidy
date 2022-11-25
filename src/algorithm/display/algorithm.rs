@@ -88,6 +88,11 @@ mod tests {
         assert_eq!(d4, "U URDL L L");
         assert_eq!(d5, "UURDLLL");
         assert_eq!(d6, "U2RDL3");
+
+        assert_eq!(a.display_long_spaced().to_string(), d1);
+        assert_eq!(a.display_long_unspaced().to_string(), d5);
+        assert_eq!(a.display_short_spaced().to_string(), d3);
+        assert_eq!(a.display_short_unspaced().to_string(), d6);
     }
 }
 
