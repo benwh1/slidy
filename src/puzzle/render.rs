@@ -6,7 +6,7 @@ use num_traits::PrimInt;
 use palette::rgb::Rgba;
 use svg::{
     node::{
-        element::{Group, Rectangle, Style, Text},
+        element::{Group, Rectangle, Style, Text as TextElement},
         Text as TextNode,
     },
     Document,
@@ -101,6 +101,103 @@ impl Default for Borders {
     }
 }
 
+/// Struct containing the information needed to draw text on the pieces of the puzzle.
+pub struct Text<'a> {
+    scheme: IndexedRecursiveScheme,
+    font: Font<'a>,
+    font_size: f32,
+    position: (f32, f32),
+}
+
+impl<'a> Text<'a> {
+    /// Create a new [`Text`] instance.
+    pub fn new() -> Self {
+        Self {
+            scheme: Scheme::new(
+                Box::new(Trivial),
+                Box::new(Monochrome::new(Rgba::new(0.0, 0.0, 0.0, 1.0))),
+            )
+            .into(),
+            font: Font::Family("sans-serif"),
+            font_size: 30.0,
+            position: (0.5, 0.5),
+        }
+    }
+
+    /// Set the text color scheme.
+    ///
+    /// If the main color scheme (see [`Renderer::scheme`]) has a subscheme, and the subscheme
+    /// style (see [`Renderer::subscheme_style`]) is [`SubschemeStyle::TextColor`], then the
+    /// subscheme color will override the text scheme.
+    #[must_use]
+    pub fn scheme<S: Into<IndexedRecursiveScheme>>(mut self, scheme: S) -> Self {
+        self.scheme = scheme.into();
+        self
+    }
+
+    /// Set the font.
+    #[must_use]
+    pub fn font(mut self, font: Font<'a>) -> Self {
+        self.font = font;
+        self
+    }
+
+    /// Set the font size.
+    #[must_use]
+    pub fn font_size(mut self, size: f32) -> Self {
+        self.font_size = size.max(0.0);
+        self
+    }
+
+    /// Set the position around which the text within each tile will be centered, as a fraction of
+    /// the tile size. (0, 0) is the top left of the tile and (1, 1) is the bottom right. This is
+    /// useful if your font does not render perfectly centered.
+    #[must_use]
+    pub fn position(mut self, pos: (f32, f32)) -> Self {
+        self.position = pos;
+        self
+    }
+
+    /// Write the formatting options into a CSS string.
+    #[must_use]
+    pub fn style_string(&self) -> String {
+        if let Font::Family(f) = self.font {
+            format!(
+                "text {{ font-family: {f}; font-size: {fs}px; }}",
+                fs = self.font_size
+            )
+        } else {
+            let src = match self.font {
+                Font::Family(_) => unreachable!(),
+                Font::Url { path, format } => {
+                    format!(r#"url({path}) format("{format}")"#)
+                }
+                Font::Base64 { data, format } => {
+                    format!(r#"url(data:font/ttf;base64,{data}) format("{format}")"#)
+                }
+            };
+
+            format!(
+                "@font-face {{ \
+                    font-family: f; \
+                    src: {src}; \
+                }} \
+                text {{ \
+                    font-family: f; \
+                    font-size: {fs}px; \
+                }}",
+                fs = self.font_size
+            )
+        }
+    }
+}
+
+impl<'a> Default for Text<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Ways that the subscheme can be displayed on the puzzle.
 ///
 /// The default value is [`SubschemeStyle::Rectangle`].
@@ -118,14 +215,11 @@ pub enum SubschemeStyle {
 /// Draws a [`SlidingPuzzle`] as an SVG image.
 pub struct Renderer<'a> {
     scheme: IndexedRecursiveScheme,
-    text_scheme: IndexedRecursiveScheme,
     borders: Option<Borders>,
-    font: Font<'a>,
+    text: Option<Text<'a>>,
     tile_size: f32,
     tile_rounding: f32,
     tile_gap: f32,
-    font_size: f32,
-    text_position: (f32, f32),
     padding: f32,
     subscheme_style: Option<SubschemeStyle>,
     background_color: Rgba,
@@ -141,18 +235,11 @@ impl<'a> Renderer<'a> {
                 Box::new(Monochrome::new(Rgba::new(1.0, 1.0, 1.0, 1.0))),
             )
             .into(),
-            text_scheme: Scheme::new(
-                Box::new(Trivial),
-                Box::new(Monochrome::new(Rgba::new(0.0, 0.0, 0.0, 1.0))),
-            )
-            .into(),
             borders: None,
-            font: Font::Family("sans-serif"),
+            text: None,
             tile_size: 75.0,
             tile_rounding: 0.0,
             tile_gap: 0.0,
-            font_size: 30.0,
-            text_position: (0.5, 0.5),
             padding: 0.0,
             subscheme_style: Some(SubschemeStyle::Rectangle),
             background_color: Rgba::new(1.0, 1.0, 1.0, 0.0),
@@ -166,17 +253,6 @@ impl<'a> Renderer<'a> {
         self
     }
 
-    /// Set the text color scheme.
-    ///
-    /// If the main color scheme (see [`Renderer::scheme`]) has a subscheme, and the subscheme
-    /// style (see [`Renderer::subscheme_style`]) is [`SubschemeStyle::TextColor`], then the
-    /// subscheme color will override the text scheme.
-    #[must_use]
-    pub fn text_scheme<S: Into<IndexedRecursiveScheme>>(mut self, scheme: S) -> Self {
-        self.text_scheme = scheme.into();
-        self
-    }
-
     /// Set the borders.
     #[must_use]
     pub fn borders(mut self, borders: Borders) -> Self {
@@ -184,10 +260,10 @@ impl<'a> Renderer<'a> {
         self
     }
 
-    /// Set the font.
+    /// Set the text.
     #[must_use]
-    pub fn font(mut self, font: Font<'a>) -> Self {
-        self.font = font;
+    pub fn text(mut self, text: Text<'a>) -> Self {
+        self.text = Some(text);
         self
     }
 
@@ -208,21 +284,7 @@ impl<'a> Renderer<'a> {
     /// Set the gap between tiles in pixels.
     #[must_use]
     pub fn tile_gap(mut self, gap: f32) -> Self {
-        self.tile_gap = gap.max(0.0);
-        self
-    }
-
-    /// Set the font size.
-    #[must_use]
-    pub fn font_size(mut self, size: f32) -> Self {
-        self.font_size = size.max(0.0);
-        self
-    }
-
-    /// Set the position of the text within each tile, as a fraction of the tile size
-    #[must_use]
-    pub fn text_position(mut self, pos: (f32, f32)) -> Self {
-        self.text_position = pos;
+        self.tile_gap = gap;
         self
     }
 
@@ -278,29 +340,11 @@ impl<'a> Renderer<'a> {
         );
 
         let style_str = {
-            let font = if let Font::Family(f) = self.font {
-                format!("text {{ font-family: {f}; }}")
-            } else {
-                let src = match self.font {
-                    Font::Family(_) => unreachable!(),
-                    Font::Url { path, format } => {
-                        format!(r#"url({path}) format("{format}")"#)
-                    }
-                    Font::Base64 { data, format } => {
-                        format!(r#"url(data:font/ttf;base64,{data}) format("{format}")"#)
-                    }
-                };
-
-                format!(
-                    "@font-face {{\
-                        font-family: f;\
-                        src: {src};\
-                    }}\
-                    text {{\
-                        font-family: f;\
-                    }}"
-                )
-            };
+            let font = self
+                .text
+                .as_ref()
+                .map(|a| a.style_string())
+                .unwrap_or_default();
 
             let bg = {
                 let color: Rgba<_, u8> = self.background_color.into_format();
@@ -308,25 +352,23 @@ impl<'a> Renderer<'a> {
             };
 
             format!(
-                "svg {{ background-color: {bg}; }}\
-                text {{\
-                    text-anchor: middle;\
-                    dominant-baseline: central;\
-                    font-size: {fs}px;\
-                }}\
-                rect.piece {{\
-                    width: {ts}px;\
-                    height: {ts}px;\
-                    rx: {tr}px;\
-                    ry: {tr}px;\
-                    stroke-width: {sw}px;\
-                }}\
-                rect.sub {{\
-                    width: {srw}px;\
-                    height: {srh}px;\
-                }}\
+                "svg {{ background-color: {bg}; }} \
+                text {{ \
+                    text-anchor: middle; \
+                    dominant-baseline: central; \
+                }} \
+                rect.piece {{ \
+                    width: {ts}px; \
+                    height: {ts}px; \
+                    rx: {tr}px; \
+                    ry: {tr}px; \
+                    stroke-width: {sw}px; \
+                }} \
+                rect.sub {{ \
+                    width: {srw}px; \
+                    height: {srh}px; \
+                }} \
                 {font}",
-                fs = self.font_size,
                 ts = self.tile_size,
                 tr = self.tile_rounding,
                 sw = border_thickness,
@@ -427,16 +469,16 @@ impl<'a> Renderer<'a> {
             r
         };
 
-        let text = {
-            let fill = color!(self.text_scheme, SubschemeStyle::TextColor);
-            let (tx, ty) = self.text_position;
+        let text = self.text.as_ref().map(|text| {
+            let fill = color!(text.scheme, SubschemeStyle::TextColor);
+            let (tx, ty) = text.position;
 
-            Text::new()
+            TextElement::new()
                 .set("x", rect_pos.0 + self.tile_size * tx)
                 .set("y", rect_pos.1 + self.tile_size * ty)
                 .set("fill", fill)
                 .add(TextNode::new(piece.to_string()))
-        };
+        });
 
         let subscheme_render = if let Some(subcolor) = subscheme_color
             && self.subscheme_style == Some(SubschemeStyle::Rectangle)
@@ -459,7 +501,11 @@ impl<'a> Renderer<'a> {
             None
         };
 
-        let mut group = Group::new().add(rect).add(text);
+        let mut group = Group::new().add(rect);
+
+        if let Some(text) = text {
+            group = group.add(text);
+        }
 
         if let Some(s) = subscheme_render {
             group = group.add(s);
