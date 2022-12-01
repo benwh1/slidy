@@ -66,13 +66,14 @@ where
 pub struct RandomMoves {
     /// Number of random moves to apply.
     pub moves: u64,
-    /// Are cancelling moves allowed? E.g. If one move of the scramble is R, is the next move
-    /// allowed to be L? If `allow_cancellation` is false, the L move will not be allowed.
-    pub allow_cancellation: bool,
-    /// Are unapplyable moves counted? E.g. If the first generated move of the scramble is L (which
+    /// Are backtracking moves allowed? E.g. If one move of the scramble is R, is the next move
+    /// allowed to be L? If this is false, the L move will not be allowed and a differentmove will
+    /// be generated.
+    pub allow_backtracking: bool,
+    /// Are illegal moves counted? E.g. If the first generated move of the scramble is L (which
     /// can not be applied to the puzzle), should this be counted towards the total move count? If
-    /// `require_applyable` is true, the L move will not be counted.
-    pub require_applyable: bool,
+    /// this is false, the L move will not be counted and a different move will be generated.
+    pub allow_illegal_moves: bool,
 }
 
 impl<P, Piece> Scrambler<P, Piece> for RandomMoves
@@ -85,8 +86,8 @@ where
         for _ in 0..self.moves {
             let dir = {
                 let mut d = rng.gen::<Direction>();
-                while (!self.allow_cancellation && last_dir == Some(d.inverse()))
-                    || (self.require_applyable && !puzzle.can_move_dir(d))
+                while (!self.allow_backtracking && last_dir == Some(d.inverse()))
+                    || (!self.allow_illegal_moves && !puzzle.can_move_dir(d))
                 {
                     d = rng.gen();
                 }
