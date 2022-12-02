@@ -52,18 +52,21 @@ where
 
     /// Size of the puzzle in the form `(width, height)`.
     #[must_use]
+    #[inline(always)]
     fn size(&self) -> (usize, usize) {
         (self.width(), self.height())
     }
 
     /// Product of the width and height.
     #[must_use]
+    #[inline(always)]
     fn area(&self) -> usize {
         self.width() * self.height()
     }
 
     /// Number of pieces in the puzzle.
     #[must_use]
+    #[inline(always)]
     fn num_pieces(&self) -> usize {
         self.area() - 1
     }
@@ -85,6 +88,7 @@ where
     }
 
     /// Reset the puzzle to the default state.
+    #[inline(always)]
     fn reset(&mut self) {
         self.reset_to_label(&RowGrids);
     }
@@ -111,6 +115,7 @@ where
 
     /// Check if the puzzle is solved.
     #[must_use]
+    #[inline(always)]
     fn is_solved(&self) -> bool {
         RowGrids.is_solved(self)
     }
@@ -145,6 +150,8 @@ where
     /// # Safety
     ///
     /// See panics section of [`SlidingPuzzle::solved_pos`].
+    #[must_use]
+    #[inline(always)]
     unsafe fn solved_pos_unchecked(&self, piece: Piece) -> usize {
         self.solved_pos(piece)
     }
@@ -177,6 +184,7 @@ where
     ///
     /// See panics section of [`SlidingPuzzle::solved_pos_xy`].
     #[must_use]
+    #[inline(always)]
     unsafe fn solved_pos_xy_unchecked(&self, piece: Piece) -> (usize, usize) {
         self.solved_pos_xy(piece)
     }
@@ -206,6 +214,7 @@ where
     ///
     /// See panics section of [`SlidingPuzzle::piece_at`].
     #[must_use]
+    #[inline(always)]
     unsafe fn piece_at_unchecked(&self, idx: usize) -> Piece {
         self.piece_at(idx)
     }
@@ -216,6 +225,7 @@ where
     ///
     /// See [`SlidingPuzzle::piece_at`].
     #[must_use]
+    #[inline]
     fn piece_at_xy(&self, x: usize, y: usize) -> Piece {
         self.piece_at(x + self.width() * y)
     }
@@ -236,6 +246,7 @@ where
     ///
     /// See panics section of [`SlidingPuzzle::piece_at_xy`].
     #[must_use]
+    #[inline(always)]
     unsafe fn piece_at_xy_unchecked(&self, x: usize, y: usize) -> Piece {
         self.piece_at_xy(x, y)
     }
@@ -268,6 +279,7 @@ where
     /// # Safety
     ///
     /// See panics section of [`SlidingPuzzle::set_piece`].
+    #[inline(always)]
     unsafe fn set_piece_unchecked(&mut self, idx: usize, piece: Piece) {
         self.set_piece(idx, piece);
     }
@@ -277,11 +289,13 @@ where
     /// # Panics
     ///
     /// See [`SlidingPuzzle::set_piece`].
+    #[inline]
     fn set_piece_xy(&mut self, (x, y): (usize, usize), piece: Piece) {
         self.set_piece(x + self.width() * y, piece);
     }
 
     /// See also: [`SlidingPuzzle::set_piece_xy`].
+    #[inline]
     fn try_set_piece_xy(&mut self, (x, y): (usize, usize), piece: Piece) -> bool {
         self.try_set_piece(x + self.width() * y, piece)
     }
@@ -291,6 +305,7 @@ where
     /// # Safety
     ///
     /// See panics section of [`SlidingPuzzle::set_piece_xy`].
+    #[inline(always)]
     unsafe fn set_piece_xy_unchecked(&mut self, (x, y): (usize, usize), piece: Piece) {
         self.set_piece_xy((x, y), piece);
     }
@@ -326,6 +341,7 @@ where
     /// # Safety
     ///
     /// See panics section of [`SlidingPuzzle::swap_pieces`].
+    #[inline(always)]
     unsafe fn swap_pieces_unchecked(&mut self, idx1: usize, idx2: usize) {
         self.swap_pieces(idx1, idx2);
     }
@@ -335,12 +351,14 @@ where
     /// # Panics
     ///
     /// See [`SlidingPuzzle::swap_pieces`].
+    #[inline]
     fn swap_pieces_xy(&mut self, (x1, y1): (usize, usize), (x2, y2): (usize, usize)) {
         let w = self.width();
         self.swap_pieces(x1 + w * y1, x2 + w * y2);
     }
 
     /// See also: [`SlidingPuzzle::swap_pieces_xy`].
+    #[inline]
     fn try_swap_pieces_xy(&mut self, (x1, y1): (usize, usize), (x2, y2): (usize, usize)) -> bool {
         let w = self.width();
         self.try_swap_pieces(x1 + w * y1, x2 + w * y2)
@@ -351,6 +369,7 @@ where
     /// # Safety
     ///
     /// See panics section of [`SlidingPuzzle::swap_pieces_xy`].
+    #[inline(always)]
     unsafe fn swap_pieces_xy_unchecked(
         &mut self,
         (x1, y1): (usize, usize),
@@ -405,6 +424,7 @@ where
     /// # Safety
     ///
     /// See panics section of [`SlidingPuzzle::move_dir`].
+    #[inline(always)]
     unsafe fn move_dir_unchecked(&mut self, dir: Direction) {
         self.move_dir(dir);
     }
@@ -451,6 +471,7 @@ where
     /// # Safety
     ///
     /// See panics section of [`SlidingPuzzle::apply_move`].
+    #[inline(always)]
     unsafe fn apply_move_unchecked(&mut self, mv: Move) {
         self.apply_move(mv);
     }
@@ -509,6 +530,7 @@ where
     /// # Safety
     ///
     /// See panics section of [`SlidingPuzzle::apply_alg`].
+    #[inline(always)]
     unsafe fn apply_alg_unchecked(&mut self, alg: &Algorithm) {
         self.apply_alg(alg);
     }
