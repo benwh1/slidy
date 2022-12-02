@@ -111,6 +111,7 @@ pub struct Text<'a> {
 
 impl<'a> Text<'a> {
     /// Create a new [`Text`] instance.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             scheme: Scheme::new(
