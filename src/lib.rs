@@ -125,6 +125,7 @@
 #![feature(iter_intersperse)]
 #![feature(let_chains)]
 #![feature(slice_group_by)]
+#![feature(slice_swap_unchecked)]
 #![feature(test)]
 #![allow(clippy::module_inception)]
 #![warn(clippy::must_use_candidate)]

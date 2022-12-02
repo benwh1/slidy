@@ -131,27 +131,75 @@ impl Puzzle {
 }
 
 impl SlidingPuzzle<u32> for Puzzle {
+    #[inline(always)]
     fn width(&self) -> usize {
         self.width
     }
 
+    #[inline(always)]
     fn height(&self) -> usize {
         self.height
     }
 
+    #[inline(always)]
     fn gap_position(&self) -> usize {
         self.gap
     }
 
+    #[inline(always)]
     fn piece_at(&self, idx: usize) -> u32 {
         self.pieces[idx]
     }
 
+    #[inline(always)]
     fn set_piece(&mut self, idx: usize, piece: u32) {
         self.pieces[idx] = piece;
         if piece == 0 {
             self.gap = idx;
         }
+    }
+
+    #[inline(always)]
+    fn solved_pos(&self, piece: u32) -> usize {
+        if piece == 0 {
+            self.num_pieces()
+        } else {
+            piece as usize - 1
+        }
+    }
+
+    #[inline(always)]
+    unsafe fn piece_at_unchecked(&self, idx: usize) -> u32 {
+        *self.pieces.get_unchecked(idx)
+    }
+
+    #[inline(always)]
+    unsafe fn piece_at_xy_unchecked(&self, x: usize, y: usize) -> u32 {
+        self.piece_at_unchecked(x + self.width() * y)
+    }
+
+    #[inline(always)]
+    unsafe fn set_piece_unchecked(&mut self, idx: usize, piece: u32) {
+        *self.pieces.get_unchecked_mut(idx) = piece;
+    }
+
+    #[inline(always)]
+    unsafe fn set_piece_xy_unchecked(&mut self, (x, y): (usize, usize), piece: u32) {
+        self.set_piece_unchecked(x + self.width() * y, piece);
+    }
+
+    #[inline(always)]
+    unsafe fn swap_pieces_unchecked(&mut self, idx1: usize, idx2: usize) {
+        self.pieces.swap_unchecked(idx1, idx2);
+    }
+
+    #[inline(always)]
+    unsafe fn swap_pieces_xy_unchecked(
+        &mut self,
+        (x1, y1): (usize, usize),
+        (x2, y2): (usize, usize),
+    ) {
+        self.swap_pieces_unchecked(x1 + self.width() * y1, x2 + self.width() * y2);
     }
 }
 
