@@ -42,22 +42,22 @@ where
 
             // Swap and check if we need to toggle parity
             if i != j {
-                puzzle.swap_pieces(i, j);
+                puzzle.try_swap_pieces(i, j);
                 parity = !parity;
             }
         }
 
         // Swap the last two pieces if necessary to make it solvable
         if parity {
-            puzzle.swap_pieces(n - 2, n - 1);
+            puzzle.try_swap_pieces(n - 2, n - 1);
         }
 
         // Move blank to a random position
         let (w, h) = puzzle.size();
         let (d, r) = (rng.gen_range(0..h), rng.gen_range(0..w));
 
-        puzzle.apply_move_unchecked(Move::new(Direction::Down, d as u32));
-        puzzle.apply_move_unchecked(Move::new(Direction::Right, r as u32));
+        puzzle.apply_move(Move::new(Direction::Down, d as u32));
+        puzzle.apply_move(Move::new(Direction::Right, r as u32));
     }
 }
 
@@ -95,7 +95,7 @@ where
             };
 
             last_dir = Some(dir);
-            puzzle.move_dir(dir);
+            puzzle.try_move_dir(dir);
         }
     }
 }
@@ -120,11 +120,11 @@ where
         let pieces = rand::seq::index::sample(rng, max, cycle_len);
 
         for i in 1..cycle_len {
-            puzzle.swap_pieces(pieces.index(0), pieces.index(i));
+            puzzle.try_swap_pieces(pieces.index(0), pieces.index(i));
         }
 
         if self.length % 2 == 0 {
-            puzzle.swap_pieces(n - 2, n - 1);
+            puzzle.try_swap_pieces(n - 2, n - 1);
         }
     }
 }

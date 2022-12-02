@@ -46,18 +46,18 @@ impl<'a, L: Label> Label for Scaled<'a, L> {
         self.label.is_valid_size(width, height)
     }
 
-    fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
         let width = width.div_ceil(self.horizontal as usize);
         let height = height.div_ceil(self.vertical as usize);
         let x = x.div_floor(self.horizontal as usize);
         let y = y.div_floor(self.vertical as usize);
-        self.label.position_label_unchecked(width, height, x, y)
+        self.label.position_label(width, height, x, y)
     }
 
-    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
+    fn num_labels(&self, width: usize, height: usize) -> usize {
         let width = width.div_ceil(self.horizontal as usize);
         let height = height.div_ceil(self.vertical as usize);
-        self.label.num_labels_unchecked(width, height)
+        self.label.num_labels(width, height)
     }
 }
 
@@ -72,9 +72,9 @@ mod tests {
         let label = Scaled::new(&RowGrids, 3, 2).unwrap();
 
         let labels = (0..40)
-            .map(|i| label.position_label_unchecked(8, 5, i % 8, i / 8))
+            .map(|i| label.position_label(8, 5, i % 8, i / 8))
             .collect::<Vec<_>>();
-        let num_labels = label.num_labels_unchecked(8, 5);
+        let num_labels = label.num_labels(8, 5);
 
         #[rustfmt::skip]
         assert_eq!(labels, vec![

@@ -58,7 +58,7 @@ where
     #[must_use]
     fn gap_position(&self) -> usize {
         (0..self.area())
-            .position(|idx| self.piece_at_unchecked(idx) == Piece::zero())
+            .position(|idx| self.piece_at(idx) == Piece::zero())
             .unwrap()
     }
 
@@ -81,7 +81,7 @@ where
         let area = Piece::from(w * h).unwrap();
         for y in 0..h {
             for x in 0..w {
-                let label = label.position_label_unchecked(w, h, x, y);
+                let label = label.position_label(w, h, x, y);
                 let piece = {
                     let a = Piece::from(label).unwrap() + Piece::one();
                     if a == area {
@@ -90,7 +90,7 @@ where
                         a
                     }
                 };
-                self.set_piece_xy_unchecked(x, y, piece);
+                self.set_piece_xy(x, y, piece);
             }
         }
     }
@@ -106,7 +106,7 @@ where
     /// This function does not check whether `piece` is within the valid range for the puzzle.
     /// If `piece` is outside the valid range, the function may return a wrong result or panic.
     #[must_use]
-    fn solved_pos_unchecked(&self, piece: Piece) -> usize {
+    fn solved_pos(&self, piece: Piece) -> usize {
         if piece == Piece::zero() {
             self.num_pieces()
         } else {
@@ -118,10 +118,10 @@ where
     ///
     /// Returns `None` if `piece` is outside the valid range for the puzzle.
     #[must_use]
-    fn solved_pos(&self, piece: Piece) -> Option<usize> {
+    fn try_solved_pos(&self, piece: Piece) -> Option<usize> {
         let n = self.num_pieces();
         match piece.to_usize() {
-            Some(p) if p <= n => Some(self.solved_pos_unchecked(piece)),
+            Some(p) if p <= n => Some(self.solved_pos(piece)),
             _ => None,
         }
     }
@@ -131,8 +131,8 @@ where
     /// This function does not check whether `piece` is within the valid range for the puzzle.
     /// If `piece` is outside the valid range, the function may return a wrong result or panic.
     #[must_use]
-    fn solved_pos_xy_unchecked(&self, piece: Piece) -> (usize, usize) {
-        let p = self.solved_pos_unchecked(piece);
+    fn solved_pos_xy(&self, piece: Piece) -> (usize, usize) {
+        let p = self.solved_pos(piece);
         let w = self.width();
         (p % w, p / w)
     }
@@ -141,10 +141,10 @@ where
     ///
     /// Returns `None` if `piece` is outside the valid range for the puzzle.
     #[must_use]
-    fn solved_pos_xy(&self, piece: Piece) -> Option<(usize, usize)> {
+    fn try_solved_pos_xy(&self, piece: Piece) -> Option<(usize, usize)> {
         let n = self.num_pieces();
         match piece.to_usize() {
-            Some(p) if p <= n => Some(self.solved_pos_xy_unchecked(piece)),
+            Some(p) if p <= n => Some(self.solved_pos_xy(piece)),
             _ => None,
         }
     }
@@ -154,33 +154,33 @@ where
     /// This function does not check whether `idx` is within the valid range for the puzzle.
     /// If `idx` is outside the valid range, the function may return a wrong result or panic.
     #[must_use]
-    fn piece_at_unchecked(&self, idx: usize) -> Piece;
+    fn piece_at(&self, idx: usize) -> Piece;
 
     /// The piece at a given position.
     ///
     /// Returns `None` if `idx` is outside the valid range for the puzzle.
     #[must_use]
-    fn piece_at(&self, idx: usize) -> Option<Piece> {
+    fn try_piece_at(&self, idx: usize) -> Option<Piece> {
         if idx <= self.num_pieces() {
-            Some(self.piece_at_unchecked(idx))
+            Some(self.piece_at(idx))
         } else {
             None
         }
     }
 
     /// The piece at a given (x, y) position.
-    /// See also: [`SlidingPuzzle::piece_at_unchecked`].
+    /// See also: [`SlidingPuzzle::piece_at`].
     #[must_use]
-    fn piece_at_xy_unchecked(&self, x: usize, y: usize) -> Piece {
-        self.piece_at_unchecked(x + self.width() * y)
+    fn piece_at_xy(&self, x: usize, y: usize) -> Piece {
+        self.piece_at(x + self.width() * y)
     }
 
     /// The piece at a given (x, y) position.
     /// See also: [`SlidingPuzzle::piece_at`].
     #[must_use]
-    fn piece_at_xy(&self, x: usize, y: usize) -> Option<Piece> {
+    fn try_piece_at_xy(&self, x: usize, y: usize) -> Option<Piece> {
         if x < self.width() && y < self.height() {
-            Some(self.piece_at_xy_unchecked(x, y))
+            Some(self.piece_at_xy(x, y))
         } else {
             None
         }
@@ -193,7 +193,7 @@ where
     ///
     /// This function does not check whether `idx` is within the valid range for the puzzle.
     /// If `idx` is outside the valid range, the function may panic.
-    fn set_piece_unchecked(&mut self, idx: usize, piece: Piece);
+    fn set_piece(&mut self, idx: usize, piece: Piece);
 
     /// Attempts to set the piece at a given position to `piece`.
     ///
@@ -202,9 +202,9 @@ where
     ///
     /// Returns `true` if `idx` is within the valid range for the puzzle and the piece was
     /// successfully set, and `false` otherwise.
-    fn set_piece(&mut self, idx: usize, piece: Piece) -> bool {
+    fn try_set_piece(&mut self, idx: usize, piece: Piece) -> bool {
         if idx < self.area() {
-            self.set_piece_unchecked(idx, piece);
+            self.set_piece(idx, piece);
             true
         } else {
             false
@@ -212,35 +212,35 @@ where
     }
 
     /// Set the piece at a given (x, y) position to `piece`.
-    /// See also: [`SlidingPuzzle::set_piece_unchecked`].
-    fn set_piece_xy_unchecked(&mut self, x: usize, y: usize, piece: Piece) {
-        self.set_piece_unchecked(x + self.width() * y, piece);
+    /// See also: [`SlidingPuzzle::set_piece`].
+    fn set_piece_xy(&mut self, x: usize, y: usize, piece: Piece) {
+        self.set_piece(x + self.width() * y, piece);
     }
 
     /// Set the piece at a given (x, y) position to `piece`.
     /// See also: [`SlidingPuzzle::set_piece`].
-    fn set_piece_xy(&mut self, x: usize, y: usize, piece: Piece) -> bool {
-        self.set_piece(x + self.width() * y, piece)
+    fn try_set_piece_xy(&mut self, x: usize, y: usize, piece: Piece) -> bool {
+        self.try_set_piece(x + self.width() * y, piece)
     }
 
     /// Swaps the pieces at positions `idx1` and `idx2`.
     ///
     /// This function does not check whether `idx1` and `idx2` are within the valid range for the
     /// puzzle. If `idx1` or `idx2` is outside the valid range, the function may panic.
-    fn swap_pieces_unchecked(&mut self, idx1: usize, idx2: usize) {
-        let piece = self.piece_at_unchecked(idx1);
-        self.set_piece_unchecked(idx1, self.piece_at_unchecked(idx2));
-        self.set_piece_unchecked(idx2, piece);
+    fn swap_pieces(&mut self, idx1: usize, idx2: usize) {
+        let piece = self.piece_at(idx1);
+        self.set_piece(idx1, self.piece_at(idx2));
+        self.set_piece(idx2, piece);
     }
 
     /// Attempts to swap the pieces at positions `idx1` and `idx2`.
     ///
     /// Returns `true` if `idx1` and `idx2` are within the valid range for the puzzle and the
     /// pieces were successfully swapped, and `false` otherwise.
-    fn swap_pieces(&mut self, idx1: usize, idx2: usize) -> bool {
+    fn try_swap_pieces(&mut self, idx1: usize, idx2: usize) -> bool {
         let area = self.area();
         if idx1 < area && idx2 < area {
-            self.swap_pieces_unchecked(idx1, idx2);
+            self.swap_pieces(idx1, idx2);
             true
         } else {
             false
@@ -248,17 +248,17 @@ where
     }
 
     /// Swaps the pieces at positions `(x1, y1)` and `(x2, y2)`.
-    /// See also: [`SlidingPuzzle::swap_pieces_unchecked`].
-    fn swap_pieces_xy_unchecked(&mut self, (x1, y1): (usize, usize), (x2, y2): (usize, usize)) {
+    /// See also: [`SlidingPuzzle::swap_pieces`].
+    fn swap_pieces_xy(&mut self, (x1, y1): (usize, usize), (x2, y2): (usize, usize)) {
         let w = self.width();
-        self.swap_pieces_unchecked(x1 + w * y1, x2 + w * y2);
+        self.swap_pieces(x1 + w * y1, x2 + w * y2);
     }
 
     /// Attempts to swap the pieces at positions `(x1, y1)` and `(x2, y2)`.
     /// See also: [`SlidingPuzzle::swap_pieces`].
-    fn swap_pieces_xy(&mut self, (x1, y1): (usize, usize), (x2, y2): (usize, usize)) -> bool {
+    fn try_swap_pieces_xy(&mut self, (x1, y1): (usize, usize), (x2, y2): (usize, usize)) -> bool {
         let w = self.width();
-        self.swap_pieces(x1 + w * y1, x2 + w * y2)
+        self.try_swap_pieces(x1 + w * y1, x2 + w * y2)
     }
 
     /// Checks if it is possible to move a piece in the given [`Direction`].
@@ -277,7 +277,7 @@ where
     ///
     /// This function does not check whether the piece can be moved. If it can not, the function
     /// may panic or the puzzle may be transformed in an invalid way.
-    fn move_dir_unchecked(&mut self, dir: Direction) {
+    fn move_dir(&mut self, dir: Direction) {
         let gap = self.gap_position();
         let piece = match dir {
             Direction::Up => gap + self.width(),
@@ -285,15 +285,15 @@ where
             Direction::Down => gap - self.width(),
             Direction::Right => gap - 1,
         };
-        self.swap_pieces_unchecked(gap, piece);
+        self.swap_pieces(gap, piece);
     }
 
     /// Attempts to move a piece in the given [`Direction`].
     ///
     /// Returns `true` if the piece was moved successfully, `false` otherwise.
-    fn move_dir(&mut self, dir: Direction) -> bool {
+    fn try_move_dir(&mut self, dir: Direction) -> bool {
         if self.can_move_dir(dir) {
-            self.move_dir_unchecked(dir);
+            self.move_dir(dir);
             true
         } else {
             false
@@ -317,18 +317,18 @@ where
     ///
     /// This function does not check whether the move is valid. If it is not, the function may
     /// panic or the puzzle may be transformed in an invalid way.
-    fn apply_move_unchecked(&mut self, mv: Move) {
+    fn apply_move(&mut self, mv: Move) {
         for _ in 0..mv.amount {
-            self.move_dir_unchecked(mv.direction);
+            self.move_dir(mv.direction);
         }
     }
 
     /// Attempts to apply the given [`Move`] to the puzzle.
     ///
     /// Returns `true` if the move was applied successfully, `false` otherwise.
-    fn apply_move(&mut self, mv: Move) -> bool {
+    fn try_apply_move(&mut self, mv: Move) -> bool {
         if self.can_apply_move(mv) {
-            self.apply_move_unchecked(mv);
+            self.apply_move(mv);
             true
         } else {
             false
@@ -364,18 +364,18 @@ where
     ///
     /// This function does not check whether the algorithm is valid. If it is not, the function may
     /// panic or the puzzle may be transformed in an invalid way.
-    fn apply_alg_unchecked(&mut self, alg: &Algorithm) {
+    fn apply_alg(&mut self, alg: &Algorithm) {
         for m in alg.iter_moves() {
-            self.apply_move_unchecked(m);
+            self.apply_move(m);
         }
     }
 
     /// Attempts to apply the given [`Algorithm`] to the puzzle.
     ///
     /// Returns `true` if the algorithm was applied successfully, `false` otherwise.
-    fn apply_alg(&mut self, alg: &Algorithm) -> bool {
+    fn try_apply_alg(&mut self, alg: &Algorithm) -> bool {
         if self.can_apply_alg(alg) {
-            self.apply_alg_unchecked(alg);
+            self.apply_alg(alg);
             true
         } else {
             false

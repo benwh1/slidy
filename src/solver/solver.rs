@@ -142,7 +142,7 @@ where
                 continue;
             }
 
-            if !self.puzzle.move_dir(d) {
+            if !self.puzzle.try_move_dir(d) {
                 continue;
             }
 
@@ -153,7 +153,7 @@ where
             }
 
             self.stack.pop();
-            self.puzzle.move_dir(d.inverse());
+            self.puzzle.try_move_dir(d.inverse());
         }
 
         false

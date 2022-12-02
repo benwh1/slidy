@@ -384,7 +384,7 @@ impl<'a> Renderer<'a> {
 
         for y in 0..height {
             for x in 0..width {
-                let piece = puzzle.piece_at_xy_unchecked(x, y);
+                let piece = puzzle.piece_at_xy(x, y);
 
                 if piece != Piece::zero() {
                     doc = doc.add(self.render_piece(puzzle, x, y));
@@ -408,8 +408,8 @@ impl<'a> Renderer<'a> {
             .map(|a| a.thickness)
             .unwrap_or_default();
 
-        let piece = puzzle.piece_at_xy_unchecked(x, y);
-        let solved_pos = puzzle.solved_pos_xy_unchecked(piece);
+        let piece = puzzle.piece_at_xy(x, y);
+        let solved_pos = puzzle.solved_pos_xy(piece);
 
         let (x, y) = (x as f32, y as f32);
 
@@ -437,7 +437,7 @@ impl<'a> Renderer<'a> {
                     c
                 } else {
                     // If no override, then we use the text or border scheme color.
-                    $scheme.color_unchecked(width, height, solved_pos.0, solved_pos.1)
+                    $scheme.color(width, height, solved_pos.0, solved_pos.1)
                 };
 
                 // Format as hex string
@@ -450,7 +450,7 @@ impl<'a> Renderer<'a> {
             let fill = {
                 let color: Rgba<_, u8> = self
                     .scheme
-                    .color_unchecked(width, height, solved_pos.0, solved_pos.1)
+                    .color(width, height, solved_pos.0, solved_pos.1)
                     .into_format();
                 format!("#{color:x}")
             };

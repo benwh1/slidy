@@ -37,11 +37,11 @@ where
             .take(w * h - 1)
             .all(|(x, y)| {
                 // Label of piece in position (x, y)
-                let (sx, sy) = puzzle.solved_pos_xy_unchecked(puzzle.piece_at_xy_unchecked(x, y));
-                let piece_label = self.position_label(w, h, sx, sy);
+                let (sx, sy) = puzzle.solved_pos_xy(puzzle.piece_at_xy(x, y));
+                let piece_label = self.try_position_label(w, h, sx, sy);
 
                 // Label of piece in position (x, y) on a solved puzzle
-                let solved_label = self.position_label(w, h, x, y);
+                let solved_label = self.try_position_label(w, h, x, y);
 
                 piece_label == solved_label
             })

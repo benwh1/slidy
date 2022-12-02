@@ -36,12 +36,12 @@ impl<L: Label> Label for Id<L> {
         self.0.is_valid_size(width, height)
     }
 
-    fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        self.0.position_label_unchecked(width, height, x, y)
+    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+        self.0.position_label(width, height, x, y)
     }
 
-    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
-        self.0.num_labels_unchecked(width, height)
+    fn num_labels(&self, width: usize, height: usize) -> usize {
+        self.0.num_labels(width, height)
     }
 }
 
@@ -50,13 +50,12 @@ impl<L: Label> Label for RotateCw<L> {
         self.0.is_valid_size(height, width)
     }
 
-    fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        self.0
-            .position_label_unchecked(height, width, y, width - 1 - x)
+    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+        self.0.position_label(height, width, y, width - 1 - x)
     }
 
-    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
-        self.0.num_labels_unchecked(height, width)
+    fn num_labels(&self, width: usize, height: usize) -> usize {
+        self.0.num_labels(height, width)
     }
 }
 
@@ -65,13 +64,12 @@ impl<L: Label> Label for RotateCcw<L> {
         self.0.is_valid_size(height, width)
     }
 
-    fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        self.0
-            .position_label_unchecked(height, width, height - 1 - y, x)
+    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+        self.0.position_label(height, width, height - 1 - y, x)
     }
 
-    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
-        self.0.num_labels_unchecked(height, width)
+    fn num_labels(&self, width: usize, height: usize) -> usize {
+        self.0.num_labels(height, width)
     }
 }
 
@@ -80,13 +78,13 @@ impl<L: Label> Label for RotateHalf<L> {
         self.0.is_valid_size(width, height)
     }
 
-    fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
         self.0
-            .position_label_unchecked(width, height, width - 1 - x, height - 1 - y)
+            .position_label(width, height, width - 1 - x, height - 1 - y)
     }
 
-    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
-        self.0.num_labels_unchecked(width, height)
+    fn num_labels(&self, width: usize, height: usize) -> usize {
+        self.0.num_labels(width, height)
     }
 }
 
@@ -95,13 +93,12 @@ impl<L: Label> Label for ReflectVertical<L> {
         self.0.is_valid_size(height, width)
     }
 
-    fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        self.0
-            .position_label_unchecked(width, height, x, height - 1 - y)
+    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+        self.0.position_label(width, height, x, height - 1 - y)
     }
 
-    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
-        self.0.num_labels_unchecked(width, height)
+    fn num_labels(&self, width: usize, height: usize) -> usize {
+        self.0.num_labels(width, height)
     }
 }
 
@@ -110,13 +107,12 @@ impl<L: Label> Label for ReflectHorizontal<L> {
         self.0.is_valid_size(width, height)
     }
 
-    fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        self.0
-            .position_label_unchecked(width, height, width - 1 - x, y)
+    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+        self.0.position_label(width, height, width - 1 - x, y)
     }
 
-    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
-        self.0.num_labels_unchecked(width, height)
+    fn num_labels(&self, width: usize, height: usize) -> usize {
+        self.0.num_labels(width, height)
     }
 }
 
@@ -125,12 +121,12 @@ impl<L: Label> Label for ReflectDiagonal<L> {
         self.0.is_valid_size(height, width)
     }
 
-    fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        self.0.position_label_unchecked(height, width, y, x)
+    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+        self.0.position_label(height, width, y, x)
     }
 
-    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
-        self.0.num_labels_unchecked(height, width)
+    fn num_labels(&self, width: usize, height: usize) -> usize {
+        self.0.num_labels(height, width)
     }
 }
 
@@ -139,13 +135,13 @@ impl<L: Label> Label for ReflectAntidiagonal<L> {
         self.0.is_valid_size(height, width)
     }
 
-    fn position_label_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
         self.0
-            .position_label_unchecked(height, width, height - 1 - y, width - 1 - x)
+            .position_label(height, width, height - 1 - y, width - 1 - x)
     }
 
-    fn num_labels_unchecked(&self, width: usize, height: usize) -> usize {
-        self.0.num_labels_unchecked(height, width)
+    fn num_labels(&self, width: usize, height: usize) -> usize {
+        self.0.num_labels(height, width)
     }
 }
 
@@ -172,9 +168,9 @@ mod tests {
                     $(#[test]
                     fn [< test_ $label:snake _ $w x $h >] () {
                         let labels = (0..$w * $h)
-                            .map(|i| $label(RowGrids).position_label_unchecked($w, $h, i % $w, i / $w))
+                            .map(|i| $label(RowGrids).position_label($w, $h, i % $w, i / $w))
                             .collect::<Vec<_>>();
-                        let num_labels = $label(RowGrids).num_labels_unchecked($w, $h);
+                        let num_labels = $label(RowGrids).num_labels($w, $h);
                         let expected_num_labels = $labels.iter().max().unwrap() + 1;
                         assert_eq!(labels, $labels);
                         assert_eq!(num_labels, expected_num_labels);

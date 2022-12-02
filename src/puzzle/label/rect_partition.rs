@@ -231,12 +231,12 @@ impl Label for RectPartition {
         self.rect().size() == (width as u32, height as u32)
     }
 
-    fn position_label_unchecked(&self, _width: usize, _height: usize, x: usize, y: usize) -> usize {
+    fn position_label(&self, _width: usize, _height: usize, x: usize, y: usize) -> usize {
         let (x, y) = (x as u32, y as u32);
         self.rects.iter().position(|r| r.contains(x, y)).unwrap()
     }
 
-    fn num_labels_unchecked(&self, _width: usize, _height: usize) -> usize {
+    fn num_labels(&self, _width: usize, _height: usize) -> usize {
         self.num_rects()
     }
 }

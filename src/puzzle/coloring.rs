@@ -15,14 +15,14 @@ pub trait Coloring {
     /// This function does not check that `label` is within bounds (i.e. `label < num_labels`).
     /// If it is not, the function may panic or return any other color.
     #[must_use]
-    fn color_unchecked(&self, label: usize, num_labels: usize) -> Rgba;
+    fn color(&self, label: usize, num_labels: usize) -> Rgba;
 
     /// Returns a color based on a label and the total number of labels, or `None` if `label` is
     /// out of bounds (i.e. `label >= num_labels`).
     #[must_use]
-    fn color(&self, label: usize, num_labels: usize) -> Option<Rgba> {
+    fn try_color(&self, label: usize, num_labels: usize) -> Option<Rgba> {
         if label < num_labels {
-            Some(self.color_unchecked(label, num_labels))
+            Some(self.color(label, num_labels))
         } else {
             None
         }
@@ -85,7 +85,7 @@ impl Monochrome {
 }
 
 impl Coloring for Monochrome {
-    fn color_unchecked(&self, _label: usize, _num_labels: usize) -> Rgba {
+    fn color(&self, _label: usize, _num_labels: usize) -> Rgba {
         self.color
     }
 }
@@ -102,7 +102,7 @@ impl ColorList {
 }
 
 impl Coloring for ColorList {
-    fn color_unchecked(&self, label: usize, _num_labels: usize) -> Rgba {
+    fn color(&self, label: usize, _num_labels: usize) -> Rgba {
         self.colors[label % self.colors.len()]
     }
 }
@@ -116,24 +116,24 @@ impl Default for ColorList {
 }
 
 impl Coloring for Rainbow {
-    fn color_unchecked(&self, label: usize, num_labels: usize) -> Rgba {
+    fn color(&self, label: usize, num_labels: usize) -> Rgba {
         let frac = label as f32 / num_labels as f32;
         Hsl::new(330.0 * frac, 1.0, 0.5).into_color()
     }
 }
 
 impl Coloring for RainbowFull {
-    fn color_unchecked(&self, label: usize, num_labels: usize) -> Rgba {
+    fn color(&self, label: usize, num_labels: usize) -> Rgba {
         if num_labels <= 1 {
             Hsl::new(0.0, 1.0, 0.5).into_color()
         } else {
-            Rainbow.color_unchecked(label, num_labels - 1)
+            Rainbow.color(label, num_labels - 1)
         }
     }
 }
 
 impl Coloring for RainbowBright {
-    fn color_unchecked(&self, label: usize, num_labels: usize) -> Rgba {
+    fn color(&self, label: usize, num_labels: usize) -> Rgba {
         let frac = label as f32 / num_labels as f32;
         let hue = 330.0 * frac;
         let lum = 0.5
@@ -144,19 +144,19 @@ impl Coloring for RainbowBright {
 }
 
 impl Coloring for RainbowBrightFull {
-    fn color_unchecked(&self, label: usize, num_labels: usize) -> Rgba {
+    fn color(&self, label: usize, num_labels: usize) -> Rgba {
         if num_labels <= 1 {
             Hsl::new(0.0, 1.0, 0.5).into_color()
         } else {
-            RainbowBright.color_unchecked(label, num_labels - 1)
+            RainbowBright.color(label, num_labels - 1)
         }
     }
 }
 
 impl<'a, T: Coloring> Coloring for AlternatingBrightness<'a, T> {
-    fn color_unchecked(&self, label: usize, num_labels: usize) -> Rgba {
+    fn color(&self, label: usize, num_labels: usize) -> Rgba {
         let l = (label / 2) * 2;
-        let color = self.0.color_unchecked(l, num_labels);
+        let color = self.0.color(l, num_labels);
         if label == l {
             let color: Hsla = color.into_color();
             let (h, s, l, a) = color.into_components();
@@ -181,8 +181,8 @@ impl<'a, C: Coloring> AddLightness<'a, C> {
 impl<'a, C: Coloring> Coloring for AddLightness<'a, C> {
     /// Calls `self.coloring.color` and adds `self.lightness` to the HSL lightness value.
     /// The lightness is clamped to the interval `[0.0, 1.0]`.
-    fn color_unchecked(&self, label: usize, num_labels: usize) -> Rgba {
-        let color = self.coloring.color_unchecked(label, num_labels);
+    fn color(&self, label: usize, num_labels: usize) -> Rgba {
+        let color = self.coloring.color(label, num_labels);
         let color: Hsla = color.into_color();
         let (h, s, l, a) = color.into_components();
         let l = (l + self.lightness).clamp(0.0, 1.0);
@@ -198,7 +198,7 @@ where
     usize: AsPrimitive<C::Scalar>,
     C::Scalar: Div + 'static,
 {
-    fn color_unchecked(&self, label: usize, num_labels: usize) -> Rgba {
+    fn color(&self, label: usize, num_labels: usize) -> Rgba {
         let point = if num_labels < 2 {
             0.as_()
         } else {
@@ -219,10 +219,10 @@ mod tests {
     fn test_monochrome() {
         let c = Rgba::new(0.2718, 0.3141, 0.6931, 0.4142);
         let a = Monochrome::new(c);
-        assert_eq!(a.color(0, 3), Some(c));
-        assert_eq!(a.color(1, 3), Some(c));
-        assert_eq!(a.color(2, 3), Some(c));
-        assert_eq!(a.color(3, 3), None);
+        assert_eq!(a.try_color(0, 3), Some(c));
+        assert_eq!(a.try_color(1, 3), Some(c));
+        assert_eq!(a.try_color(2, 3), Some(c));
+        assert_eq!(a.try_color(3, 3), None);
     }
 
     mod color_list {
@@ -252,14 +252,14 @@ mod tests {
                 Rgba::new(0.6, 0.3, 0.4, 1.0),
             ];
             let a = ColorList::new(c.clone()).unwrap();
-            assert_eq!(a.color(0, 10), Some(c[0]));
-            assert_eq!(a.color(1, 10), Some(c[1]));
-            assert_eq!(a.color(2, 10), Some(c[2]));
-            assert_eq!(a.color(3, 10), Some(c[0]));
-            assert_eq!(a.color(4, 10), Some(c[1]));
-            assert_eq!(a.color(5, 10), Some(c[2]));
-            assert_eq!(a.color(6, 10), Some(c[0]));
-            assert_eq!(a.color(10, 10), None);
+            assert_eq!(a.try_color(0, 10), Some(c[0]));
+            assert_eq!(a.try_color(1, 10), Some(c[1]));
+            assert_eq!(a.try_color(2, 10), Some(c[2]));
+            assert_eq!(a.try_color(3, 10), Some(c[0]));
+            assert_eq!(a.try_color(4, 10), Some(c[1]));
+            assert_eq!(a.try_color(5, 10), Some(c[2]));
+            assert_eq!(a.try_color(6, 10), Some(c[0]));
+            assert_eq!(a.try_color(10, 10), None);
         }
     }
 
@@ -267,37 +267,82 @@ mod tests {
     fn test_rainbow() {
         let a = Rainbow;
 
-        assert_eq!(a.color(0, 1), Some(Hsl::new(0.0, 1.0, 0.5).into_color()));
-        assert_eq!(a.color(1, 1), None);
+        assert_eq!(
+            a.try_color(0, 1),
+            Some(Hsl::new(0.0, 1.0, 0.5).into_color())
+        );
+        assert_eq!(a.try_color(1, 1), None);
 
-        assert_eq!(a.color(0, 2), Some(Hsl::new(0.0, 1.0, 0.5).into_color()));
-        assert_eq!(a.color(1, 2), Some(Hsl::new(165.0, 1.0, 0.5).into_color()));
-        assert_eq!(a.color(2, 2), None);
+        assert_eq!(
+            a.try_color(0, 2),
+            Some(Hsl::new(0.0, 1.0, 0.5).into_color())
+        );
+        assert_eq!(
+            a.try_color(1, 2),
+            Some(Hsl::new(165.0, 1.0, 0.5).into_color())
+        );
+        assert_eq!(a.try_color(2, 2), None);
 
-        assert_eq!(a.color(0, 4), Some(Hsl::new(0.0, 1.0, 0.5).into_color()));
-        assert_eq!(a.color(1, 4), Some(Hsl::new(82.5, 1.0, 0.5).into_color()));
-        assert_eq!(a.color(2, 4), Some(Hsl::new(165.0, 1.0, 0.5).into_color()));
-        assert_eq!(a.color(3, 4), Some(Hsl::new(247.5, 1.0, 0.5).into_color()));
-        assert_eq!(a.color(4, 4), None);
+        assert_eq!(
+            a.try_color(0, 4),
+            Some(Hsl::new(0.0, 1.0, 0.5).into_color())
+        );
+        assert_eq!(
+            a.try_color(1, 4),
+            Some(Hsl::new(82.5, 1.0, 0.5).into_color())
+        );
+        assert_eq!(
+            a.try_color(2, 4),
+            Some(Hsl::new(165.0, 1.0, 0.5).into_color())
+        );
+        assert_eq!(
+            a.try_color(3, 4),
+            Some(Hsl::new(247.5, 1.0, 0.5).into_color())
+        );
+        assert_eq!(a.try_color(4, 4), None);
     }
 
     #[test]
     fn test_rainbow_full() {
         let a = RainbowFull;
 
-        assert_eq!(a.color(0, 1), Some(Hsl::new(0.0, 1.0, 0.5).into_color()));
-        assert_eq!(a.color(1, 1), None);
+        assert_eq!(
+            a.try_color(0, 1),
+            Some(Hsl::new(0.0, 1.0, 0.5).into_color())
+        );
+        assert_eq!(a.try_color(1, 1), None);
 
-        assert_eq!(a.color(0, 2), Some(Hsl::new(0.0, 1.0, 0.5).into_color()));
-        assert_eq!(a.color(1, 2), Some(Hsl::new(330.0, 1.0, 0.5).into_color()));
-        assert_eq!(a.color(2, 2), None);
+        assert_eq!(
+            a.try_color(0, 2),
+            Some(Hsl::new(0.0, 1.0, 0.5).into_color())
+        );
+        assert_eq!(
+            a.try_color(1, 2),
+            Some(Hsl::new(330.0, 1.0, 0.5).into_color())
+        );
+        assert_eq!(a.try_color(2, 2), None);
 
-        assert_eq!(a.color(0, 5), Some(Hsl::new(0.0, 1.0, 0.5).into_color()));
-        assert_eq!(a.color(1, 5), Some(Hsl::new(82.5, 1.0, 0.5).into_color()));
-        assert_eq!(a.color(2, 5), Some(Hsl::new(165.0, 1.0, 0.5).into_color()));
-        assert_eq!(a.color(3, 5), Some(Hsl::new(247.5, 1.0, 0.5).into_color()));
-        assert_eq!(a.color(4, 5), Some(Hsl::new(330.0, 1.0, 0.5).into_color()));
-        assert_eq!(a.color(5, 5), None);
+        assert_eq!(
+            a.try_color(0, 5),
+            Some(Hsl::new(0.0, 1.0, 0.5).into_color())
+        );
+        assert_eq!(
+            a.try_color(1, 5),
+            Some(Hsl::new(82.5, 1.0, 0.5).into_color())
+        );
+        assert_eq!(
+            a.try_color(2, 5),
+            Some(Hsl::new(165.0, 1.0, 0.5).into_color())
+        );
+        assert_eq!(
+            a.try_color(3, 5),
+            Some(Hsl::new(247.5, 1.0, 0.5).into_color())
+        );
+        assert_eq!(
+            a.try_color(4, 5),
+            Some(Hsl::new(330.0, 1.0, 0.5).into_color())
+        );
+        assert_eq!(a.try_color(5, 5), None);
     }
 
     #[test]
@@ -320,7 +365,7 @@ mod tests {
         ];
 
         for i in 0..7 {
-            assert_eq!(g.color(i, 6), expected[i]);
+            assert_eq!(g.try_color(i, 6), expected[i]);
         }
     }
 }

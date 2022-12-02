@@ -48,10 +48,10 @@ pub trait ColorScheme {
     /// scheme, or whether `(x, y)` is within the bounds of the puzzle. If these conditions are not
     /// satisfied, the function may panic or return any other color.
     #[must_use]
-    fn color_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> Rgba;
+    fn color(&self, width: usize, height: usize, x: usize, y: usize) -> Rgba;
 
     /// Returns the color of `(x, y)` on a `width x height` puzzle.
-    fn color(
+    fn try_color(
         &self,
         width: usize,
         height: usize,
@@ -68,7 +68,7 @@ pub trait ColorScheme {
                 y,
             })
         } else {
-            Ok(self.color_unchecked(width, height, x, y))
+            Ok(self.color(width, height, x, y))
         }
     }
 }
@@ -92,10 +92,10 @@ impl ColorScheme for Scheme {
         self.label.is_valid_size(width, height)
     }
 
-    fn color_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> Rgba {
-        let label = self.label.position_label_unchecked(width, height, x, y);
-        let num_labels = self.label.num_labels_unchecked(width, height);
-        self.coloring.color_unchecked(label, num_labels)
+    fn color(&self, width: usize, height: usize, x: usize, y: usize) -> Rgba {
+        let label = self.label.position_label(width, height, x, y);
+        let num_labels = self.label.num_labels(width, height);
+        self.coloring.color(label, num_labels)
     }
 }
 
@@ -203,7 +203,7 @@ impl RecursiveScheme {
         y: usize,
     ) -> Option<Rgba> {
         if layer == 0 {
-            Some(self.scheme.color_unchecked(width, height, x, y))
+            Some(self.scheme.color(width, height, x, y))
         } else if let Some(partition) = &self.partition {
             let (pos, rect) = partition
                 .rects
@@ -230,8 +230,8 @@ impl ColorScheme for RecursiveScheme {
         self.scheme.is_valid_size(width, height)
     }
 
-    fn color_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> Rgba {
-        self.scheme.color_unchecked(width, height, x, y)
+    fn color(&self, width: usize, height: usize, x: usize, y: usize) -> Rgba {
+        self.scheme.color(width, height, x, y)
     }
 }
 
@@ -282,7 +282,7 @@ impl ColorScheme for IndexedRecursiveScheme {
         partition_valid && scheme_valid
     }
 
-    fn color_unchecked(&self, width: usize, height: usize, x: usize, y: usize) -> Rgba {
+    fn color(&self, width: usize, height: usize, x: usize, y: usize) -> Rgba {
         self.scheme
             .color_at_layer(self.index, width, height, x, y)
             .unwrap()
