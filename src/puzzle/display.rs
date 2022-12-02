@@ -140,17 +140,21 @@ mod tests {
     #[test]
     fn test_display_grid() {
         let p = Puzzle::new(4, 4).unwrap();
-        let a = DisplayGrid::new(&p);
-        let s = a.to_string();
-        assert_eq!(s, " 1  2  3  4\n 5  6  7  8\n 9 10 11 12\n13 14 15  0");
+        let s1 = DisplayGrid::new(&p).to_string();
+        let s2 = p.display_grid().to_string();
+        assert_eq!(s1, " 1  2  3  4\n 5  6  7  8\n 9 10 11 12\n13 14 15  0");
+        assert_eq!(s1, s2);
     }
 
     #[test]
     fn test_display_inline() {
         let p = Puzzle::new(4, 4).unwrap();
-        let a = DisplayInline::new(&p);
-        let s = a.to_string();
-        assert_eq!(s, "1 2 3 4/5 6 7 8/9 10 11 12/13 14 15 0");
+        let s1 = DisplayInline::new(&p).to_string();
+        let s2 = p.display_inline().to_string();
+        let s3 = p.to_string();
+        assert_eq!(s1, "1 2 3 4/5 6 7 8/9 10 11 12/13 14 15 0");
+        assert_eq!(s1, s2);
+        assert_eq!(s1, s3);
     }
 }
 

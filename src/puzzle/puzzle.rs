@@ -585,6 +585,12 @@ mod tests {
                 })
             );
         }
+
+        #[test]
+        fn test_from_str_4() {
+            let a = Puzzle::from_str("1 2 3 4/5t 6 7 8/9 10 11 12/13 14 15 0");
+            assert_eq!(a, Err(ParsePuzzleError::InvalidCharacter('t')));
+        }
     }
 }
 
