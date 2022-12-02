@@ -65,7 +65,7 @@ where
     /// Number of pieces in the puzzle.
     #[must_use]
     fn num_pieces(&self) -> usize {
-        self.width() * self.height() - 1
+        self.area() - 1
     }
 
     /// Position of the empty space.
