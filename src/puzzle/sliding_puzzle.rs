@@ -104,7 +104,7 @@ where
                         a
                     }
                 };
-                self.set_piece_xy(x, y, piece);
+                self.set_piece_xy((x, y), piece);
             }
         }
     }
@@ -277,12 +277,12 @@ where
     /// # Panics
     ///
     /// See [`SlidingPuzzle::set_piece`].
-    fn set_piece_xy(&mut self, x: usize, y: usize, piece: Piece) {
+    fn set_piece_xy(&mut self, (x, y): (usize, usize), piece: Piece) {
         self.set_piece(x + self.width() * y, piece);
     }
 
     /// See also: [`SlidingPuzzle::set_piece_xy`].
-    fn try_set_piece_xy(&mut self, x: usize, y: usize, piece: Piece) -> bool {
+    fn try_set_piece_xy(&mut self, (x, y): (usize, usize), piece: Piece) -> bool {
         self.try_set_piece(x + self.width() * y, piece)
     }
 
@@ -291,8 +291,8 @@ where
     /// # Safety
     ///
     /// See panics section of [`SlidingPuzzle::set_piece_xy`].
-    unsafe fn set_piece_xy_unchecked(&mut self, x: usize, y: usize, piece: Piece) {
-        self.set_piece_xy(x, y, piece);
+    unsafe fn set_piece_xy_unchecked(&mut self, (x, y): (usize, usize), piece: Piece) {
+        self.set_piece_xy((x, y), piece);
     }
 
     /// Swaps the pieces at positions `idx1` and `idx2`.

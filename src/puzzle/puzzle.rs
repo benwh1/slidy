@@ -401,7 +401,7 @@ mod tests {
         fn test_set_piece() {
             let mut p = Puzzle::new(4, 4).unwrap();
             p.try_set_piece(0, 6);
-            p.try_set_piece_xy(1, 1, 1);
+            p.try_set_piece_xy((1, 1), 1);
             assert_eq!(
                 p.pieces,
                 vec![6, 2, 3, 4, 5, 1, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0]
@@ -412,7 +412,7 @@ mod tests {
         fn test_set_piece_2() {
             let mut p = Puzzle::new(4, 4).unwrap();
             p.try_set_piece(0, 0);
-            p.try_set_piece_xy(3, 3, 1);
+            p.try_set_piece_xy((3, 3), 1);
             assert_eq!(
                 p.pieces,
                 vec![0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 1,]
