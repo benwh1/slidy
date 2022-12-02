@@ -141,6 +141,10 @@ where
     }
 
     /// See also: [`SlidingPuzzle::solved_pos`].
+    ///
+    /// # Safety
+    ///
+    /// See panics section of [`SlidingPuzzle::solved_pos`].
     unsafe fn solved_pos_unchecked(&self, piece: Piece) -> usize {
         self.solved_pos(piece)
     }
@@ -168,6 +172,10 @@ where
     }
 
     /// See also: [`SlidingPuzzle::solved_pos_xy`].
+    ///
+    /// # Safety
+    ///
+    /// See panics section of [`SlidingPuzzle::solved_pos_xy`].
     #[must_use]
     unsafe fn solved_pos_xy_unchecked(&self, piece: Piece) -> (usize, usize) {
         self.solved_pos_xy(piece)
@@ -193,6 +201,10 @@ where
     }
 
     /// See also: [`SlidingPuzzle::piece_at`].
+    ///
+    /// # Safety
+    ///
+    /// See panics section of [`SlidingPuzzle::piece_at`].
     #[must_use]
     unsafe fn piece_at_unchecked(&self, idx: usize) -> Piece {
         self.piece_at(idx)
@@ -219,6 +231,10 @@ where
     }
 
     /// See also: [`SlidingPuzzle::piece_at_xy`].
+    ///
+    /// # Safety
+    ///
+    /// See panics section of [`SlidingPuzzle::piece_at_xy`].
     #[must_use]
     unsafe fn piece_at_xy_unchecked(&self, x: usize, y: usize) -> Piece {
         self.piece_at_xy(x, y)
@@ -248,6 +264,10 @@ where
     }
 
     /// See also: [`SlidingPuzzle::set_piece`].
+    ///
+    /// # Safety
+    ///
+    /// See panics section of [`SlidingPuzzle::set_piece`].
     unsafe fn set_piece_unchecked(&mut self, idx: usize, piece: Piece) {
         self.set_piece(idx, piece)
     }
@@ -267,6 +287,10 @@ where
     }
 
     /// See also: [`SlidingPuzzle::set_piece_xy`].
+    ///
+    /// # Safety
+    ///
+    /// See panics section of [`SlidingPuzzle::set_piece_xy`].
     unsafe fn set_piece_xy_unchecked(&mut self, x: usize, y: usize, piece: Piece) {
         self.set_piece_xy(x, y, piece);
     }
@@ -298,6 +322,10 @@ where
     }
 
     /// See also: [`SlidingPuzzle::swap_pieces`].
+    ///
+    /// # Safety
+    ///
+    /// See panics section of [`SlidingPuzzle::swap_pieces`].
     unsafe fn swap_pieces_unchecked(&mut self, idx1: usize, idx2: usize) {
         self.swap_pieces(idx1, idx2)
     }
@@ -319,6 +347,10 @@ where
     }
 
     /// See also: [`SlidingPuzzle::swap_pieces_xy`].
+    ///
+    /// # Safety
+    ///
+    /// See panics section of [`SlidingPuzzle::swap_pieces_xy`].
     unsafe fn swap_pieces_xy_unchecked(
         &mut self,
         (x1, y1): (usize, usize),
@@ -369,6 +401,10 @@ where
     }
 
     /// See also: [`SlidingPuzzle::move_dir`].
+    ///
+    /// # Safety
+    ///
+    /// See panics section of [`SlidingPuzzle::move_dir`].
     unsafe fn move_dir_unchecked(&mut self, dir: Direction) {
         self.move_dir(dir)
     }
@@ -411,6 +447,10 @@ where
     }
 
     /// See also: [`SlidingPuzzle::apply_move`].
+    ///
+    /// # Safety
+    ///
+    /// See panics section of [`SlidingPuzzle::apply_move`].
     unsafe fn apply_move_unchecked(&mut self, mv: Move) {
         self.apply_move(mv)
     }
@@ -465,6 +505,10 @@ where
     }
 
     /// See also: [`SlidingPuzzle::apply_alg`].
+    ///
+    /// # Safety
+    ///
+    /// See panics section of [`SlidingPuzzle::apply_alg`].
     unsafe fn apply_alg_unchecked(&mut self, alg: &Algorithm) {
         self.apply_alg(alg)
     }
