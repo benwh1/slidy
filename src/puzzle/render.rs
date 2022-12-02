@@ -464,7 +464,7 @@ impl<'a> Renderer<'a> {
 
             if let Some(s) = &self.borders {
                 let stroke = color!(s.scheme, SubschemeStyle::BorderColor);
-                r = r.set("stroke", stroke)
+                r = r.set("stroke", stroke);
             }
 
             r

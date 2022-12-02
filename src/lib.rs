@@ -133,6 +133,7 @@
 #![deny(clippy::if_not_else)]
 #![deny(clippy::iter_not_returning_iterator)]
 #![deny(clippy::mod_module_files)]
+#![deny(clippy::semicolon_if_nothing_returned)]
 #![deny(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]
 

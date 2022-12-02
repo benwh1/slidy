@@ -269,7 +269,7 @@ where
     ///
     /// See panics section of [`SlidingPuzzle::set_piece`].
     unsafe fn set_piece_unchecked(&mut self, idx: usize, piece: Piece) {
-        self.set_piece(idx, piece)
+        self.set_piece(idx, piece);
     }
 
     /// Set the piece at a given (x, y) position to `piece`.
@@ -327,7 +327,7 @@ where
     ///
     /// See panics section of [`SlidingPuzzle::swap_pieces`].
     unsafe fn swap_pieces_unchecked(&mut self, idx1: usize, idx2: usize) {
-        self.swap_pieces(idx1, idx2)
+        self.swap_pieces(idx1, idx2);
     }
 
     /// Swaps the pieces at positions `(x1, y1)` and `(x2, y2)`.
@@ -356,7 +356,7 @@ where
         (x1, y1): (usize, usize),
         (x2, y2): (usize, usize),
     ) {
-        self.swap_pieces_xy((x1, y1), (x2, y2))
+        self.swap_pieces_xy((x1, y1), (x2, y2));
     }
 
     /// Checks if it is possible to move a piece in the given [`Direction`].
@@ -406,7 +406,7 @@ where
     ///
     /// See panics section of [`SlidingPuzzle::move_dir`].
     unsafe fn move_dir_unchecked(&mut self, dir: Direction) {
-        self.move_dir(dir)
+        self.move_dir(dir);
     }
 
     /// Checks if it is possible to apply the given [`Move`].
@@ -452,7 +452,7 @@ where
     ///
     /// See panics section of [`SlidingPuzzle::apply_move`].
     unsafe fn apply_move_unchecked(&mut self, mv: Move) {
-        self.apply_move(mv)
+        self.apply_move(mv);
     }
 
     /// Checks if it is possible to apply the given [`Algorithm`].
@@ -510,6 +510,6 @@ where
     ///
     /// See panics section of [`SlidingPuzzle::apply_alg`].
     unsafe fn apply_alg_unchecked(&mut self, alg: &Algorithm) {
-        self.apply_alg(alg)
+        self.apply_alg(alg);
     }
 }
