@@ -10,15 +10,15 @@ use thiserror::Error;
 ///
 /// See also: [`crate::puzzle::label::label::Label`].
 pub trait Coloring {
-    /// See also: [`Coloring::color`].
+    /// Returns a color based on a label and the total number of labels, or `None` if `label` is
+    /// out of bounds (i.e. `label >= num_labels`).
     ///
     /// This function does not check that `label` is within bounds (i.e. `label < num_labels`).
     /// If it is not, the function may panic or return any other color.
     #[must_use]
     fn color(&self, label: usize, num_labels: usize) -> Rgba;
 
-    /// Returns a color based on a label and the total number of labels, or `None` if `label` is
-    /// out of bounds (i.e. `label >= num_labels`).
+    /// See [`Coloring::color`].
     #[must_use]
     fn try_color(&self, label: usize, num_labels: usize) -> Option<Rgba> {
         if label < num_labels {

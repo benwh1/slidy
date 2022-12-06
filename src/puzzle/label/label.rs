@@ -39,7 +39,9 @@ pub trait Label {
     #[must_use]
     fn is_valid_size(&self, width: usize, height: usize) -> bool;
 
-    /// See also: [`Self::position_label`].
+    /// Returns the label of `(x, y)` on a `width x height` puzzle.
+    ///
+    /// The label must be an integer from 0 to `self.num_labels(width, height) - 1`.
     ///
     /// This function may not check whether `width x height` is a valid puzzle size for the label,
     /// or whether `(x, y)` is within the bounds of the puzzle. If these conditions are not
@@ -48,9 +50,7 @@ pub trait Label {
     #[must_use]
     fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize;
 
-    /// Returns the label of `(x, y)` on a `width x height` puzzle.
-    ///
-    /// The label must be an integer from 0 to `self.num_labels(width, height) - 1`.
+    /// See [`Self::position_label`].
     fn try_position_label(
         &self,
         width: usize,
@@ -72,14 +72,14 @@ pub trait Label {
         }
     }
 
-    /// See also: [`Self::num_labels`].
+    /// Returns the total number of distinct labels across all `(x, y)` positions in the puzzle.
     ///
     /// This function may not check whether `width x height` is a valid puzzle size for the label.
     /// If it is not, the function may panic or return an invalid number.
     #[must_use]
     fn num_labels(&self, width: usize, height: usize) -> usize;
 
-    /// Returns the total number of distinct labels across all `(x, y)` positions in the puzzle.
+    /// See [`Self::num_labels`].
     fn try_num_labels(&self, width: usize, height: usize) -> Result<usize, LabelError> {
         if self.is_valid_size(width, height) {
             Ok(self.num_labels(width, height))

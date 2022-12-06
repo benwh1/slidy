@@ -134,7 +134,7 @@ impl Algorithm {
 
     /// Simplifies the algorithm.
     ///
-    /// See also: [`Algorithm::simplified`]
+    /// See also: [`Algorithm::simplified`].
     pub fn simplify(&mut self) {
         self.moves = self.simplified().moves;
     }
@@ -150,7 +150,7 @@ impl Algorithm {
 
     /// Inverts the algorithm.
     ///
-    /// See also: [`Algorithm::inverse`]
+    /// See also: [`Algorithm::inverse`].
     pub fn invert(&mut self) {
         self.moves = self.inverse().moves;
     }

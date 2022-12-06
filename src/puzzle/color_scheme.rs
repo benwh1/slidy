@@ -42,7 +42,7 @@ pub trait ColorScheme {
     #[must_use]
     fn is_valid_size(&self, width: usize, height: usize) -> bool;
 
-    /// See also: [`Self::color`].
+    /// See [`Self::color`].
     ///
     /// This function may not check whether `width x height` is a valid puzzle size for the color
     /// scheme, or whether `(x, y)` is within the bounds of the puzzle. If these conditions are not

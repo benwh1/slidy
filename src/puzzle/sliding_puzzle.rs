@@ -58,6 +58,11 @@ where
     }
 
     /// Position of the empty space.
+    ///
+    /// # Panics
+    ///
+    /// This function never panics unless a function like [`SlidingPuzzle::set_piece`] has
+    /// been used to create an invalid state (i.e. a state with no gap).
     #[must_use]
     fn gap_position(&self) -> usize {
         self.try_gap_position().unwrap()
@@ -148,7 +153,7 @@ where
         }
     }
 
-    /// See also: [`SlidingPuzzle::solved_pos`].
+    /// See [`SlidingPuzzle::solved_pos`].
     #[must_use]
     fn try_solved_pos(&self, piece: Piece) -> Option<usize> {
         let n = self.num_pieces();
@@ -158,7 +163,7 @@ where
         }
     }
 
-    /// See also: [`SlidingPuzzle::solved_pos`].
+    /// See [`SlidingPuzzle::solved_pos`].
     ///
     /// # Safety
     ///
@@ -181,7 +186,7 @@ where
         (p % w, p / w)
     }
 
-    /// See also: [`SlidingPuzzle::solved_pos_xy`].
+    /// See [`SlidingPuzzle::solved_pos_xy`].
     #[must_use]
     fn try_solved_pos_xy(&self, piece: Piece) -> Option<(usize, usize)> {
         let n = self.num_pieces();
@@ -191,7 +196,7 @@ where
         }
     }
 
-    /// See also: [`SlidingPuzzle::solved_pos_xy`].
+    /// See [`SlidingPuzzle::solved_pos_xy`].
     ///
     /// # Safety
     ///
@@ -211,7 +216,7 @@ where
     #[must_use]
     fn piece_at(&self, idx: usize) -> Piece;
 
-    /// See also: [`SlidingPuzzle::piece_at`].
+    /// See [`SlidingPuzzle::piece_at`].
     #[must_use]
     fn try_piece_at(&self, idx: usize) -> Option<Piece> {
         if idx < self.area() {
@@ -221,7 +226,7 @@ where
         }
     }
 
-    /// See also: [`SlidingPuzzle::piece_at`].
+    /// See [`SlidingPuzzle::piece_at`].
     ///
     /// # Safety
     ///
@@ -243,7 +248,7 @@ where
         self.piece_at(x + self.width() * y)
     }
 
-    /// See also: [`SlidingPuzzle::piece_at_xy`].
+    /// See [`SlidingPuzzle::piece_at_xy`].
     #[must_use]
     fn try_piece_at_xy(&self, x: usize, y: usize) -> Option<Piece> {
         if x < self.width() && y < self.height() {
@@ -253,7 +258,7 @@ where
         }
     }
 
-    /// See also: [`SlidingPuzzle::piece_at_xy`].
+    /// See [`SlidingPuzzle::piece_at_xy`].
     ///
     /// # Safety
     ///
@@ -274,7 +279,7 @@ where
     /// If `idx` is not within the range `0 <= idx < self.area()`, the function may panic.
     fn set_piece(&mut self, idx: usize, piece: Piece);
 
-    /// See also: [`SlidingPuzzle::set_piece`].
+    /// See [`SlidingPuzzle::set_piece`].
     ///
     /// Returns `true` if `idx` is within the valid range for the puzzle and the piece was
     /// successfully set, and `false` otherwise.
@@ -287,7 +292,7 @@ where
         }
     }
 
-    /// See also: [`SlidingPuzzle::set_piece`].
+    /// See [`SlidingPuzzle::set_piece`].
     ///
     /// # Safety
     ///
@@ -307,13 +312,13 @@ where
         self.set_piece(x + self.width() * y, piece);
     }
 
-    /// See also: [`SlidingPuzzle::set_piece_xy`].
+    /// See [`SlidingPuzzle::set_piece_xy`].
     #[inline]
     fn try_set_piece_xy(&mut self, (x, y): (usize, usize), piece: Piece) -> bool {
         self.try_set_piece(x + self.width() * y, piece)
     }
 
-    /// See also: [`SlidingPuzzle::set_piece_xy`].
+    /// See [`SlidingPuzzle::set_piece_xy`].
     ///
     /// # Safety
     ///
@@ -335,7 +340,7 @@ where
         self.set_piece(idx2, piece);
     }
 
-    /// See also: [`SlidingPuzzle::swap_pieces`].
+    /// See [`SlidingPuzzle::swap_pieces`].
     ///
     /// Returns `true` if `idx1` and `idx2` are within the valid range for the puzzle and the
     /// pieces were successfully swapped, and `false` otherwise.
@@ -349,7 +354,7 @@ where
         }
     }
 
-    /// See also: [`SlidingPuzzle::swap_pieces`].
+    /// See [`SlidingPuzzle::swap_pieces`].
     ///
     /// # Safety
     ///
@@ -370,14 +375,14 @@ where
         self.swap_pieces(x1 + w * y1, x2 + w * y2);
     }
 
-    /// See also: [`SlidingPuzzle::swap_pieces_xy`].
+    /// See [`SlidingPuzzle::swap_pieces_xy`].
     #[inline]
     fn try_swap_pieces_xy(&mut self, (x1, y1): (usize, usize), (x2, y2): (usize, usize)) -> bool {
         let w = self.width();
         self.try_swap_pieces(x1 + w * y1, x2 + w * y2)
     }
 
-    /// See also: [`SlidingPuzzle::swap_pieces_xy`].
+    /// See [`SlidingPuzzle::swap_pieces_xy`].
     ///
     /// # Safety
     ///
@@ -443,7 +448,7 @@ where
         self.swap_pieces(gap, piece);
     }
 
-    /// See also: [`SlidingPuzzle::move_dir`].
+    /// See [`SlidingPuzzle::move_dir`].
     ///
     /// Returns `true` if the piece was moved successfully, `false` otherwise.
     fn try_move_dir(&mut self, dir: Direction) -> bool {
@@ -455,7 +460,7 @@ where
         }
     }
 
-    /// See also: [`SlidingPuzzle::move_dir`].
+    /// See [`SlidingPuzzle::move_dir`].
     ///
     /// # Safety
     ///
@@ -490,7 +495,7 @@ where
         }
     }
 
-    /// See also: [`SlidingPuzzle::apply_move`].
+    /// See [`SlidingPuzzle::apply_move`].
     ///
     /// Returns `true` if the move was applied successfully, `false` otherwise.
     fn try_apply_move(&mut self, mv: Move) -> bool {
@@ -502,7 +507,7 @@ where
         }
     }
 
-    /// See also: [`SlidingPuzzle::apply_move`].
+    /// See [`SlidingPuzzle::apply_move`].
     ///
     /// # Safety
     ///
@@ -549,7 +554,7 @@ where
         }
     }
 
-    /// See also: [`SlidingPuzzle::apply_alg`].
+    /// See [`SlidingPuzzle::apply_alg`].
     ///
     /// Returns `true` if the algorithm was applied successfully, `false` otherwise.
     fn try_apply_alg(&mut self, alg: &Algorithm) -> bool {
@@ -561,7 +566,7 @@ where
         }
     }
 
-    /// See also: [`SlidingPuzzle::apply_alg`].
+    /// See [`SlidingPuzzle::apply_alg`].
     ///
     /// # Safety
     ///
