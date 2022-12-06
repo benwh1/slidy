@@ -23,6 +23,7 @@ use super::label::label::RowGrids;
 /// - If `w` is the width of the puzzle, then position `w-1` is the top right corner and position
 /// `w` is below position 0
 /// - Position `N` is the bottom right corner
+#[allow(clippy::missing_safety_doc)]
 pub trait SlidingPuzzle<Piece>
 where
     Piece: PrimInt,
@@ -75,10 +76,6 @@ where
     }
 
     /// See [`SlidingPuzzle::gap_position`].
-    ///
-    /// # Safety
-    ///
-    /// See panics section of [`SlidingPuzzle::gap_position`].
     #[must_use]
     unsafe fn gap_position_unchecked(&self) -> usize {
         self.gap_position()
@@ -166,10 +163,6 @@ where
     }
 
     /// See [`SlidingPuzzle::solved_pos`].
-    ///
-    /// # Safety
-    ///
-    /// See panics section of [`SlidingPuzzle::solved_pos`].
     #[must_use]
     #[inline(always)]
     unsafe fn solved_pos_unchecked(&self, piece: Piece) -> usize {
@@ -199,10 +192,6 @@ where
     }
 
     /// See [`SlidingPuzzle::solved_pos_xy`].
-    ///
-    /// # Safety
-    ///
-    /// See panics section of [`SlidingPuzzle::solved_pos_xy`].
     #[must_use]
     #[inline(always)]
     unsafe fn solved_pos_xy_unchecked(&self, piece: Piece) -> (usize, usize) {
@@ -231,10 +220,6 @@ where
     }
 
     /// See [`SlidingPuzzle::piece_at`].
-    ///
-    /// # Safety
-    ///
-    /// See panics section of [`SlidingPuzzle::piece_at`].
     #[must_use]
     #[inline(always)]
     unsafe fn piece_at_unchecked(&self, idx: usize) -> Piece {
@@ -263,10 +248,6 @@ where
     }
 
     /// See [`SlidingPuzzle::piece_at_xy`].
-    ///
-    /// # Safety
-    ///
-    /// See panics section of [`SlidingPuzzle::piece_at_xy`].
     #[must_use]
     #[inline(always)]
     unsafe fn piece_at_xy_unchecked(&self, x: usize, y: usize) -> Piece {
@@ -297,10 +278,6 @@ where
     }
 
     /// See [`SlidingPuzzle::set_piece`].
-    ///
-    /// # Safety
-    ///
-    /// See panics section of [`SlidingPuzzle::set_piece`].
     #[inline(always)]
     unsafe fn set_piece_unchecked(&mut self, idx: usize, piece: Piece) {
         self.set_piece(idx, piece);
@@ -323,10 +300,6 @@ where
     }
 
     /// See [`SlidingPuzzle::set_piece_xy`].
-    ///
-    /// # Safety
-    ///
-    /// See panics section of [`SlidingPuzzle::set_piece_xy`].
     #[inline(always)]
     unsafe fn set_piece_xy_unchecked(&mut self, (x, y): (usize, usize), piece: Piece) {
         self.set_piece_unchecked(x + self.width() * y, piece);
@@ -359,10 +332,6 @@ where
     }
 
     /// See [`SlidingPuzzle::swap_pieces`].
-    ///
-    /// # Safety
-    ///
-    /// See panics section of [`SlidingPuzzle::swap_pieces`].
     #[inline(always)]
     unsafe fn swap_pieces_unchecked(&mut self, idx1: usize, idx2: usize) {
         self.swap_pieces(idx1, idx2);
@@ -387,10 +356,6 @@ where
     }
 
     /// See [`SlidingPuzzle::swap_pieces_xy`].
-    ///
-    /// # Safety
-    ///
-    /// See panics section of [`SlidingPuzzle::swap_pieces_xy`].
     #[inline(always)]
     unsafe fn swap_pieces_xy_unchecked(
         &mut self,
@@ -414,11 +379,6 @@ where
     }
 
     /// See [`SlidingPuzzle::swap_piece_with_gap`].
-    ///
-    /// # Safety
-    ///
-    /// If `idx` is not within the range `0 <= idx < self.area()`, calling the function is
-    /// undefined behavior.
     #[inline(always)]
     unsafe fn swap_piece_with_gap_unchecked(&mut self, idx: usize) {
         self.swap_pieces_unchecked(idx, self.gap_position());
@@ -466,10 +426,6 @@ where
     }
 
     /// See [`SlidingPuzzle::move_dir`].
-    ///
-    /// # Safety
-    ///
-    /// See panics section of [`SlidingPuzzle::move_dir`].
     #[inline(always)]
     unsafe fn move_dir_unchecked(&mut self, dir: Direction) {
         let gap = self.gap_position_unchecked();
@@ -520,10 +476,6 @@ where
     }
 
     /// See [`SlidingPuzzle::apply_move`].
-    ///
-    /// # Safety
-    ///
-    /// See panics section of [`SlidingPuzzle::apply_move`].
     #[inline(always)]
     unsafe fn apply_move_unchecked(&mut self, mv: Move) {
         for _ in 0..mv.amount {
@@ -581,10 +533,6 @@ where
     }
 
     /// See [`SlidingPuzzle::apply_alg`].
-    ///
-    /// # Safety
-    ///
-    /// See panics section of [`SlidingPuzzle::apply_alg`].
     #[inline(always)]
     unsafe fn apply_alg_unchecked(&mut self, alg: &Algorithm) {
         for m in alg.iter_moves() {
