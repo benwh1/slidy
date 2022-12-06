@@ -375,7 +375,12 @@ where
     /// See [`SlidingPuzzle::swap_piece_with_gap`].
     #[inline(always)]
     fn try_swap_piece_with_gap(&mut self, idx: usize) -> bool {
-        self.try_swap_pieces(idx, self.gap_position())
+        if idx < self.area() {
+            unsafe { self.swap_piece_with_gap_unchecked(idx) };
+            true
+        } else {
+            false
+        }
     }
 
     /// See [`SlidingPuzzle::swap_piece_with_gap`].
