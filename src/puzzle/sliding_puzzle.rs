@@ -23,20 +23,6 @@ use super::label::label::RowGrids;
 /// - If `w` is the width of the puzzle, then position `w-1` is the top right corner and position
 /// `w` is below position 0
 /// - Position `N` is the bottom right corner
-///
-/// # Safe, panicking, and unsafe functions
-///
-/// Some functions defined in this trait have variants with names of the form `foo`, `try_foo`, and
-/// `foo_unchecked`.
-///
-/// - The functions `foo` may panic, return invalid results, or create invalid states when given
-/// invalid arguments.
-/// - The functions `try_foo` should return `None` when given invalid arguments, and should never
-/// panic. The default implementations of these functions call `foo` with the appropriate checks
-/// included.
-/// - The functions `foo_unchecked` should be considered `unsafe` and are intended for situations
-/// where performance is important. The default implementations of these functions just call `foo`
-/// and do not contain any unsafe code. Implement these functions manually if you require them.
 pub trait SlidingPuzzle<Piece>
 where
     Piece: PrimInt,
