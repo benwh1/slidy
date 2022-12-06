@@ -74,9 +74,23 @@ where
     /// Position of the empty space.
     #[must_use]
     fn gap_position(&self) -> usize {
-        (0..self.area())
-            .position(|idx| self.piece_at(idx) == Piece::zero())
-            .unwrap()
+        self.try_gap_position().unwrap()
+    }
+
+    /// See [`SlidingPuzzle::gap_position`].
+    #[must_use]
+    fn try_gap_position(&self) -> Option<usize> {
+        (0..self.area()).position(|idx| self.piece_at(idx) == Piece::zero())
+    }
+
+    /// See [`SlidingPuzzle::gap_position`].
+    ///
+    /// # Safety
+    ///
+    /// See panics section of [`SlidingPuzzle::gap_position`].
+    #[must_use]
+    unsafe fn gap_position_unchecked(&self) -> usize {
+        self.gap_position()
     }
 
     /// Position of the empty space as (x, y) coordinates.
@@ -85,6 +99,19 @@ where
         let pos = self.gap_position();
         let w = self.width();
         (pos % w, pos / w)
+    }
+
+    /// See [`SlidingPuzzle::gap_position_xy`].
+    #[must_use]
+    fn try_gap_position_xy(&self) -> Option<(usize, usize)> {
+        let w = self.width();
+        self.try_gap_position().map(|p| (p % w, p / w))
+    }
+
+    /// See [`SlidingPuzzle::gap_position_xy`].
+    #[must_use]
+    unsafe fn gap_position_xy_unchecked(&self) -> (usize, usize) {
+        self.gap_position_xy()
     }
 
     /// Reset the puzzle to the default state.
