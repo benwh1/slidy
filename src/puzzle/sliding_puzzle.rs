@@ -378,6 +378,29 @@ where
         self.swap_pieces_xy((x1, y1), (x2, y2));
     }
 
+    /// Swaps piece in position `idx` with the gap.
+    #[inline(always)]
+    fn swap_piece_with_gap(&mut self, idx: usize) {
+        self.swap_pieces(idx, self.gap_position());
+    }
+
+    /// See [`SlidingPuzzle::swap_piece_with_gap`].
+    #[inline(always)]
+    fn try_swap_piece_with_gap(&mut self, idx: usize) -> bool {
+        self.try_swap_pieces(idx, self.gap_position())
+    }
+
+    /// See [`SlidingPuzzle::swap_piece_with_gap`].
+    ///
+    /// # Safety
+    ///
+    /// If `idx` is not within the range `0 <= idx < self.area()`, calling the function is
+    /// undefined behavior.
+    #[inline(always)]
+    unsafe fn swap_piece_with_gap_unchecked(&mut self, idx: usize) {
+        self.swap_pieces(idx, self.gap_position());
+    }
+
     /// Checks if it is possible to move a piece in the given [`Direction`].
     #[must_use]
     fn can_move_dir(&self, dir: Direction) -> bool {
