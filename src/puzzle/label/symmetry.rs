@@ -7,7 +7,7 @@ macro_rules! define_sym {
         $(
             $(#[$annot])*
             #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-            pub struct $name<L: Label>(pub L);
+            pub struct $name<L: Label + ?Sized>(pub L);
         )*
     };
 }
@@ -31,7 +31,7 @@ define_sym!(
     ReflectAntidiagonal,
 );
 
-impl<L: Label> Label for Id<L> {
+impl<L: Label + ?Sized> Label for Id<L> {
     fn is_valid_size(&self, width: usize, height: usize) -> bool {
         self.0.is_valid_size(width, height)
     }
@@ -45,7 +45,7 @@ impl<L: Label> Label for Id<L> {
     }
 }
 
-impl<L: Label> Label for RotateCw<L> {
+impl<L: Label + ?Sized> Label for RotateCw<L> {
     fn is_valid_size(&self, width: usize, height: usize) -> bool {
         self.0.is_valid_size(height, width)
     }
@@ -59,7 +59,7 @@ impl<L: Label> Label for RotateCw<L> {
     }
 }
 
-impl<L: Label> Label for RotateCcw<L> {
+impl<L: Label + ?Sized> Label for RotateCcw<L> {
     fn is_valid_size(&self, width: usize, height: usize) -> bool {
         self.0.is_valid_size(height, width)
     }
@@ -73,7 +73,7 @@ impl<L: Label> Label for RotateCcw<L> {
     }
 }
 
-impl<L: Label> Label for RotateHalf<L> {
+impl<L: Label + ?Sized> Label for RotateHalf<L> {
     fn is_valid_size(&self, width: usize, height: usize) -> bool {
         self.0.is_valid_size(width, height)
     }
@@ -88,7 +88,7 @@ impl<L: Label> Label for RotateHalf<L> {
     }
 }
 
-impl<L: Label> Label for ReflectVertical<L> {
+impl<L: Label + ?Sized> Label for ReflectVertical<L> {
     fn is_valid_size(&self, width: usize, height: usize) -> bool {
         self.0.is_valid_size(height, width)
     }
@@ -102,7 +102,7 @@ impl<L: Label> Label for ReflectVertical<L> {
     }
 }
 
-impl<L: Label> Label for ReflectHorizontal<L> {
+impl<L: Label + ?Sized> Label for ReflectHorizontal<L> {
     fn is_valid_size(&self, width: usize, height: usize) -> bool {
         self.0.is_valid_size(width, height)
     }
@@ -116,7 +116,7 @@ impl<L: Label> Label for ReflectHorizontal<L> {
     }
 }
 
-impl<L: Label> Label for ReflectDiagonal<L> {
+impl<L: Label + ?Sized> Label for ReflectDiagonal<L> {
     fn is_valid_size(&self, width: usize, height: usize) -> bool {
         self.0.is_valid_size(height, width)
     }
@@ -130,7 +130,7 @@ impl<L: Label> Label for ReflectDiagonal<L> {
     }
 }
 
-impl<L: Label> Label for ReflectAntidiagonal<L> {
+impl<L: Label + ?Sized> Label for ReflectAntidiagonal<L> {
     fn is_valid_size(&self, width: usize, height: usize) -> bool {
         self.0.is_valid_size(height, width)
     }
@@ -145,14 +145,14 @@ impl<L: Label> Label for ReflectAntidiagonal<L> {
     }
 }
 
-impl<L: BijectiveLabel> BijectiveLabel for Id<L> {}
-impl<L: BijectiveLabel> BijectiveLabel for RotateCw<L> {}
-impl<L: BijectiveLabel> BijectiveLabel for RotateCcw<L> {}
-impl<L: BijectiveLabel> BijectiveLabel for RotateHalf<L> {}
-impl<L: BijectiveLabel> BijectiveLabel for ReflectVertical<L> {}
-impl<L: BijectiveLabel> BijectiveLabel for ReflectHorizontal<L> {}
-impl<L: BijectiveLabel> BijectiveLabel for ReflectDiagonal<L> {}
-impl<L: BijectiveLabel> BijectiveLabel for ReflectAntidiagonal<L> {}
+impl<L: BijectiveLabel + ?Sized> BijectiveLabel for Id<L> {}
+impl<L: BijectiveLabel + ?Sized> BijectiveLabel for RotateCw<L> {}
+impl<L: BijectiveLabel + ?Sized> BijectiveLabel for RotateCcw<L> {}
+impl<L: BijectiveLabel + ?Sized> BijectiveLabel for RotateHalf<L> {}
+impl<L: BijectiveLabel + ?Sized> BijectiveLabel for ReflectVertical<L> {}
+impl<L: BijectiveLabel + ?Sized> BijectiveLabel for ReflectHorizontal<L> {}
+impl<L: BijectiveLabel + ?Sized> BijectiveLabel for ReflectDiagonal<L> {}
+impl<L: BijectiveLabel + ?Sized> BijectiveLabel for ReflectAntidiagonal<L> {}
 
 #[cfg(test)]
 mod tests {

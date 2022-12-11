@@ -18,10 +18,7 @@ pub trait SolvedState {
         Self: Sized;
 }
 
-impl<T> SolvedState for T
-where
-    T: Label,
-{
+impl<L: Label + ?Sized> SolvedState for L {
     fn is_solved<Piece, Puzzle>(&self, puzzle: &Puzzle) -> bool
     where
         Piece: PrimInt,

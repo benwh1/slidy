@@ -10,7 +10,7 @@ use super::label::Label;
 /// will have the label 0, the top right 3x2 block will have the label 1, the left 3x2 block in the
 /// middle two rows will have the label 2, etc. for a total of 6 distinct labels.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Scaled<'a, L: Label> {
+pub struct Scaled<'a, L: Label + ?Sized> {
     label: &'a L,
     horizontal: u32,
     vertical: u32,
@@ -24,7 +24,7 @@ pub enum ScaledError {
     ZeroScale,
 }
 
-impl<'a, L: Label> Scaled<'a, L> {
+impl<'a, L: Label + ?Sized> Scaled<'a, L> {
     /// Creates a new [`Scaled`] from a [`Label`] and scaling factors.
     pub fn new(label: &'a L, horizontal: u32, vertical: u32) -> Result<Self, ScaledError> {
         if horizontal == 0 || vertical == 0 {
@@ -39,7 +39,7 @@ impl<'a, L: Label> Scaled<'a, L> {
     }
 }
 
-impl<'a, L: Label> Label for Scaled<'a, L> {
+impl<'a, L: Label + ?Sized> Label for Scaled<'a, L> {
     fn is_valid_size(&self, width: usize, height: usize) -> bool {
         let width = width.div_ceil(self.horizontal as usize);
         let height = height.div_ceil(self.vertical as usize);
