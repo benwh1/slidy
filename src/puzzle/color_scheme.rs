@@ -74,20 +74,20 @@ pub trait ColorScheme {
 }
 
 /// A color scheme formed by composing a [`Label`] and a [`Coloring`].
-pub struct Scheme {
-    label: Box<dyn Label>,
-    coloring: Box<dyn Coloring>,
+pub struct Scheme<'a, L: Label + ?Sized, C: Coloring + ?Sized> {
+    label: &'a L,
+    coloring: &'a C,
 }
 
-impl Scheme {
+impl<'a, L: Label + ?Sized, C: Coloring + ?Sized> Scheme<'a, L, C> {
     /// Create a new [`Scheme`] from a [`Label`] and a [`Coloring`].
     #[must_use]
-    pub fn new(label: Box<dyn Label>, coloring: Box<dyn Coloring>) -> Self {
+    pub fn new(label: &'a L, coloring: &'a C) -> Self {
         Self { label, coloring }
     }
 }
 
-impl ColorScheme for Scheme {
+impl<'a, L: Label + ?Sized, C: Coloring + ?Sized> ColorScheme for Scheme<'a, L, C> {
     fn is_valid_size(&self, width: usize, height: usize) -> bool {
         self.label.is_valid_size(width, height)
     }
