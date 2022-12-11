@@ -238,14 +238,14 @@ impl<'a, S: ColorScheme + ?Sized> ColorScheme for RecursiveScheme<'a, S> {
 /// A [`RecursiveScheme`] together with an index, representing which layer of the color scheme tree
 /// is currently active.
 pub struct IndexedRecursiveScheme<'a, S: ColorScheme + ?Sized> {
-    scheme: &'a RecursiveScheme<'a, S>,
+    scheme: RecursiveScheme<'a, S>,
     index: u32,
 }
 
 impl<'a, S: ColorScheme + ?Sized> IndexedRecursiveScheme<'a, S> {
     /// Create a new [`IndexedRecursiveScheme`]. The default index is 0.
     #[must_use]
-    pub fn new(scheme: &'a RecursiveScheme<'a, S>) -> Self {
+    pub fn new(scheme: RecursiveScheme<'a, S>) -> Self {
         Self { scheme, index: 0 }
     }
 
@@ -295,10 +295,15 @@ impl<'a, S: ColorScheme + ?Sized> From<&'a S> for RecursiveScheme<'a, S> {
     }
 }
 
-impl<'a, S: ColorScheme + ?Sized> From<&'a RecursiveScheme<'a, S>>
-    for IndexedRecursiveScheme<'a, S>
-{
-    fn from(scheme: &'a RecursiveScheme<'a, S>) -> Self {
+impl<'a, S: ColorScheme + ?Sized> From<RecursiveScheme<'a, S>> for IndexedRecursiveScheme<'a, S> {
+    fn from(scheme: RecursiveScheme<'a, S>) -> Self {
         Self::new(scheme)
+    }
+}
+
+impl<'a, S: ColorScheme + ?Sized> From<&'a S> for IndexedRecursiveScheme<'a, S> {
+    fn from(value: &'a S) -> Self {
+        let r: RecursiveScheme<_> = value.into();
+        r.into()
     }
 }
