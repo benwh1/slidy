@@ -13,10 +13,9 @@ use svg::{
 };
 use thiserror::Error;
 
-use super::{
-    color_scheme::{ColorScheme, IndexedRecursiveScheme},
-    sliding_puzzle::SlidingPuzzle,
-};
+use crate::puzzle::color_scheme::SchemeList;
+
+use super::{color_scheme::ColorScheme, sliding_puzzle::SlidingPuzzle};
 
 /// Error type for [`Renderer`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -198,7 +197,7 @@ pub struct Renderer<
     T: ColorScheme + ?Sized = dyn ColorScheme,
     B: ColorScheme + ?Sized = dyn ColorScheme,
 > {
-    scheme: &'a IndexedRecursiveScheme<'a, S>,
+    scheme: &'a SchemeList<'a, S>,
     borders: Option<Borders<'a, B>>,
     text: Option<Text<'a, T>>,
     tile_size: f32,
@@ -214,7 +213,7 @@ impl<'a, S: ColorScheme + ?Sized, T: ColorScheme + ?Sized, B: ColorScheme + ?Siz
 {
     /// Create a new [`Renderer`].
     #[must_use]
-    pub fn with_scheme(scheme: &'a IndexedRecursiveScheme<'a, S>) -> Self {
+    pub fn with_scheme(scheme: &'a SchemeList<'a, S>) -> Self {
         Self {
             scheme,
             borders: None,
@@ -230,7 +229,7 @@ impl<'a, S: ColorScheme + ?Sized, T: ColorScheme + ?Sized, B: ColorScheme + ?Siz
 
     /// Set the color scheme.
     #[must_use]
-    pub fn scheme(mut self, scheme: &'a IndexedRecursiveScheme<'a, S>) -> Self {
+    pub fn scheme(mut self, scheme: &'a SchemeList<'a, S>) -> Self {
         self.scheme = scheme;
         self
     }
@@ -404,9 +403,10 @@ impl<'a, S: ColorScheme + ?Sized, T: ColorScheme + ?Sized, B: ColorScheme + ?Siz
                 + (self.tile_size + self.tile_gap + border_thickness) * y,
         );
 
-        let subscheme_color =
-            self.scheme
-                .subscheme_color(width, height, solved_pos.0, solved_pos.1);
+        let subscheme_color = self
+            .scheme
+            .subscheme()
+            .map(|subscheme| subscheme.color(width, height, solved_pos.0, solved_pos.1));
 
         // Macro to get the color that we want for text and border colors, as a hex string.
         // If `self.subscheme_style` is TextColor or BorderColor, then this will override the
