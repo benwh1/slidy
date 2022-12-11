@@ -289,14 +289,16 @@ impl<'a, S: ColorScheme + ?Sized> ColorScheme for IndexedRecursiveScheme<'a, S> 
     }
 }
 
-impl<'a> From<&'a Scheme> for RecursiveScheme<'a, Scheme> {
-    fn from(scheme: &'a Scheme) -> Self {
+impl<'a, S: ColorScheme + ?Sized> From<&'a S> for RecursiveScheme<'a, S> {
+    fn from(scheme: &'a S) -> Self {
         Self::new_leaf(scheme)
     }
 }
 
-impl<'a> From<&'a RecursiveScheme<'a, Scheme>> for IndexedRecursiveScheme<'a, Scheme> {
-    fn from(scheme: &'a RecursiveScheme<'a, Scheme>) -> Self {
+impl<'a, S: ColorScheme + ?Sized> From<&'a RecursiveScheme<'a, S>>
+    for IndexedRecursiveScheme<'a, S>
+{
+    fn from(scheme: &'a RecursiveScheme<'a, S>) -> Self {
         Self::new(scheme)
     }
 }
