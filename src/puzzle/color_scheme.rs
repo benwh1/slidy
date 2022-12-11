@@ -76,7 +76,8 @@ pub trait ColorScheme {
 }
 
 /// A color scheme formed by composing a [`Label`] and a [`Coloring`].
-pub struct Scheme<'a, L: Label + ?Sized, C: Coloring + ?Sized> {
+pub struct Scheme<'a, L: Label + ?Sized = dyn Label + 'a, C: Coloring + ?Sized = dyn Coloring + 'a>
+{
     label: &'a L,
     coloring: &'a C,
 }
