@@ -132,17 +132,17 @@ pub enum RecursiveSchemeError {
 /// This struct is only used to store the data making up a recursive scheme, so the implementation
 /// of [`ColorScheme`] for this struct only uses the main scheme, with the subschemes not being
 /// accessible. Use [`IndexedRecursiveScheme`] instead.
-pub struct RecursiveScheme {
-    scheme: Scheme,
+pub struct RecursiveScheme<'a, S: ColorScheme + ?Sized> {
+    scheme: &'a S,
     partition: Option<RectPartition>,
     subschemes: Vec<Self>,
 }
 
-impl RecursiveScheme {
+impl<'a, S: ColorScheme + ?Sized> RecursiveScheme<'a, S> {
     /// Create a new recursive scheme from a main [`Scheme`], a [`RectPartition`], and a list of
     /// subschemes.
     pub fn new(
-        scheme: Scheme,
+        scheme: &'a S,
         partition: RectPartition,
         subschemes: Vec<Self>,
     ) -> Result<Self, RecursiveSchemeError> {
@@ -171,7 +171,7 @@ impl RecursiveScheme {
 
     /// Create a new [`RecursiveScheme`] with no subschemes (a leaf node in the scheme tree).
     #[must_use]
-    pub fn new_leaf(scheme: Scheme) -> Self {
+    pub fn new_leaf(scheme: &'a S) -> Self {
         Self {
             scheme,
             partition: None,
@@ -225,7 +225,7 @@ impl RecursiveScheme {
     }
 }
 
-impl ColorScheme for RecursiveScheme {
+impl<'a, S: ColorScheme + ?Sized> ColorScheme for RecursiveScheme<'a, S> {
     fn is_valid_size(&self, width: usize, height: usize) -> bool {
         self.scheme.is_valid_size(width, height)
     }
@@ -237,15 +237,15 @@ impl ColorScheme for RecursiveScheme {
 
 /// A [`RecursiveScheme`] together with an index, representing which layer of the color scheme tree
 /// is currently active.
-pub struct IndexedRecursiveScheme {
-    scheme: RecursiveScheme,
+pub struct IndexedRecursiveScheme<'a, S: ColorScheme + ?Sized> {
+    scheme: &'a RecursiveScheme<'a, S>,
     index: u32,
 }
 
-impl IndexedRecursiveScheme {
+impl<'a, S: ColorScheme + ?Sized> IndexedRecursiveScheme<'a, S> {
     /// Create a new [`IndexedRecursiveScheme`]. The default index is 0.
     #[must_use]
-    pub fn new(scheme: RecursiveScheme) -> Self {
+    pub fn new(scheme: &'a RecursiveScheme<'a, S>) -> Self {
         Self { scheme, index: 0 }
     }
 
@@ -270,7 +270,7 @@ impl IndexedRecursiveScheme {
     }
 }
 
-impl ColorScheme for IndexedRecursiveScheme {
+impl<'a, S: ColorScheme + ?Sized> ColorScheme for IndexedRecursiveScheme<'a, S> {
     fn is_valid_size(&self, width: usize, height: usize) -> bool {
         let partition_valid = if let Some(p) = &self.scheme.partition {
             p.is_valid_size(width, height)
@@ -289,20 +289,14 @@ impl ColorScheme for IndexedRecursiveScheme {
     }
 }
 
-impl From<Scheme> for RecursiveScheme {
-    fn from(scheme: Scheme) -> Self {
+impl<'a> From<&'a Scheme> for RecursiveScheme<'a, Scheme> {
+    fn from(scheme: &'a Scheme) -> Self {
         Self::new_leaf(scheme)
     }
 }
 
-impl From<RecursiveScheme> for IndexedRecursiveScheme {
-    fn from(scheme: RecursiveScheme) -> Self {
+impl<'a> From<&'a RecursiveScheme<'a, Scheme>> for IndexedRecursiveScheme<'a, Scheme> {
+    fn from(scheme: &'a RecursiveScheme<'a, Scheme>) -> Self {
         Self::new(scheme)
-    }
-}
-
-impl From<Scheme> for IndexedRecursiveScheme {
-    fn from(scheme: Scheme) -> Self {
-        Self::from(RecursiveScheme::from(scheme))
     }
 }

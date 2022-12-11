@@ -14,9 +14,7 @@ use svg::{
 use thiserror::Error;
 
 use super::{
-    color_scheme::{ColorScheme, IndexedRecursiveScheme, Scheme},
-    coloring::Monochrome,
-    label::label::Trivial,
+    color_scheme::{ColorScheme, IndexedRecursiveScheme},
     sliding_puzzle::SlidingPuzzle,
 };
 
@@ -57,21 +55,17 @@ pub enum Font<'a> {
 }
 
 /// Struct containing the information needed to draw the borders of the puzzle.
-pub struct Borders {
-    scheme: IndexedRecursiveScheme,
+pub struct Borders<'a, S: ColorScheme + ?Sized> {
+    scheme: &'a S,
     thickness: f32,
 }
 
-impl Borders {
+impl<'a, S: ColorScheme + ?Sized> Borders<'a, S> {
     /// Create a new [`Borders`] instance. The default is a 1 pixel wide black border.
     #[must_use]
-    pub fn new() -> Self {
+    pub fn with_scheme(scheme: &'a S) -> Self {
         Self {
-            scheme: Scheme::new(
-                Box::new(Trivial),
-                Box::new(Monochrome::new(Rgba::new(0.0, 0.0, 0.0, 1.0))),
-            )
-            .into(),
+            scheme,
             thickness: 1.0,
         }
     }
@@ -82,8 +76,8 @@ impl Borders {
     /// style (see [`Renderer::subscheme_style`]) is [`SubschemeStyle::BorderColor`], then the
     /// subscheme color will override the border scheme.
     #[must_use]
-    pub fn scheme<S: Into<IndexedRecursiveScheme>>(mut self, scheme: S) -> Self {
-        self.scheme = scheme.into();
+    pub fn scheme(mut self, scheme: &'a S) -> Self {
+        self.scheme = scheme;
         self
     }
 
@@ -95,30 +89,20 @@ impl Borders {
     }
 }
 
-impl Default for Borders {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 /// Struct containing the information needed to draw text on the pieces of the puzzle.
-pub struct Text<'a> {
-    scheme: IndexedRecursiveScheme,
+pub struct Text<'a, S: ColorScheme + ?Sized> {
+    scheme: &'a S,
     font: Font<'a>,
     font_size: f32,
     position: (f32, f32),
 }
 
-impl<'a> Text<'a> {
+impl<'a, S: ColorScheme + ?Sized> Text<'a, S> {
     /// Create a new [`Text`] instance.
     #[must_use]
-    pub fn new() -> Self {
+    pub fn with_scheme(scheme: &'a S) -> Self {
         Self {
-            scheme: Scheme::new(
-                Box::new(Trivial),
-                Box::new(Monochrome::new(Rgba::new(0.0, 0.0, 0.0, 1.0))),
-            )
-            .into(),
+            scheme,
             font: Font::Family("sans-serif"),
             font_size: 30.0,
             position: (0.5, 0.5),
@@ -131,8 +115,8 @@ impl<'a> Text<'a> {
     /// style (see [`Renderer::subscheme_style`]) is [`SubschemeStyle::TextColor`], then the
     /// subscheme color will override the text scheme.
     #[must_use]
-    pub fn scheme<S: Into<IndexedRecursiveScheme>>(mut self, scheme: S) -> Self {
-        self.scheme = scheme.into();
+    pub fn scheme(mut self, scheme: &'a S) -> Self {
+        self.scheme = scheme;
         self
     }
 
@@ -193,12 +177,6 @@ impl<'a> Text<'a> {
     }
 }
 
-impl<'a> Default for Text<'a> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 /// Ways that the subscheme can be displayed on the puzzle.
 ///
 /// The default value is [`SubschemeStyle::Rectangle`].
@@ -214,10 +192,10 @@ pub enum SubschemeStyle {
 }
 
 /// Draws a [`SlidingPuzzle`] as an SVG image.
-pub struct Renderer<'a> {
-    scheme: IndexedRecursiveScheme,
-    borders: Option<Borders>,
-    text: Option<Text<'a>>,
+pub struct Renderer<'a, S: ColorScheme + ?Sized, B: ColorScheme + ?Sized, T: ColorScheme + ?Sized> {
+    scheme: &'a IndexedRecursiveScheme<'a, S>,
+    borders: Option<Borders<'a, B>>,
+    text: Option<Text<'a, T>>,
     tile_size: f32,
     tile_rounding: f32,
     tile_gap: f32,
@@ -226,16 +204,14 @@ pub struct Renderer<'a> {
     background_color: Rgba,
 }
 
-impl<'a> Renderer<'a> {
+impl<'a, S: ColorScheme + ?Sized, B: ColorScheme + ?Sized, T: ColorScheme + ?Sized>
+    Renderer<'a, S, B, T>
+{
     /// Create a new [`Renderer`].
     #[must_use]
-    pub fn new() -> Self {
+    pub fn with_scheme(scheme: &'a IndexedRecursiveScheme<'a, S>) -> Self {
         Self {
-            scheme: Scheme::new(
-                Box::new(Trivial),
-                Box::new(Monochrome::new(Rgba::new(1.0, 1.0, 1.0, 1.0))),
-            )
-            .into(),
+            scheme,
             borders: None,
             text: None,
             tile_size: 75.0,
@@ -249,21 +225,21 @@ impl<'a> Renderer<'a> {
 
     /// Set the color scheme.
     #[must_use]
-    pub fn scheme<S: Into<IndexedRecursiveScheme>>(mut self, scheme: S) -> Self {
-        self.scheme = scheme.into();
+    pub fn scheme(mut self, scheme: &'a IndexedRecursiveScheme<'a, S>) -> Self {
+        self.scheme = scheme;
         self
     }
 
     /// Set the borders.
     #[must_use]
-    pub fn borders(mut self, borders: Borders) -> Self {
+    pub fn borders(mut self, borders: Borders<'a, B>) -> Self {
         self.borders = Some(borders);
         self
     }
 
     /// Set the text.
     #[must_use]
-    pub fn text(mut self, text: Text<'a>) -> Self {
+    pub fn text(mut self, text: Text<'a, T>) -> Self {
         self.text = Some(text);
         self
     }
@@ -513,11 +489,5 @@ impl<'a> Renderer<'a> {
         }
 
         group
-    }
-}
-
-impl Default for Renderer<'_> {
-    fn default() -> Self {
-        Self::new()
     }
 }
