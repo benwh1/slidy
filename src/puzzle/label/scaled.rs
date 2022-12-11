@@ -12,8 +12,7 @@ use super::label::Label;
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Scaled<'a, L: Label + ?Sized> {
     label: &'a L,
-    horizontal: u32,
-    vertical: u32,
+    factor: (u32, u32),
 }
 
 /// Error type for [`Scaled`].
@@ -26,37 +25,33 @@ pub enum ScaledError {
 
 impl<'a, L: Label + ?Sized> Scaled<'a, L> {
     /// Creates a new [`Scaled`] from a [`Label`] and scaling factors.
-    pub fn new(label: &'a L, horizontal: u32, vertical: u32) -> Result<Self, ScaledError> {
-        if horizontal == 0 || vertical == 0 {
+    pub fn new(label: &'a L, factor: (u32, u32)) -> Result<Self, ScaledError> {
+        if factor.0 == 0 || factor.1 == 0 {
             Err(ScaledError::ZeroScale)
         } else {
-            Ok(Self {
-                label,
-                horizontal,
-                vertical,
-            })
+            Ok(Self { label, factor })
         }
     }
 }
 
 impl<'a, L: Label + ?Sized> Label for Scaled<'a, L> {
     fn is_valid_size(&self, width: usize, height: usize) -> bool {
-        let width = width.div_ceil(self.horizontal as usize);
-        let height = height.div_ceil(self.vertical as usize);
+        let width = width.div_ceil(self.factor.0 as usize);
+        let height = height.div_ceil(self.factor.1 as usize);
         self.label.is_valid_size(width, height)
     }
 
     fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        let width = width.div_ceil(self.horizontal as usize);
-        let height = height.div_ceil(self.vertical as usize);
-        let x = x.div_floor(self.horizontal as usize);
-        let y = y.div_floor(self.vertical as usize);
+        let width = width.div_ceil(self.factor.0 as usize);
+        let height = height.div_ceil(self.factor.1 as usize);
+        let x = x.div_floor(self.factor.0 as usize);
+        let y = y.div_floor(self.factor.1 as usize);
         self.label.position_label(width, height, x, y)
     }
 
     fn num_labels(&self, width: usize, height: usize) -> usize {
-        let width = width.div_ceil(self.horizontal as usize);
-        let height = height.div_ceil(self.vertical as usize);
+        let width = width.div_ceil(self.factor.0 as usize);
+        let height = height.div_ceil(self.factor.1 as usize);
         self.label.num_labels(width, height)
     }
 }
@@ -69,7 +64,7 @@ mod tests {
 
     #[test]
     fn test_scaled_row_grids() {
-        let label = Scaled::new(&RowGrids, 3, 2).unwrap();
+        let label = Scaled::new(&RowGrids, (3, 2)).unwrap();
 
         let labels = (0..40)
             .map(|i| label.position_label(8, 5, i % 8, i / 8))
