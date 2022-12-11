@@ -307,3 +307,77 @@ impl<'a, S: ColorScheme + ?Sized> From<&'a S> for IndexedRecursiveScheme<'a, S> 
         r.into()
     }
 }
+
+/// A list of [`ColorScheme`]s and an index, indicating which color scheme is currently "active".
+/// The implementation of [`ColorScheme`] for this type uses the active scheme.
+pub struct SchemeList<'a, S: ColorScheme + ?Sized = dyn ColorScheme + 'a> {
+    schemes: &'a [&'a S],
+    index: usize,
+}
+
+/// Error type for [`SchemeList`].
+#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum SchemeListError {
+    /// Returned from [`SchemeList::new`] if the list of schemes is empty.
+    #[error("Empty: list of schemes must be non-empty")]
+    Empty,
+}
+
+impl<'a, S: ColorScheme + ?Sized> SchemeList<'a, S> {
+    /// Create a new [`SchemeList`] containing the given list of color schemes. The default index
+    /// is 0.
+    pub fn new(schemes: &'a [&'a S]) -> Result<Self, SchemeListError> {
+        if schemes.is_empty() {
+            Err(SchemeListError::Empty)
+        } else {
+            Ok(Self { schemes, index: 0 })
+        }
+    }
+
+    /// Increments the index by 1. Returns true if the index changed, or false if the last scheme
+    /// was already active.
+    pub fn next(&mut self) -> bool {
+        if self.index < self.schemes.len() - 1 {
+            self.index += 1;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Decrements the index by 1. Returns true if the index changed, or false if the first scheme
+    /// was already active.
+    pub fn prev(&mut self) -> bool {
+        if self.index > 0 {
+            self.index -= 1;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Returns a reference to the scheme that is currently active.
+    pub fn current_scheme(&self) -> &'a S {
+        self.schemes[self.index]
+    }
+
+    /// Returns a reference to the scheme after the one that is currently active, or `None` if the
+    /// active scheme is the last one.
+    pub fn subscheme(&self) -> Option<&'a S> {
+        if self.index + 1 < self.schemes.len() {
+            Some(self.schemes[self.index + 1])
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a, S: ColorScheme + ?Sized> ColorScheme for SchemeList<'a, S> {
+    fn is_valid_size(&self, width: usize, height: usize) -> bool {
+        self.schemes[self.index].is_valid_size(width, height)
+    }
+
+    fn color(&self, width: usize, height: usize, x: usize, y: usize) -> Rgba {
+        self.schemes[self.index].color(width, height, x, y)
+    }
+}
