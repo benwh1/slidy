@@ -192,7 +192,12 @@ pub enum SubschemeStyle {
 }
 
 /// Draws a [`SlidingPuzzle`] as an SVG image.
-pub struct Renderer<'a, S: ColorScheme + ?Sized, T: ColorScheme + ?Sized, B: ColorScheme + ?Sized> {
+pub struct Renderer<
+    'a,
+    S: ColorScheme + ?Sized = dyn ColorScheme,
+    T: ColorScheme + ?Sized = dyn ColorScheme,
+    B: ColorScheme + ?Sized = dyn ColorScheme,
+> {
     scheme: &'a IndexedRecursiveScheme<'a, S>,
     borders: Option<Borders<'a, B>>,
     text: Option<Text<'a, T>>,
