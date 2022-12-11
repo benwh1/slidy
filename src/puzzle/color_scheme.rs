@@ -1,5 +1,7 @@
 //! Defines the [`ColorScheme`] trait and an implementation, as well as a recursive color scheme.
 
+pub mod tiled;
+
 use palette::rgb::Rgba;
 use thiserror::Error;
 
