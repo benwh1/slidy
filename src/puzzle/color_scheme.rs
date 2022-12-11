@@ -139,7 +139,7 @@ pub struct RecursiveScheme {
 }
 
 impl RecursiveScheme {
-    /// Create a new recursive scheme from a main [`Scheme], a [`RectPartition`], and a list of
+    /// Create a new recursive scheme from a main [`Scheme`], a [`RectPartition`], and a list of
     /// subschemes.
     pub fn new(
         scheme: Scheme,
