@@ -218,6 +218,10 @@ pub enum ParseAlgorithmError {
     /// Read a number with no direction, e.g. "U2 R3 5 D"
     #[error("MissingDirection: a number must be preceded by a direction")]
     MissingDirection,
+
+    /// Overflow when reading the number after a direction
+    #[error("Overflow: integer overflow occurred when reading the number after a direction")]
+    Overflow,
 }
 
 impl FromStr for Algorithm {
@@ -250,7 +254,12 @@ impl FromStr for Algorithm {
 
                 // Append the next digit to the number
                 if let Some(a) = amount {
-                    amount = Some(10 * a + d);
+                    amount = Some(
+                        a.checked_mul(10)
+                            .ok_or(ParseAlgorithmError::Overflow)?
+                            .checked_add(d)
+                            .ok_or(ParseAlgorithmError::Overflow)?,
+                    );
                 } else {
                     amount = Some(d);
                 }
@@ -616,6 +625,12 @@ mod tests {
         fn test_from_str_13() {
             let a = Algorithm::from_str("D 3L");
             assert_eq!(a, Err(ParseAlgorithmError::MissingDirection));
+        }
+
+        #[test]
+        fn test_from_str_14() {
+            let a = Algorithm::from_str("U10000000000");
+            assert_eq!(a, Err(ParseAlgorithmError::Overflow));
         }
 
         #[test]
