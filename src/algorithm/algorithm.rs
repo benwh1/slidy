@@ -1,6 +1,11 @@
 //! Defines the [`Algorithm`] type as a sequence of moves.
 
-use std::{cmp::Ordering, fmt::Display, ops::Add, str::FromStr};
+use std::{
+    cmp::Ordering,
+    fmt::Display,
+    ops::{Add, AddAssign},
+    str::FromStr,
+};
 
 use thiserror::Error;
 
@@ -300,6 +305,13 @@ impl Add for Algorithm {
         let mut moves2 = rhs.moves;
         moves.append(&mut moves2);
         Self { moves }
+    }
+}
+
+impl AddAssign for Algorithm {
+    /// Appends `rhs` to `self`.
+    fn add_assign(&mut self, mut rhs: Self) {
+        self.moves.append(&mut rhs.moves);
     }
 }
 
