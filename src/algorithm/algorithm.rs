@@ -670,6 +670,18 @@ mod tests {
             assert_eq!(a + b, Algorithm::from_str("ULDRDRUL").unwrap());
         }
     }
+
+    mod add_assign {
+        use super::*;
+
+        #[test]
+        fn test_add_assign() {
+            let mut a = Algorithm::from_str("ULDRU").unwrap();
+            let b = Algorithm::from_str("DRUL").unwrap();
+            a += b;
+            assert_eq!(a, Algorithm::from_str("ULDRUDRUL").unwrap());
+        }
+    }
 }
 
 #[cfg(test)]
