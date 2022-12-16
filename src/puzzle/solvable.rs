@@ -24,7 +24,7 @@ where
 {
     /// Checks if the puzzle is solvable.
     #[must_use]
-    fn solvable(puzzle: &Puzzle) -> bool;
+    fn is_solvable(puzzle: &Puzzle) -> bool;
 }
 
 impl<Piece, Puzzle> Solvable<Piece, Puzzle> for RowGrids
@@ -32,7 +32,7 @@ where
     Piece: PrimInt,
     Puzzle: SlidingPuzzle<Piece>,
 {
-    fn solvable(puzzle: &Puzzle) -> bool {
+    fn is_solvable(puzzle: &Puzzle) -> bool {
         // Closure to get the piece that would be in position (x, y), if we do L* U* to move the
         // gap to the bottom right corner
         let (w, h) = puzzle.size();
@@ -86,7 +86,7 @@ macro_rules! always_solvable {
                 Piece: PrimInt,
                 Puzzle: SlidingPuzzle<Piece>,
             {
-                fn solvable(_puzzle: &Puzzle) -> bool {
+                fn is_solvable(_puzzle: &Puzzle) -> bool {
                     true
                 }
             }
@@ -112,10 +112,10 @@ where
     Piece: PrimInt,
     Puzzle: SlidingPuzzle<Piece>,
 {
-    fn solvable(puzzle: &Puzzle) -> bool {
+    fn is_solvable(puzzle: &Puzzle) -> bool {
         // Always solvable unless puzzle is 2x2, then equivalent to RowGrids.
         if puzzle.size() == (2, 2) {
-            RowGrids::solvable(puzzle)
+            RowGrids::is_solvable(puzzle)
         } else {
             true
         }
@@ -144,11 +144,11 @@ mod tests {
             ];
             for s in solvable {
                 let p = Puzzle::from_str(s).unwrap();
-                assert!(RowGrids::solvable(&p));
+                assert!(RowGrids::is_solvable(&p));
             }
             for s in unsolvable {
                 let p = Puzzle::from_str(s).unwrap();
-                assert!(!RowGrids::solvable(&p));
+                assert!(!RowGrids::is_solvable(&p));
             }
         }
     }

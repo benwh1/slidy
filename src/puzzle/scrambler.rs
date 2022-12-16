@@ -146,7 +146,7 @@ mod tests {
                 for _ in 0..100 {
                     p.reset();
                     x.scramble(&mut p);
-                    assert!(RowGrids::solvable(&p));
+                    assert!(RowGrids::is_solvable(&p));
                 }
             }
         }

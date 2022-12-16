@@ -141,7 +141,7 @@ where
     #[must_use]
     #[inline(always)]
     fn is_solvable(&self) -> bool {
-        RowGrids::solvable(self)
+        RowGrids::is_solvable(self)
     }
 
     /// The position of `piece` when the puzzle is solved.
