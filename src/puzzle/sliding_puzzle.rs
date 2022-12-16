@@ -5,7 +5,7 @@ use num_traits::PrimInt;
 
 use crate::{
     algorithm::{algorithm::Algorithm, direction::Direction, puzzle_move::Move},
-    puzzle::{label::label::BijectiveLabel, solved_state::SolvedState},
+    puzzle::{label::label::BijectiveLabel, solved_state::SolvedState, solvable::Solvable},
 };
 
 use super::label::label::RowGrids;
@@ -135,6 +135,13 @@ where
     #[inline(always)]
     fn is_solved(&self) -> bool {
         RowGrids.is_solved(self)
+    }
+
+    /// Check if the puzzle is solvable.
+    #[must_use]
+    #[inline(always)]
+    fn is_solvable(&self) -> bool {
+        RowGrids::solvable(self)
     }
 
     /// The position of `piece` when the puzzle is solved.
