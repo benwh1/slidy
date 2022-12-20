@@ -54,15 +54,15 @@ pub enum Font<'a> {
 }
 
 /// Struct containing the information needed to draw the borders of the puzzle.
-pub struct Borders<'a, S: ColorScheme + ?Sized> {
-    scheme: &'a S,
+pub struct Borders<S: ColorScheme> {
+    scheme: S,
     thickness: f32,
 }
 
-impl<'a, S: ColorScheme + ?Sized> Borders<'a, S> {
+impl<S: ColorScheme> Borders<S> {
     /// Create a new [`Borders`] instance. The default is a 1 pixel wide black border.
     #[must_use]
-    pub fn with_scheme(scheme: &'a S) -> Self {
+    pub fn with_scheme(scheme: S) -> Self {
         Self {
             scheme,
             thickness: 1.0,
@@ -75,7 +75,7 @@ impl<'a, S: ColorScheme + ?Sized> Borders<'a, S> {
     /// style (see [`Renderer::subscheme_style`]) is [`SubschemeStyle::BorderColor`], then the
     /// subscheme color will override the border scheme.
     #[must_use]
-    pub fn scheme(mut self, scheme: &'a S) -> Self {
+    pub fn scheme(mut self, scheme: S) -> Self {
         self.scheme = scheme;
         self
     }
@@ -89,17 +89,17 @@ impl<'a, S: ColorScheme + ?Sized> Borders<'a, S> {
 }
 
 /// Struct containing the information needed to draw text on the pieces of the puzzle.
-pub struct Text<'a, S: ColorScheme + ?Sized> {
-    scheme: &'a S,
+pub struct Text<'a, S: ColorScheme> {
+    scheme: S,
     font: Font<'a>,
     font_size: f32,
     position: (f32, f32),
 }
 
-impl<'a, S: ColorScheme + ?Sized> Text<'a, S> {
+impl<'a, S: ColorScheme> Text<'a, S> {
     /// Create a new [`Text`] instance.
     #[must_use]
-    pub fn with_scheme(scheme: &'a S) -> Self {
+    pub fn with_scheme(scheme: S) -> Self {
         Self {
             scheme,
             font: Font::Family("sans-serif"),
@@ -114,7 +114,7 @@ impl<'a, S: ColorScheme + ?Sized> Text<'a, S> {
     /// style (see [`Renderer::subscheme_style`]) is [`SubschemeStyle::TextColor`], then the
     /// subscheme color will override the text scheme.
     #[must_use]
-    pub fn scheme(mut self, scheme: &'a S) -> Self {
+    pub fn scheme(mut self, scheme: S) -> Self {
         self.scheme = scheme;
         self
     }
@@ -191,14 +191,9 @@ pub enum SubschemeStyle {
 }
 
 /// Draws a [`SlidingPuzzle`] as an SVG image.
-pub struct Renderer<
-    'a,
-    S: ColorScheme + ?Sized = dyn ColorScheme + 'a,
-    T: ColorScheme + ?Sized = dyn ColorScheme + 'a,
-    B: ColorScheme + ?Sized = dyn ColorScheme + 'a,
-> {
+pub struct Renderer<'a, S: ColorScheme, T: ColorScheme, B: ColorScheme> {
     scheme: &'a SchemeList<'a, S>,
-    borders: Option<Borders<'a, B>>,
+    borders: Option<Borders<B>>,
     text: Option<Text<'a, T>>,
     tile_size: f32,
     tile_rounding: f32,
@@ -208,9 +203,7 @@ pub struct Renderer<
     background_color: Rgba,
 }
 
-impl<'a, S: ColorScheme + ?Sized, T: ColorScheme + ?Sized, B: ColorScheme + ?Sized>
-    Renderer<'a, S, T, B>
-{
+impl<'a, S: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'a, S, T, B> {
     /// Create a new [`Renderer`].
     #[must_use]
     pub fn with_scheme(scheme: &'a SchemeList<'a, S>) -> Self {
@@ -236,7 +229,7 @@ impl<'a, S: ColorScheme + ?Sized, T: ColorScheme + ?Sized, B: ColorScheme + ?Siz
 
     /// Set the borders.
     #[must_use]
-    pub fn borders(mut self, borders: Borders<'a, B>) -> Self {
+    pub fn borders(mut self, borders: Borders<B>) -> Self {
         self.borders = Some(borders);
         self
     }

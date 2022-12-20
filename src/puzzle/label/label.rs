@@ -2,6 +2,7 @@
 
 use std::cmp::Ordering;
 
+use blanket::blanket;
 use thiserror::Error;
 
 /// Error type for [`Label`].
@@ -34,6 +35,7 @@ pub enum LabelError {
 
 /// Provides a function mapping an `(x, y)` coordinate on a puzzle to a number which we call the
 /// label of `(x, y)`.
+#[blanket(derive(Ref, Rc, Arc, Mut, Box))]
 pub trait Label {
     /// Checks if this `Label` can be used with a given puzzle size.
     #[must_use]

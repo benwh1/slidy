@@ -6,8 +6,8 @@ use thiserror::Error;
 use crate::puzzle::color_scheme::ColorScheme;
 
 /// A [`ColorScheme`] applied to a fixed-size rectangle, and then tiled across the puzzle.
-pub struct Tiled<'a, C: ColorScheme + ?Sized> {
-    color_scheme: &'a C,
+pub struct Tiled<C: ColorScheme> {
+    color_scheme: C,
     grid_size: (usize, usize),
 }
 
@@ -19,9 +19,9 @@ pub enum TiledError {
     InvalidGridSize,
 }
 
-impl<'a, C: ColorScheme + ?Sized> Tiled<'a, C> {
+impl<C: ColorScheme> Tiled<C> {
     /// Creates a new [`Tiled`] from a [`ColorScheme`] and a grid size.
-    pub fn new(color_scheme: &'a C, grid_size: (usize, usize)) -> Result<Self, TiledError> {
+    pub fn new(color_scheme: C, grid_size: (usize, usize)) -> Result<Self, TiledError> {
         if grid_size.0 == 0 || grid_size.1 == 0 {
             Err(TiledError::InvalidGridSize)
         } else {
@@ -33,7 +33,7 @@ impl<'a, C: ColorScheme + ?Sized> Tiled<'a, C> {
     }
 }
 
-impl<'a, C: ColorScheme + ?Sized> ColorScheme for Tiled<'a, C> {
+impl<C: ColorScheme> ColorScheme for Tiled<C> {
     fn is_valid_size(&self, width: usize, height: usize) -> bool {
         // Check if the label is valid for all sizes that it will be applied to.
         // There are at most 4 cases to check: the width could be either grid_width or

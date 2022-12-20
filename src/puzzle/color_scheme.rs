@@ -2,6 +2,7 @@
 
 pub mod tiled;
 
+use blanket::blanket;
 use palette::rgb::Rgba;
 use thiserror::Error;
 
@@ -36,6 +37,7 @@ pub enum ColorSchemeError {
 }
 
 /// Provides a function mapping `(x, y)` coordinate on a puzzle to a color.
+#[blanket(derive(Ref, Rc, Arc, Mut, Box))]
 pub trait ColorScheme {
     /// Checks if this `ColorScheme` can be used with a given puzzle size.
     #[must_use]
@@ -73,21 +75,20 @@ pub trait ColorScheme {
 }
 
 /// A color scheme formed by composing a [`Label`] and a [`Coloring`].
-pub struct Scheme<'a, L: Label + ?Sized = dyn Label + 'a, C: Coloring + ?Sized = dyn Coloring + 'a>
-{
-    label: &'a L,
-    coloring: &'a C,
+pub struct Scheme<L: Label, C: Coloring> {
+    label: L,
+    coloring: C,
 }
 
-impl<'a, L: Label + ?Sized, C: Coloring + ?Sized> Scheme<'a, L, C> {
+impl<L: Label, C: Coloring> Scheme<L, C> {
     /// Create a new [`Scheme`] from a [`Label`] and a [`Coloring`].
     #[must_use]
-    pub fn new(label: &'a L, coloring: &'a C) -> Self {
+    pub fn new(label: L, coloring: C) -> Self {
         Self { label, coloring }
     }
 }
 
-impl<'a, L: Label + ?Sized, C: Coloring + ?Sized> ColorScheme for Scheme<'a, L, C> {
+impl<L: Label, C: Coloring> ColorScheme for Scheme<L, C> {
     fn is_valid_size(&self, width: usize, height: usize) -> bool {
         self.label.is_valid_size(width, height)
     }
@@ -101,8 +102,8 @@ impl<'a, L: Label + ?Sized, C: Coloring + ?Sized> ColorScheme for Scheme<'a, L, 
 
 /// A list of [`ColorScheme`]s and an index, indicating which color scheme is currently "active".
 /// The implementation of [`ColorScheme`] for this type uses the active scheme.
-pub struct SchemeList<'a, S: ColorScheme + ?Sized = dyn ColorScheme + 'a> {
-    schemes: &'a [&'a S],
+pub struct SchemeList<'a, S: ColorScheme> {
+    schemes: &'a [S],
     index: usize,
 }
 
@@ -114,10 +115,10 @@ pub enum SchemeListError {
     Empty,
 }
 
-impl<'a, S: ColorScheme + ?Sized> SchemeList<'a, S> {
+impl<'a, S: ColorScheme> SchemeList<'a, S> {
     /// Create a new [`SchemeList`] containing the given list of color schemes. The default index
     /// is 0.
-    pub fn new(schemes: &'a [&'a S]) -> Result<Self, SchemeListError> {
+    pub fn new(schemes: &'a [S]) -> Result<Self, SchemeListError> {
         if schemes.is_empty() {
             Err(SchemeListError::Empty)
         } else {
@@ -149,21 +150,21 @@ impl<'a, S: ColorScheme + ?Sized> SchemeList<'a, S> {
 
     /// Returns a reference to the scheme that is currently active.
     pub fn current_scheme(&self) -> &'a S {
-        self.schemes[self.index]
+        &self.schemes[self.index]
     }
 
     /// Returns a reference to the scheme after the one that is currently active, or `None` if the
     /// active scheme is the last one.
     pub fn subscheme(&self) -> Option<&'a S> {
         if self.index + 1 < self.schemes.len() {
-            Some(self.schemes[self.index + 1])
+            Some(&self.schemes[self.index + 1])
         } else {
             None
         }
     }
 }
 
-impl<'a, S: ColorScheme + ?Sized> ColorScheme for SchemeList<'a, S> {
+impl<'a, S: ColorScheme> ColorScheme for SchemeList<'a, S> {
     fn is_valid_size(&self, width: usize, height: usize) -> bool {
         self.schemes[self.index].is_valid_size(width, height)
     }

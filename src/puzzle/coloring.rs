@@ -2,6 +2,7 @@
 
 use std::ops::Div;
 
+use blanket::blanket;
 use num_traits::AsPrimitive;
 use palette::{rgb::Rgba, Gradient, Hsl, Hsla, IntoColor, Mix};
 use thiserror::Error;
@@ -9,6 +10,7 @@ use thiserror::Error;
 /// Provides a function mapping labels to colors.
 ///
 /// See also: [`crate::puzzle::label::label::Label`].
+#[blanket(derive(Ref, Rc, Arc, Mut, Box))]
 pub trait Coloring {
     /// Returns a color based on a label and the total number of labels, or `None` if `label` is
     /// out of bounds (i.e. `label >= num_labels`).
@@ -67,12 +69,12 @@ pub struct RainbowBrightFull;
 
 /// Given a [`Coloring`] `T`, makes the colors brighter when `label` is even.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct AlternatingBrightness<'a, C: Coloring + ?Sized>(pub &'a C);
+pub struct AlternatingBrightness<C: Coloring>(pub C);
 
 /// Given a [`Coloring`] `C`, adds a fixed constant to the HSL lightness value.
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
-pub struct AddLightness<'a, C: Coloring + ?Sized> {
-    coloring: &'a C,
+pub struct AddLightness<C: Coloring> {
+    coloring: C,
     lightness: f32,
 }
 
@@ -153,7 +155,7 @@ impl Coloring for RainbowBrightFull {
     }
 }
 
-impl<'a, C: Coloring + ?Sized> Coloring for AlternatingBrightness<'a, C> {
+impl<C: Coloring> Coloring for AlternatingBrightness<C> {
     fn color(&self, label: usize, num_labels: usize) -> Rgba {
         let l = (label / 2) * 2;
         let color = self.0.color(l, num_labels);
@@ -168,9 +170,9 @@ impl<'a, C: Coloring + ?Sized> Coloring for AlternatingBrightness<'a, C> {
     }
 }
 
-impl<'a, C: Coloring + ?Sized> AddLightness<'a, C> {
+impl<C: Coloring> AddLightness<C> {
     /// Creates a new [`AddLightness`] from `coloring` that adds `lightness` to the lightness value.
-    pub fn new(coloring: &'a C, lightness: f32) -> Self {
+    pub fn new(coloring: C, lightness: f32) -> Self {
         Self {
             coloring,
             lightness,
@@ -178,7 +180,7 @@ impl<'a, C: Coloring + ?Sized> AddLightness<'a, C> {
     }
 }
 
-impl<'a, C: Coloring + ?Sized> Coloring for AddLightness<'a, C> {
+impl<C: Coloring> Coloring for AddLightness<C> {
     /// Calls `self.coloring.color` and adds `self.lightness` to the HSL lightness value.
     /// The lightness is clamped to the interval `[0.0, 1.0]`.
     fn color(&self, label: usize, num_labels: usize) -> Rgba {
