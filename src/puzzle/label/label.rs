@@ -35,7 +35,7 @@ pub enum LabelError {
 
 /// Provides a function mapping an `(x, y)` coordinate on a puzzle to a number which we call the
 /// label of `(x, y)`.
-#[blanket(derive(Ref, Rc, Arc, Mut, Box))]
+#[blanket(derive(Ref, Rc, Arc, Mut))]
 pub trait Label {
     /// Checks if this `Label` can be used with a given puzzle size.
     #[must_use]
@@ -88,6 +88,20 @@ pub trait Label {
         } else {
             Err(LabelError::InvalidSize { width, height })
         }
+    }
+}
+
+impl<T: Label + ?Sized> Label for Box<T> {
+    fn is_valid_size(&self, width: usize, height: usize) -> bool {
+        (**self).is_valid_size(width, height)
+    }
+
+    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+        (**self).position_label(width, height, x, y)
+    }
+
+    fn num_labels(&self, width: usize, height: usize) -> usize {
+        (**self).num_labels(width, height)
     }
 }
 

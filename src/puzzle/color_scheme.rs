@@ -37,7 +37,7 @@ pub enum ColorSchemeError {
 }
 
 /// Provides a function mapping `(x, y)` coordinate on a puzzle to a color.
-#[blanket(derive(Ref, Rc, Arc, Mut, Box))]
+#[blanket(derive(Ref, Rc, Arc, Mut))]
 pub trait ColorScheme {
     /// Checks if this `ColorScheme` can be used with a given puzzle size.
     #[must_use]
@@ -71,6 +71,16 @@ pub trait ColorScheme {
         } else {
             Ok(self.color(width, height, x, y))
         }
+    }
+}
+
+impl<T: ColorScheme + ?Sized> ColorScheme for Box<T> {
+    fn is_valid_size(&self, width: usize, height: usize) -> bool {
+        (**self).is_valid_size(width, height)
+    }
+
+    fn color(&self, width: usize, height: usize, x: usize, y: usize) -> Rgba {
+        (**self).color(width, height, x, y)
     }
 }
 

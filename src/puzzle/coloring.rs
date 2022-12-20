@@ -10,7 +10,7 @@ use thiserror::Error;
 /// Provides a function mapping labels to colors.
 ///
 /// See also: [`crate::puzzle::label::label::Label`].
-#[blanket(derive(Ref, Rc, Arc, Mut, Box))]
+#[blanket(derive(Ref, Rc, Arc, Mut))]
 pub trait Coloring {
     /// Returns a color based on a label and the total number of labels, or `None` if `label` is
     /// out of bounds (i.e. `label >= num_labels`).
@@ -28,6 +28,12 @@ pub trait Coloring {
         } else {
             None
         }
+    }
+}
+
+impl<T: Coloring + ?Sized> Coloring for Box<T> {
+    fn color(&self, label: usize, num_labels: usize) -> Rgba {
+        (**self).color(label, num_labels)
     }
 }
 
