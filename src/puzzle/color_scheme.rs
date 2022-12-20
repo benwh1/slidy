@@ -128,7 +128,7 @@ impl<'a, S: ColorScheme> SchemeList<'a, S> {
 
     /// Increments the index by 1. Returns true if the index changed, or false if the last scheme
     /// was already active.
-    pub fn next(&mut self) -> bool {
+    pub fn increment_index(&mut self) -> bool {
         if self.index < self.schemes.len() - 1 {
             self.index += 1;
             true
@@ -139,7 +139,7 @@ impl<'a, S: ColorScheme> SchemeList<'a, S> {
 
     /// Decrements the index by 1. Returns true if the index changed, or false if the first scheme
     /// was already active.
-    pub fn prev(&mut self) -> bool {
+    pub fn decrement_index(&mut self) -> bool {
         if self.index > 0 {
             self.index -= 1;
             true
@@ -149,12 +149,14 @@ impl<'a, S: ColorScheme> SchemeList<'a, S> {
     }
 
     /// Returns a reference to the scheme that is currently active.
+    #[must_use]
     pub fn current_scheme(&self) -> &'a S {
         &self.schemes[self.index]
     }
 
     /// Returns a reference to the scheme after the one that is currently active, or `None` if the
     /// active scheme is the last one.
+    #[must_use]
     pub fn subscheme(&self) -> Option<&'a S> {
         if self.index + 1 < self.schemes.len() {
             Some(&self.schemes[self.index + 1])
