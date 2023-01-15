@@ -1,6 +1,6 @@
 //! Defines the [`Renderer`] struct for creating SVG images of [`SlidingPuzzle`]s.
 
-use std::fmt::Display;
+use std::{fmt::Display, ops::Deref};
 
 use num_traits::PrimInt;
 use palette::rgb::Rgba;
@@ -218,8 +218,8 @@ pub enum SubschemeStyle {
     BorderColor,
 }
 
-/// Draws a [`SlidingPuzzle`] as an SVG image.
-pub struct Renderer<
+/// Used to build a [`Renderer`].
+pub struct RendererBuilder<
     'a,
     S: ColorScheme = &'a dyn ColorScheme,
     T: ColorScheme = &'a dyn ColorScheme,
@@ -236,8 +236,26 @@ pub struct Renderer<
     background_color: Rgba,
 }
 
-impl<'a, S: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'a, S, T, B> {
-    /// Create a new [`Renderer`].
+/// Draws a [`SlidingPuzzle`] as an SVG image.
+pub struct Renderer<
+    'a,
+    S: ColorScheme = &'a dyn ColorScheme,
+    T: ColorScheme = &'a dyn ColorScheme,
+    B: ColorScheme = &'a dyn ColorScheme,
+> {
+    builder: RendererBuilder<'a, S, T, B>,
+}
+
+impl<'a, S: ColorScheme, T: ColorScheme, B: ColorScheme> Deref for Renderer<'a, S, T, B> {
+    type Target = RendererBuilder<'a, S, T, B>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.builder
+    }
+}
+
+impl<'a, S: ColorScheme, T: ColorScheme, B: ColorScheme> RendererBuilder<'a, S, T, B> {
+    /// Create a new [`RendererBuilder`].
     #[must_use]
     pub fn with_scheme(scheme: &'a SchemeList<'a, S>) -> Self {
         Self {
@@ -316,8 +334,61 @@ impl<'a, S: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'a, S, T, B> {
         self
     }
 
-    /// Draws `puzzle` as an SVG image.
-    pub fn svg<Piece, P>(&self, puzzle: &P) -> Result<Document, RendererError>
+    /// Builds a [`Renderer`].
+    #[must_use]
+    pub fn build(self) -> Renderer<'a, S, T, B> {
+        Renderer { builder: self }
+    }
+}
+
+impl<'a, S: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'a, S, T, B> {
+    /// Returns the CSS string used to style the image.
+    pub fn style_string(&self) -> String {
+        let font = self
+            .text
+            .as_ref()
+            .map(|a| a.style_string())
+            .unwrap_or_default();
+
+        let bg = {
+            let color: Rgba<_, u8> = self.background_color.into_format();
+            format!("#{color:x}")
+        };
+
+        let border_thickness = self
+            .borders
+            .as_ref()
+            .map(|a| a.thickness)
+            .unwrap_or_default();
+
+        format!(
+            "svg {{ background-color: {bg}; }} \
+            text {{ \
+                text-anchor: middle; \
+                dominant-baseline: central; \
+            }} \
+            rect.piece {{ \
+                width: {ts}px; \
+                height: {ts}px; \
+                rx: {tr}px; \
+                ry: {tr}px; \
+                stroke-width: {sw}px; \
+            }} \
+            rect.sub {{ \
+                width: {srw}px; \
+                height: {srh}px; \
+            }} \
+            {font}",
+            ts = self.tile_size,
+            tr = self.tile_rounding,
+            sw = border_thickness,
+            srw = self.tile_size * 0.7,
+            srh = self.tile_size * 0.1,
+        )
+    }
+
+    /// Draws `puzzle` as an SVG image, wrapped in an SVG group element.
+    pub fn group<Piece, P>(&self, puzzle: &P) -> Result<Group, RendererError>
     where
         Piece: PrimInt + Display,
         P: SlidingPuzzle<Piece>,
@@ -328,81 +399,24 @@ impl<'a, S: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'a, S, T, B> {
             return Err(RendererError::IncompatibleLabel { width, height });
         }
 
-        let border_thickness = self
-            .borders
-            .as_ref()
-            .map(|a| a.thickness)
-            .unwrap_or_default();
-
-        let (w, h) = (width as f32, height as f32);
-        let (image_w, image_h) = (
-            w * self.tile_size
-                + (w - 1.0) * self.tile_gap
-                + w * border_thickness
-                + 2.0 * self.padding,
-            h * self.tile_size
-                + (h - 1.0) * self.tile_gap
-                + h * border_thickness
-                + 2.0 * self.padding,
-        );
-
-        let style_str = {
-            let font = self
-                .text
-                .as_ref()
-                .map(|a| a.style_string())
-                .unwrap_or_default();
-
-            let bg = {
-                let color: Rgba<_, u8> = self.background_color.into_format();
-                format!("#{color:x}")
-            };
-
-            format!(
-                "svg {{ background-color: {bg}; }} \
-                text {{ \
-                    text-anchor: middle; \
-                    dominant-baseline: central; \
-                }} \
-                rect.piece {{ \
-                    width: {ts}px; \
-                    height: {ts}px; \
-                    rx: {tr}px; \
-                    ry: {tr}px; \
-                    stroke-width: {sw}px; \
-                }} \
-                rect.sub {{ \
-                    width: {srw}px; \
-                    height: {srh}px; \
-                }} \
-                {font}",
-                ts = self.tile_size,
-                tr = self.tile_rounding,
-                sw = border_thickness,
-                srw = self.tile_size * 0.7,
-                srh = self.tile_size * 0.1,
-            )
-        };
-
-        let mut doc = Document::new()
-            .add(Style::new(style_str))
-            .set("width", image_w)
-            .set("height", image_h);
+        let mut group = Group::new();
 
         for y in 0..height {
             for x in 0..width {
                 let piece = puzzle.piece_at_xy(x, y);
 
                 if piece != Piece::zero() {
-                    doc = doc.add(self.render_piece(puzzle, x, y));
+                    group = group.add(self.render_piece(puzzle, x, y));
                 }
             }
         }
 
-        Ok(doc)
+        Ok(group)
     }
 
-    fn render_piece<Piece, P>(&self, puzzle: &P, x: usize, y: usize) -> Group
+    /// Draws the piece of `puzzle` at position `(x, y)` as an SVG image, wrapped in an SVG group
+    /// element.
+    pub fn render_piece<Piece, P>(&self, puzzle: &P, x: usize, y: usize) -> Group
     where
         Piece: PrimInt + Display,
         P: SlidingPuzzle<Piece>,
@@ -520,5 +534,46 @@ impl<'a, S: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'a, S, T, B> {
         }
 
         group
+    }
+
+    /// Draws `puzzle` as an SVG image.
+    pub fn render<Piece, P>(&self, puzzle: &P) -> Result<Document, RendererError>
+    where
+        Piece: PrimInt + Display,
+        P: SlidingPuzzle<Piece>,
+    {
+        let (width, height) = puzzle.size();
+
+        if !self.scheme.is_valid_size(width, height) {
+            return Err(RendererError::IncompatibleLabel { width, height });
+        }
+
+        let border_thickness = self
+            .borders
+            .as_ref()
+            .map(|a| a.thickness)
+            .unwrap_or_default();
+
+        let (w, h) = (width as f32, height as f32);
+        let (image_w, image_h) = (
+            w * self.tile_size
+                + (w - 1.0) * self.tile_gap
+                + w * border_thickness
+                + 2.0 * self.padding,
+            h * self.tile_size
+                + (h - 1.0) * self.tile_gap
+                + h * border_thickness
+                + 2.0 * self.padding,
+        );
+
+        let style_str = self.style_string();
+
+        let doc = Document::new()
+            .add(Style::new(style_str))
+            .add(self.group(puzzle)?)
+            .set("width", image_w)
+            .set("height", image_h);
+
+        Ok(doc)
     }
 }
