@@ -242,15 +242,13 @@ pub struct Renderer<
     S: ColorScheme = &'a dyn ColorScheme,
     T: ColorScheme = &'a dyn ColorScheme,
     B: ColorScheme = &'a dyn ColorScheme,
-> {
-    builder: RendererBuilder<'a, S, T, B>,
-}
+>(RendererBuilder<'a, S, T, B>);
 
 impl<'a, S: ColorScheme, T: ColorScheme, B: ColorScheme> Deref for Renderer<'a, S, T, B> {
     type Target = RendererBuilder<'a, S, T, B>;
 
     fn deref(&self) -> &Self::Target {
-        &self.builder
+        &self.0
     }
 }
 
@@ -337,7 +335,7 @@ impl<'a, S: ColorScheme, T: ColorScheme, B: ColorScheme> RendererBuilder<'a, S, 
     /// Builds a [`Renderer`].
     #[must_use]
     pub fn build(self) -> Renderer<'a, S, T, B> {
-        Renderer { builder: self }
+        Renderer(self)
     }
 }
 
