@@ -185,3 +185,17 @@ impl<'a, S: ColorScheme> ColorScheme for SchemeList<'a, S> {
         self.schemes[self.index].color(width, height, x, y)
     }
 }
+
+/// A [`ColorScheme`] that always outputs black. This is just to make using [`Renderer`] more
+/// convenient (because most of the time, we probably want black text and black borders).
+pub struct Black;
+
+impl ColorScheme for Black {
+    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+        true
+    }
+
+    fn color(&self, _width: usize, _height: usize, _x: usize, _y: usize) -> Rgba {
+        Rgba::new(0.0, 0.0, 0.0, 1.0)
+    }
+}
