@@ -67,6 +67,12 @@ impl Borders<Black> {
     }
 }
 
+impl Default for Borders<Black> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<S: ColorScheme> Borders<S> {
     /// Create a new [`Borders`] instance. The default is a 1 pixel wide black border.
     #[must_use]
@@ -109,6 +115,12 @@ impl<'a> Text<'a, Black> {
     #[must_use]
     pub fn new() -> Self {
         Self::with_scheme(Black)
+    }
+}
+
+impl<'a> Default for Text<'a, Black> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
