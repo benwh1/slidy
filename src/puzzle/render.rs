@@ -13,7 +13,7 @@ use svg::{
 };
 use thiserror::Error;
 
-use crate::puzzle::color_scheme::SchemeList;
+use crate::puzzle::color_scheme::{Black, SchemeList};
 
 use super::{color_scheme::ColorScheme, sliding_puzzle::SlidingPuzzle};
 
@@ -59,6 +59,14 @@ pub struct Borders<S: ColorScheme> {
     thickness: f32,
 }
 
+impl Borders<Black> {
+    /// Creates a new [`Borders`] instance using the [`Black`] [`ColorScheme`].
+    #[must_use]
+    pub fn new() -> Self {
+        Self::with_scheme(Black)
+    }
+}
+
 impl<S: ColorScheme> Borders<S> {
     /// Create a new [`Borders`] instance. The default is a 1 pixel wide black border.
     #[must_use]
@@ -94,6 +102,14 @@ pub struct Text<'a, S: ColorScheme> {
     font: Font<'a>,
     font_size: f32,
     position: (f32, f32),
+}
+
+impl<'a> Text<'a, Black> {
+    /// Creates a new [`Text`] instance using the [`Black`] [`ColorScheme`].
+    #[must_use]
+    pub fn new() -> Self {
+        Self::with_scheme(Black)
+    }
 }
 
 impl<'a, S: ColorScheme> Text<'a, S> {
