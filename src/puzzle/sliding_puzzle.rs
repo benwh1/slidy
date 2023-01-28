@@ -5,7 +5,7 @@ use num_traits::PrimInt;
 
 use crate::{
     algorithm::{algorithm::Algorithm, direction::Direction, puzzle_move::Move},
-    puzzle::{label::label::BijectiveLabel, solved_state::SolvedState, solvable::Solvable},
+    puzzle::{label::label::BijectiveLabel, solvable::Solvable, solved_state::SolvedState},
 };
 
 use super::label::label::RowGrids;
