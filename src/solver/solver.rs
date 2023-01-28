@@ -78,9 +78,9 @@ where
     H: Heuristic<Piece, Puzzle, T>,
     u8: AsPrimitive<T>,
 {
-    puzzle: Puzzle,
     stack: Stack,
     phantom_piece: PhantomData<Piece>,
+    phantom_puzzle: PhantomData<Puzzle>,
     heuristic: &'a H,
     phantom_t: PhantomData<T>,
 }
@@ -91,12 +91,12 @@ where
     Puzzle: SlidingPuzzle<Piece> + Clone,
     H: Heuristic<Piece, Puzzle, u8>,
 {
-    /// Constructs a new [`Solver`] for solving `puzzle`.
-    pub fn new(puzzle: &Puzzle, heuristic: &'a H) -> Self {
+    /// Creates a new [`Solver`] using the given heuristic.
+    pub fn new(heuristic: &'a H) -> Self {
         Self {
-            puzzle: puzzle.clone(),
             stack: Stack::default(),
             phantom_piece: PhantomData,
+            phantom_puzzle: PhantomData,
             heuristic,
             phantom_t: PhantomData,
         }
@@ -112,25 +112,25 @@ where
     u8: AsPrimitive<T>,
 {
     /// Constructs a new [`Solver`] for solving `puzzle`.
-    pub fn new_with_t(puzzle: &Puzzle, heuristic: &'a H) -> Self {
+    pub fn new_with_t(heuristic: &'a H) -> Self {
         Self {
-            puzzle: puzzle.clone(),
             stack: Stack::default(),
             phantom_piece: PhantomData,
+            phantom_puzzle: PhantomData,
             heuristic,
             phantom_t: PhantomData::<T>,
         }
     }
 
-    fn dfs(&mut self, depth: T) -> bool {
+    fn dfs(&mut self, puzzle: &mut Puzzle, depth: T) -> bool {
         if depth == T::zero() {
-            if self.puzzle.is_solved() {
+            if puzzle.is_solved() {
                 return true;
             }
             return false;
         }
 
-        let bound = self.heuristic.bound(&self.puzzle);
+        let bound = self.heuristic.bound(puzzle);
 
         if bound > depth {
             return false;
@@ -142,28 +142,29 @@ where
                 continue;
             }
 
-            if !self.puzzle.try_move_dir(d) {
+            if !puzzle.try_move_dir(d) {
                 continue;
             }
 
             self.stack.push(d);
 
-            if self.dfs(depth - T::one()) {
+            if self.dfs(puzzle, depth - T::one()) {
                 return true;
             }
 
             self.stack.pop();
-            self.puzzle.try_move_dir(d.inverse());
+            puzzle.try_move_dir(d.inverse());
         }
 
         false
     }
 
-    /// Solves the puzzle.
-    pub fn solve(&mut self) -> Result<Algorithm, SolverError> {
-        let mut depth = self.heuristic.bound(&self.puzzle);
+    /// Solves `puzzle`.
+    pub fn solve(&mut self, puzzle: &Puzzle) -> Result<Algorithm, SolverError> {
+        let mut puzzle = puzzle.clone();
+        let mut depth = self.heuristic.bound(&puzzle);
         loop {
-            if self.dfs(depth) {
+            if self.dfs(&mut puzzle, depth) {
                 let mut solution: Algorithm = (&self.stack).into();
                 solution.simplify();
                 return Ok(solution);
