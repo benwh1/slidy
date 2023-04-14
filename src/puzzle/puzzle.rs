@@ -396,6 +396,19 @@ mod tests {
         }
 
         #[test]
+        fn test_piece_position() {
+            let p =
+                Puzzle::from_str("9 15 20 6/19 11 13 12/17 3 10 23/0 7 2 14/1 16 18 21/22 8 5 4")
+                    .unwrap();
+            assert_eq!(p.piece_position(9), 0);
+            assert_eq!(p.piece_position_xy(9), (0, 0));
+            assert_eq!(p.piece_position(3), 9);
+            assert_eq!(p.piece_position_xy(3), (1, 2));
+            assert_eq!(p.piece_position(4), 23);
+            assert_eq!(p.piece_position_xy(4), (3, 5));
+        }
+
+        #[test]
         fn test_gap_position() {
             let mut p = Puzzle::new(4, 6).unwrap();
             assert_eq!(p.gap_position(), 23);
@@ -567,6 +580,112 @@ mod tests {
             assert_eq!(
                 p.pieces,
                 vec![1, 2, 3, 4, 9, 5, 6, 7, 0, 10, 11, 8, 13, 14, 15, 12]
+            );
+        }
+
+        #[test]
+        fn test_can_move_position() {
+            let p =
+                Puzzle::from_str("9 15 20 6/19 11 13 12/17 3 10 23/7 0 2 14/1 16 18 21/22 8 5 4")
+                    .unwrap();
+            assert!(!p.can_move_position(0));
+            assert!(p.can_move_position(1));
+            assert!(!p.can_move_position(2));
+            assert!(!p.can_move_position(11));
+            assert!(p.can_move_position(12));
+            assert!(p.can_move_position(13));
+            assert!(p.can_move_position(15));
+            assert!(!p.can_move_position(16));
+            assert!(p.can_move_position(17));
+            assert!(!p.can_move_position(23));
+
+            assert!(!p.can_move_position(24));
+            assert!(!p.can_move_position(25));
+            assert!(!p.can_move_position(100));
+
+            assert!(!p.can_move_position_xy((0, 0)));
+            assert!(p.can_move_position_xy((1, 0)));
+            assert!(!p.can_move_position_xy((2, 0)));
+            assert!(!p.can_move_position_xy((3, 2)));
+            assert!(p.can_move_position_xy((0, 3)));
+            assert!(p.can_move_position_xy((1, 3)));
+            assert!(p.can_move_position_xy((3, 3)));
+            assert!(!p.can_move_position_xy((0, 4)));
+            assert!(p.can_move_position_xy((1, 4)));
+            assert!(!p.can_move_position_xy((3, 5)));
+            assert!(!p.can_move_position_xy((0, 6)));
+
+            assert!(!p.can_move_position_xy((0, 6)));
+            assert!(!p.can_move_position_xy((1, 6)));
+            assert!(!p.can_move_position_xy((4, 0)));
+            assert!(!p.can_move_position_xy((4, 3)));
+            assert!(!p.can_move_position_xy((10, 10)));
+        }
+
+        #[test]
+        fn test_move_position() {
+            let mut p =
+                Puzzle::from_str("9 15 20 6/19 11 13 12/17 3 10 23/7 0 2 14/1 16 18 21/22 8 5 4")
+                    .unwrap();
+
+            p.try_move_position(1);
+            p.try_move_position(6);
+            p.try_move_position(0);
+            p.try_move_position(16);
+            p.try_move_position(15);
+            p.try_move_position(100);
+            p.try_move_position(19);
+
+            assert_eq!(
+                p.pieces,
+                vec![
+                    19, 9, 20, 6, 17, 15, 13, 12, 7, 11, 10, 23, 1, 3, 2, 14, 16, 18, 21, 0, 22, 8,
+                    5, 4
+                ]
+            );
+        }
+
+        #[test]
+        fn test_can_move_piece() {
+            let p =
+                Puzzle::from_str("9 15 20 6/19 11 13 12/17 3 10 23/7 0 2 14/1 16 18 21/22 8 5 4")
+                    .unwrap();
+            assert!(p.can_move_piece(15));
+            assert!(p.can_move_piece(7));
+            assert!(p.can_move_piece(14));
+            assert!(p.can_move_piece(8));
+            assert!(p.can_move_piece(0));
+            assert!(!p.can_move_piece(9));
+            assert!(!p.can_move_piece(6));
+            assert!(!p.can_move_piece(13));
+            assert!(!p.can_move_piece(17));
+            assert!(!p.can_move_piece(22));
+
+            assert!(!p.can_move_piece(24));
+            assert!(!p.can_move_piece(100));
+        }
+
+        #[test]
+        fn test_move_piece() {
+            let mut p =
+                Puzzle::from_str("9 15 20 6/19 11 13 12/17 3 10 23/7 0 2 14/1 16 18 21/22 8 5 4")
+                    .unwrap();
+
+            p.try_move_piece(15);
+            p.try_move_piece(13);
+            p.try_move_piece(9);
+            p.try_move_piece(1);
+            p.try_move_piece(14);
+            p.try_move_piece(0);
+            p.try_move_piece(100);
+            p.try_move_piece(21);
+
+            assert_eq!(
+                p.pieces,
+                vec![
+                    19, 9, 20, 6, 17, 15, 13, 12, 7, 11, 10, 23, 1, 3, 2, 14, 16, 18, 21, 0, 22, 8,
+                    5, 4
+                ]
             );
         }
 
