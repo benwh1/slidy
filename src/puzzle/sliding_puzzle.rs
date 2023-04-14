@@ -1,6 +1,8 @@
 //! Defines the [`SlidingPuzzle`] trait, which is the main trait defining the properties of a
 //! sliding puzzle.
 
+use std::cmp::Ordering;
+
 use num_traits::PrimInt;
 
 use crate::{
@@ -534,6 +536,123 @@ where
         for _ in 0..mv.amount {
             self.move_dir_unchecked(mv.direction);
         }
+    }
+
+    /// Checks if it is possible to move the piece at position `idx`.
+    ///
+    /// Returns `true` if position is in the same row or column as the gap. Also returns `true`
+    /// if `idx` is the gap position.
+    #[must_use]
+    fn can_move_position(&self, idx: usize) -> bool {
+        let w = self.width();
+        self.can_move_position_xy((idx % w, idx / w))
+    }
+
+    /// Moves the piece in position `idx`.
+    ///
+    /// # Panics
+    ///
+    /// If `self.can_move_position(idx)` is false, the function may panic or the puzzle may be
+    /// transformed in an invalid way.
+    fn move_position(&mut self, idx: usize) {
+        let w = self.width();
+        self.move_position_xy((idx % w, idx / w));
+    }
+
+    /// See [`SlidingPuzzle::move_position`].
+    ///
+    /// Returns `true` if the piece was moved successfully, `false` otherwise.
+    fn try_move_position(&mut self, idx: usize) -> bool {
+        let w = self.width();
+        self.try_move_position_xy((idx % w, idx / w))
+    }
+
+    /// See [`SlidingPuzzle::move_position`].
+    #[inline(always)]
+    unsafe fn move_position_unchecked(&mut self, idx: usize) {
+        self.move_position(idx);
+    }
+
+    /// Checks if it is possible to move the piece at position `(x, y)`.
+    ///
+    /// Returns `true` if position `(x, y)` is in the same row or column as the gap. Also returns
+    /// `true` if `(x, y)` is the gap position.
+    #[must_use]
+    fn can_move_position_xy(&self, (x, y): (usize, usize)) -> bool {
+        let (gx, gy) = self.gap_position_xy();
+        x == gx || y == gy
+    }
+
+    /// Moves the piece in position `(x, y)`.
+    ///
+    /// # Panics
+    ///
+    /// If `self.can_move_position_xy((x, y))` is false, the function may panic or the puzzle may be
+    /// transformed in an invalid way.
+    fn move_position_xy(&mut self, (x, y): (usize, usize)) {
+        self.try_move_position_xy((x, y));
+    }
+
+    /// See [`SlidingPuzzle::move_position_xy`].
+    ///
+    /// Returns `true` if the piece was moved successfully, `false` otherwise.
+    fn try_move_position_xy(&mut self, (x, y): (usize, usize)) -> bool {
+        let (gx, gy) = self.gap_position_xy();
+        if x == gx {
+            match y.cmp(&gy) {
+                Ordering::Less => self.apply_move(Move::new(Direction::Down, (gy - y) as u32)),
+                Ordering::Greater => self.apply_move(Move::new(Direction::Up, (y - gy) as u32)),
+                Ordering::Equal => {}
+            }
+            true
+        } else if y == gy {
+            match x.cmp(&gx) {
+                Ordering::Less => self.apply_move(Move::new(Direction::Right, (gx - x) as u32)),
+                Ordering::Greater => self.apply_move(Move::new(Direction::Left, (x - gx) as u32)),
+                Ordering::Equal => {}
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    /// See [`SlidingPuzzle::move_position_xy`].
+    #[inline(always)]
+    unsafe fn move_position_xy_unchecked(&mut self, (x, y): (usize, usize)) {
+        self.move_position_xy((x, y));
+    }
+
+    /// Checks if it is possible to move piece `n`.
+    ///
+    /// Returns `true` if the piece is in the same row or column as the gap. Also returns `true` if
+    /// `n` is 0, i.e. the gap piece.
+    #[must_use]
+    fn can_move_piece(&self, piece: Piece) -> bool {
+        self.can_move_position_xy(self.piece_position_xy(piece))
+    }
+
+    /// Moves piece `n`.
+    ///
+    /// # Panics
+    ///
+    /// If `self.can_move_piece(n)` is false, the function may panic or the puzzle may be
+    /// transformed in an invalid way.
+    fn move_piece(&mut self, piece: Piece) {
+        self.move_position_xy(self.piece_position_xy(piece));
+    }
+
+    /// See [`SlidingPuzzle::move_piece`].
+    ///
+    /// Returns `true` if the piece was moved successfully, `false` otherwise.
+    fn try_move_piece(&mut self, piece: Piece) -> bool {
+        self.try_move_position_xy(self.piece_position_xy(piece))
+    }
+
+    /// See [`SlidingPuzzle::move_piece`].
+    #[inline(always)]
+    unsafe fn move_piece_unchecked(&mut self, piece: Piece) {
+        self.move_piece(piece);
     }
 
     /// Checks if it is possible to apply the given [`Algorithm`].
