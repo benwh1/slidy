@@ -6,7 +6,7 @@ use thiserror::Error;
 
 use crate::algorithm::{
     direction::Direction,
-    display::puzzle_move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort, MoveDisplay},
+    display::r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort, MoveDisplay},
 };
 
 /// A (possibly multi-tile) move of a puzzle. Contains a direction and an amount.

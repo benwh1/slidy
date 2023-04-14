@@ -35,8 +35,8 @@ define_display!(
     /// ```
     /// # use slidy::algorithm::{
     /// #     direction::Direction,
-    /// #     display::puzzle_move::{DisplayLongSpaced, MoveDisplay},
-    /// #     puzzle_move::Move,
+    /// #     display::r#move::{DisplayLongSpaced, MoveDisplay},
+    /// #     r#move::r#move::Move,
     /// # };
     /// # use std::str::FromStr;
     /// let a = Move::new(Direction::Up, 5);
@@ -50,8 +50,8 @@ define_display!(
     /// ```
     /// # use slidy::algorithm::{
     /// #     direction::Direction,
-    /// #     display::puzzle_move::{DisplayLongUnspaced, MoveDisplay},
-    /// #     puzzle_move::Move,
+    /// #     display::r#move::{DisplayLongUnspaced, MoveDisplay},
+    /// #     r#move::r#move::Move,
     /// # };
     /// # use std::str::FromStr;
     /// let a = Move::new(Direction::Up, 5);
@@ -65,8 +65,8 @@ define_display!(
     /// ```
     /// # use slidy::algorithm::{
     /// #     direction::Direction,
-    /// #     display::puzzle_move::{DisplayShort, MoveDisplay},
-    /// #     puzzle_move::Move,
+    /// #     display::r#move::{DisplayShort, MoveDisplay},
+    /// #     r#move::r#move::Move,
     /// # };
     /// # use std::str::FromStr;
     /// let a = Move::new(Direction::Up, 5);
@@ -106,7 +106,7 @@ impl Display for DisplayShort {
 mod tests {
     use crate::algorithm::{
         direction::Direction,
-        display::puzzle_move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
+        display::r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
         r#move::r#move::Move,
     };
 

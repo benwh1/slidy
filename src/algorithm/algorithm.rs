@@ -11,7 +11,7 @@ use thiserror::Error;
 
 use crate::algorithm::display::{
     algorithm::{AlgorithmDisplay, DisplaySpaced, DisplayUnspaced},
-    puzzle_move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
+    r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
 };
 
 use super::{

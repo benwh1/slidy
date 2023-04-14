@@ -1,6 +1,6 @@
 //! Defines ways in which an [`Algorithm`] can be displayed.
 
-use super::puzzle_move::MoveDisplay;
+use super::r#move::MoveDisplay;
 use crate::algorithm::algorithm::Algorithm;
 use std::{fmt::Display, marker::PhantomData};
 
@@ -68,7 +68,7 @@ mod tests {
         algorithm::Algorithm,
         display::{
             algorithm::{AlgorithmDisplay, DisplaySpaced, DisplayUnspaced},
-            puzzle_move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
+            r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
         },
     };
     use std::str::FromStr;
@@ -104,7 +104,7 @@ mod benchmarks {
 
     use test::Bencher;
 
-    use crate::algorithm::display::puzzle_move::DisplayShort;
+    use crate::algorithm::display::r#move::DisplayShort;
 
     use super::*;
 
