@@ -58,50 +58,91 @@ where
         self.area() - 1
     }
 
-    /// Position of the empty space.
+    /// Position of piece `piece`.
     ///
     /// # Panics
     ///
-    /// This function never panics unless a function like [`SlidingPuzzle::set_piece`] has
-    /// been used to create an invalid state (i.e. a state with no gap).
+    /// Panics if there is no piece `piece` (i.e. if `piece` is out of the valid range for the
+    /// puzzle, or if a function like [`SlidingPuzzle::set_piece`] has been used to create an
+    /// invalid state, i.e. a state with no piece `piece`).
+    #[must_use]
+    fn piece_position(&self, piece: Piece) -> usize {
+        self.try_piece_position(piece).unwrap()
+    }
+
+    /// See [`SlidingPuzzle::piece_position`].
+    #[must_use]
+    fn try_piece_position(&self, piece: Piece) -> Option<usize> {
+        (0..self.area()).position(|idx| self.piece_at(idx) == piece)
+    }
+
+    /// See [`SlidingPuzzle::piece_position`].
+    #[must_use]
+    unsafe fn piece_position_unchecked(&self, piece: Piece) -> usize {
+        self.piece_position(piece)
+    }
+
+    /// Position of piece `piece` as (x, y) coordinates.
+    #[must_use]
+    fn piece_position_xy(&self, piece: Piece) -> (usize, usize) {
+        let pos = self.piece_position(piece);
+        let w = self.width();
+        (pos % w, pos / w)
+    }
+
+    /// See [`SlidingPuzzle::piece_position_xy`].
+    #[must_use]
+    fn try_piece_position_xy(&self, piece: Piece) -> Option<(usize, usize)> {
+        let w = self.width();
+        self.try_piece_position(piece).map(|p| (p % w, p / w))
+    }
+
+    /// See [`SlidingPuzzle::piece_position_xy`].
+    #[must_use]
+    unsafe fn piece_position_xy_unchecked(&self, piece: Piece) -> (usize, usize) {
+        let pos = self.piece_position_unchecked(piece);
+        let w = self.width();
+        (pos % w, pos / w)
+    }
+
+    /// Position of the empty space.
+    ///
+    /// See [`SlidingPuzzle::piece_position`].
     #[must_use]
     fn gap_position(&self) -> usize {
-        self.try_gap_position().unwrap()
+        self.piece_position(Piece::zero())
     }
 
-    /// See [`SlidingPuzzle::gap_position`].
+    /// See [`SlidingPuzzle::try_piece_position`].
     #[must_use]
     fn try_gap_position(&self) -> Option<usize> {
-        (0..self.area()).position(|idx| self.piece_at(idx) == Piece::zero())
+        self.try_piece_position(Piece::zero())
     }
 
-    /// See [`SlidingPuzzle::gap_position`].
+    /// See [`SlidingPuzzle::piece_position_unchecked`].
     #[must_use]
     unsafe fn gap_position_unchecked(&self) -> usize {
-        self.gap_position()
+        self.piece_position_unchecked(Piece::zero())
     }
 
     /// Position of the empty space as (x, y) coordinates.
+    ///
+    /// See [`SlidingPuzzle::piece_position_xy`].
     #[must_use]
     fn gap_position_xy(&self) -> (usize, usize) {
-        let pos = self.gap_position();
-        let w = self.width();
-        (pos % w, pos / w)
+        self.piece_position_xy(Piece::zero())
     }
 
-    /// See [`SlidingPuzzle::gap_position_xy`].
+    /// See [`SlidingPuzzle::try_piece_position_xy`].
     #[must_use]
     fn try_gap_position_xy(&self) -> Option<(usize, usize)> {
-        let w = self.width();
-        self.try_gap_position().map(|p| (p % w, p / w))
+        self.try_piece_position_xy(Piece::zero())
     }
 
-    /// See [`SlidingPuzzle::gap_position_xy`].
+    /// See [`SlidingPuzzle::piece_position_xy_unchecked`].
     #[must_use]
     unsafe fn gap_position_xy_unchecked(&self) -> (usize, usize) {
-        let pos = self.gap_position_unchecked();
-        let w = self.width();
-        (pos % w, pos / w)
+        self.piece_position_xy_unchecked(Piece::zero())
     }
 
     /// Reset the puzzle to the default state.
