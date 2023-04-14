@@ -1,12 +1,14 @@
 //! Defines the [`SlidingPuzzle`] trait, which is the main trait defining the properties of a
 //! sliding puzzle.
 
-use std::cmp::Ordering;
-
 use num_traits::{NumCast, One, PrimInt, ToPrimitive, Zero};
 
 use crate::{
-    algorithm::{algorithm::Algorithm, direction::Direction, r#move::r#move::Move},
+    algorithm::{
+        algorithm::Algorithm,
+        direction::Direction,
+        r#move::{position_move::PositionMove, r#move::Move, try_into_move::TryIntoMove},
+    },
     puzzle::{label::label::BijectiveLabel, solvable::Solvable, solved_state::SolvedState},
 };
 
@@ -604,29 +606,12 @@ where
     ///
     /// Returns `true` if the piece was moved successfully, `false` otherwise.
     fn try_move_position_xy(&mut self, (x, y): (usize, usize)) -> bool {
-        if self.can_move_position_xy((x, y)) {
-            let (gx, gy) = self.gap_position_xy();
-            if x == gx {
-                match y.cmp(&gy) {
-                    Ordering::Less => self.apply_move(Move::new(Direction::Down, (gy - y) as u32)),
-                    Ordering::Greater => self.apply_move(Move::new(Direction::Up, (y - gy) as u32)),
-                    Ordering::Equal => {}
-                }
+        match PositionMove(x, y).try_into_move(self) {
+            Ok(mv) => {
+                self.apply_move(mv);
                 true
-            } else if y == gy {
-                match x.cmp(&gx) {
-                    Ordering::Less => self.apply_move(Move::new(Direction::Right, (gx - x) as u32)),
-                    Ordering::Greater => {
-                        self.apply_move(Move::new(Direction::Left, (x - gx) as u32))
-                    }
-                    Ordering::Equal => {}
-                }
-                true
-            } else {
-                false
             }
-        } else {
-            false
+            Err(_) => false,
         }
     }
 
