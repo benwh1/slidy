@@ -16,7 +16,7 @@ use crate::algorithm::display::{
 
 use super::{
     direction::Direction,
-    puzzle_move::{Move, MoveSum},
+    r#move::r#move::{Move, MoveSum},
 };
 
 /// A sequence of moves.
@@ -511,7 +511,7 @@ mod tests {
         use crate::algorithm::{
             algorithm::{Algorithm, ParseAlgorithmError},
             direction::Direction,
-            puzzle_move::Move,
+            r#move::r#move::Move,
         };
         use std::str::FromStr;
 

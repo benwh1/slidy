@@ -2,7 +2,7 @@
 
 use std::fmt::Display;
 
-use crate::algorithm::puzzle_move::Move;
+use crate::algorithm::r#move::r#move::Move;
 
 /// Marker trait for structs that are used to display moves
 pub trait MoveDisplay {
@@ -107,7 +107,7 @@ mod tests {
     use crate::algorithm::{
         direction::Direction,
         display::puzzle_move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
-        puzzle_move::Move,
+        r#move::r#move::Move,
     };
 
     #[test]

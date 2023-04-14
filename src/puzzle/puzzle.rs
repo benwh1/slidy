@@ -369,7 +369,7 @@ mod tests {
 
     mod sliding_puzzle {
         use crate::{
-            algorithm::{algorithm::Algorithm, direction::Direction, puzzle_move::Move},
+            algorithm::{algorithm::Algorithm, direction::Direction, r#move::r#move::Move},
             puzzle::label::label::FringeGrids,
         };
 

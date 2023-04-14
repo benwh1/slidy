@@ -6,7 +6,7 @@ use std::cmp::Ordering;
 use num_traits::PrimInt;
 
 use crate::{
-    algorithm::{algorithm::Algorithm, direction::Direction, puzzle_move::Move},
+    algorithm::{algorithm::Algorithm, direction::Direction, r#move::r#move::Move},
     puzzle::{label::label::BijectiveLabel, solvable::Solvable, solved_state::SolvedState},
 };
 

@@ -6,7 +6,7 @@ use num_traits::{AsPrimitive, PrimInt, Unsigned};
 use thiserror::Error;
 
 use crate::{
-    algorithm::{algorithm::Algorithm, direction::Direction, puzzle_move::Move},
+    algorithm::{algorithm::Algorithm, direction::Direction, r#move::r#move::Move},
     puzzle::sliding_puzzle::SlidingPuzzle,
 };
 
