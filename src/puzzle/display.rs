@@ -1,39 +1,28 @@
 //! Defines ways in which implementations of [`SlidingPuzzle`] can be displayed.
 
-use num_traits::PrimInt;
-
 use crate::puzzle::sliding_puzzle::SlidingPuzzle;
-use std::{
-    fmt::{Display, Write},
-    marker::PhantomData,
-};
+use std::fmt::{Display, Write};
 
 macro_rules! define_display {
     ($($(#[$annot:meta])* $name:ident),* $(,)?) => {
         $(
             $(#[$annot])*
             #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-            pub struct $name<'a, Piece, Puzzle>
+            pub struct $name<'a, Puzzle>
             where
-                Piece: PrimInt,
-                Puzzle: SlidingPuzzle<Piece>,
+                Puzzle: SlidingPuzzle,
             {
                 puzzle: &'a Puzzle,
-                phantom_piece: PhantomData<Piece>,
             }
 
-            impl<'a, Piece, Puzzle> $name<'a, Piece, Puzzle>
+            impl<'a, Puzzle> $name<'a, Puzzle>
             where
-                Piece: PrimInt,
-                Puzzle: SlidingPuzzle<Piece>,
+                Puzzle: SlidingPuzzle,
             {
                 #[doc = concat!("Create a new [`", stringify!($name), "`] for displaying `puzzle`.")]
                 #[must_use]
                 pub fn new(puzzle: &'a Puzzle) -> Self {
-                    Self {
-                        puzzle,
-                        phantom_piece: PhantomData,
-                    }
+                    Self { puzzle }
                 }
             }
         )*
@@ -82,10 +71,10 @@ define_display!(
     DisplayInline,
 );
 
-impl<Piece, Puzzle> Display for DisplayGrid<'_, Piece, Puzzle>
+impl<Puzzle> Display for DisplayGrid<'_, Puzzle>
 where
-    Piece: PrimInt + Display,
-    Puzzle: SlidingPuzzle<Piece>,
+    Puzzle: SlidingPuzzle,
+    Puzzle::Piece: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         let max_number = self.puzzle.num_pieces();
@@ -108,10 +97,10 @@ where
     }
 }
 
-impl<Piece, P> Display for DisplayInline<'_, Piece, P>
+impl<Puzzle> Display for DisplayInline<'_, Puzzle>
 where
-    Piece: PrimInt + Display,
-    P: SlidingPuzzle<Piece>,
+    Puzzle: SlidingPuzzle,
+    Puzzle::Piece: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         let (w, h) = self.puzzle.size();

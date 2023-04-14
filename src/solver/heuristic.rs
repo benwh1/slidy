@@ -1,15 +1,14 @@
 //! Defines the [`Heuristic`] trait and the [`ManhattanDistance`] heuristic.
 
 use itertools::Itertools;
-use num_traits::{AsPrimitive, PrimInt, Unsigned};
+use num_traits::{AsPrimitive, PrimInt, Unsigned, Zero};
 
 use crate::puzzle::sliding_puzzle::SlidingPuzzle;
 
 /// Provides a function returning a lower bound on the number of moves needed to solve a puzzle.
-pub trait Heuristic<Piece, Puzzle, T>
+pub trait Heuristic<Puzzle, T>
 where
-    Piece: PrimInt,
-    Puzzle: SlidingPuzzle<Piece>,
+    Puzzle: SlidingPuzzle,
     T: PrimInt + Unsigned,
 {
     /// Returns a lower bound on the number of moves needed to solve `puzzle`.
@@ -21,10 +20,9 @@ where
 #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ManhattanDistance;
 
-impl<Piece, Puzzle, T> Heuristic<Piece, Puzzle, T> for ManhattanDistance
+impl<Puzzle, T> Heuristic<Puzzle, T> for ManhattanDistance
 where
-    Piece: PrimInt,
-    Puzzle: SlidingPuzzle<Piece>,
+    Puzzle: SlidingPuzzle,
     T: PrimInt + Unsigned + 'static,
     usize: AsPrimitive<T>,
 {
@@ -36,7 +34,7 @@ where
                 let piece = puzzle.piece_at_xy(x, y);
                 let (a, b) = puzzle.solved_pos_xy(piece);
 
-                if piece == Piece::zero() {
+                if piece == Puzzle::Piece::zero() {
                     0
                 } else {
                     x.abs_diff(a) + y.abs_diff(b)

@@ -2,23 +2,21 @@
 
 use super::sliding_puzzle::SlidingPuzzle;
 use crate::algorithm::{direction::Direction, r#move::r#move::Move};
-use num_traits::PrimInt;
 use rand::Rng;
 
 /// Trait defining a scrambling algorithm.
-pub trait Scrambler<P, Piece>
+pub trait Scrambler<Puzzle>
 where
-    P: SlidingPuzzle<Piece>,
-    Piece: PrimInt,
+    Puzzle: SlidingPuzzle,
 {
     /// Scrambles the puzzle using [`rand::thread_rng`].
-    fn scramble(&self, puzzle: &mut P) {
+    fn scramble(&self, puzzle: &mut Puzzle) {
         let mut rng = rand::thread_rng();
         self.scramble_with_rng(puzzle, &mut rng);
     }
 
     /// Scrambles the puzzle using a given [`Rng`].
-    fn scramble_with_rng<R: Rng>(&self, puzzle: &mut P, rng: &mut R);
+    fn scramble_with_rng<R: Rng>(&self, puzzle: &mut Puzzle, rng: &mut R);
 }
 
 /// Random state scrambler. Scrambles the puzzle in such a way that every solvable state is equally
@@ -26,12 +24,11 @@ where
 #[derive(Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RandomState;
 
-impl<P, Piece> Scrambler<P, Piece> for RandomState
+impl<Puzzle> Scrambler<Puzzle> for RandomState
 where
-    P: SlidingPuzzle<Piece>,
-    Piece: PrimInt,
+    Puzzle: SlidingPuzzle,
 {
-    fn scramble_with_rng<R: Rng>(&self, puzzle: &mut P, rng: &mut R) {
+    fn scramble_with_rng<R: Rng>(&self, puzzle: &mut Puzzle, rng: &mut R) {
         puzzle.reset();
 
         let n = puzzle.num_pieces();
@@ -76,12 +73,11 @@ pub struct RandomMoves {
     pub allow_illegal_moves: bool,
 }
 
-impl<P, Piece> Scrambler<P, Piece> for RandomMoves
+impl<Puzzle> Scrambler<Puzzle> for RandomMoves
 where
-    P: SlidingPuzzle<Piece>,
-    Piece: PrimInt,
+    Puzzle: SlidingPuzzle,
 {
-    fn scramble_with_rng<R: Rng>(&self, puzzle: &mut P, rng: &mut R) {
+    fn scramble_with_rng<R: Rng>(&self, puzzle: &mut Puzzle, rng: &mut R) {
         let mut last_dir = None::<Direction>;
         for _ in 0..self.moves {
             let dir = {
@@ -108,12 +104,11 @@ pub struct Cycle {
     pub length: u64,
 }
 
-impl<P, Piece> Scrambler<P, Piece> for Cycle
+impl<Puzzle> Scrambler<Puzzle> for Cycle
 where
-    P: SlidingPuzzle<Piece>,
-    Piece: PrimInt,
+    Puzzle: SlidingPuzzle,
 {
-    fn scramble_with_rng<R: Rng>(&self, puzzle: &mut P, rng: &mut R) {
+    fn scramble_with_rng<R: Rng>(&self, puzzle: &mut Puzzle, rng: &mut R) {
         let n = puzzle.num_pieces();
         let cycle_len = (self.length as usize).min(if n % 2 == 0 { n - 1 } else { n });
         let max = if cycle_len % 2 == 0 { n - 2 } else { n };

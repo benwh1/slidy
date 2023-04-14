@@ -5,24 +5,21 @@
 
 use crate::puzzle::{label::label::Label, sliding_puzzle::SlidingPuzzle};
 use itertools::Itertools;
-use num_traits::PrimInt;
 
 /// Defines a solved state.
 pub trait SolvedState {
     /// Checks if `puzzle` is solved.
     #[must_use]
-    fn is_solved<Piece, Puzzle>(&self, puzzle: &Puzzle) -> bool
+    fn is_solved<Puzzle>(&self, puzzle: &Puzzle) -> bool
     where
-        Piece: PrimInt,
-        Puzzle: SlidingPuzzle<Piece>,
+        Puzzle: SlidingPuzzle,
         Self: Sized;
 }
 
 impl<L: Label> SolvedState for L {
-    fn is_solved<Piece, Puzzle>(&self, puzzle: &Puzzle) -> bool
+    fn is_solved<Puzzle>(&self, puzzle: &Puzzle) -> bool
     where
-        Piece: PrimInt,
-        Puzzle: SlidingPuzzle<Piece>,
+        Puzzle: SlidingPuzzle,
     {
         let (w, h) = puzzle.size();
         if puzzle.gap_position_xy() != (w - 1, h - 1) {

@@ -119,18 +119,20 @@ impl Puzzle {
 
     /// Equivalent to [`DisplayInline::new`].
     #[must_use]
-    pub fn display_inline(&self) -> DisplayInline<u32, Self> {
+    pub fn display_inline(&self) -> DisplayInline<Self> {
         DisplayInline::new(self)
     }
 
     /// Equivalent to [`DisplayGrid::new`].
     #[must_use]
-    pub fn display_grid(&self) -> DisplayGrid<u32, Self> {
+    pub fn display_grid(&self) -> DisplayGrid<Self> {
         DisplayGrid::new(self)
     }
 }
 
-impl SlidingPuzzle<u32> for Puzzle {
+impl SlidingPuzzle for Puzzle {
+    type Piece = u32;
+
     #[inline(always)]
     fn width(&self) -> usize {
         self.width

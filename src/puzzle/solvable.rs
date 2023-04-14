@@ -3,8 +3,6 @@
 //!
 //! [`slidy::label::label`]: ../label/label/index.html
 
-use num_traits::PrimInt;
-
 use super::{
     label::label::{
         ConcentricRectangles, Diagonals, Fringe, LastTwoRows, RowGrids, Rows, Spiral, SplitFringe,
@@ -17,20 +15,18 @@ use super::{
 /// has at least two pieces with the same label is always solvable.
 ///
 /// [`Label`]: ../label/label/trait.Label.html
-pub trait Solvable<Piece, Puzzle>
+pub trait Solvable<Puzzle>
 where
-    Piece: PrimInt,
-    Puzzle: SlidingPuzzle<Piece>,
+    Puzzle: SlidingPuzzle,
 {
     /// Checks if the puzzle is solvable.
     #[must_use]
     fn is_solvable(puzzle: &Puzzle) -> bool;
 }
 
-impl<Piece, Puzzle> Solvable<Piece, Puzzle> for RowGrids
+impl<Puzzle> Solvable<Puzzle> for RowGrids
 where
-    Piece: PrimInt,
-    Puzzle: SlidingPuzzle<Piece>,
+    Puzzle: SlidingPuzzle,
 {
     fn is_solvable(puzzle: &Puzzle) -> bool {
         // Closure to get the piece that would be in position (x, y), if we do L* U* to move the
@@ -81,10 +77,9 @@ where
 macro_rules! always_solvable {
     ($($t:ty),* $(,)?) => {
         $(
-            impl<Piece, Puzzle> Solvable<Piece, Puzzle> for $t
+            impl<Puzzle> Solvable<Puzzle> for $t
             where
-                Piece: PrimInt,
-                Puzzle: SlidingPuzzle<Piece>,
+                Puzzle: SlidingPuzzle,
             {
                 fn is_solvable(_puzzle: &Puzzle) -> bool {
                     true
@@ -107,10 +102,9 @@ always_solvable!(
     ConcentricRectangles,
 );
 
-impl<Piece, Puzzle> Solvable<Piece, Puzzle> for Spiral
+impl<Puzzle> Solvable<Puzzle> for Spiral
 where
-    Piece: PrimInt,
-    Puzzle: SlidingPuzzle<Piece>,
+    Puzzle: SlidingPuzzle,
 {
     fn is_solvable(puzzle: &Puzzle) -> bool {
         // Always solvable unless puzzle is 2x2, then equivalent to RowGrids.

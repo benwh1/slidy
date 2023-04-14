@@ -2,7 +2,7 @@
 
 use std::{fmt::Display, ops::Deref};
 
-use num_traits::PrimInt;
+use num_traits::Zero;
 use palette::rgb::Rgba;
 use svg::{
     node::{
@@ -386,10 +386,10 @@ impl<'a, S: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'a, S, T, B> {
     }
 
     /// Draws `puzzle` as an SVG image, wrapped in an SVG group element.
-    pub fn group<Piece, P>(&self, puzzle: &P) -> Result<Group, RendererError>
+    pub fn group<Puzzle>(&self, puzzle: &Puzzle) -> Result<Group, RendererError>
     where
-        Piece: PrimInt + Display,
-        P: SlidingPuzzle<Piece>,
+        Puzzle: SlidingPuzzle,
+        Puzzle::Piece: Display,
     {
         let (width, height) = puzzle.size();
 
@@ -403,7 +403,7 @@ impl<'a, S: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'a, S, T, B> {
             for x in 0..width {
                 let piece = puzzle.piece_at_xy(x, y);
 
-                if piece != Piece::zero() {
+                if piece != Puzzle::Piece::zero() {
                     group = group.add(self.render_piece(puzzle, x, y));
                 }
             }
@@ -414,10 +414,10 @@ impl<'a, S: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'a, S, T, B> {
 
     /// Draws the piece of `puzzle` at position `(x, y)` as an SVG image, wrapped in an SVG group
     /// element.
-    pub fn render_piece<Piece, P>(&self, puzzle: &P, x: usize, y: usize) -> Group
+    pub fn render_piece<Puzzle>(&self, puzzle: &Puzzle, x: usize, y: usize) -> Group
     where
-        Piece: PrimInt + Display,
-        P: SlidingPuzzle<Piece>,
+        Puzzle: SlidingPuzzle,
+        Puzzle::Piece: Display,
     {
         let (width, height) = puzzle.size();
 
@@ -535,10 +535,10 @@ impl<'a, S: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'a, S, T, B> {
     }
 
     /// Draws `puzzle` as an SVG image.
-    pub fn render<Piece, P>(&self, puzzle: &P) -> Result<Document, RendererError>
+    pub fn render<Puzzle>(&self, puzzle: &Puzzle) -> Result<Document, RendererError>
     where
-        Piece: PrimInt + Display,
-        P: SlidingPuzzle<Piece>,
+        Puzzle: SlidingPuzzle,
+        Puzzle::Piece: Display,
     {
         let (width, height) = puzzle.size();
 

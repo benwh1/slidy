@@ -70,32 +70,28 @@ pub enum SolverError {
 /// `T` should be chosen such that the maximum length of a potential solution is less than the
 /// maximum value of a `T`. In almost all cases, `T = u8` should be used.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Solver<'a, Piece, Puzzle, T, H>
+pub struct Solver<'a, Puzzle, T, H>
 where
-    Piece: PrimInt,
-    Puzzle: SlidingPuzzle<Piece> + Clone,
+    Puzzle: SlidingPuzzle + Clone,
     T: PrimInt + Unsigned + 'static,
-    H: Heuristic<Piece, Puzzle, T>,
+    H: Heuristic<Puzzle, T>,
     u8: AsPrimitive<T>,
 {
     stack: Stack,
-    phantom_piece: PhantomData<Piece>,
     phantom_puzzle: PhantomData<Puzzle>,
     heuristic: &'a H,
     phantom_t: PhantomData<T>,
 }
 
-impl<'a, Piece, Puzzle, H> Solver<'a, Piece, Puzzle, u8, H>
+impl<'a, Puzzle, H> Solver<'a, Puzzle, u8, H>
 where
-    Piece: PrimInt,
-    Puzzle: SlidingPuzzle<Piece> + Clone,
-    H: Heuristic<Piece, Puzzle, u8>,
+    Puzzle: SlidingPuzzle + Clone,
+    H: Heuristic<Puzzle, u8>,
 {
     /// Creates a new [`Solver`] using the given heuristic.
     pub fn new(heuristic: &'a H) -> Self {
         Self {
             stack: Stack::default(),
-            phantom_piece: PhantomData,
             phantom_puzzle: PhantomData,
             heuristic,
             phantom_t: PhantomData,
@@ -103,19 +99,17 @@ where
     }
 }
 
-impl<'a, Piece, Puzzle, T, H> Solver<'a, Piece, Puzzle, T, H>
+impl<'a, Puzzle, T, H> Solver<'a, Puzzle, T, H>
 where
-    Piece: PrimInt,
-    Puzzle: SlidingPuzzle<Piece> + Clone,
+    Puzzle: SlidingPuzzle + Clone,
     T: PrimInt + Unsigned + 'static,
-    H: Heuristic<Piece, Puzzle, T>,
+    H: Heuristic<Puzzle, T>,
     u8: AsPrimitive<T>,
 {
     /// Constructs a new [`Solver`] for solving `puzzle`.
     pub fn new_with_t(heuristic: &'a H) -> Self {
         Self {
             stack: Stack::default(),
-            phantom_piece: PhantomData,
             phantom_puzzle: PhantomData,
             heuristic,
             phantom_t: PhantomData::<T>,

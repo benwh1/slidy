@@ -3,7 +3,7 @@
 
 use std::cmp::Ordering;
 
-use num_traits::PrimInt;
+use num_traits::{NumCast, One, PrimInt, ToPrimitive, Zero};
 
 use crate::{
     algorithm::{algorithm::Algorithm, direction::Direction, r#move::r#move::Move},
@@ -26,11 +26,13 @@ use super::label::label::RowGrids;
 /// `w` is below position 0
 /// - Position `N` is the bottom right corner
 #[allow(clippy::missing_safety_doc)]
-pub trait SlidingPuzzle<Piece>
+pub trait SlidingPuzzle
 where
-    Piece: PrimInt,
     Self: Sized,
 {
+    /// The type representing a piece of the puzzle (likely the elements in an array or vector).
+    type Piece: PrimInt;
+
     /// Width of the puzzle.
     #[must_use]
     fn width(&self) -> usize;
@@ -68,25 +70,25 @@ where
     /// puzzle, or if a function like [`SlidingPuzzle::set_piece`] has been used to create an
     /// invalid state, i.e. a state with no piece `piece`).
     #[must_use]
-    fn piece_position(&self, piece: Piece) -> usize {
+    fn piece_position(&self, piece: Self::Piece) -> usize {
         self.try_piece_position(piece).unwrap()
     }
 
     /// See [`SlidingPuzzle::piece_position`].
     #[must_use]
-    fn try_piece_position(&self, piece: Piece) -> Option<usize> {
+    fn try_piece_position(&self, piece: Self::Piece) -> Option<usize> {
         (0..self.area()).position(|idx| self.piece_at(idx) == piece)
     }
 
     /// See [`SlidingPuzzle::piece_position`].
     #[must_use]
-    unsafe fn piece_position_unchecked(&self, piece: Piece) -> usize {
+    unsafe fn piece_position_unchecked(&self, piece: Self::Piece) -> usize {
         self.piece_position(piece)
     }
 
     /// Position of piece `piece` as (x, y) coordinates.
     #[must_use]
-    fn piece_position_xy(&self, piece: Piece) -> (usize, usize) {
+    fn piece_position_xy(&self, piece: Self::Piece) -> (usize, usize) {
         let pos = self.piece_position(piece);
         let w = self.width();
         (pos % w, pos / w)
@@ -94,14 +96,14 @@ where
 
     /// See [`SlidingPuzzle::piece_position_xy`].
     #[must_use]
-    fn try_piece_position_xy(&self, piece: Piece) -> Option<(usize, usize)> {
+    fn try_piece_position_xy(&self, piece: Self::Piece) -> Option<(usize, usize)> {
         let w = self.width();
         self.try_piece_position(piece).map(|p| (p % w, p / w))
     }
 
     /// See [`SlidingPuzzle::piece_position_xy`].
     #[must_use]
-    unsafe fn piece_position_xy_unchecked(&self, piece: Piece) -> (usize, usize) {
+    unsafe fn piece_position_xy_unchecked(&self, piece: Self::Piece) -> (usize, usize) {
         let pos = self.piece_position_unchecked(piece);
         let w = self.width();
         (pos % w, pos / w)
@@ -112,19 +114,19 @@ where
     /// See [`SlidingPuzzle::piece_position`].
     #[must_use]
     fn gap_position(&self) -> usize {
-        self.piece_position(Piece::zero())
+        self.piece_position(Self::Piece::zero())
     }
 
     /// See [`SlidingPuzzle::try_piece_position`].
     #[must_use]
     fn try_gap_position(&self) -> Option<usize> {
-        self.try_piece_position(Piece::zero())
+        self.try_piece_position(Self::Piece::zero())
     }
 
     /// See [`SlidingPuzzle::piece_position_unchecked`].
     #[must_use]
     unsafe fn gap_position_unchecked(&self) -> usize {
-        self.piece_position_unchecked(Piece::zero())
+        self.piece_position_unchecked(Self::Piece::zero())
     }
 
     /// Position of the empty space as (x, y) coordinates.
@@ -132,19 +134,19 @@ where
     /// See [`SlidingPuzzle::piece_position_xy`].
     #[must_use]
     fn gap_position_xy(&self) -> (usize, usize) {
-        self.piece_position_xy(Piece::zero())
+        self.piece_position_xy(Self::Piece::zero())
     }
 
     /// See [`SlidingPuzzle::try_piece_position_xy`].
     #[must_use]
     fn try_gap_position_xy(&self) -> Option<(usize, usize)> {
-        self.try_piece_position_xy(Piece::zero())
+        self.try_piece_position_xy(Self::Piece::zero())
     }
 
     /// See [`SlidingPuzzle::piece_position_xy_unchecked`].
     #[must_use]
     unsafe fn gap_position_xy_unchecked(&self) -> (usize, usize) {
-        self.piece_position_xy_unchecked(Piece::zero())
+        self.piece_position_xy_unchecked(Self::Piece::zero())
     }
 
     /// Reset the puzzle to the default state.
@@ -156,14 +158,14 @@ where
     /// Reset the puzzle to the solved state as defined by a [`BijectiveLabel`]
     fn reset_to_label<L: BijectiveLabel>(&mut self, label: &L) {
         let (w, h) = self.size();
-        let area = Piece::from(w * h).unwrap();
+        let area = <Self::Piece as NumCast>::from(w * h).unwrap();
         for y in 0..h {
             for x in 0..w {
                 let label = label.position_label(w, h, x, y);
                 let piece = {
-                    let a = Piece::from(label).unwrap() + Piece::one();
+                    let a = <Self::Piece as NumCast>::from(label).unwrap() + Self::Piece::one();
                     if a == area {
-                        Piece::zero()
+                        Self::Piece::zero()
                     } else {
                         a
                     }
@@ -194,8 +196,8 @@ where
     /// If `piece` is not within the range `0 <= piece < self.area()`, the function may panic or
     /// return a wrong result.
     #[must_use]
-    fn solved_pos(&self, piece: Piece) -> usize {
-        if piece == Piece::zero() {
+    fn solved_pos(&self, piece: Self::Piece) -> usize {
+        if piece == Self::Piece::zero() {
             self.num_pieces()
         } else {
             piece.to_usize().unwrap() - 1
@@ -204,7 +206,7 @@ where
 
     /// See [`SlidingPuzzle::solved_pos`].
     #[must_use]
-    fn try_solved_pos(&self, piece: Piece) -> Option<usize> {
+    fn try_solved_pos(&self, piece: Self::Piece) -> Option<usize> {
         let n = self.num_pieces();
         match piece.to_usize() {
             Some(p) if p <= n => Some(unsafe { self.solved_pos_unchecked(piece) }),
@@ -215,7 +217,7 @@ where
     /// See [`SlidingPuzzle::solved_pos`].
     #[must_use]
     #[inline(always)]
-    unsafe fn solved_pos_unchecked(&self, piece: Piece) -> usize {
+    unsafe fn solved_pos_unchecked(&self, piece: Self::Piece) -> usize {
         self.solved_pos(piece)
     }
 
@@ -225,7 +227,7 @@ where
     ///
     /// See [`SlidingPuzzle::solved_pos`].
     #[must_use]
-    fn solved_pos_xy(&self, piece: Piece) -> (usize, usize) {
+    fn solved_pos_xy(&self, piece: Self::Piece) -> (usize, usize) {
         let p = self.solved_pos(piece);
         let w = self.width();
         (p % w, p / w)
@@ -233,7 +235,7 @@ where
 
     /// See [`SlidingPuzzle::solved_pos_xy`].
     #[must_use]
-    fn try_solved_pos_xy(&self, piece: Piece) -> Option<(usize, usize)> {
+    fn try_solved_pos_xy(&self, piece: Self::Piece) -> Option<(usize, usize)> {
         let n = self.num_pieces();
         match piece.to_usize() {
             Some(p) if p <= n => Some(unsafe { self.solved_pos_xy_unchecked(piece) }),
@@ -244,7 +246,7 @@ where
     /// See [`SlidingPuzzle::solved_pos_xy`].
     #[must_use]
     #[inline(always)]
-    unsafe fn solved_pos_xy_unchecked(&self, piece: Piece) -> (usize, usize) {
+    unsafe fn solved_pos_xy_unchecked(&self, piece: Self::Piece) -> (usize, usize) {
         let p = self.solved_pos_unchecked(piece);
         let w = self.width();
         (p % w, p / w)
@@ -257,11 +259,11 @@ where
     /// If `idx` is not within the range `0 <= idx < self.area()`, the function may panic or return
     /// a wrong result.
     #[must_use]
-    fn piece_at(&self, idx: usize) -> Piece;
+    fn piece_at(&self, idx: usize) -> Self::Piece;
 
     /// See [`SlidingPuzzle::piece_at`].
     #[must_use]
-    fn try_piece_at(&self, idx: usize) -> Option<Piece> {
+    fn try_piece_at(&self, idx: usize) -> Option<Self::Piece> {
         if idx < self.area() {
             Some(unsafe { self.piece_at_unchecked(idx) })
         } else {
@@ -272,7 +274,7 @@ where
     /// See [`SlidingPuzzle::piece_at`].
     #[must_use]
     #[inline(always)]
-    unsafe fn piece_at_unchecked(&self, idx: usize) -> Piece {
+    unsafe fn piece_at_unchecked(&self, idx: usize) -> Self::Piece {
         self.piece_at(idx)
     }
 
@@ -283,13 +285,13 @@ where
     /// See [`SlidingPuzzle::piece_at`].
     #[must_use]
     #[inline]
-    fn piece_at_xy(&self, x: usize, y: usize) -> Piece {
+    fn piece_at_xy(&self, x: usize, y: usize) -> Self::Piece {
         self.piece_at(x + self.width() * y)
     }
 
     /// See [`SlidingPuzzle::piece_at_xy`].
     #[must_use]
-    fn try_piece_at_xy(&self, x: usize, y: usize) -> Option<Piece> {
+    fn try_piece_at_xy(&self, x: usize, y: usize) -> Option<Self::Piece> {
         if x < self.width() && y < self.height() {
             Some(unsafe { self.piece_at_xy_unchecked(x, y) })
         } else {
@@ -300,7 +302,7 @@ where
     /// See [`SlidingPuzzle::piece_at_xy`].
     #[must_use]
     #[inline(always)]
-    unsafe fn piece_at_xy_unchecked(&self, x: usize, y: usize) -> Piece {
+    unsafe fn piece_at_xy_unchecked(&self, x: usize, y: usize) -> Self::Piece {
         self.piece_at_unchecked(x + self.width() * y)
     }
 
@@ -312,13 +314,13 @@ where
     /// # Panics
     ///
     /// If `idx` is not within the range `0 <= idx < self.area()`, the function may panic.
-    fn set_piece(&mut self, idx: usize, piece: Piece);
+    fn set_piece(&mut self, idx: usize, piece: Self::Piece);
 
     /// See [`SlidingPuzzle::set_piece`].
     ///
     /// Returns `true` if `idx` is within the valid range for the puzzle and the piece was
     /// successfully set, and `false` otherwise.
-    fn try_set_piece(&mut self, idx: usize, piece: Piece) -> bool {
+    fn try_set_piece(&mut self, idx: usize, piece: Self::Piece) -> bool {
         if idx < self.area() {
             unsafe { self.set_piece_unchecked(idx, piece) };
             true
@@ -329,7 +331,7 @@ where
 
     /// See [`SlidingPuzzle::set_piece`].
     #[inline(always)]
-    unsafe fn set_piece_unchecked(&mut self, idx: usize, piece: Piece) {
+    unsafe fn set_piece_unchecked(&mut self, idx: usize, piece: Self::Piece) {
         self.set_piece(idx, piece);
     }
 
@@ -339,19 +341,19 @@ where
     ///
     /// See [`SlidingPuzzle::set_piece`].
     #[inline]
-    fn set_piece_xy(&mut self, (x, y): (usize, usize), piece: Piece) {
+    fn set_piece_xy(&mut self, (x, y): (usize, usize), piece: Self::Piece) {
         self.set_piece(x + self.width() * y, piece);
     }
 
     /// See [`SlidingPuzzle::set_piece_xy`].
     #[inline]
-    fn try_set_piece_xy(&mut self, (x, y): (usize, usize), piece: Piece) -> bool {
+    fn try_set_piece_xy(&mut self, (x, y): (usize, usize), piece: Self::Piece) -> bool {
         self.try_set_piece(x + self.width() * y, piece)
     }
 
     /// See [`SlidingPuzzle::set_piece_xy`].
     #[inline(always)]
-    unsafe fn set_piece_xy_unchecked(&mut self, (x, y): (usize, usize), piece: Piece) {
+    unsafe fn set_piece_xy_unchecked(&mut self, (x, y): (usize, usize), piece: Self::Piece) {
         self.set_piece_unchecked(x + self.width() * y, piece);
     }
 
@@ -639,7 +641,7 @@ where
     /// Returns `true` if the piece is in the same row or column as the gap. Also returns `true` if
     /// `n` is 0, i.e. the gap piece.
     #[must_use]
-    fn can_move_piece(&self, piece: Piece) -> bool {
+    fn can_move_piece(&self, piece: Self::Piece) -> bool {
         self.try_piece_position_xy(piece)
             .map(|pos| self.can_move_position_xy(pos))
             .unwrap_or(false)
@@ -651,14 +653,14 @@ where
     ///
     /// If `self.can_move_piece(n)` is false, the function may panic or the puzzle may be
     /// transformed in an invalid way.
-    fn move_piece(&mut self, piece: Piece) {
+    fn move_piece(&mut self, piece: Self::Piece) {
         self.move_position_xy(self.piece_position_xy(piece));
     }
 
     /// See [`SlidingPuzzle::move_piece`].
     ///
     /// Returns `true` if the piece was moved successfully, `false` otherwise.
-    fn try_move_piece(&mut self, piece: Piece) -> bool {
+    fn try_move_piece(&mut self, piece: Self::Piece) -> bool {
         self.try_piece_position_xy(piece)
             .map(|pos| self.try_move_position_xy(pos))
             .unwrap_or(false)
@@ -666,7 +668,7 @@ where
 
     /// See [`SlidingPuzzle::move_piece`].
     #[inline(always)]
-    unsafe fn move_piece_unchecked(&mut self, piece: Piece) {
+    unsafe fn move_piece_unchecked(&mut self, piece: Self::Piece) {
         self.move_piece(piece);
     }
 
