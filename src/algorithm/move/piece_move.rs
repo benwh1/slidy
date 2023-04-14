@@ -1,7 +1,5 @@
 //! Defines the [`PieceMove`] type.
 
-#![allow(missing_docs)]
-
 use num_traits::PrimInt;
 use thiserror::Error;
 
@@ -14,13 +12,16 @@ use crate::{
     puzzle::sliding_puzzle::SlidingPuzzle,
 };
 
+/// Represents a move of the piece with the given number.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PieceMove<Piece>(pub Piece)
 where
     Piece: PrimInt;
 
+/// Error type for the implementation of [`TryIntoMove`] for [`PieceMove`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TryPieceMoveIntoMoveError<Piece: PrimInt> {
+    /// Returned when the piece can not be moved.
     #[error("InvalidMove: piece {0} can not be moved")]
     InvalidMove(Piece),
 }

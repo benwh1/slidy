@@ -1,7 +1,5 @@
 //! Defines the [`PositionMove`] type.
 
-#![allow(missing_docs)]
-
 use std::cmp::Ordering;
 
 use thiserror::Error;
@@ -14,11 +12,14 @@ use crate::{
     puzzle::sliding_puzzle::SlidingPuzzle,
 };
 
+/// Represents a move of the piece in the given position.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PositionMove(pub usize, pub usize);
 
+/// Error type for the implementation of [`TryIntoMove`] for [`PositionMove`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TryPositionMoveIntoMoveError {
+    /// Returned when the piece can not be moved.
     #[error("InvalidMove: position ({0}, {1}) can not be moved")]
     InvalidMove(usize, usize),
 }
