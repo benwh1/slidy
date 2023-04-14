@@ -59,8 +59,8 @@
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     let mut puzzle = Puzzle::from_str("0 10 6 4/1 5 14 15/13 11 8 7/3 2 9 12")?;
 //!
-//!     let mut solver = Solver::new(&puzzle, &ManhattanDistance);
-//!     let solution = solver.solve()?;
+//!     let mut solver = Solver::new(&ManhattanDistance);
+//!     let solution = solver.solve(&puzzle)?;
 //!
 //!     println!("Solution: {} ({} moves)", solution, solution.len());
 //!
@@ -80,7 +80,7 @@
 //!     coloring::{Monochrome, RainbowBrightFull},
 //!     label::labels::{SplitFringe, Trivial},
 //!     puzzle::Puzzle,
-//!     render::{Borders, Renderer, Text},
+//!     render::{Borders, RendererBuilder, Text},
 //! };
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -90,7 +90,7 @@
 //!     )];
 //!     let scheme_list = SchemeList::new(&schemes)?;
 //!
-//!     let renderer = Renderer::with_scheme(&scheme_list)
+//!     let renderer = RendererBuilder::with_scheme(&scheme_list)
 //!         .borders(Borders::with_scheme(Scheme::new(SplitFringe, RainbowBrightFull)).thickness(5.0))
 //!         .text(
 //!             Text::with_scheme(Scheme::new(
@@ -103,10 +103,11 @@
 //!         .tile_size(75.0)
 //!         .tile_gap(5.0)
 //!         .tile_rounding(10.0)
-//!         .padding(10.0);
+//!         .padding(10.0)
+//!         .build();
 //!
 //!     let puzzle = Puzzle::default();
-//!     let svg = renderer.svg(&puzzle)?;
+//!     let svg = renderer.render(&puzzle)?;
 //!
 //!     svg::save("out.svg", &svg)?;
 //!
