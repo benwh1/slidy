@@ -579,8 +579,13 @@ where
     /// `true` if `(x, y)` is the gap position.
     #[must_use]
     fn can_move_position_xy(&self, (x, y): (usize, usize)) -> bool {
-        let (gx, gy) = self.gap_position_xy();
-        x == gx || y == gy
+        let (w, h) = self.size();
+        if x >= w || y >= h {
+            false
+        } else {
+            let (gx, gy) = self.gap_position_xy();
+            x == gx || y == gy
+        }
     }
 
     /// Moves the piece in position `(x, y)`.
@@ -597,21 +602,27 @@ where
     ///
     /// Returns `true` if the piece was moved successfully, `false` otherwise.
     fn try_move_position_xy(&mut self, (x, y): (usize, usize)) -> bool {
-        let (gx, gy) = self.gap_position_xy();
-        if x == gx {
-            match y.cmp(&gy) {
-                Ordering::Less => self.apply_move(Move::new(Direction::Down, (gy - y) as u32)),
-                Ordering::Greater => self.apply_move(Move::new(Direction::Up, (y - gy) as u32)),
-                Ordering::Equal => {}
+        if self.can_move_position_xy((x, y)) {
+            let (gx, gy) = self.gap_position_xy();
+            if x == gx {
+                match y.cmp(&gy) {
+                    Ordering::Less => self.apply_move(Move::new(Direction::Down, (gy - y) as u32)),
+                    Ordering::Greater => self.apply_move(Move::new(Direction::Up, (y - gy) as u32)),
+                    Ordering::Equal => {}
+                }
+                true
+            } else if y == gy {
+                match x.cmp(&gx) {
+                    Ordering::Less => self.apply_move(Move::new(Direction::Right, (gx - x) as u32)),
+                    Ordering::Greater => {
+                        self.apply_move(Move::new(Direction::Left, (x - gx) as u32))
+                    }
+                    Ordering::Equal => {}
+                }
+                true
+            } else {
+                false
             }
-            true
-        } else if y == gy {
-            match x.cmp(&gx) {
-                Ordering::Less => self.apply_move(Move::new(Direction::Right, (gx - x) as u32)),
-                Ordering::Greater => self.apply_move(Move::new(Direction::Left, (x - gx) as u32)),
-                Ordering::Equal => {}
-            }
-            true
         } else {
             false
         }
@@ -629,7 +640,9 @@ where
     /// `n` is 0, i.e. the gap piece.
     #[must_use]
     fn can_move_piece(&self, piece: Piece) -> bool {
-        self.can_move_position_xy(self.piece_position_xy(piece))
+        self.try_piece_position_xy(piece)
+            .map(|pos| self.can_move_position_xy(pos))
+            .unwrap_or(false)
     }
 
     /// Moves piece `n`.
@@ -646,7 +659,9 @@ where
     ///
     /// Returns `true` if the piece was moved successfully, `false` otherwise.
     fn try_move_piece(&mut self, piece: Piece) -> bool {
-        self.try_move_position_xy(self.piece_position_xy(piece))
+        self.try_piece_position_xy(piece)
+            .map(|pos| self.try_move_position_xy(pos))
+            .unwrap_or(false)
     }
 
     /// See [`SlidingPuzzle::move_piece`].
