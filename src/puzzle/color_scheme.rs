@@ -2,6 +2,8 @@
 
 pub mod tiled;
 
+use std::marker::PhantomData;
+
 use blanket::blanket;
 use palette::rgb::Rgba;
 use thiserror::Error;
@@ -112,9 +114,10 @@ impl<L: Label, C: Coloring> ColorScheme for Scheme<L, C> {
 
 /// A list of [`ColorScheme`]s and an index, indicating which color scheme is currently "active".
 /// The implementation of [`ColorScheme`] for this type uses the active scheme.
-pub struct SchemeList<'a, S: ColorScheme> {
-    schemes: &'a [S],
+pub struct SchemeList<S: ColorScheme, List: AsRef<[S]>> {
+    schemes: List,
     index: usize,
+    phantom_s: PhantomData<S>,
 }
 
 /// Error type for [`SchemeList`].
@@ -125,21 +128,25 @@ pub enum SchemeListError {
     Empty,
 }
 
-impl<'a, S: ColorScheme> SchemeList<'a, S> {
+impl<S: ColorScheme, List: AsRef<[S]>> SchemeList<S, List> {
     /// Create a new [`SchemeList`] containing the given list of color schemes. The default index
     /// is 0.
-    pub fn new(schemes: &'a [S]) -> Result<Self, SchemeListError> {
-        if schemes.is_empty() {
+    pub fn new(schemes: List) -> Result<Self, SchemeListError> {
+        if schemes.as_ref().is_empty() {
             Err(SchemeListError::Empty)
         } else {
-            Ok(Self { schemes, index: 0 })
+            Ok(Self {
+                schemes,
+                index: 0,
+                phantom_s: PhantomData,
+            })
         }
     }
 
     /// Increments the index by 1. Returns true if the index changed, or false if the last scheme
     /// was already active.
     pub fn increment_index(&mut self) -> bool {
-        if self.index < self.schemes.len() - 1 {
+        if self.index < self.schemes.as_ref().len() - 1 {
             self.index += 1;
             true
         } else {
@@ -160,29 +167,29 @@ impl<'a, S: ColorScheme> SchemeList<'a, S> {
 
     /// Returns a reference to the scheme that is currently active.
     #[must_use]
-    pub fn current_scheme(&self) -> &'a S {
-        &self.schemes[self.index]
+    pub fn current_scheme(&self) -> &S {
+        &self.schemes.as_ref()[self.index]
     }
 
     /// Returns a reference to the scheme after the one that is currently active, or `None` if the
     /// active scheme is the last one.
     #[must_use]
-    pub fn subscheme(&self) -> Option<&'a S> {
-        if self.index + 1 < self.schemes.len() {
-            Some(&self.schemes[self.index + 1])
+    pub fn subscheme(&self) -> Option<&S> {
+        if self.index + 1 < self.schemes.as_ref().len() {
+            Some(&self.schemes.as_ref()[self.index + 1])
         } else {
             None
         }
     }
 }
 
-impl<'a, S: ColorScheme> ColorScheme for SchemeList<'a, S> {
+impl<S: ColorScheme, List: AsRef<[S]>> ColorScheme for SchemeList<S, List> {
     fn is_valid_size(&self, width: usize, height: usize) -> bool {
-        self.schemes[self.index].is_valid_size(width, height)
+        self.schemes.as_ref()[self.index].is_valid_size(width, height)
     }
 
     fn color(&self, width: usize, height: usize, x: usize, y: usize) -> Rgba {
-        self.schemes[self.index].color(width, height, x, y)
+        self.schemes.as_ref()[self.index].color(width, height, x, y)
     }
 }
 

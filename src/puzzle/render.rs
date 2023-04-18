@@ -1,6 +1,6 @@
 //! Defines the [`Renderer`] struct for creating SVG images of [`SlidingPuzzle`]s.
 
-use std::{fmt::Display, ops::Deref};
+use std::{fmt::Display, marker::PhantomData, ops::Deref};
 
 use num_traits::Zero;
 use palette::rgb::Rgba;
@@ -221,11 +221,12 @@ pub enum SubschemeStyle {
 /// Used to build a [`Renderer`].
 pub struct RendererBuilder<
     'a,
+    List: AsRef<[S]>,
     S: ColorScheme = &'a dyn ColorScheme,
     T: ColorScheme = &'a dyn ColorScheme,
     B: ColorScheme = &'a dyn ColorScheme,
 > {
-    scheme: &'a SchemeList<'a, S>,
+    scheme: &'a SchemeList<S, List>,
     borders: Option<Borders<B>>,
     text: Option<Text<'a, T>>,
     tile_size: f32,
@@ -234,28 +235,34 @@ pub struct RendererBuilder<
     padding: f32,
     subscheme_style: Option<SubschemeStyle>,
     background_color: Rgba,
+    phantom_s: PhantomData<S>,
 }
 
 /// Draws a [`SlidingPuzzle`] as an SVG image.
 pub struct Renderer<
     'a,
+    List: AsRef<[S]>,
     S: ColorScheme = &'a dyn ColorScheme,
     T: ColorScheme = &'a dyn ColorScheme,
     B: ColorScheme = &'a dyn ColorScheme,
->(RendererBuilder<'a, S, T, B>);
+>(RendererBuilder<'a, List, S, T, B>);
 
-impl<'a, S: ColorScheme, T: ColorScheme, B: ColorScheme> Deref for Renderer<'a, S, T, B> {
-    type Target = RendererBuilder<'a, S, T, B>;
+impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme> Deref
+    for Renderer<'a, List, S, T, B>
+{
+    type Target = RendererBuilder<'a, List, S, T, B>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl<'a, S: ColorScheme, T: ColorScheme, B: ColorScheme> RendererBuilder<'a, S, T, B> {
+impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
+    RendererBuilder<'a, List, S, T, B>
+{
     /// Create a new [`RendererBuilder`].
     #[must_use]
-    pub fn with_scheme(scheme: &'a SchemeList<'a, S>) -> Self {
+    pub fn with_scheme(scheme: &'a SchemeList<S, List>) -> Self {
         Self {
             scheme,
             borders: None,
@@ -266,12 +273,13 @@ impl<'a, S: ColorScheme, T: ColorScheme, B: ColorScheme> RendererBuilder<'a, S, 
             padding: 0.0,
             subscheme_style: Some(SubschemeStyle::Rectangle),
             background_color: Rgba::new(1.0, 1.0, 1.0, 0.0),
+            phantom_s: PhantomData,
         }
     }
 
     /// Set the color scheme.
     #[must_use]
-    pub fn scheme(mut self, scheme: &'a SchemeList<'a, S>) -> Self {
+    pub fn scheme(mut self, scheme: &'a SchemeList<S, List>) -> Self {
         self.scheme = scheme;
         self
     }
@@ -334,12 +342,14 @@ impl<'a, S: ColorScheme, T: ColorScheme, B: ColorScheme> RendererBuilder<'a, S, 
 
     /// Builds a [`Renderer`].
     #[must_use]
-    pub fn build(self) -> Renderer<'a, S, T, B> {
+    pub fn build(self) -> Renderer<'a, List, S, T, B> {
         Renderer(self)
     }
 }
 
-impl<'a, S: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'a, S, T, B> {
+impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
+    Renderer<'a, List, S, T, B>
+{
     /// Returns the CSS string used to style the image.
     pub fn style_string(&self) -> String {
         let font = self
