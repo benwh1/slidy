@@ -26,9 +26,15 @@ pub struct Algorithm {
 }
 
 impl Algorithm {
+    /// Create a new empty [`Algorithm`].
+    #[must_use]
+    pub fn new() -> Self {
+        Self { moves: Vec::new() }
+    }
+
     /// Create a new [`Algorithm`] from a list of [`Move`]s.
     #[must_use]
-    pub fn new(moves: Vec<Move>) -> Self {
+    pub fn from_moves(moves: Vec<Move>) -> Self {
         Self { moves }
     }
 
@@ -93,7 +99,7 @@ impl Algorithm {
     #[must_use]
     pub fn simplified(&self) -> Self {
         if self.moves.len() < 2 {
-            return Self::new(self.moves.clone());
+            return Self::from_moves(self.moves.clone());
         }
 
         // List of simplified moves
@@ -134,7 +140,7 @@ impl Algorithm {
             moves.push(m);
         }
 
-        Self::new(moves)
+        Self::from_moves(moves)
     }
 
     /// Simplifies the algorithm.
@@ -345,7 +351,7 @@ mod tests {
 
     #[test]
     fn test_is_empty_2() {
-        let a = Algorithm::new(Vec::new());
+        let a = Algorithm::new();
         assert!(a.is_empty());
     }
 
@@ -462,7 +468,7 @@ mod tests {
 
     #[test]
     fn test_simplify_6() {
-        let mut a = Algorithm::new(Vec::new());
+        let mut a = Algorithm::new();
         let b = a.clone();
         a.simplify();
         assert_eq!(a, b);
