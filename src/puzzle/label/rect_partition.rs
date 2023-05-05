@@ -31,10 +31,10 @@ impl Rect {
         let (top, left, bottom, right) = (top_left.1, top_left.0, bottom_right.1, bottom_right.0);
         if bottom > top && right > left {
             Ok(Self {
-                top,
                 left,
-                bottom,
+                top,
                 right,
+                bottom,
             })
         } else {
             Err(RectError::InvalidSize)
