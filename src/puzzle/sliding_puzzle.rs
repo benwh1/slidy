@@ -217,7 +217,7 @@ where
         Self::Piece: 'static,
     {
         for i in 0..other.area() {
-            self.set_piece_unchecked(i, other.piece_at_unchecked(i).as_())
+            self.set_piece_unchecked(i, other.piece_at_unchecked(i).as_());
         }
     }
 
