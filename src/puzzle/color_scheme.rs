@@ -98,6 +98,18 @@ impl<L: Label, C: Coloring> Scheme<L, C> {
     pub fn new(label: L, coloring: C) -> Self {
         Self { label, coloring }
     }
+
+    /// The [`Label`] of the [`Scheme`].
+    #[must_use]
+    pub fn label(&self) -> &L {
+        &self.label
+    }
+
+    /// The [`Coloring`] of the [`Scheme`].
+    #[must_use]
+    pub fn coloring(&self) -> &C {
+        &self.coloring
+    }
 }
 
 impl<L: Label, C: Coloring> ColorScheme for Scheme<L, C> {
