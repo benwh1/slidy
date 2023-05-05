@@ -31,6 +31,11 @@ impl<C: ColorScheme> Tiled<C> {
             })
         }
     }
+
+    /// Returns a reference to the inner [`ColorScheme`].
+    pub fn inner(&self) -> &C {
+        &self.color_scheme
+    }
 }
 
 impl<C: ColorScheme> ColorScheme for Tiled<C> {
