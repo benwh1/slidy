@@ -1,7 +1,7 @@
 //! Defines the [`SlidingPuzzle`] trait, which is the main trait defining the properties of a
 //! sliding puzzle.
 
-use num_traits::{NumCast, One, PrimInt, ToPrimitive, Zero};
+use num_traits::{AsPrimitive, NumCast, One, PrimInt, ToPrimitive, Zero};
 
 use crate::{
     algorithm::{
@@ -174,6 +174,50 @@ where
                 };
                 self.set_piece_xy((x, y), piece);
             }
+        }
+    }
+
+    /// Sets the state to `other`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self` and `other` are not the same size.
+    fn set_state<P: SlidingPuzzle>(&mut self, other: &P)
+    where
+        P::Piece: AsPrimitive<Self::Piece>,
+        Self::Piece: 'static,
+    {
+        if !self.try_set_state(other) {
+            let (w1, h1) = self.size();
+            let (w2, h2) = other.size();
+            panic!("`self` has size {w1}x{h1} but `other` has size {w2}x{h2}");
+        }
+    }
+
+    /// See [`SlidingPuzzle::set_state`].
+    ///
+    /// Returns `true` if the state was set successfully, `false` otherwise.
+    fn try_set_state<P: SlidingPuzzle>(&mut self, other: &P) -> bool
+    where
+        P::Piece: AsPrimitive<Self::Piece>,
+        Self::Piece: 'static,
+    {
+        if self.size() == other.size() {
+            unsafe { self.set_state_unchecked(other) };
+            true
+        } else {
+            false
+        }
+    }
+
+    /// See [`SlidingPuzzle::set_state`].
+    unsafe fn set_state_unchecked<P: SlidingPuzzle>(&mut self, other: &P)
+    where
+        P::Piece: AsPrimitive<Self::Piece>,
+        Self::Piece: 'static,
+    {
+        for i in 0..other.area() {
+            self.set_piece_unchecked(i, other.piece_at_unchecked(i).as_())
         }
     }
 

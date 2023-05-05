@@ -442,6 +442,17 @@ mod tests {
         }
 
         #[test]
+        fn test_set_state() {
+            let mut p1 = Puzzle::from_str("6 15 12 4/14 0 9 11/7 10 8 5/3 1 2 13").unwrap();
+            let p2 = Puzzle::default();
+            let p3 = Puzzle::from_str("3 4 1/5 0 7/2 8 6").unwrap();
+            assert!(p1.try_set_state(&p2));
+            assert_eq!(p1.pieces, p2.pieces);
+            assert!(!p1.try_set_state(&p3));
+            assert_eq!(p1.pieces, p2.pieces);
+        }
+
+        #[test]
         fn test_solved_pos() {
             let p = Puzzle::new(4, 6).unwrap();
             assert_eq!(p.try_solved_pos(0), Some(23));
