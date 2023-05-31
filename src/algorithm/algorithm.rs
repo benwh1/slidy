@@ -9,9 +9,12 @@ use std::{
 
 use thiserror::Error;
 
-use crate::algorithm::display::{
-    algorithm::{AlgorithmDisplay, DisplaySpaced, DisplayUnspaced},
-    r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
+use crate::algorithm::{
+    display::{
+        algorithm::{AlgorithmDisplay, DisplaySpaced, DisplayUnspaced},
+        r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
+    },
+    slice::AlgorithmSlice,
 };
 
 use super::{
@@ -182,9 +185,14 @@ impl Algorithm {
         }
     }
 
-    /// Returns an iterator over the moves.
-    pub fn iter_moves(&self) -> impl Iterator<Item = Move> + '_ {
-        self.moves.iter().copied()
+    /// Returns an [`AlgorithmSlice`] containing the entire algorithm.
+    #[must_use]
+    pub fn as_slice(&self) -> AlgorithmSlice {
+        AlgorithmSlice {
+            first: None,
+            middle: &self.moves,
+            last: None,
+        }
     }
 
     /// Helper function for creating a [`DisplaySpaced<DisplayLongSpaced>`] around `self`.
@@ -318,6 +326,24 @@ impl AddAssign for Algorithm {
     /// Appends `rhs` to `self`.
     fn add_assign(&mut self, mut rhs: Self) {
         self.moves.append(&mut rhs.moves);
+    }
+}
+
+impl From<AlgorithmSlice<'_>> for Algorithm {
+    fn from(value: AlgorithmSlice<'_>) -> Self {
+        let mut alg = Self::new();
+
+        if let Some(m) = value.first {
+            alg.push(m);
+        }
+
+        alg += Self::from_moves(value.middle.to_vec());
+
+        if let Some(m) = value.last {
+            alg.push(m);
+        }
+
+        alg
     }
 }
 
