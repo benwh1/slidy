@@ -1,7 +1,10 @@
 //! Defines the [`Direction`] type.
 
 use rand::{distributions::Standard, prelude::Distribution};
-use std::fmt::{Display, Write};
+use std::{
+    fmt::{Display, Write},
+    str::FromStr,
+};
 use thiserror::Error;
 
 /// The directions in which a piece can be moved.
@@ -59,19 +62,41 @@ pub enum ParseDirectionError {
     /// Found a character other than U, L, D, R.
     #[error("InvalidCharacter: character {0} must be one of 'U', 'L', 'D', 'R'")]
     InvalidCharacter(char),
+
+    /// The string is empty.
+    #[error("Empty: string is empty")]
+    Empty,
 }
 
 impl TryFrom<char> for Direction {
     type Error = ParseDirectionError;
 
-    /// Maps the characters U, L, D, R to directions.
+    /// Maps the characters 'U', 'L', 'D', 'R' to directions.
     fn try_from(value: char) -> Result<Self, Self::Error> {
         match value {
             'U' => Ok(Self::Up),
             'L' => Ok(Self::Left),
             'D' => Ok(Self::Down),
             'R' => Ok(Self::Right),
-            _ => Err(ParseDirectionError::InvalidCharacter(value)),
+            _ => Err(Self::Error::InvalidCharacter(value)),
+        }
+    }
+}
+
+impl FromStr for Direction {
+    type Err = ParseDirectionError;
+
+    /// Maps the single-character strings "U", "L", "D", "R" to directions.
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "U" => Ok(Self::Up),
+            "L" => Ok(Self::Left),
+            "D" => Ok(Self::Down),
+            "R" => Ok(Self::Right),
+            _ => Err(match s.chars().next() {
+                Some(c) => Self::Err::InvalidCharacter(c),
+                None => Self::Err::Empty,
+            }),
         }
     }
 }
