@@ -55,14 +55,14 @@ impl Display for Direction {
 
 /// Error type for [`TryFrom<char>`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum TryDirectionFromCharError {
+pub enum ParseDirectionError {
     /// Found a character other than U, L, D, R.
     #[error("InvalidCharacter: character {0} must be one of 'U', 'L', 'D', 'R'")]
     InvalidCharacter(char),
 }
 
 impl TryFrom<char> for Direction {
-    type Error = TryDirectionFromCharError;
+    type Error = ParseDirectionError;
 
     /// Maps the characters U, L, D, R to directions.
     fn try_from(value: char) -> Result<Self, Self::Error> {
@@ -71,7 +71,7 @@ impl TryFrom<char> for Direction {
             'L' => Ok(Self::Left),
             'D' => Ok(Self::Down),
             'R' => Ok(Self::Right),
-            _ => Err(TryDirectionFromCharError::InvalidCharacter(value)),
+            _ => Err(ParseDirectionError::InvalidCharacter(value)),
         }
     }
 }
