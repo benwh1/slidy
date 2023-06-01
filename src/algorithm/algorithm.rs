@@ -539,6 +539,20 @@ mod tests {
         assert_eq!(b, expected);
     }
 
+    #[test]
+    fn test_as_slice() {
+        let a = Algorithm::from_str("U2LD3R").unwrap();
+        let b = a.as_slice();
+        assert_eq!(
+            b,
+            AlgorithmSlice {
+                first: None,
+                middle: &a.moves,
+                last: None
+            }
+        );
+    }
+
     mod from_str {
         use crate::algorithm::{
             algorithm::{Algorithm, ParseAlgorithmError},
