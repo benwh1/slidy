@@ -894,6 +894,73 @@ mod tests {
             assert_eq!(a, Algorithm::from_str("ULDRUDRUL").unwrap());
         }
     }
+
+    mod from_algorithm_slice {
+        use super::*;
+
+        #[test]
+        fn test_from_algorithm_slice() {
+            let slice = AlgorithmSlice {
+                first: None,
+                middle: &[],
+                last: None,
+            };
+            assert_eq!(Algorithm::from(slice), Algorithm::new());
+        }
+
+        #[test]
+        fn test_from_algorithm_slice_2() {
+            let slice = AlgorithmSlice {
+                first: None,
+                middle: &[Move::new(Direction::Up, 2)],
+                last: None,
+            };
+            assert_eq!(Algorithm::from(slice), Algorithm::from_str("U2").unwrap());
+        }
+
+        #[test]
+        fn test_from_algorithm_slice_3() {
+            let slice = AlgorithmSlice {
+                first: Some(Move::new(Direction::Left, 1)),
+                middle: &[Move::new(Direction::Up, 2), Move::new(Direction::Right, 3)],
+                last: Some(Move::new(Direction::Down, 4)),
+            };
+            assert_eq!(
+                Algorithm::from(slice),
+                Algorithm::from_str("LU2R3D4").unwrap()
+            );
+        }
+
+        #[test]
+        fn test_from_algorithm_slice_4() {
+            let slice = AlgorithmSlice {
+                first: Some(Move::new(Direction::Left, 1)),
+                middle: &[],
+                last: None,
+            };
+            assert_eq!(Algorithm::from(slice), Algorithm::from_str("L").unwrap());
+        }
+
+        #[test]
+        fn test_from_algorithm_slice_5() {
+            let slice = AlgorithmSlice {
+                first: None,
+                middle: &[],
+                last: Some(Move::new(Direction::Left, 1)),
+            };
+            assert_eq!(Algorithm::from(slice), Algorithm::from_str("L").unwrap());
+        }
+
+        #[test]
+        fn test_from_algorithm_slice_6() {
+            let slice = AlgorithmSlice {
+                first: Some(Move::new(Direction::Left, 1)),
+                middle: &[],
+                last: Some(Move::new(Direction::Up, 2)),
+            };
+            assert_eq!(Algorithm::from(slice), Algorithm::from_str("LU2").unwrap());
+        }
+    }
 }
 
 #[cfg(test)]
