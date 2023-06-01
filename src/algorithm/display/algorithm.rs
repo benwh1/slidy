@@ -1,14 +1,14 @@
 //! Defines ways in which an [`Algorithm`] can be displayed.
 
 use super::r#move::MoveDisplay;
-use crate::algorithm::algorithm::Algorithm;
+use crate::algorithm::{as_slice::AsAlgorithmSlice, slice::AlgorithmSlice};
 use std::{fmt::Display, marker::PhantomData};
 
 /// Marker trait for structs that are used to display algorithms
 pub trait AlgorithmDisplay<'a> {
     /// Create a new [`AlgorithmDisplay`] for displaying `algorithm`.
     #[must_use]
-    fn new(algorithm: &'a Algorithm) -> Self;
+    fn new<Alg: AsAlgorithmSlice<'a>>(algorithm: &'a Alg) -> Self;
 }
 
 macro_rules! define_display {
@@ -17,14 +17,14 @@ macro_rules! define_display {
             #[$annot]
             #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
             pub struct $name<'a, T: MoveDisplay + Display> {
-                algorithm: &'a Algorithm,
+                algorithm: AlgorithmSlice<'a>,
                 phantom_t: PhantomData<T>,
             }
 
             impl<'a, T: MoveDisplay + Display> AlgorithmDisplay<'a> for $name<'a, T> {
-                fn new(algorithm: &'a Algorithm) -> Self {
+                fn new<Alg: AsAlgorithmSlice<'a>>(algorithm: &'a Alg) -> Self {
                     Self {
-                        algorithm,
+                        algorithm: algorithm.as_slice(),
                         phantom_t: PhantomData,
                     }
                 }
@@ -45,7 +45,6 @@ impl<'a, T: MoveDisplay + Display> Display for DisplaySpaced<'a, T> {
         f.write_str(
             &self
                 .algorithm
-                .as_slice()
                 .multi_tile_moves()
                 .map(|m| T::new(m).to_string())
                 .intersperse(" ".to_string())
@@ -56,7 +55,7 @@ impl<'a, T: MoveDisplay + Display> Display for DisplaySpaced<'a, T> {
 
 impl<'a, T: MoveDisplay + Display> Display for DisplayUnspaced<'a, T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for m in self.algorithm.as_slice().multi_tile_moves() {
+        for m in self.algorithm.multi_tile_moves() {
             T::new(m).fmt(f)?;
         }
         Ok(())
@@ -105,7 +104,7 @@ mod benchmarks {
 
     use test::Bencher;
 
-    use crate::algorithm::display::r#move::DisplayShort;
+    use crate::algorithm::{algorithm::Algorithm, display::r#move::DisplayShort};
 
     use super::*;
 
