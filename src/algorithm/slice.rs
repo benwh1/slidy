@@ -82,3 +82,65 @@ impl AlgorithmSlice<'_> {
         MultiTileMoves::new(self)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use crate::algorithm::{algorithm::Algorithm, direction::Direction};
+
+    #[test]
+    fn test_len() -> Result<(), Box<dyn std::error::Error>> {
+        let alg = Algorithm::from_str("R3D2LDR5U12RD3LU4R")?;
+
+        for start in 0..34 {
+            for end in start..34 {
+                let slice = alg.try_slice(start..end)?;
+                assert_eq!(slice.len(), end - start);
+            }
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_empty() -> Result<(), Box<dyn std::error::Error>> {
+        let alg = Algorithm::from_str("R3D2LDR5U12RD3LU4R")?;
+
+        for start in 0..34 {
+            for end in start..34 {
+                let slice = alg.try_slice(start..end)?;
+                assert_eq!(slice.is_empty(), start == end);
+            }
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_single_tile_moves() -> Result<(), Box<dyn std::error::Error>> {
+        let alg = Algorithm::from_str("R3D2LDR5U12RD3LU4R")?;
+        let slice = alg.try_slice(4..19)?;
+        let mut moves = slice.single_tile_moves();
+
+        assert_eq!(moves.next(), Some(Direction::Down));
+        assert_eq!(moves.next(), Some(Direction::Left));
+        assert_eq!(moves.next(), Some(Direction::Down));
+        assert_eq!(moves.next(), Some(Direction::Right));
+        assert_eq!(moves.next(), Some(Direction::Right));
+        assert_eq!(moves.next(), Some(Direction::Right));
+        assert_eq!(moves.next(), Some(Direction::Right));
+        assert_eq!(moves.next(), Some(Direction::Right));
+        assert_eq!(moves.next(), Some(Direction::Up));
+        assert_eq!(moves.next(), Some(Direction::Up));
+        assert_eq!(moves.next(), Some(Direction::Up));
+        assert_eq!(moves.next(), Some(Direction::Up));
+        assert_eq!(moves.next(), Some(Direction::Up));
+        assert_eq!(moves.next(), Some(Direction::Up));
+        assert_eq!(moves.next(), Some(Direction::Up));
+        assert_eq!(moves.next(), None);
+        assert_eq!(moves.next(), None);
+
+        Ok(())
+    }
+}

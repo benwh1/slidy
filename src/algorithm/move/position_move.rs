@@ -51,3 +51,42 @@ impl<Puzzle: SlidingPuzzle> TryIntoMove<Puzzle> for PositionMove {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use crate::{
+        algorithm::r#move::{
+            position_move::{PositionMove, TryPositionMoveIntoMoveError},
+            r#move::Move,
+            try_into_move::TryIntoMove,
+        },
+        puzzle::puzzle::Puzzle,
+    };
+
+    #[test]
+    fn test_try_into_move() {
+        let p = Puzzle::from_str("7 4 14 10/11 0 12 5/1 9 2 3/15 8 6 13").unwrap();
+        assert_eq!(
+            PositionMove(3, 1).try_into_move(&p),
+            Ok(Move::from_str("L2").unwrap())
+        );
+        assert_eq!(
+            PositionMove(1, 3).try_into_move(&p),
+            Ok(Move::from_str("U2").unwrap())
+        );
+        assert_eq!(
+            PositionMove(0, 1).try_into_move(&p),
+            Ok(Move::from_str("R").unwrap())
+        );
+        assert_eq!(
+            PositionMove(1, 0).try_into_move(&p),
+            Ok(Move::from_str("D").unwrap())
+        );
+        assert_eq!(
+            PositionMove(0, 0).try_into_move(&p),
+            Err(TryPositionMoveIntoMoveError::InvalidMove(0, 0))
+        );
+    }
+}

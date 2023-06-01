@@ -57,3 +57,27 @@ impl Iterator for MultiTileMoves<'_> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use crate::algorithm::{algorithm::Algorithm, r#move::r#move::Move};
+
+    #[test]
+    fn test_multi_tile_moves() -> Result<(), Box<dyn std::error::Error>> {
+        let alg = Algorithm::from_str("R3D2LDR5U12RD3LU4R")?;
+        let slice = alg.try_slice(4..19)?;
+        let mut moves = slice.multi_tile_moves();
+
+        assert_eq!(moves.next(), Some(Move::from_str("D")?));
+        assert_eq!(moves.next(), Some(Move::from_str("L")?));
+        assert_eq!(moves.next(), Some(Move::from_str("D")?));
+        assert_eq!(moves.next(), Some(Move::from_str("R5")?));
+        assert_eq!(moves.next(), Some(Move::from_str("U7")?));
+        assert_eq!(moves.next(), None);
+        assert_eq!(moves.next(), None);
+
+        Ok(())
+    }
+}

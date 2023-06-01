@@ -112,3 +112,20 @@ impl Distribution<Direction> for Standard {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use crate::algorithm::direction::{Direction, ParseDirectionError};
+
+    #[test]
+    fn test_from_str() {
+        assert_eq!(Direction::from_str("U"), Ok(Direction::Up));
+        assert_eq!(
+            Direction::from_str("🥚"),
+            Err(ParseDirectionError::InvalidCharacter('🥚'))
+        );
+        assert_eq!(Direction::from_str(""), Err(ParseDirectionError::Empty));
+    }
+}
