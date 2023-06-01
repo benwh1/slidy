@@ -216,7 +216,6 @@ impl Algorithm {
     }
 
     /// Returns an [`AlgorithmSlice`] containing the (single-tile) moves in the range `range`.
-    #[must_use]
     pub fn try_slice(&self, range: Range<u32>) -> Result<AlgorithmSlice, SliceError> {
         if range.start > range.end {
             return Err(SliceError::UnorderedRange(range));
@@ -228,7 +227,7 @@ impl Algorithm {
         }
 
         let iter = iter::once(0).chain(self.moves.iter().scan(0, |a, b| {
-            *a = *a + b.amount;
+            *a += b.amount;
             Some(*a)
         }));
 
@@ -244,8 +243,7 @@ impl Algorithm {
             .clone()
             .tuple_windows()
             .find_position(|&(_, j)| j > range.end)
-            .map(|(idx, (i, _))| (idx, i))
-            .unwrap_or((self.moves.len(), self.len()));
+            .map_or((self.moves.len(), self.len()), |(idx, (i, _))| (idx, i));
 
         if start_idx > end_idx {
             // The beginning and the end of the slice are both within a single move, e.g. U9[3..7].
@@ -255,8 +253,7 @@ impl Algorithm {
                 first: self
                     .moves
                     .get(start_idx - 1)
-                    .map(|mv| Move::new_nonzero(mv.direction, range.end - range.start).ok())
-                    .flatten(),
+                    .and_then(|mv| Move::new_nonzero(mv.direction, range.end - range.start).ok()),
                 middle: &[],
                 last: None,
             })
@@ -268,16 +265,13 @@ impl Algorithm {
             Ok(AlgorithmSlice {
                 first: start_idx
                     .checked_sub(1)
-                    .map(|idx| self.moves.get(idx))
-                    .flatten()
-                    .map(|mv| Move::new_nonzero(mv.direction, start_total - range.start).ok())
-                    .flatten(),
+                    .and_then(|idx| self.moves.get(idx))
+                    .and_then(|mv| Move::new_nonzero(mv.direction, start_total - range.start).ok()),
                 middle: &self.moves[start_idx..end_idx],
                 last: self
                     .moves
                     .get(end_idx)
-                    .map(|mv| Move::new_nonzero(mv.direction, range.end - end_total).ok())
-                    .flatten(),
+                    .and_then(|mv| Move::new_nonzero(mv.direction, range.end - end_total).ok()),
             })
         }
     }

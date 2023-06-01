@@ -143,7 +143,7 @@ impl FromStr for Move {
             rest.parse().map_err(Self::Err::ParseIntError)?
         };
 
-        Ok(Move::new(direction, amount))
+        Ok(Self::new(direction, amount))
     }
 }
 
