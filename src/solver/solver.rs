@@ -49,7 +49,7 @@ impl Default for Stack {
 
 impl From<&Stack> for Algorithm {
     fn from(stack: &Stack) -> Self {
-        Self::from_moves(
+        Self::with_moves(
             stack.stack[..stack.idx]
                 .iter()
                 .map(|d| Move::from(*d))

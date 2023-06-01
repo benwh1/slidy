@@ -57,7 +57,7 @@ impl Algorithm {
 
     /// Create a new [`Algorithm`] from a list of [`Move`]s.
     #[must_use]
-    pub fn from_moves(moves: Vec<Move>) -> Self {
+    pub fn with_moves(moves: Vec<Move>) -> Self {
         Self { moves }
     }
 
@@ -122,7 +122,7 @@ impl Algorithm {
     #[must_use]
     pub fn simplified(&self) -> Self {
         if self.moves.len() < 2 {
-            return Self::from_moves(self.moves.clone());
+            return Self::with_moves(self.moves.clone());
         }
 
         // List of simplified moves
@@ -163,7 +163,7 @@ impl Algorithm {
             moves.push(m);
         }
 
-        Self::from_moves(moves)
+        Self::with_moves(moves)
     }
 
     /// Simplifies the algorithm.
@@ -418,7 +418,7 @@ impl From<AlgorithmSlice<'_>> for Algorithm {
             alg.push(m);
         }
 
-        alg += Self::from_moves(value.middle.to_vec());
+        alg += Self::with_moves(value.middle.to_vec());
 
         if let Some(m) = value.last {
             alg.push(m);
