@@ -1,11 +1,11 @@
 //! Defines the [`Move`] type.
 
-use std::{cmp::Ordering, fmt::Display, ops::Add};
+use std::{cmp::Ordering, fmt::Display, num::ParseIntError, ops::Add, str::FromStr};
 
 use thiserror::Error;
 
 use crate::algorithm::{
-    direction::Direction,
+    direction::{Direction, ParseDirectionError},
     display::r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort, MoveDisplay},
 };
 
@@ -105,6 +105,45 @@ impl Display for Move {
     /// Uses [`Move::display_short`] as the default formatting.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.display_short().fmt(f)
+    }
+}
+
+/// Error type for [`Move::from_str`].
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
+pub enum ParseMoveError {
+    /// Failed to parse the direction.
+    #[error("ParseDirectionError: {0}")]
+    ParseDirectionError(ParseDirectionError),
+
+    /// Failed to parse the amount.
+    #[error("ParseIntError: {0}")]
+    ParseIntError(ParseIntError),
+
+    /// The string is empty.
+    #[error("Empty: input string is empty")]
+    Empty,
+}
+
+impl FromStr for Move {
+    type Err = ParseMoveError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut chars = s.chars();
+
+        let direction = chars
+            .next()
+            .ok_or(Self::Err::Empty)?
+            .try_into()
+            .map_err(Self::Err::ParseDirectionError)?;
+
+        let rest = chars.as_str();
+        let amount = if rest.is_empty() {
+            1
+        } else {
+            rest.parse().map_err(Self::Err::ParseIntError)?
+        };
+
+        Ok(Move::new(direction, amount))
     }
 }
 
