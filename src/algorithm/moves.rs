@@ -15,14 +15,14 @@ enum State {
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct MultiTileMoves<'a> {
     slice: AlgorithmSlice<'a>,
-    state: State,
+    iter_state: State,
 }
 
 impl<'a> MultiTileMoves<'a> {
     pub(super) fn new(slice: AlgorithmSlice<'a>) -> Self {
         Self {
             slice,
-            state: State::First,
+            iter_state: State::First,
         }
     }
 }
@@ -31,17 +31,17 @@ impl Iterator for MultiTileMoves<'_> {
     type Item = Move;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.state {
+        match self.iter_state {
             State::First => {
-                self.state = State::Middle(0);
+                self.iter_state = State::Middle(0);
                 self.slice.first.or_else(|| self.next())
             }
             State::Middle(n) => {
                 if self.slice.middle.is_empty() {
-                    self.state = State::Last;
+                    self.iter_state = State::Last;
                     self.next()
                 } else {
-                    self.state = if n + 1 == self.slice.middle.len() {
+                    self.iter_state = if n + 1 == self.slice.middle.len() {
                         State::Last
                     } else {
                         State::Middle(n + 1)
@@ -50,7 +50,7 @@ impl Iterator for MultiTileMoves<'_> {
                 }
             }
             State::Last => {
-                self.state = State::Finished;
+                self.iter_state = State::Finished;
                 self.slice.last
             }
             State::Finished => None,
