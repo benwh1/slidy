@@ -14,12 +14,12 @@ enum State {
 /// Iterator over the moves of an [`AlgorithmSlice`]
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct MultiTileMoves<'a> {
-    slice: &'a AlgorithmSlice<'a>,
+    slice: AlgorithmSlice<'a>,
     state: State,
 }
 
 impl<'a> MultiTileMoves<'a> {
-    pub(super) fn new(slice: &'a AlgorithmSlice<'a>) -> Self {
+    pub(super) fn new(slice: AlgorithmSlice<'a>) -> Self {
         Self {
             slice,
             state: State::First,

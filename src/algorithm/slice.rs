@@ -5,7 +5,7 @@ use std::iter;
 use crate::algorithm::{direction::Direction, moves::MultiTileMoves, r#move::r#move::Move};
 
 /// A slice of an [`Algorithm`].
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AlgorithmSlice<'a> {
     // We might slice in the middle of one move, e.g. D10LU10R[5..15] should be D5LU4. To represent
     // this, we need to store the first and last moves separately.
@@ -79,7 +79,7 @@ impl AlgorithmSlice<'_> {
     /// ```
     #[must_use]
     pub fn multi_tile_moves(&self) -> MultiTileMoves {
-        MultiTileMoves::new(self)
+        MultiTileMoves::new(*self)
     }
 }
 
