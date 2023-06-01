@@ -696,6 +696,27 @@ mod tests {
             assert_eq!(alg.try_slice(16..19), slice!("", "R2", "D"));
             assert_eq!(alg.try_slice(17..19), slice!("R", "", "D"));
         }
+
+        #[test]
+        fn test_slice_2() {
+            let alg = Algorithm::from_str("R2DLU10RUR2D2D3D5L5U2L").unwrap();
+
+            assert_eq!(alg.try_slice(10..5), Err(SliceError::UnorderedRange(10..5)));
+            assert_eq!(
+                alg.try_slice(0..37),
+                Err(SliceError::OutOfRange {
+                    range: 0..37,
+                    len: 36
+                })
+            );
+            assert_eq!(
+                alg.try_slice(37..37),
+                Err(SliceError::OutOfRange {
+                    range: 37..37,
+                    len: 36
+                })
+            );
+        }
     }
 
     mod from_str {
