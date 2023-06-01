@@ -24,6 +24,24 @@ use super::{
     r#move::r#move::{Move, MoveSum},
 };
 
+/// Error type for [`Algorithm::slice`].
+#[derive(Clone, Debug, Error, PartialEq, Eq, Hash)]
+pub enum SliceError {
+    /// The input range is unordered, e.g. `10..5`.
+    #[error("UnorderedRange: range {0:?} is not ordered")]
+    UnorderedRange(Range<u32>),
+
+    /// The input range goes beyond the bounds of the [`Algorithm`].
+    #[error("OutOfRange: slice is out of range (range is {range:?} but length is {len})")]
+    OutOfRange {
+        /// The range that was given as input.
+        range: Range<u32>,
+
+        /// The length of the [`Algorithm`].
+        len: u32,
+    },
+}
+
 /// A sequence of moves.
 #[derive(Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Algorithm {
@@ -199,7 +217,16 @@ impl Algorithm {
 
     /// Returns an [`AlgorithmSlice`] containing the (single-tile) moves in the range `range`.
     #[must_use]
-    pub fn slice(&self, range: Range<u32>) -> AlgorithmSlice {
+    pub fn try_slice(&self, range: Range<u32>) -> Result<AlgorithmSlice, SliceError> {
+        if range.start > range.end {
+            return Err(SliceError::UnorderedRange(range));
+        }
+
+        let len = self.len();
+        if range.start > len || range.end > len {
+            return Err(SliceError::OutOfRange { range, len });
+        }
+
         let iter = iter::once(0).chain(self.moves.iter().scan(0, |a, b| {
             *a = *a + b.amount;
             Some(*a)
@@ -224,7 +251,7 @@ impl Algorithm {
             // The beginning and the end of the slice are both within a single move, e.g. U9[3..7].
             // Return a slice containing a single move with direction = the direction of the move
             // that we sliced through, and amount = length of the range.
-            AlgorithmSlice {
+            Ok(AlgorithmSlice {
                 first: self
                     .moves
                     .get(start_idx - 1)
@@ -232,13 +259,13 @@ impl Algorithm {
                     .flatten(),
                 middle: &[],
                 last: None,
-            }
+            })
         } else {
             // The middle section of the slice (everything except maybe the first and last moves)
             // is given by the slice of `self.moves` from `start_idx` to `end_idx`. The first and
             // last moves (if needed) are created by indexing into `self.moves` and creating moves
             // with the relevant direction and amount.
-            AlgorithmSlice {
+            Ok(AlgorithmSlice {
                 first: start_idx
                     .checked_sub(1)
                     .map(|idx| self.moves.get(idx))
@@ -251,7 +278,7 @@ impl Algorithm {
                     .get(end_idx)
                     .map(|mv| Move::new_nonzero(mv.direction, range.end - end_total).ok())
                     .flatten(),
-            }
+            })
         }
     }
 
@@ -632,11 +659,11 @@ mod tests {
                     Some(Move::from_str($last).unwrap())
                 };
 
-                AlgorithmSlice {
+                Ok(AlgorithmSlice {
                     first,
                     middle: &std::mem::take(&mut middle.moves),
                     last,
-                }
+                })
             }};
         }
 
@@ -645,26 +672,29 @@ mod tests {
             let alg = Algorithm::from_str("R2DLU10RUR2D2D3D5L5U2L").unwrap();
 
             // Empty slices
-            assert_eq!(alg.slice(0..0), slice!("", "", ""));
-            assert_eq!(alg.slice(1..1), slice!("", "", ""));
-            assert_eq!(alg.slice(36..36), slice!("", "", ""));
+            assert_eq!(alg.try_slice(0..0), slice!("", "", ""));
+            assert_eq!(alg.try_slice(1..1), slice!("", "", ""));
+            assert_eq!(alg.try_slice(36..36), slice!("", "", ""));
 
             // Slices on move boundaries
-            assert_eq!(alg.slice(0..36), slice!("", "R2DLU10RUR2D2D3D5L5U2L", ""));
-            assert_eq!(alg.slice(0..28), slice!("", "R2DLU10RUR2D2D3D5", ""));
-            assert_eq!(alg.slice(4..36), slice!("", "U10RUR2D2D3D5L5U2L", ""));
-            assert_eq!(alg.slice(4..28), slice!("", "U10RUR2D2D3D5", ""));
+            assert_eq!(
+                alg.try_slice(0..36),
+                slice!("", "R2DLU10RUR2D2D3D5L5U2L", "")
+            );
+            assert_eq!(alg.try_slice(0..28), slice!("", "R2DLU10RUR2D2D3D5", ""));
+            assert_eq!(alg.try_slice(4..36), slice!("", "U10RUR2D2D3D5L5U2L", ""));
+            assert_eq!(alg.try_slice(4..28), slice!("", "U10RUR2D2D3D5", ""));
 
             // Slices not on move boundaries
-            assert_eq!(alg.slice(0..30), slice!("", "R2DLU10RUR2D2D3D5", "L2"));
-            assert_eq!(alg.slice(11..36), slice!("U3", "RUR2D2D3D5L5U2L", ""));
-            assert_eq!(alg.slice(11..30), slice!("U3", "RUR2D2D3D5", "L2"));
+            assert_eq!(alg.try_slice(0..30), slice!("", "R2DLU10RUR2D2D3D5", "L2"));
+            assert_eq!(alg.try_slice(11..36), slice!("U3", "RUR2D2D3D5L5U2L", ""));
+            assert_eq!(alg.try_slice(11..30), slice!("U3", "RUR2D2D3D5", "L2"));
 
             // Small slices
-            assert_eq!(alg.slice(3..4), slice!("", "L", ""));
-            assert_eq!(alg.slice(5..7), slice!("U2", "", ""));
-            assert_eq!(alg.slice(16..19), slice!("", "R2", "D"));
-            assert_eq!(alg.slice(17..19), slice!("R", "", "D"));
+            assert_eq!(alg.try_slice(3..4), slice!("", "L", ""));
+            assert_eq!(alg.try_slice(5..7), slice!("U2", "", ""));
+            assert_eq!(alg.try_slice(16..19), slice!("", "R2", "D"));
+            assert_eq!(alg.try_slice(17..19), slice!("R", "", "D"));
         }
     }
 
