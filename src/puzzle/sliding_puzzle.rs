@@ -5,7 +5,7 @@ use num_traits::{AsPrimitive, NumCast, One, PrimInt, ToPrimitive, Zero};
 
 use crate::{
     algorithm::{
-        algorithm::Algorithm,
+        as_slice::AsAlgorithmSlice,
         direction::Direction,
         r#move::{position_move::PositionMove, r#move::Move, try_into_move::TryIntoMove},
     },
@@ -701,7 +701,7 @@ where
 
     /// Checks if it is possible to apply the given [`Algorithm`].
     #[must_use]
-    fn can_apply_alg(&self, alg: &Algorithm) -> bool {
+    fn can_apply_alg<'a, Alg: AsAlgorithmSlice<'a>>(&self, alg: &'a Alg) -> bool {
         let (width, height) = self.size();
         let (mut gx, mut gy) = self.gap_position_xy();
 
@@ -730,7 +730,7 @@ where
     ///
     /// If `self.can_apply_alg(alg)` is false, the function may panic or the puzzle may be
     /// transformed in an invalid way.
-    fn apply_alg(&mut self, alg: &Algorithm) {
+    fn apply_alg<'a, Alg: AsAlgorithmSlice<'a>>(&mut self, alg: &'a Alg) {
         for m in alg.as_slice().multi_tile_moves() {
             self.apply_move(m);
         }
@@ -739,7 +739,7 @@ where
     /// See [`SlidingPuzzle::apply_alg`].
     ///
     /// Returns `true` if the algorithm was applied successfully, `false` otherwise.
-    fn try_apply_alg(&mut self, alg: &Algorithm) -> bool {
+    fn try_apply_alg<'a, Alg: AsAlgorithmSlice<'a>>(&mut self, alg: &'a Alg) -> bool {
         if self.can_apply_alg(alg) {
             unsafe { self.apply_alg_unchecked(alg) };
             true
@@ -750,7 +750,7 @@ where
 
     /// See [`SlidingPuzzle::apply_alg`].
     #[inline]
-    unsafe fn apply_alg_unchecked(&mut self, alg: &Algorithm) {
+    unsafe fn apply_alg_unchecked<'a, Alg: AsAlgorithmSlice<'a>>(&mut self, alg: &'a Alg) {
         for m in alg.as_slice().multi_tile_moves() {
             self.apply_move_unchecked(m);
         }
