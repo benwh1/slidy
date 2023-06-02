@@ -97,4 +97,18 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_exact_size_iterator() -> Result<(), Box<dyn std::error::Error>> {
+        let alg = Algorithm::from_str("R3D2LDR5U12RD3LU4R")?;
+        let slice = alg.try_slice(2..20)?;
+
+        let mut iter = slice.multi_tile_moves();
+        for i in 0..7 {
+            assert_eq!(iter.len(), 6 - i);
+            iter.next();
+        }
+
+        Ok(())
+    }
 }
