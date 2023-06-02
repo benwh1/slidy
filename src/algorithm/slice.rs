@@ -104,6 +104,33 @@ impl AlgorithmSlice<'_> {
         )
     }
 
+    /// Returns `Some((w, h))` if `self` can be applied to a solved puzzle (with the gap in the
+    /// bottom right) of size `w x h` but cannot be applied to any smaller solved puzzle. Returns
+    /// `None` if `self` can not be applied to a puzzle of any size.
+    #[must_use]
+    pub fn min_applicable_size(&self) -> Option<(usize, usize)> {
+        // Gap position where (0, 0) is the bottom right position, increasing up and left
+        let (mut max_gx, mut max_gy) = (0u32, 0u32);
+        let (mut gx, mut gy) = (0u32, 0u32);
+
+        for mv in self.multi_tile_moves() {
+            let n = mv.amount;
+
+            // Update the gap position occurs and return `None` if overflow/underflow occurs
+            match mv.direction {
+                Direction::Up => gy = gy.checked_sub(n)?,
+                Direction::Left => gx = gx.checked_sub(n)?,
+                Direction::Down => gy = gy.checked_add(n)?,
+                Direction::Right => gx = gx.checked_add(n)?,
+            }
+
+            max_gx = max_gx.max(gx);
+            max_gy = max_gy.max(gy);
+        }
+
+        Some((1 + max_gx as usize, 1 + max_gy as usize))
+    }
+
     /// An iterator over the single-tile moves in the slice.
     ///
     /// # Example
@@ -199,7 +226,9 @@ impl Display for AlgorithmSlice<'_> {
 mod tests {
     use std::str::FromStr;
 
-    use crate::algorithm::{algorithm::Algorithm, direction::Direction};
+    use crate::algorithm::{
+        algorithm::Algorithm, as_slice::AsAlgorithmSlice, direction::Direction,
+    };
 
     #[test]
     fn test_len() -> Result<(), Box<dyn std::error::Error>> {
@@ -227,6 +256,29 @@ mod tests {
         }
 
         Ok(())
+    }
+
+    #[test]
+    fn test_min_applicable_size() {
+        let size = |alg: &str| -> Option<(usize, usize)> {
+            Algorithm::from_str(alg)
+                .unwrap()
+                .as_slice()
+                .min_applicable_size()
+        };
+
+        assert_eq!(size("DR"), Some((2, 2)));
+        assert_eq!(size("D3RU2RD2RU3L3"), Some((4, 4)));
+        assert_eq!(size("D10000"), Some((1, 10001)));
+        assert_eq!(size("R10000"), Some((10001, 1)));
+        assert_eq!(size("D9R9U9L9D8R8UL7U4R3D2L"), Some((10, 10)));
+        assert_eq!(size("RDRDRDRDRDRDRDRDRD"), Some((10, 10)));
+        assert_eq!(size("RDLD2R2U2RDL2U2LDRURDLUR2D2LUL2D2R2UL2"), Some((4, 4)));
+
+        assert_eq!(size("L"), None);
+        assert_eq!(size("U"), None);
+        assert_eq!(size("DRU2LDRD"), None);
+        assert_eq!(size("R3DL4RURDLU"), None);
     }
 
     #[test]
