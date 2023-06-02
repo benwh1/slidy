@@ -12,6 +12,7 @@ use itertools::Itertools;
 use thiserror::Error;
 
 use crate::algorithm::{
+    as_slice::AsAlgorithmSlice,
     display::{
         algorithm::{AlgorithmDisplay, DisplaySpaced, DisplayUnspaced},
         r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
@@ -19,10 +20,7 @@ use crate::algorithm::{
     slice::AlgorithmSlice,
 };
 
-use super::{
-    direction::Direction,
-    r#move::r#move::{Move, MoveSum},
-};
+use super::{direction::Direction, r#move::r#move::Move};
 
 /// Error type for [`Algorithm::slice`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, Hash)]
@@ -121,49 +119,7 @@ impl Algorithm {
     /// that cancel completely.
     #[must_use]
     pub fn simplified(&self) -> Self {
-        if self.moves.len() < 2 {
-            return Self::with_moves(self.moves.clone());
-        }
-
-        // List of simplified moves
-        let mut moves = Vec::new();
-
-        // Current move that we are accumulating into. This will be pushed to `moves` when we
-        // reach a move that can't be added to it.
-        let mut acc_move = None;
-
-        for &next in self.moves.iter() {
-            match acc_move {
-                Some(sum) => match sum + next {
-                    MoveSum::Ok(m) => {
-                        // Moves completely cancel.
-                        acc_move = if m.amount == 0 {
-                            // Try and pop a move off `moves`, because the next move might cancel.
-                            // e.g. consider URLD where `next` is the L move. We pop the U move
-                            // from `moves` so that the following D move can cancel with it.
-                            moves.pop()
-                        }
-                        // Moves can be added but don't fully cancel, keep accumulating into mv.
-                        else {
-                            Some(m)
-                        };
-                    }
-                    // Moves can't be added, there is no more simplification at this point.
-                    MoveSum::Invalid => {
-                        // Push mv and go to the next move.
-                        moves.push(sum);
-                        acc_move = Some(next);
-                    }
-                },
-                None => acc_move = Some(next),
-            }
-        }
-
-        if let Some(m) = acc_move && m.amount != 0 {
-            moves.push(m);
-        }
-
-        Self::with_moves(moves)
+        self.as_slice().simplified()
     }
 
     /// Simplifies the algorithm.
