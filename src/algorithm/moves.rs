@@ -56,7 +56,24 @@ impl Iterator for MultiTileMoves<'_> {
             State::Finished => None,
         }
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let f = self.slice.first.is_some() as usize;
+        let m = self.slice.middle.len();
+        let l = self.slice.last.is_some() as usize;
+
+        let len = match self.iter_state {
+            State::First => f + m + l,
+            State::Middle(n) => m - n + l,
+            State::Last => l,
+            State::Finished => 0,
+        };
+
+        (len, Some(len))
+    }
 }
+
+impl ExactSizeIterator for MultiTileMoves<'_> {}
 
 #[cfg(test)]
 mod tests {
