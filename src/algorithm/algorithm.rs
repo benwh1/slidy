@@ -45,7 +45,7 @@ pub enum SliceError {
 /// A sequence of moves.
 #[derive(Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Algorithm {
-    moves: Vec<Move>,
+    pub(super) moves: Vec<Move>,
 }
 
 impl Algorithm {
@@ -202,16 +202,6 @@ impl Algorithm {
     pub fn repeat(&self, n: usize) -> Self {
         Self {
             moves: self.moves.repeat(n),
-        }
-    }
-
-    /// Returns an [`AlgorithmSlice`] containing the entire algorithm.
-    #[must_use]
-    pub fn as_slice(&self) -> AlgorithmSlice {
-        AlgorithmSlice {
-            first: None,
-            middle: &self.moves,
-            last: None,
         }
     }
 

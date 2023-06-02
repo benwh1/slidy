@@ -9,22 +9,18 @@ pub trait AsAlgorithmSlice<'a> {
 }
 
 impl<'a> AsAlgorithmSlice<'a> for Algorithm {
+    /// Returns an [`AlgorithmSlice`] containing the entire algorithm.
     fn as_slice(&'a self) -> AlgorithmSlice<'a> {
-        self.as_slice()
+        AlgorithmSlice {
+            first: None,
+            middle: &self.moves,
+            last: None,
+        }
     }
 }
 
 impl<'a> AsAlgorithmSlice<'a> for AlgorithmSlice<'a> {
     fn as_slice(&'a self) -> AlgorithmSlice<'a> {
-        let Self {
-            first,
-            middle,
-            last,
-        } = self;
-        Self {
-            first: *first,
-            middle,
-            last: *last,
-        }
+        *self
     }
 }
