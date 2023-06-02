@@ -110,7 +110,9 @@ impl AlgorithmSlice<'_> {
     ///
     /// ```
     /// # use std::str::FromStr;
-    /// # use slidy::algorithm::{algorithm::Algorithm, direction::Direction};
+    /// # use slidy::algorithm::{
+    /// #     algorithm::Algorithm, as_slice::AsAlgorithmSlice, direction::Direction, r#move::r#move::Move,
+    /// # };
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let alg = Algorithm::from_str("RD3LUR2")?;
     /// let slice = alg.as_slice();
@@ -139,7 +141,9 @@ impl AlgorithmSlice<'_> {
     ///
     /// ```
     /// # use std::str::FromStr;
-    /// # use slidy::algorithm::{algorithm::Algorithm, direction::Direction, r#move::r#move::Move};
+    /// # use slidy::algorithm::{
+    /// #     algorithm::Algorithm, as_slice::AsAlgorithmSlice, direction::Direction, r#move::r#move::Move,
+    /// # };
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let alg = Algorithm::from_str("RD3LUR2")?;
     /// let slice = alg.as_slice();
