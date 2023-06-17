@@ -13,12 +13,12 @@ enum State {
 
 /// Iterator over the moves of an [`AlgorithmSlice`]
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct MultiTileMoves<'a> {
+pub struct Moves<'a> {
     slice: AlgorithmSlice<'a>,
     iter_state: State,
 }
 
-impl<'a> MultiTileMoves<'a> {
+impl<'a> Moves<'a> {
     pub(super) fn new(slice: AlgorithmSlice<'a>) -> Self {
         Self {
             slice,
@@ -27,7 +27,7 @@ impl<'a> MultiTileMoves<'a> {
     }
 }
 
-impl Iterator for MultiTileMoves<'_> {
+impl Iterator for Moves<'_> {
     type Item = Move;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -73,7 +73,7 @@ impl Iterator for MultiTileMoves<'_> {
     }
 }
 
-impl ExactSizeIterator for MultiTileMoves<'_> {}
+impl ExactSizeIterator for Moves<'_> {}
 
 #[cfg(test)]
 mod tests {
@@ -85,7 +85,7 @@ mod tests {
     fn test_multi_tile_moves() -> Result<(), Box<dyn std::error::Error>> {
         let alg = Algorithm::from_str("R3D2LDR5U12RD3LU4R")?;
         let slice = alg.try_slice(4..19)?;
-        let mut moves = slice.multi_tile_moves();
+        let mut moves = slice.moves();
 
         assert_eq!(moves.next(), Some(Move::from_str("D")?));
         assert_eq!(moves.next(), Some(Move::from_str("L")?));
@@ -103,7 +103,7 @@ mod tests {
         let alg = Algorithm::from_str("R3D2LDR5U12RD3LU4R")?;
         let slice = alg.try_slice(2..20)?;
 
-        let mut iter = slice.multi_tile_moves();
+        let mut iter = slice.moves();
         for i in 0..7 {
             assert_eq!(iter.len(), 6 - i);
             iter.next();

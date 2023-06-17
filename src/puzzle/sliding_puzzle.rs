@@ -705,7 +705,7 @@ where
         let (width, height) = self.size();
         let (mut gx, mut gy) = self.gap_position_xy();
 
-        for m in alg.as_slice().multi_tile_moves() {
+        for m in alg.as_slice().moves() {
             let amount = m.amount.try_into().unwrap();
             let (new_gx, new_gy) = match m.direction {
                 Direction::Up => (Some(gx), gy.checked_add(amount)),
@@ -731,7 +731,7 @@ where
     /// If `self.can_apply_alg(alg)` is false, the function may panic or the puzzle may be
     /// transformed in an invalid way.
     fn apply_alg<'a, Alg: AsAlgorithmSlice<'a>>(&mut self, alg: &'a Alg) {
-        for m in alg.as_slice().multi_tile_moves() {
+        for m in alg.as_slice().moves() {
             self.apply_move(m);
         }
     }
@@ -751,7 +751,7 @@ where
     /// See [`SlidingPuzzle::apply_alg`].
     #[inline]
     unsafe fn apply_alg_unchecked<'a, Alg: AsAlgorithmSlice<'a>>(&mut self, alg: &'a Alg) {
-        for m in alg.as_slice().multi_tile_moves() {
+        for m in alg.as_slice().moves() {
             self.apply_move_unchecked(m);
         }
     }

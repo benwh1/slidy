@@ -10,7 +10,7 @@ use crate::algorithm::{
         r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
     },
     metric::{Metric, Mtm, Stm},
-    moves::MultiTileMoves,
+    moves::Moves,
     r#move::r#move::{Move, MoveSum},
 };
 
@@ -28,7 +28,7 @@ impl AlgorithmSlice<'_> {
     /// The length of the slice in the [`Metric`] `M`.
     #[must_use]
     pub fn len<M: Metric>(&self) -> u32 {
-        self.multi_tile_moves().map(|m| M::len(m)).sum()
+        self.moves().map(|m| M::len(m)).sum()
     }
 
     /// The length of the slice in the [`Stm`] [`Metric`].
@@ -53,7 +53,7 @@ impl AlgorithmSlice<'_> {
     /// that cancel completely. Returns the result as a new [`Algorithm`].
     #[must_use]
     pub fn simplified(&self) -> Algorithm {
-        if self.multi_tile_moves().count() < 2 {
+        if self.moves().count() < 2 {
             return Algorithm::from(*self);
         }
 
@@ -64,7 +64,7 @@ impl AlgorithmSlice<'_> {
         // reach a move that can't be added to it.
         let mut acc_move = None;
 
-        for next in self.multi_tile_moves() {
+        for next in self.moves() {
             match acc_move {
                 Some(sum) => match sum + next {
                     MoveSum::Ok(m) => {
@@ -102,19 +102,14 @@ impl AlgorithmSlice<'_> {
     /// [`Algorithm`].
     #[must_use]
     pub fn transpose(&self) -> Algorithm {
-        Algorithm::with_moves(self.multi_tile_moves().map(|m| m.transpose()).collect())
+        Algorithm::with_moves(self.moves().map(|m| m.transpose()).collect())
     }
 
     /// Concatenates `n` copies of `self` and returns the result as a new [`Algorithm`].
     #[must_use]
     pub fn repeat(&self, n: usize) -> Algorithm {
-        let len = self.multi_tile_moves().len();
-        Algorithm::with_moves(
-            self.multi_tile_moves()
-                .cycle()
-                .take(len * n)
-                .collect::<Vec<_>>(),
-        )
+        let len = self.moves().len();
+        Algorithm::with_moves(self.moves().cycle().take(len * n).collect::<Vec<_>>())
     }
 
     /// Returns `Some((w, h))` if `self` can be applied to a solved puzzle (with the gap in the
@@ -126,7 +121,7 @@ impl AlgorithmSlice<'_> {
         let (mut max_gx, mut max_gy) = (0u32, 0u32);
         let (mut gx, mut gy) = (0u32, 0u32);
 
-        for mv in self.multi_tile_moves() {
+        for mv in self.moves() {
             let n = mv.amount;
 
             // Update the gap position occurs and return `None` if overflow/underflow occurs
@@ -171,7 +166,7 @@ impl AlgorithmSlice<'_> {
     /// # }
     /// ```
     pub fn single_tile_moves(&self) -> impl Iterator<Item = Direction> + '_ {
-        self.multi_tile_moves()
+        self.moves()
             .flat_map(|m| iter::repeat(m.direction).take(m.amount as usize))
     }
 
@@ -188,7 +183,7 @@ impl AlgorithmSlice<'_> {
     /// let alg = Algorithm::from_str("RD3LUR2")?;
     /// let slice = alg.as_slice();
     ///
-    /// let mut iter = slice.multi_tile_moves();
+    /// let mut iter = slice.moves();
     /// assert_eq!(iter.next(), Some(Move::new(Direction::Right, 1)));
     /// assert_eq!(iter.next(), Some(Move::new(Direction::Down, 3)));
     /// assert_eq!(iter.next(), Some(Move::new(Direction::Left, 1)));
@@ -199,8 +194,8 @@ impl AlgorithmSlice<'_> {
     /// # }
     /// ```
     #[must_use]
-    pub fn multi_tile_moves(&self) -> MultiTileMoves {
-        MultiTileMoves::new(*self)
+    pub fn moves(&self) -> Moves {
+        Moves::new(*self)
     }
 
     /// Helper function for creating a [`DisplaySpaced<DisplayLongSpaced>`] around `self`.
