@@ -264,7 +264,7 @@ mod tests {
         for start in 0..34 {
             for end in start..34 {
                 let slice = alg.try_slice(start..end)?;
-                assert_eq!(slice.is_empty(), start == end);
+                assert_eq!(slice.is_empty(), (start..end).is_empty());
             }
         }
 
