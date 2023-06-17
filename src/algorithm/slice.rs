@@ -9,6 +9,7 @@ use crate::algorithm::{
         algorithm::{AlgorithmDisplay, DisplaySpaced, DisplayUnspaced},
         r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
     },
+    metric::{Metric, Mtm, Stm},
     moves::MultiTileMoves,
     r#move::r#move::{Move, MoveSum},
 };
@@ -24,10 +25,22 @@ pub struct AlgorithmSlice<'a> {
 }
 
 impl AlgorithmSlice<'_> {
-    /// The length of the slice in single tile moves.
+    /// The length of the slice in the [`Metric`] `M`.
     #[must_use]
-    pub fn len(&self) -> u32 {
-        self.multi_tile_moves().map(|m| m.amount).sum()
+    pub fn len<M: Metric>(&self) -> u32 {
+        self.multi_tile_moves().map(|m| M::len(m)).sum()
+    }
+
+    /// The length of the slice in the [`Stm`] [`Metric`].
+    #[must_use]
+    pub fn len_stm(&self) -> u32 {
+        self.len::<Stm>()
+    }
+
+    /// The length of the slice in the [`Mtm`] [`Metric`].
+    #[must_use]
+    pub fn len_mtm(&self) -> u32 {
+        self.len::<Mtm>()
     }
 
     /// Checks if the slice is empty.
@@ -237,7 +250,7 @@ mod tests {
         for start in 0..34 {
             for end in start..34 {
                 let slice = alg.try_slice(start..end)?;
-                assert_eq!(slice.len(), end - start);
+                assert_eq!(slice.len_stm(), end - start);
             }
         }
 

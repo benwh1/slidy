@@ -17,6 +17,7 @@ use crate::algorithm::{
         algorithm::{AlgorithmDisplay, DisplaySpaced, DisplayUnspaced},
         r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
     },
+    metric::Metric,
     slice::AlgorithmSlice,
 };
 
@@ -59,10 +60,22 @@ impl Algorithm {
         Self { moves }
     }
 
-    /// The length of the algorithm in single tile moves.
+    /// The length of the algorithm in the [`Metric`] `M`.
     #[must_use]
-    pub fn len(&self) -> u32 {
-        self.moves.iter().map(|m| m.amount).sum()
+    pub fn len<M: Metric>(&self) -> u32 {
+        self.as_slice().len::<M>()
+    }
+
+    /// The length of the algorithm in the [`Stm`] [`Metric`].
+    #[must_use]
+    pub fn len_stm(&self) -> u32 {
+        self.as_slice().len_stm()
+    }
+
+    /// The length of the algorithm in the [`Mtm`] [`Metric`].
+    #[must_use]
+    pub fn len_mtm(&self) -> u32 {
+        self.as_slice().len_mtm()
     }
 
     /// Checks if the algorithm is empty.
@@ -167,7 +180,7 @@ impl Algorithm {
             return Err(SliceError::UnorderedRange(range));
         }
 
-        let len = self.len();
+        let len = self.len_stm();
         if range.start > len || range.end > len {
             return Err(SliceError::OutOfRange { range, len });
         }
@@ -181,7 +194,7 @@ impl Algorithm {
         let (start_idx, start_total) = iter
             .clone()
             .find_position(|&i| i >= range.start)
-            .unwrap_or((self.moves.len() + 1, self.len()));
+            .unwrap_or((self.moves.len() + 1, self.len_stm()));
 
         // Find the last move where all moves up to and including this one have a combined length
         // <= range.end
@@ -189,7 +202,7 @@ impl Algorithm {
             .clone()
             .tuple_windows()
             .find_position(|&(_, j)| j > range.end)
-            .map_or((self.moves.len(), self.len()), |(idx, (i, _))| (idx, i));
+            .map_or((self.moves.len(), self.len_stm()), |(idx, (i, _))| (idx, i));
 
         if start_idx > end_idx {
             // The beginning and the end of the slice are both within a single move, e.g. U9[3..7].
@@ -381,19 +394,22 @@ mod tests {
     #[test]
     fn test_len() {
         let a = Algorithm::from_str("ULDR").unwrap();
-        assert_eq!(a.len(), 4);
+        assert_eq!(a.len_stm(), 4);
+        assert_eq!(a.len_mtm(), 4);
     }
 
     #[test]
     fn test_len_2() {
         let a = Algorithm::from_str("U3L6D2R20").unwrap();
-        assert_eq!(a.len(), 31);
+        assert_eq!(a.len_stm(), 31);
+        assert_eq!(a.len_mtm(), 4);
     }
 
     #[test]
     fn test_len_3() {
         let a = Algorithm::from_str("UUU3").unwrap();
-        assert_eq!(a.len(), 5);
+        assert_eq!(a.len_stm(), 5);
+        assert_eq!(a.len_mtm(), 3);
     }
 
     #[test]
