@@ -36,6 +36,10 @@ impl Stack {
         self.idx -= 1;
         self.stack[self.idx]
     }
+
+    fn clear(&mut self) {
+        self.idx = 0;
+    }
 }
 
 impl Default for Stack {
@@ -155,6 +159,7 @@ where
 
     /// Solves `puzzle`.
     pub fn solve(&mut self, puzzle: &Puzzle) -> Result<Algorithm, SolverError> {
+        self.stack.clear();
         let mut puzzle = puzzle.clone();
         let mut depth = self.heuristic.bound(&puzzle);
         loop {
