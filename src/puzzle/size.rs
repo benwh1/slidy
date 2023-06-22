@@ -56,6 +56,12 @@ impl Size {
     }
 }
 
+impl Into<(usize, usize)> for Size {
+    fn into(self) -> (usize, usize) {
+        (self.width(), self.height())
+    }
+}
+
 impl Display for Size {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.0.to_string())?;
