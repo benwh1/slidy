@@ -49,6 +49,11 @@ impl Size {
     pub fn num_pieces(&self) -> usize {
         self.area() - 1
     }
+
+    /// Checks whether a position `(x, y)` is within bounds on a puzzle of this size.
+    pub fn is_within_bounds(&self, (x, y): (usize, usize)) -> bool {
+        x < self.width() && y < self.height()
+    }
 }
 
 impl Display for Size {
