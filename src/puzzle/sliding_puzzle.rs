@@ -187,10 +187,8 @@ where
         P::Piece: AsPrimitive<Self::Piece>,
         Self::Piece: 'static,
     {
-        if !self.try_set_state(other) {
-            let (w1, h1) = self.size();
-            let (w2, h2) = other.size();
-            panic!("`self` has size {w1}x{h1} but `other` has size {w2}x{h2}");
+        for i in 0..other.area() {
+            self.swap_pieces(i, self.piece_position(other.piece_at(i).as_()));
         }
     }
 
@@ -203,7 +201,7 @@ where
         Self::Piece: 'static,
     {
         if self.size() == other.size() {
-            unsafe { self.set_state_unchecked(other) };
+            self.set_state(other);
             true
         } else {
             false
@@ -258,7 +256,7 @@ where
     fn try_solved_pos(&self, piece: Self::Piece) -> Option<usize> {
         let n = self.num_pieces();
         match piece.to_usize() {
-            Some(p) if p <= n => Some(unsafe { self.solved_pos_unchecked(piece) }),
+            Some(p) if p <= n => Some(self.solved_pos(piece)),
             _ => None,
         }
     }
@@ -287,7 +285,7 @@ where
     fn try_solved_pos_xy(&self, piece: Self::Piece) -> Option<(usize, usize)> {
         let n = self.num_pieces();
         match piece.to_usize() {
-            Some(p) if p <= n => Some(unsafe { self.solved_pos_xy_unchecked(piece) }),
+            Some(p) if p <= n => Some(self.solved_pos_xy(piece)),
             _ => None,
         }
     }
@@ -314,7 +312,7 @@ where
     #[must_use]
     fn try_piece_at(&self, idx: usize) -> Option<Self::Piece> {
         if idx < self.area() {
-            Some(unsafe { self.piece_at_unchecked(idx) })
+            Some(self.piece_at(idx))
         } else {
             None
         }
@@ -342,7 +340,7 @@ where
     #[must_use]
     fn try_piece_at_xy(&self, x: usize, y: usize) -> Option<Self::Piece> {
         if x < self.width() && y < self.height() {
-            Some(unsafe { self.piece_at_xy_unchecked(x, y) })
+            Some(self.piece_at_xy(x, y))
         } else {
             None
         }
@@ -370,7 +368,7 @@ where
     fn try_swap_pieces(&mut self, idx1: usize, idx2: usize) -> bool {
         let area = self.area();
         if idx1 < area && idx2 < area {
-            unsafe { self.swap_pieces_unchecked(idx1, idx2) };
+            self.swap_pieces(idx1, idx2);
             true
         } else {
             false
@@ -422,7 +420,7 @@ where
     #[inline]
     fn try_swap_piece_with_gap(&mut self, idx: usize) -> bool {
         if idx < self.area() {
-            unsafe { self.swap_piece_with_gap_unchecked(idx) };
+            self.swap_piece_with_gap(idx);
             true
         } else {
             false
@@ -469,7 +467,7 @@ where
     /// Returns `true` if the piece was moved successfully, `false` otherwise.
     fn try_move_dir(&mut self, dir: Direction) -> bool {
         if self.can_move_dir(dir) {
-            unsafe { self.move_dir_unchecked(dir) };
+            self.move_dir(dir);
             true
         } else {
             false
@@ -519,7 +517,7 @@ where
     /// Returns `true` if the move was applied successfully, `false` otherwise.
     fn try_apply_move(&mut self, mv: Move) -> bool {
         if self.can_apply_move(mv) {
-            unsafe { self.apply_move_unchecked(mv) };
+            self.apply_move(mv);
             true
         } else {
             false
@@ -689,7 +687,7 @@ where
     /// Returns `true` if the algorithm was applied successfully, `false` otherwise.
     fn try_apply_alg<'a, Alg: AsAlgorithmSlice<'a>>(&mut self, alg: &'a Alg) -> bool {
         if self.can_apply_alg(alg) {
-            unsafe { self.apply_alg_unchecked(alg) };
+            self.apply_alg(alg);
             true
         } else {
             false

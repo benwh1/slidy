@@ -123,12 +123,12 @@
 //! - The functions `foo` may panic, return invalid results, or create invalid states when given
 //! invalid arguments.
 //! - The functions `try_foo` should return `None` when given invalid arguments, and should never
-//! panic. In most cases, the default implementations of these functions call `foo_unchecked`
-//! (which are safe by default) with the appropriate checks included.
+//! panic. In most cases, the default implementations of these functions call `foo` with the
+//! appropriate checks included.
 //! - The functions `foo_unchecked` should be considered `unsafe` and are intended for situations
 //! where performance is important. The default implementations of these functions do not contain
 //! any unsafe code, and most of them are just a call to `foo` or a re-implementation of `foo`
-//! using other unchecked functions (which, in turn, are also safe by default, etc.).
+//! using other unchecked functions.
 
 #![feature(if_let_guard)]
 #![feature(int_roundings)]
