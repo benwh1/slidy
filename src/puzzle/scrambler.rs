@@ -50,7 +50,7 @@ where
         }
 
         // Move blank to a random position
-        let (w, h) = puzzle.size();
+        let (w, h) = puzzle.size().into();
         let (d, r) = (rng.gen_range(0..h), rng.gen_range(0..w));
 
         puzzle.apply_move(Move::new(Direction::Down, d as u32));
@@ -131,12 +131,12 @@ mod tests {
 
     mod random_state {
         use super::*;
-        use crate::puzzle::{label::label::RowGrids, solvable::Solvable};
+        use crate::puzzle::{label::label::RowGrids, size::Size, solvable::Solvable};
 
         #[test]
         fn test_solvable() {
             for (w, h) in [(2, 2), (4, 4), (10, 2), (20, 20)] {
-                let mut p = Puzzle::new(w, h).unwrap();
+                let mut p = Puzzle::new(Size::new(w, h).unwrap());
                 let x = RandomState;
                 for _ in 0..100 {
                     p.reset();

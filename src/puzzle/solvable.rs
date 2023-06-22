@@ -31,7 +31,7 @@ where
     fn is_solvable(puzzle: &Puzzle) -> bool {
         // Closure to get the piece that would be in position (x, y), if we do L* U* to move the
         // gap to the bottom right corner
-        let (w, h) = puzzle.size();
+        let (w, h) = puzzle.size().into();
         let (gx, gy) = puzzle.gap_position_xy();
         let piece_at = |i| {
             let (x, y) = (i % w, i / w);
@@ -108,7 +108,8 @@ where
 {
     fn is_solvable(puzzle: &Puzzle) -> bool {
         // Always solvable unless puzzle is 2x2, then equivalent to RowGrids.
-        if puzzle.size() == (2, 2) {
+        let (w, h) = puzzle.size().into();
+        if (w, h) == (2, 2) {
             RowGrids::is_solvable(puzzle)
         } else {
             true

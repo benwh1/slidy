@@ -1,5 +1,7 @@
 //! Defines an implementation of the [`SlidingPuzzle`] trait.
 
+use crate::puzzle::size::{Size, SizeError};
+
 use super::{
     display::{DisplayGrid, DisplayInline},
     label::labels::BijectiveLabel,
@@ -15,24 +17,18 @@ use thiserror::Error;
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Puzzle {
     pieces: Vec<u32>,
-    width: usize,
-    height: usize,
+    size: Size,
     gap: usize,
 }
 
 /// Error type for [`Puzzle`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum PuzzleError {
-    /// Returned when the width and height are not both greater than zero.
-    #[error("InvalidSize: width ({width}) and height ({height}) must both be at least 1")]
-    InvalidSize {
-        /// Width of the puzzle.
-        width: usize,
-        /// Height of the puzzle.
-        height: usize,
-    },
+    /// Returned when there was an error creating a [`Size`].
+    #[error("InvalidSize: {0}")]
+    InvalidSize(SizeError),
 
-    /// Returned from [`Puzzle::new_from_grid`] when the given grid is empty.
+    /// Returned from [`Puzzle::new_from_grid`] when the given grid does not contain any pieces.
     #[error("Empty: grid is empty")]
     Empty,
 
@@ -51,20 +47,15 @@ pub enum PuzzleError {
 
 impl Puzzle {
     /// Create a new [`Puzzle`] of a given size in the solved state.
-    pub fn new(width: usize, height: usize) -> Result<Self, PuzzleError> {
-        if width < 1 || height < 1 {
-            Err(PuzzleError::InvalidSize { width, height })
-        } else {
-            Ok(Self {
-                pieces: {
-                    let mut v: Vec<u32> = (1..(width * height) as u32).collect();
-                    v.push(0);
-                    v
-                },
-                width,
-                height,
-                gap: width * height - 1,
-            })
+    pub fn new(size: Size) -> Self {
+        Self {
+            pieces: {
+                let mut v: Vec<u32> = (1..size.area() as u32).collect();
+                v.push(0);
+                v
+            },
+            size,
+            gap: size.num_pieces(),
         }
     }
 
@@ -75,10 +66,7 @@ impl Puzzle {
         }
 
         if grid[0].is_empty() {
-            return Err(PuzzleError::InvalidSize {
-                width: 0,
-                height: 0,
-            });
+            return Err(PuzzleError::Empty);
         }
 
         let w = grid[0].len();
@@ -88,6 +76,8 @@ impl Puzzle {
         if grid.iter().any(|r| r.len() != w) {
             return Err(PuzzleError::UnequalRowLengths);
         }
+
+        let size = Size::new(w, h).map_err(PuzzleError::InvalidSize)?;
 
         let mut gap = None;
         let mut pieces = HashSet::new();
@@ -113,8 +103,7 @@ impl Puzzle {
         // So it is safe to call unwrap.
         Ok(Self {
             pieces: grid.into_iter().flatten().collect(),
-            width: w,
-            height: h,
+            size,
             gap: gap.unwrap(),
         })
     }
@@ -136,8 +125,8 @@ impl SlidingPuzzle for Puzzle {
     type Piece = u32;
 
     #[inline]
-    fn size(&self) -> (usize, usize) {
-        (self.width, self.height)
+    fn size(&self) -> Size {
+        self.size
     }
 
     #[inline]
@@ -146,7 +135,7 @@ impl SlidingPuzzle for Puzzle {
     }
 
     fn reset_to_label<L: BijectiveLabel>(&mut self, label: &L) {
-        let (w, h) = self.size();
+        let (w, h) = self.size().into();
         let area = self.area();
         for y in 0..h {
             for x in 0..w {
@@ -225,7 +214,7 @@ impl SlidingPuzzle for Puzzle {
 
 impl Default for Puzzle {
     fn default() -> Self {
-        Self::new(4, 4).unwrap()
+        Self::new(Size::new(4, 4).unwrap())
     }
 }
 
@@ -298,28 +287,16 @@ mod tests {
 
     #[test]
     fn test_new() {
-        let p = Puzzle::new(4, 4).unwrap();
+        let size = Size::new(4, 4).unwrap();
+        let p = Puzzle::new(size);
         assert_eq!(
             p,
             Puzzle {
                 pieces: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0],
-                width: 4,
-                height: 4,
+                size,
                 gap: 15
             }
         );
-    }
-
-    #[test]
-    fn test_new_2() {
-        let p = Puzzle::new(0, 0);
-        assert!(p.is_err());
-
-        let p = Puzzle::new(3, 0);
-        assert!(p.is_err());
-
-        let p = Puzzle::new(0, 5);
-        assert!(p.is_err());
     }
 
     #[test]
@@ -341,13 +318,7 @@ mod tests {
     #[test]
     fn test_new_from_grid_3() {
         let p = Puzzle::new_from_grid(vec![vec![]]);
-        assert_eq!(
-            p,
-            Err(PuzzleError::InvalidSize {
-                width: 0,
-                height: 0
-            })
-        );
+        assert_eq!(p, Err(PuzzleError::Empty));
     }
 
     #[test]
@@ -386,26 +357,6 @@ mod tests {
         use super::*;
 
         #[test]
-        fn test_size() {
-            let p = Puzzle::new(4, 6).unwrap();
-            assert_eq!(p.width(), 4);
-            assert_eq!(p.height(), 6);
-            assert_eq!(p.size(), (4, 6));
-        }
-
-        #[test]
-        fn test_area() {
-            let p = Puzzle::new(4, 6).unwrap();
-            assert_eq!(p.area(), 24);
-        }
-
-        #[test]
-        fn test_num_pieces() {
-            let p = Puzzle::new(4, 6).unwrap();
-            assert_eq!(p.num_pieces(), 23);
-        }
-
-        #[test]
         fn test_piece_position() {
             let p =
                 Puzzle::from_str("9 15 20 6/19 11 13 12/17 3 10 23/0 7 2 14/1 16 18 21/22 8 5 4")
@@ -420,7 +371,7 @@ mod tests {
 
         #[test]
         fn test_gap_position() {
-            let mut p = Puzzle::new(4, 6).unwrap();
+            let mut p = Puzzle::new(Size::new(4, 6).unwrap());
             assert_eq!(p.gap_position(), 23);
             assert_eq!(p.gap_position_xy(), (3, 5));
             p.try_move_dir(Direction::Down);
@@ -433,15 +384,15 @@ mod tests {
 
         #[test]
         fn test_reset() {
-            let mut p = Puzzle::new(4, 4).unwrap();
+            let mut p = Puzzle::new(Size::new(4, 4).unwrap());
             p.try_move_dir(Direction::Down);
             p.reset();
-            assert_eq!(p, Puzzle::new(4, 4).unwrap());
+            assert_eq!(p, Puzzle::new(Size::new(4, 4).unwrap()));
         }
 
         #[test]
         fn test_reset_to_label() {
-            let mut p = Puzzle::new(4, 4).unwrap();
+            let mut p = Puzzle::new(Size::new(4, 4).unwrap());
             p.reset_to_label(&FringeGrids);
             assert_eq!(
                 p.pieces,
@@ -462,7 +413,7 @@ mod tests {
 
         #[test]
         fn test_solved_pos() {
-            let p = Puzzle::new(4, 6).unwrap();
+            let p = Puzzle::new(Size::new(4, 6).unwrap());
             assert_eq!(p.try_solved_pos(0), Some(23));
             assert_eq!(p.try_solved_pos_xy(0), Some((3, 5)));
             assert_eq!(p.try_solved_pos(1), Some(0));
@@ -475,7 +426,7 @@ mod tests {
 
         #[test]
         fn test_piece_at() {
-            let mut p = Puzzle::new(4, 6).unwrap();
+            let mut p = Puzzle::new(Size::new(4, 6).unwrap());
             p.try_apply_move(Move::new(Direction::Down, 2));
             p.try_apply_move(Move::new(Direction::Right, 3));
             assert_eq!(p.try_piece_at(0), Some(1));
@@ -491,7 +442,7 @@ mod tests {
 
         #[test]
         fn test_swap_pieces() {
-            let mut p = Puzzle::new(4, 4).unwrap();
+            let mut p = Puzzle::new(Size::new(4, 4).unwrap());
             p.try_swap_pieces(0, 6);
             assert_eq!(p.try_piece_at(0), Some(7));
             assert_eq!(p.try_piece_at(6), Some(1));
@@ -502,14 +453,14 @@ mod tests {
 
         #[test]
         fn test_swap_pieces_2() {
-            let mut p = Puzzle::new(4, 4).unwrap();
+            let mut p = Puzzle::new(Size::new(4, 4).unwrap());
             p.try_swap_pieces(0, 15);
             assert_eq!(p.gap_position(), 0);
         }
 
         #[test]
         fn test_can_move_dir() {
-            let mut p = Puzzle::new(4, 4).unwrap();
+            let mut p = Puzzle::new(Size::new(4, 4).unwrap());
             assert!(!p.can_move_dir(Direction::Up));
             assert!(!p.can_move_dir(Direction::Left));
             assert!(p.can_move_dir(Direction::Down));
@@ -538,7 +489,7 @@ mod tests {
 
         #[test]
         fn test_move_dir() {
-            let mut p = Puzzle::new(4, 4).unwrap();
+            let mut p = Puzzle::new(Size::new(4, 4).unwrap());
             assert!(p.try_move_dir(Direction::Down));
             assert!(!p.try_move_dir(Direction::Left));
             assert!(p.try_move_dir(Direction::Right));
@@ -552,7 +503,7 @@ mod tests {
 
         #[test]
         fn test_can_apply_move() {
-            let mut p = Puzzle::new(4, 4).unwrap();
+            let mut p = Puzzle::new(Size::new(4, 4).unwrap());
             p.try_move_dir(Direction::Down);
             p.try_move_dir(Direction::Right);
             assert!(p.can_apply_move(Move::new(Direction::Up, 1)));
@@ -567,7 +518,7 @@ mod tests {
 
         #[test]
         fn test_apply_move() {
-            let mut p = Puzzle::new(4, 4).unwrap();
+            let mut p = Puzzle::new(Size::new(4, 4).unwrap());
             assert!(p.try_apply_move(Move::new(Direction::Down, 2)));
             assert!(!p.try_apply_move(Move::new(Direction::Down, 2)));
             assert!(!p.try_apply_move(Move::new(Direction::Left, 1)));
@@ -689,7 +640,7 @@ mod tests {
 
         #[test]
         fn test_can_apply_alg() {
-            let p = Puzzle::new(4, 4).unwrap();
+            let p = Puzzle::new(Size::new(4, 4).unwrap());
             let a = Algorithm::from_str("D3RU2RD2RU3L3").unwrap();
             assert!(p.can_apply_alg(&a));
             let a = Algorithm::from_str("R2DL2UR2D2RU2LD3RULURDLDLU2RDLULD2RULDR2U").unwrap();
@@ -705,7 +656,7 @@ mod tests {
 
         #[test]
         fn test_apply_alg() {
-            let mut p = Puzzle::new(4, 4).unwrap();
+            let mut p = Puzzle::new(Size::new(4, 4).unwrap());
             let a = Algorithm::from_str("D3RU2RD2RU3L3").unwrap();
             p.try_apply_alg(&a);
             assert_eq!(
@@ -726,8 +677,7 @@ mod tests {
                 a,
                 Ok(Puzzle {
                     pieces: vec![1, 2, 3, 4, 5, 6, 7, 0],
-                    width: 4,
-                    height: 2,
+                    size: Size::new(4, 2).unwrap(),
                     gap: 7
                 })
             );
@@ -740,8 +690,7 @@ mod tests {
                 a,
                 Ok(Puzzle {
                     pieces: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0],
-                    width: 4,
-                    height: 4,
+                    size: Size::new(4, 4).unwrap(),
                     gap: 15
                 })
             );
@@ -754,8 +703,7 @@ mod tests {
                 a,
                 Ok(Puzzle {
                     pieces: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0],
-                    width: 4,
-                    height: 4,
+                    size: Size::new(4, 4).unwrap(),
                     gap: 15
                 })
             );
@@ -804,13 +752,13 @@ mod benchmarks {
 
     #[bench]
     fn bench_is_solved_100(b: &mut Bencher) {
-        let p = Puzzle::new(100, 100).unwrap();
+        let p = Puzzle::new(Size::new(100, 100).unwrap());
         b.iter(|| black_box(p.is_solved()));
     }
 
     #[bench]
     fn bench_solved_pos(b: &mut Bencher) {
-        let p = Puzzle::new(4, 4).unwrap();
+        let p = Puzzle::new(Size::new(4, 4).unwrap());
         b.iter(|| {
             for _ in 0..1000 {
                 black_box(p.solved_pos(10));
@@ -820,7 +768,7 @@ mod benchmarks {
 
     #[bench]
     fn bench_try_solved_pos(b: &mut Bencher) {
-        let p = Puzzle::new(4, 4).unwrap();
+        let p = Puzzle::new(Size::new(4, 4).unwrap());
         b.iter(|| {
             for _ in 0..1000 {
                 black_box(p.try_solved_pos(10).unwrap());
@@ -830,7 +778,7 @@ mod benchmarks {
 
     #[bench]
     fn bench_solved_pos_xy(b: &mut Bencher) {
-        let p = Puzzle::new(4, 4).unwrap();
+        let p = Puzzle::new(Size::new(4, 4).unwrap());
         b.iter(|| {
             for _ in 0..1000 {
                 black_box(p.solved_pos_xy(10));
@@ -840,7 +788,7 @@ mod benchmarks {
 
     #[bench]
     fn bench_try_solved_pos_xy(b: &mut Bencher) {
-        let p = Puzzle::new(4, 4).unwrap();
+        let p = Puzzle::new(Size::new(4, 4).unwrap());
         b.iter(|| {
             for _ in 0..1000 {
                 black_box(p.try_solved_pos_xy(10).unwrap());

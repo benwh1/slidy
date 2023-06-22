@@ -401,7 +401,7 @@ impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
         Puzzle: SlidingPuzzle,
         Puzzle::Piece: Display,
     {
-        let (width, height) = puzzle.size();
+        let (width, height) = puzzle.size().into();
 
         if !self.scheme.is_valid_size(width, height) {
             return Err(RendererError::IncompatibleLabel { width, height });
@@ -429,7 +429,7 @@ impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
         Puzzle: SlidingPuzzle,
         Puzzle::Piece: Display,
     {
-        let (width, height) = puzzle.size();
+        let (width, height) = puzzle.size().into();
 
         let border_thickness = self
             .borders
@@ -550,7 +550,7 @@ impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
         Puzzle: SlidingPuzzle,
         Puzzle::Piece: Display,
     {
-        let (width, height) = puzzle.size();
+        let (width, height) = puzzle.size().into();
 
         if !self.scheme.is_valid_size(width, height) {
             return Err(RendererError::IncompatibleLabel { width, height });

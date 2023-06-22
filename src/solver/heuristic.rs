@@ -27,7 +27,7 @@ where
     usize: AsPrimitive<T>,
 {
     fn bound(&self, puzzle: &Puzzle) -> T {
-        let (w, h) = puzzle.size();
+        let (w, h) = puzzle.size().into();
         (0..w)
             .cartesian_product(0..h)
             .map(|(x, y)| {

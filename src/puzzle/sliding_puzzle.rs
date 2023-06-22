@@ -9,7 +9,9 @@ use crate::{
         direction::Direction,
         r#move::{position_move::PositionMove, r#move::Move, try_into_move::TryIntoMove},
     },
-    puzzle::{label::label::BijectiveLabel, solvable::Solvable, solved_state::SolvedState},
+    puzzle::{
+        label::label::BijectiveLabel, size::Size, solvable::Solvable, solved_state::SolvedState,
+    },
 };
 
 use super::label::label::RowGrids;
@@ -35,36 +37,22 @@ where
     /// The type representing a piece of the puzzle (likely the elements in an array or vector).
     type Piece: PrimInt;
 
-    /// Width of the puzzle.
+    /// Size of the puzzle.
     #[must_use]
-    #[inline]
-    fn width(&self) -> usize {
-        self.size().0
-    }
-
-    /// Height of the puzzle.
-    #[must_use]
-    #[inline]
-    fn height(&self) -> usize {
-        self.size().1
-    }
-
-    /// Size of the puzzle in the form `(width, height)`.
-    #[must_use]
-    fn size(&self) -> (usize, usize);
+    fn size(&self) -> Size;
 
     /// Product of the width and height.
     #[must_use]
     #[inline]
     fn area(&self) -> usize {
-        self.width() * self.height()
+        self.size().area()
     }
 
     /// Number of pieces in the puzzle.
     #[must_use]
     #[inline]
     fn num_pieces(&self) -> usize {
-        self.area() - 1
+        self.size().num_pieces()
     }
 
     /// Position of piece `piece`.
@@ -95,14 +83,14 @@ where
     #[must_use]
     fn piece_position_xy(&self, piece: Self::Piece) -> (usize, usize) {
         let pos = self.piece_position(piece);
-        let w = self.width();
+        let w = self.size().width();
         (pos % w, pos / w)
     }
 
     /// See [`SlidingPuzzle::piece_position_xy`].
     #[must_use]
     fn try_piece_position_xy(&self, piece: Self::Piece) -> Option<(usize, usize)> {
-        let w = self.width();
+        let w = self.size().width();
         self.try_piece_position(piece).map(|p| (p % w, p / w))
     }
 
@@ -110,7 +98,7 @@ where
     #[must_use]
     unsafe fn piece_position_xy_unchecked(&self, piece: Self::Piece) -> (usize, usize) {
         let pos = self.piece_position_unchecked(piece);
-        let w = self.width();
+        let w = self.size().width();
         (pos % w, pos / w)
     }
 
@@ -162,7 +150,7 @@ where
 
     /// Reset the puzzle to the solved state as defined by a [`BijectiveLabel`]
     fn reset_to_label<L: BijectiveLabel>(&mut self, label: &L) {
-        let (w, h) = self.size();
+        let (w, h) = self.size().into();
         let area = <Self::Piece as NumCast>::from(w * h).unwrap();
         for y in 0..h {
             for x in 0..w {
@@ -279,7 +267,7 @@ where
     #[must_use]
     fn solved_pos_xy(&self, piece: Self::Piece) -> (usize, usize) {
         let p = self.solved_pos(piece);
-        let w = self.width();
+        let w = self.size().width();
         (p % w, p / w)
     }
 
@@ -298,7 +286,7 @@ where
     #[inline]
     unsafe fn solved_pos_xy_unchecked(&self, piece: Self::Piece) -> (usize, usize) {
         let p = self.solved_pos_unchecked(piece);
-        let w = self.width();
+        let w = self.size().width();
         (p % w, p / w)
     }
 
@@ -336,13 +324,13 @@ where
     #[must_use]
     #[inline]
     fn piece_at_xy(&self, x: usize, y: usize) -> Self::Piece {
-        self.piece_at(x + self.width() * y)
+        self.piece_at(x + self.size().width() * y)
     }
 
     /// See [`SlidingPuzzle::piece_at_xy`].
     #[must_use]
     fn try_piece_at_xy(&self, x: usize, y: usize) -> Option<Self::Piece> {
-        if x < self.width() && y < self.height() {
+        if self.size().is_within_bounds((x, y)) {
             Some(self.piece_at_xy(x, y))
         } else {
             None
@@ -353,7 +341,7 @@ where
     #[must_use]
     #[inline]
     unsafe fn piece_at_xy_unchecked(&self, x: usize, y: usize) -> Self::Piece {
-        self.piece_at_unchecked(x + self.width() * y)
+        self.piece_at_unchecked(x + self.size().width() * y)
     }
 
     /// Swaps the pieces at positions `idx1` and `idx2`.
@@ -391,14 +379,14 @@ where
     /// See [`SlidingPuzzle::swap_pieces`].
     #[inline]
     fn swap_pieces_xy(&mut self, (x1, y1): (usize, usize), (x2, y2): (usize, usize)) {
-        let w = self.width();
+        let w = self.size().width();
         self.swap_pieces(x1 + w * y1, x2 + w * y2);
     }
 
     /// See [`SlidingPuzzle::swap_pieces_xy`].
     #[inline]
     fn try_swap_pieces_xy(&mut self, (x1, y1): (usize, usize), (x2, y2): (usize, usize)) -> bool {
-        let w = self.width();
+        let w = self.size().width();
         self.try_swap_pieces(x1 + w * y1, x2 + w * y2)
     }
 
@@ -409,7 +397,7 @@ where
         (x1, y1): (usize, usize),
         (x2, y2): (usize, usize),
     ) {
-        let w = self.width();
+        let w = self.size().width();
         self.swap_pieces_unchecked(x1 + w * y1, x2 + w * y2);
     }
 
@@ -441,8 +429,8 @@ where
     fn can_move_dir(&self, dir: Direction) -> bool {
         let (gx, gy) = self.gap_position_xy();
         match dir {
-            Direction::Up => gy + 1 < self.height(),
-            Direction::Left => gx + 1 < self.width(),
+            Direction::Up => gy + 1 < self.size().height(),
+            Direction::Left => gx + 1 < self.size().width(),
             Direction::Down => gy > 0,
             Direction::Right => gx > 0,
         }
@@ -457,9 +445,9 @@ where
     fn move_dir(&mut self, dir: Direction) {
         let gap = self.gap_position();
         let piece = match dir {
-            Direction::Up => gap + self.width(),
+            Direction::Up => gap + self.size().width(),
             Direction::Left => gap + 1,
-            Direction::Down => gap - self.width(),
+            Direction::Down => gap - self.size().width(),
             Direction::Right => gap - 1,
         };
         self.swap_piece_with_gap(piece);
@@ -482,9 +470,9 @@ where
     unsafe fn move_dir_unchecked(&mut self, dir: Direction) {
         let gap = self.gap_position_unchecked();
         let piece = match dir {
-            Direction::Up => gap + self.width(),
+            Direction::Up => gap + self.size().width(),
             Direction::Left => gap + 1,
-            Direction::Down => gap - self.width(),
+            Direction::Down => gap - self.size().width(),
             Direction::Right => gap - 1,
         };
         self.swap_piece_with_gap_unchecked(piece);
@@ -496,8 +484,8 @@ where
         let (gx, gy) = self.gap_position_xy();
         let amount = mv.amount as usize;
         match mv.direction {
-            Direction::Up => gy + amount < self.height(),
-            Direction::Left => gx + amount < self.width(),
+            Direction::Up => gy + amount < self.size().height(),
+            Direction::Left => gx + amount < self.size().width(),
             Direction::Down => gy >= amount,
             Direction::Right => gx >= amount,
         }
@@ -541,7 +529,7 @@ where
     /// if `idx` is the gap position.
     #[must_use]
     fn can_move_position(&self, idx: usize) -> bool {
-        let w = self.width();
+        let w = self.size().width();
         self.can_move_position_xy((idx % w, idx / w))
     }
 
@@ -552,7 +540,7 @@ where
     /// If `self.can_move_position(idx)` is false, the function may panic or the puzzle may be
     /// transformed in an invalid way.
     fn move_position(&mut self, idx: usize) {
-        let w = self.width();
+        let w = self.size().width();
         self.move_position_xy((idx % w, idx / w));
     }
 
@@ -560,7 +548,7 @@ where
     ///
     /// Returns `true` if the piece was moved successfully, `false` otherwise.
     fn try_move_position(&mut self, idx: usize) -> bool {
-        let w = self.width();
+        let w = self.size().width();
         self.try_move_position_xy((idx % w, idx / w))
     }
 
@@ -576,8 +564,7 @@ where
     /// `true` if `(x, y)` is the gap position.
     #[must_use]
     fn can_move_position_xy(&self, (x, y): (usize, usize)) -> bool {
-        let (w, h) = self.size();
-        if x >= w || y >= h {
+        if self.size().is_within_bounds((x, y)) {
             false
         } else {
             let (gx, gy) = self.gap_position_xy();
@@ -651,7 +638,6 @@ where
     /// Checks if it is possible to apply the given [`Algorithm`].
     #[must_use]
     fn can_apply_alg<'a, Alg: AsAlgorithmSlice<'a>>(&self, alg: &'a Alg) -> bool {
-        let (width, height) = self.size();
         let (mut gx, mut gy) = self.gap_position_xy();
 
         for m in alg.as_slice().moves() {
@@ -663,7 +649,7 @@ where
                 Direction::Right => (gx.checked_sub(amount), Some(gy)),
             };
 
-            if let (Some(new_gx), Some(new_gy)) = (new_gx, new_gy) && new_gx < width && new_gy < height {
+            if let (Some(new_gx), Some(new_gy)) = (new_gx, new_gy) && self.size().is_within_bounds((new_gx, new_gy)) {
                 (gx, gy) = (new_gx, new_gy);
             } else {
                 return false;

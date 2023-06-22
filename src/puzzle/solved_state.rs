@@ -21,7 +21,7 @@ impl<L: Label> SolvedState for L {
     where
         Puzzle: SlidingPuzzle,
     {
-        let (w, h) = puzzle.size();
+        let (w, h) = puzzle.size().into();
         if puzzle.gap_position_xy() != (w - 1, h - 1) {
             return false;
         }
