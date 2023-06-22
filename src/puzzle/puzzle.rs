@@ -2,9 +2,11 @@
 
 use super::{
     display::{DisplayGrid, DisplayInline},
+    label::labels::BijectiveLabel,
     sliding_puzzle::SlidingPuzzle,
 };
 use lazy_static::lazy_static;
+use num_traits::AsPrimitive;
 use regex::Regex;
 use std::{collections::HashSet, fmt::Display, num::ParseIntError, str::FromStr};
 use thiserror::Error;
@@ -148,6 +150,33 @@ impl SlidingPuzzle for Puzzle {
         self.gap
     }
 
+    fn reset_to_label<L: BijectiveLabel>(&mut self, label: &L) {
+        let (w, h) = self.size();
+        let area = self.area();
+        for y in 0..h {
+            for x in 0..w {
+                let label = label.position_label(w, h, x, y);
+                let idx = x + w * y;
+                if label + 1 == area {
+                    self.pieces[idx] = 0;
+                    self.gap = idx;
+                } else {
+                    self.pieces[idx] = label as u32 + 1;
+                }
+            }
+        }
+    }
+
+    unsafe fn set_state_unchecked<P: SlidingPuzzle>(&mut self, other: &P)
+    where
+        P::Piece: AsPrimitive<Self::Piece>,
+        Self::Piece: 'static,
+    {
+        for i in 0..other.area() {
+            self.pieces[i] = other.piece_at_unchecked(i).as_();
+        }
+    }
+
     #[inline]
     fn solved_pos(&self, piece: u32) -> usize {
         if piece == 0 {
@@ -165,22 +194,6 @@ impl SlidingPuzzle for Puzzle {
     #[inline]
     unsafe fn piece_at_unchecked(&self, idx: usize) -> u32 {
         *self.pieces.get_unchecked(idx)
-    }
-
-    #[inline]
-    fn set_piece(&mut self, idx: usize, piece: u32) {
-        self.pieces[idx] = piece;
-        if piece == 0 {
-            self.gap = idx;
-        }
-    }
-
-    #[inline]
-    unsafe fn set_piece_unchecked(&mut self, idx: usize, piece: u32) {
-        *self.pieces.get_unchecked_mut(idx) = piece;
-        if piece == 0 {
-            self.gap = idx;
-        }
     }
 
     fn swap_pieces(&mut self, idx1: usize, idx2: usize) {
@@ -479,29 +492,6 @@ mod tests {
             assert_eq!(p.try_piece_at(24), None);
             assert_eq!(p.try_piece_at_xy(4, 0), None);
             assert_eq!(p.try_piece_at_xy(0, 6), None);
-        }
-
-        #[test]
-        fn test_set_piece() {
-            let mut p = Puzzle::new(4, 4).unwrap();
-            p.try_set_piece(0, 6);
-            p.try_set_piece_xy((1, 1), 1);
-            assert_eq!(
-                p.pieces,
-                vec![6, 2, 3, 4, 5, 1, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0]
-            );
-        }
-
-        #[test]
-        fn test_set_piece_2() {
-            let mut p = Puzzle::new(4, 4).unwrap();
-            p.try_set_piece(0, 0);
-            p.try_set_piece_xy((3, 3), 1);
-            assert_eq!(
-                p.pieces,
-                vec![0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 1,]
-            );
-            assert_eq!(p.gap, 0);
         }
 
         #[test]

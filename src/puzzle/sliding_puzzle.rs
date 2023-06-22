@@ -172,7 +172,7 @@ where
                         a
                     }
                 };
-                self.set_piece_xy((x, y), piece);
+                self.swap_pieces_xy((x, y), self.piece_position_xy(piece));
             }
         }
     }
@@ -217,7 +217,10 @@ where
         Self::Piece: 'static,
     {
         for i in 0..other.area() {
-            self.set_piece_unchecked(i, other.piece_at_unchecked(i).as_());
+            self.swap_pieces_unchecked(
+                i,
+                self.piece_position_unchecked(other.piece_at_unchecked(i).as_()),
+            );
         }
     }
 
@@ -352,68 +355,13 @@ where
         self.piece_at_unchecked(x + self.width() * y)
     }
 
-    /// Set the piece at a given position to `piece`.
-    ///
-    /// This function may create invalid states if used incorrectly, e.g. creating multiple pieces
-    /// with the same number, or pieces with large or negative numbers.
-    ///
-    /// # Panics
-    ///
-    /// If `idx` is not within the range `0 <= idx < self.area()`, the function may panic.
-    fn set_piece(&mut self, idx: usize, piece: Self::Piece);
-
-    /// See [`SlidingPuzzle::set_piece`].
-    ///
-    /// Returns `true` if `idx` is within the valid range for the puzzle and the piece was
-    /// successfully set, and `false` otherwise.
-    fn try_set_piece(&mut self, idx: usize, piece: Self::Piece) -> bool {
-        if idx < self.area() {
-            unsafe { self.set_piece_unchecked(idx, piece) };
-            true
-        } else {
-            false
-        }
-    }
-
-    /// See [`SlidingPuzzle::set_piece`].
-    #[inline]
-    unsafe fn set_piece_unchecked(&mut self, idx: usize, piece: Self::Piece) {
-        self.set_piece(idx, piece);
-    }
-
-    /// Set the piece at a given (x, y) position to `piece`.
-    ///
-    /// # Panics
-    ///
-    /// See [`SlidingPuzzle::set_piece`].
-    #[inline]
-    fn set_piece_xy(&mut self, (x, y): (usize, usize), piece: Self::Piece) {
-        self.set_piece(x + self.width() * y, piece);
-    }
-
-    /// See [`SlidingPuzzle::set_piece_xy`].
-    #[inline]
-    fn try_set_piece_xy(&mut self, (x, y): (usize, usize), piece: Self::Piece) -> bool {
-        self.try_set_piece(x + self.width() * y, piece)
-    }
-
-    /// See [`SlidingPuzzle::set_piece_xy`].
-    #[inline]
-    unsafe fn set_piece_xy_unchecked(&mut self, (x, y): (usize, usize), piece: Self::Piece) {
-        self.set_piece_unchecked(x + self.width() * y, piece);
-    }
-
     /// Swaps the pieces at positions `idx1` and `idx2`.
     ///
     /// # Panics
     ///
     /// `idx1` and `idx2` must both satisfy `0 <= idx < self.area()`, otherwise the function may
     /// panic.
-    fn swap_pieces(&mut self, idx1: usize, idx2: usize) {
-        let piece = self.piece_at(idx1);
-        self.set_piece(idx1, self.piece_at(idx2));
-        self.set_piece(idx2, piece);
-    }
+    fn swap_pieces(&mut self, idx1: usize, idx2: usize);
 
     /// See [`SlidingPuzzle::swap_pieces`].
     ///
