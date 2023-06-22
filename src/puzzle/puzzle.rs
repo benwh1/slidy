@@ -136,13 +136,8 @@ impl SlidingPuzzle for Puzzle {
     type Piece = u32;
 
     #[inline]
-    fn width(&self) -> usize {
-        self.width
-    }
-
-    #[inline]
-    fn height(&self) -> usize {
-        self.height
+    fn size(&self) -> (usize, usize) {
+        (self.width, self.height)
     }
 
     #[inline]

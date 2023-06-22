@@ -37,18 +37,21 @@ where
 
     /// Width of the puzzle.
     #[must_use]
-    fn width(&self) -> usize;
+    #[inline]
+    fn width(&self) -> usize {
+        self.size().0
+    }
 
     /// Height of the puzzle.
     #[must_use]
-    fn height(&self) -> usize;
+    #[inline]
+    fn height(&self) -> usize {
+        self.size().1
+    }
 
     /// Size of the puzzle in the form `(width, height)`.
     #[must_use]
-    #[inline]
-    fn size(&self) -> (usize, usize) {
-        (self.width(), self.height())
-    }
+    fn size(&self) -> (usize, usize);
 
     /// Product of the width and height.
     #[must_use]
