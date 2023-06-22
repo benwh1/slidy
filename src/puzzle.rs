@@ -10,6 +10,7 @@ pub mod label;
 pub mod puzzle;
 pub mod render;
 pub mod scrambler;
+pub mod size;
 pub mod sliding_puzzle;
 pub mod solvable;
 pub mod solved_state;
