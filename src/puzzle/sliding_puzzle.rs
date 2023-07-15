@@ -565,10 +565,10 @@ where
     #[must_use]
     fn can_move_position_xy(&self, (x, y): (usize, usize)) -> bool {
         if self.size().is_within_bounds((x, y)) {
-            false
-        } else {
             let (gx, gy) = self.gap_position_xy();
             x == gx || y == gy
+        } else {
+            false
         }
     }
 
