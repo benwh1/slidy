@@ -24,55 +24,64 @@ impl Size {
     /// Creates a new [`Size`] with the given `width` and `height`.
     pub fn new(width: usize, height: usize) -> Result<Self, SizeError> {
         if width >= 2 && height >= 2 {
-            Ok(Size(width, height))
+            Ok(Self(width, height))
         } else {
             Err(SizeError::InvalidSize(width, height))
         }
     }
 
     /// The width of the [`Size`].
+    #[must_use]
     pub fn width(&self) -> usize {
         self.0
     }
 
     /// The height of the [`Size`].
+    #[must_use]
     pub fn height(&self) -> usize {
         self.1
     }
 
     /// The product of the width and height.
+    #[must_use]
     pub fn area(&self) -> usize {
         self.width() * self.height()
     }
 
     /// The number of pieces in a puzzle of this size. Equals `self.area() - 1`.
+    #[must_use]
     pub fn num_pieces(&self) -> usize {
         self.area() - 1
     }
 
     /// Checks whether a position `(x, y)` is within bounds on a puzzle of this size.
+    #[must_use]
     pub fn is_within_bounds(&self, (x, y): (usize, usize)) -> bool {
         x < self.width() && y < self.height()
     }
 
     /// The size of the transposed puzzle (width and height swapped).
+    #[must_use]
     pub fn transpose(&self) -> Self {
         Self(self.1, self.0)
     }
 
     /// The square of size equal to the minimum of the width and height of `self`.
+    #[must_use]
     pub fn shrink_to_square(&self) -> Self {
         let s = self.0.min(self.1);
         Self(s, s)
     }
 
     /// The square of size equal to the maximum of the width and height of `self`.self) -> Self {
+    #[must_use]
     pub fn expand_to_square(&self) -> Self {
         let s = self.0.max(self.1);
         Self(s, s)
     }
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<(usize, usize)> for Size {
     fn into(self) -> (usize, usize) {
         (self.width(), self.height())
@@ -111,7 +120,7 @@ impl FromStr for Size {
     /// - `WxH` for some integer strings `W` and `H`, representing the width and height.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Ok(s) = s.parse::<usize>() {
-            Ok(Size(s, s))
+            Ok(Self(s, s))
         } else {
             let (w, h) = s.split_once('x').ok_or(ParseSizeError::ParseError)?;
             let (w, h) = (
@@ -122,7 +131,7 @@ impl FromStr for Size {
                     .parse::<usize>()
                     .map_err(ParseSizeError::ParseHeightError)?,
             );
-            Ok(Size(w, h))
+            Ok(Self(w, h))
         }
     }
 }

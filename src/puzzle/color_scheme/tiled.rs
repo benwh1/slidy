@@ -35,36 +35,31 @@ impl<C: ColorScheme> ColorScheme for Tiled<C> {
         let (gw, gh) = self.grid_size.into();
 
         if width >= gw {
-            if height >= gh {
-                if !self.color_scheme.is_valid_size(self.grid_size) {
-                    return false;
-                }
+            if height >= gh && !self.color_scheme.is_valid_size(self.grid_size) {
+                return false;
             }
-            if height % gh != 0 {
-                if !Size::new(gw, height % gh)
+            if height % gh != 0
+                && !Size::new(gw, height % gh)
                     .map(|size| self.color_scheme.is_valid_size(size))
                     .unwrap_or_default()
-                {
-                    return false;
-                }
+            {
+                return false;
             }
         }
         if width % gw != 0 {
-            if height >= gh {
-                if !Size::new(width % gw, gh)
+            if height >= gh
+                && !Size::new(width % gw, gh)
                     .map(|size| self.color_scheme.is_valid_size(size))
                     .unwrap_or_default()
-                {
-                    return false;
-                }
+            {
+                return false;
             }
-            if height % gh != 0 {
-                if !Size::new(width % gw, height % gh)
+            if height % gh != 0
+                && !Size::new(width % gw, height % gh)
                     .map(|size| self.color_scheme.is_valid_size(size))
                     .unwrap_or_default()
-                {
-                    return false;
-                }
+            {
+                return false;
             }
         }
 

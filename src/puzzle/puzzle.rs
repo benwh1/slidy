@@ -47,6 +47,7 @@ pub enum PuzzleError {
 
 impl Puzzle {
     /// Create a new [`Puzzle`] of a given size in the solved state.
+    #[must_use]
     pub fn new(size: Size) -> Self {
         Self {
             pieces: {
