@@ -32,11 +32,11 @@ impl<L: Label> SolvedState for L {
             .take(w * h - 1)
             .all(|(x, y)| {
                 // Label of piece in position (x, y)
-                let (sx, sy) = puzzle.solved_pos_xy(puzzle.piece_at_xy(x, y));
-                let piece_label = self.try_position_label(size, sx, sy);
+                let solved_pos = puzzle.solved_pos_xy(puzzle.piece_at_xy((x, y)));
+                let piece_label = self.try_position_label(size, solved_pos);
 
                 // Label of piece in position (x, y) on a solved puzzle
-                let solved_label = self.try_position_label(size, x, y);
+                let solved_label = self.try_position_label(size, (x, y));
 
                 piece_label == solved_label
             })

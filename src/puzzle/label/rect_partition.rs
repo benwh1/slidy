@@ -234,7 +234,7 @@ impl Label for RectPartition {
         self.rect().size() == (width as u32, height as u32)
     }
 
-    fn position_label(&self, _size: Size, x: usize, y: usize) -> usize {
+    fn position_label(&self, _size: Size, (x, y): (usize, usize)) -> usize {
         let (x, y) = (x as u32, y as u32);
         self.rects.iter().position(|r| r.contains(x, y)).unwrap()
     }

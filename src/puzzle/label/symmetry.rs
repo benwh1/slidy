@@ -38,8 +38,8 @@ impl<L: Label> Label for Id<L> {
         self.0.is_valid_size(size)
     }
 
-    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
-        self.0.position_label(size, x, y)
+    fn position_label(&self, size: Size, pos: (usize, usize)) -> usize {
+        self.0.position_label(size, pos)
     }
 
     fn num_labels(&self, size: Size) -> usize {
@@ -52,9 +52,9 @@ impl<L: Label> Label for RotateCw<L> {
         self.0.is_valid_size(size.transpose())
     }
 
-    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+    fn position_label(&self, size: Size, (x, y): (usize, usize)) -> usize {
         self.0
-            .position_label(size.transpose(), y, size.width() - 1 - x)
+            .position_label(size.transpose(), (y, size.width() - 1 - x))
     }
 
     fn num_labels(&self, size: Size) -> usize {
@@ -67,9 +67,9 @@ impl<L: Label> Label for RotateCcw<L> {
         self.0.is_valid_size(size.transpose())
     }
 
-    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+    fn position_label(&self, size: Size, (x, y): (usize, usize)) -> usize {
         self.0
-            .position_label(size.transpose(), size.height() - 1 - y, x)
+            .position_label(size.transpose(), (size.height() - 1 - y, x))
     }
 
     fn num_labels(&self, size: Size) -> usize {
@@ -82,9 +82,9 @@ impl<L: Label> Label for RotateHalf<L> {
         self.0.is_valid_size(size)
     }
 
-    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+    fn position_label(&self, size: Size, (x, y): (usize, usize)) -> usize {
         let (width, height) = size.into();
-        self.0.position_label(size, width - 1 - x, height - 1 - y)
+        self.0.position_label(size, (width - 1 - x, height - 1 - y))
     }
 
     fn num_labels(&self, size: Size) -> usize {
@@ -97,8 +97,8 @@ impl<L: Label> Label for ReflectVertical<L> {
         self.0.is_valid_size(size)
     }
 
-    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
-        self.0.position_label(size, x, size.height() - 1 - y)
+    fn position_label(&self, size: Size, (x, y): (usize, usize)) -> usize {
+        self.0.position_label(size, (x, size.height() - 1 - y))
     }
 
     fn num_labels(&self, size: Size) -> usize {
@@ -111,8 +111,8 @@ impl<L: Label> Label for ReflectHorizontal<L> {
         self.0.is_valid_size(size)
     }
 
-    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
-        self.0.position_label(size, size.width() - 1 - x, y)
+    fn position_label(&self, size: Size, (x, y): (usize, usize)) -> usize {
+        self.0.position_label(size, (size.width() - 1 - x, y))
     }
 
     fn num_labels(&self, size: Size) -> usize {
@@ -125,8 +125,8 @@ impl<L: Label> Label for ReflectDiagonal<L> {
         self.0.is_valid_size(size.transpose())
     }
 
-    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
-        self.0.position_label(size.transpose(), y, x)
+    fn position_label(&self, size: Size, (x, y): (usize, usize)) -> usize {
+        self.0.position_label(size.transpose(), (y, x))
     }
 
     fn num_labels(&self, size: Size) -> usize {
@@ -139,10 +139,10 @@ impl<L: Label> Label for ReflectAntidiagonal<L> {
         self.0.is_valid_size(size.transpose())
     }
 
-    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+    fn position_label(&self, size: Size, (x, y): (usize, usize)) -> usize {
         let (width, height) = size.into();
         self.0
-            .position_label(size.transpose(), height - 1 - y, width - 1 - x)
+            .position_label(size.transpose(), (height - 1 - y, width - 1 - x))
     }
 
     fn num_labels(&self, size: Size) -> usize {
@@ -174,7 +174,7 @@ mod tests {
                     fn [< test_ $label:snake _ $w x $h >] () {
                         let size = Size::new($w, $h).unwrap();
                         let labels = (0..$w * $h)
-                            .map(|i| $label(RowGrids).position_label(size, i % $w, i / $w))
+                            .map(|i| $label(RowGrids).position_label(size, (i % $w, i / $w)))
                             .collect::<Vec<_>>();
                         let num_labels = $label(RowGrids).num_labels(size);
                         let expected_num_labels = $labels.iter().max().unwrap() + 1;

@@ -49,7 +49,7 @@ impl<L: Label> Label for Scaled<L> {
             .unwrap_or_default()
     }
 
-    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+    fn position_label(&self, size: Size, (x, y): (usize, usize)) -> usize {
         let (width, height) = size.into();
         let (sw, sh) = (
             width.div_ceil(self.factor.0 as usize),
@@ -61,7 +61,7 @@ impl<L: Label> Label for Scaled<L> {
         );
 
         Size::new(sw, sh)
-            .map(|size| self.label.position_label(size, x, y))
+            .map(|size| self.label.position_label(size, (x, y)))
             .unwrap_or_default()
     }
 
@@ -90,7 +90,7 @@ mod tests {
         let label = Scaled::new(&RowGrids, (3, 2)).unwrap();
 
         let labels = (0..40)
-            .map(|i| label.position_label(size, i % 8, i / 8))
+            .map(|i| label.position_label(size, (i % 8, i / 8)))
             .collect::<Vec<_>>();
         let num_labels = label.num_labels(size);
 

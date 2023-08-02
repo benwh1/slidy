@@ -82,7 +82,7 @@ where
         let (w, h) = self.puzzle.size().into();
         for y in 0..h {
             for x in 0..w {
-                let n = self.puzzle.piece_at_xy(x, y);
+                let n = self.puzzle.piece_at_xy((x, y));
                 let a = format!("{n: >num_digits$}");
                 f.write_str(&a)?;
                 if x != w - 1 {
@@ -106,7 +106,7 @@ where
         let (w, h) = self.puzzle.size().into();
         for y in 0..h {
             for x in 0..w {
-                let n = self.puzzle.piece_at_xy(x, y);
+                let n = self.puzzle.piece_at_xy((x, y));
                 f.write_str(&n.to_string())?;
                 if x != w - 1 {
                     f.write_char(' ')?;

@@ -15,14 +15,12 @@ pub enum LabelError {
     InvalidSize(Size),
 
     /// Returned when the `(x, y)` position is outside the bounds of the puzzle.
-    #[error("PositionOutOfBounds: position ({x}, {y}) is out of bounds on a {size} puzzle.")]
+    #[error("PositionOutOfBounds: position {pos:?} is out of bounds on a {size} puzzle.")]
     PositionOutOfBounds {
         /// Size of the puzzle.
         size: Size,
-        /// x coordinate of the position.
-        x: usize,
-        /// y coordinate of the position.
-        y: usize,
+        /// Piece position.
+        pos: (usize, usize),
     },
 }
 
@@ -43,16 +41,16 @@ pub trait Label {
     /// function may panic or return an invalid label, e.g. an integer greater than or equal to
     /// `self.num_labels(size)`.
     #[must_use]
-    fn position_label(&self, size: Size, x: usize, y: usize) -> usize;
+    fn position_label(&self, size: Size, pos: (usize, usize)) -> usize;
 
     /// See [`Self::position_label`].
-    fn try_position_label(&self, size: Size, x: usize, y: usize) -> Result<usize, LabelError> {
+    fn try_position_label(&self, size: Size, pos: (usize, usize)) -> Result<usize, LabelError> {
         if !self.is_valid_size(size) {
             Err(LabelError::InvalidSize(size))
-        } else if !size.is_within_bounds((x, y)) {
-            Err(LabelError::PositionOutOfBounds { size, x, y })
+        } else if !size.is_within_bounds(pos) {
+            Err(LabelError::PositionOutOfBounds { size, pos })
         } else {
-            Ok(self.position_label(size, x, y))
+            Ok(self.position_label(size, pos))
         }
     }
 
@@ -78,8 +76,8 @@ impl<T: Label + ?Sized> Label for Box<T> {
         (**self).is_valid_size(size)
     }
 
-    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
-        (**self).position_label(size, x, y)
+    fn position_label(&self, size: Size, pos: (usize, usize)) -> usize {
+        (**self).position_label(size, pos)
     }
 
     fn num_labels(&self, size: Size) -> usize {
@@ -150,7 +148,7 @@ impl Label for Trivial {
         true
     }
 
-    fn position_label(&self, _size: Size, _x: usize, _y: usize) -> usize {
+    fn position_label(&self, _size: Size, _pos: (usize, usize)) -> usize {
         0
     }
 
@@ -164,7 +162,7 @@ impl Label for RowGrids {
         true
     }
 
-    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+    fn position_label(&self, size: Size, (x, y): (usize, usize)) -> usize {
         x + size.width() * y
     }
 
@@ -178,7 +176,7 @@ impl Label for Rows {
         true
     }
 
-    fn position_label(&self, _size: Size, _x: usize, y: usize) -> usize {
+    fn position_label(&self, _size: Size, (_, y): (usize, usize)) -> usize {
         y
     }
 
@@ -192,7 +190,7 @@ impl Label for Fringe {
         true
     }
 
-    fn position_label(&self, _size: Size, x: usize, y: usize) -> usize {
+    fn position_label(&self, _size: Size, (x, y): (usize, usize)) -> usize {
         x.min(y)
     }
 
@@ -206,7 +204,7 @@ impl Label for FringeGrids {
         true
     }
 
-    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+    fn position_label(&self, size: Size, (x, y): (usize, usize)) -> usize {
         // Which (non-split) fringe is (x, y) in?
         let fringe = x.min(y);
 
@@ -237,7 +235,7 @@ impl Label for SquareFringe {
         true
     }
 
-    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+    fn position_label(&self, size: Size, (x, y): (usize, usize)) -> usize {
         let (width, height) = size.into();
         match width.cmp(&height) {
             // Puzzle is taller than it is wide
@@ -249,11 +247,11 @@ impl Label for SquareFringe {
                 }
                 // Square part of the puzzle
                 else {
-                    diff + Fringe.position_label(size, x, y - diff)
+                    diff + Fringe.position_label(size, (x, y - diff))
                 }
             }
-            Ordering::Equal => Fringe.position_label(size, x, y),
-            Ordering::Greater => self.position_label(size.transpose(), y, x),
+            Ordering::Equal => Fringe.position_label(size, (x, y)),
+            Ordering::Greater => self.position_label(size.transpose(), (y, x)),
         }
     }
 
@@ -268,7 +266,7 @@ impl Label for SplitFringe {
         true
     }
 
-    fn position_label(&self, _size: Size, x: usize, y: usize) -> usize {
+    fn position_label(&self, _size: Size, (x, y): (usize, usize)) -> usize {
         // Which (non-split) fringe is (x, y) in?
         let fringe = x.min(y);
 
@@ -289,7 +287,7 @@ impl Label for SplitSquareFringe {
         true
     }
 
-    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+    fn position_label(&self, size: Size, (x, y): (usize, usize)) -> usize {
         let (width, height) = size.into();
         let d = width.abs_diff(height);
 
@@ -298,15 +296,15 @@ impl Label for SplitSquareFringe {
                 if y < d {
                     y
                 } else {
-                    d + SplitFringe.position_label(size, x, y - d)
+                    d + SplitFringe.position_label(size, (x, y - d))
                 }
             }
-            Ordering::Equal => SplitFringe.position_label(size, x, y),
+            Ordering::Equal => SplitFringe.position_label(size, (x, y)),
             Ordering::Greater => {
                 if x < d {
                     x
                 } else {
-                    d + SplitFringe.position_label(size, x - d, y)
+                    d + SplitFringe.position_label(size, (x - d, y))
                 }
             }
         }
@@ -325,7 +323,7 @@ impl Label for Diagonals {
         true
     }
 
-    fn position_label(&self, _size: Size, x: usize, y: usize) -> usize {
+    fn position_label(&self, _size: Size, (x, y): (usize, usize)) -> usize {
         x + y
     }
 
@@ -340,7 +338,7 @@ impl Label for LastTwoRows {
         true
     }
 
-    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+    fn position_label(&self, size: Size, (x, y): (usize, usize)) -> usize {
         let height = size.height();
         if y < height - 2 {
             y
@@ -359,7 +357,7 @@ impl Label for SplitLastTwoRows {
         true
     }
 
-    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+    fn position_label(&self, size: Size, (x, y): (usize, usize)) -> usize {
         if y < size.height() - 2 {
             y
         } else {
@@ -378,7 +376,7 @@ impl Label for ConcentricRectangles {
         true
     }
 
-    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+    fn position_label(&self, size: Size, (x, y): (usize, usize)) -> usize {
         let (width, height) = size.into();
         x.min(y).min(width - 1 - x).min(height - 1 - y)
     }
@@ -394,8 +392,8 @@ impl Label for Spiral {
         true
     }
 
-    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
-        let rect_label = ConcentricRectangles.position_label(size, x, y);
+    fn position_label(&self, size: Size, (x, y): (usize, usize)) -> usize {
+        let rect_label = ConcentricRectangles.position_label(size, (x, y));
 
         // Calculate the values (x, y, width, height) if we were to strip off any outer rectangles
         // from the puzzle.
@@ -444,8 +442,8 @@ impl Label for SpiralGrids {
         true
     }
 
-    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
-        let rect_label = ConcentricRectangles.position_label(size, x, y);
+    fn position_label(&self, size: Size, (x, y): (usize, usize)) -> usize {
+        let rect_label = ConcentricRectangles.position_label(size, (x, y));
 
         // See `Spiral::position_label`
         let (width, height) = size.into();
@@ -495,7 +493,7 @@ mod tests {
                     fn [< test_ $label:snake _ $w x $h >] () {
                         let size = Size::new($w, $h).unwrap();
                         let labels = (0..$w * $h)
-                            .map(|i| $label.position_label(size, i % $w, i / $w))
+                            .map(|i| $label.position_label(size, (i % $w, i / $w)))
                             .collect::<Vec<_>>();
                         let num_labels = $label.num_labels(size);
                         let expected_num_labels = $labels.iter().max().unwrap() + 1;

@@ -408,10 +408,10 @@ impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
 
         for y in 0..height {
             for x in 0..width {
-                let piece = puzzle.piece_at_xy(x, y);
+                let piece = puzzle.piece_at_xy((x, y));
 
                 if piece != Puzzle::Piece::zero() {
-                    group = group.add(self.render_piece(puzzle, x, y));
+                    group = group.add(self.render_piece(puzzle, (x, y)));
                 }
             }
         }
@@ -421,7 +421,7 @@ impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
 
     /// Draws the piece of `puzzle` at position `(x, y)` as an SVG image, wrapped in an SVG group
     /// element.
-    pub fn render_piece<Puzzle>(&self, puzzle: &Puzzle, x: usize, y: usize) -> Group
+    pub fn render_piece<Puzzle>(&self, puzzle: &Puzzle, (x, y): (usize, usize)) -> Group
     where
         Puzzle: SlidingPuzzle,
         Puzzle::Piece: Display,
@@ -434,7 +434,7 @@ impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
             .map(|a| a.thickness)
             .unwrap_or_default();
 
-        let piece = puzzle.piece_at_xy(x, y);
+        let piece = puzzle.piece_at_xy((x, y));
         let solved_pos = puzzle.solved_pos_xy(piece);
 
         let (x, y) = (x as f32, y as f32);
@@ -451,7 +451,7 @@ impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
         let subscheme_color = self
             .scheme
             .subscheme()
-            .map(|subscheme| subscheme.color(size, solved_pos.0, solved_pos.1));
+            .map(|subscheme| subscheme.color(size, solved_pos));
 
         // Macro to get the color that we want for text and border colors, as a hex string.
         // If `self.subscheme_style` is TextColor or BorderColor, then this will override the
@@ -464,7 +464,7 @@ impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
                     c
                 } else {
                     // If no override, then we use the text or border scheme color.
-                    $scheme.color(size, solved_pos.0, solved_pos.1)
+                    $scheme.color(size, solved_pos)
                 };
 
                 // Format as hex string
@@ -475,10 +475,7 @@ impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
 
         let rect = {
             let fill = {
-                let color: Rgba<_, u8> = self
-                    .scheme
-                    .color(size, solved_pos.0, solved_pos.1)
-                    .into_format();
+                let color: Rgba<_, u8> = self.scheme.color(size, solved_pos).into_format();
                 format!("#{color:x}")
             };
 

@@ -154,7 +154,7 @@ where
         let area = <Self::Piece as NumCast>::from(self.size().area()).unwrap();
         for y in 0..h {
             for x in 0..w {
-                let label = label.position_label(self.size(), x, y);
+                let label = label.position_label(self.size(), (x, y));
                 let piece = {
                     let a = <Self::Piece as NumCast>::from(label).unwrap() + Self::Piece::one();
                     if a == area {
@@ -323,15 +323,15 @@ where
     /// See [`SlidingPuzzle::piece_at`].
     #[must_use]
     #[inline]
-    fn piece_at_xy(&self, x: usize, y: usize) -> Self::Piece {
+    fn piece_at_xy(&self, (x, y): (usize, usize)) -> Self::Piece {
         self.piece_at(x + self.size().width() * y)
     }
 
     /// See [`SlidingPuzzle::piece_at_xy`].
     #[must_use]
-    fn try_piece_at_xy(&self, x: usize, y: usize) -> Option<Self::Piece> {
-        if self.size().is_within_bounds((x, y)) {
-            Some(self.piece_at_xy(x, y))
+    fn try_piece_at_xy(&self, pos: (usize, usize)) -> Option<Self::Piece> {
+        if self.size().is_within_bounds(pos) {
+            Some(self.piece_at_xy(pos))
         } else {
             None
         }
@@ -340,7 +340,7 @@ where
     /// See [`SlidingPuzzle::piece_at_xy`].
     #[must_use]
     #[inline]
-    unsafe fn piece_at_xy_unchecked(&self, x: usize, y: usize) -> Self::Piece {
+    unsafe fn piece_at_xy_unchecked(&self, (x, y): (usize, usize)) -> Self::Piece {
         self.piece_at_unchecked(x + self.size().width() * y)
     }
 
@@ -578,8 +578,8 @@ where
     ///
     /// If `self.can_move_position_xy((x, y))` is false, the function may panic or the puzzle may be
     /// transformed in an invalid way.
-    fn move_position_xy(&mut self, (x, y): (usize, usize)) {
-        self.try_move_position_xy((x, y));
+    fn move_position_xy(&mut self, pos: (usize, usize)) {
+        self.try_move_position_xy(pos);
     }
 
     /// See [`SlidingPuzzle::move_position_xy`].
@@ -597,8 +597,8 @@ where
 
     /// See [`SlidingPuzzle::move_position_xy`].
     #[inline]
-    unsafe fn move_position_xy_unchecked(&mut self, (x, y): (usize, usize)) {
-        self.move_position_xy((x, y));
+    unsafe fn move_position_xy_unchecked(&mut self, pos: (usize, usize)) {
+        self.move_position_xy(pos);
     }
 
     /// Checks if it is possible to move piece `n`.

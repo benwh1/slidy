@@ -139,7 +139,7 @@ impl SlidingPuzzle for Puzzle {
         let area = self.area();
         for y in 0..h {
             for x in 0..w {
-                let label = label.position_label(self.size(), x, y);
+                let label = label.position_label(self.size(), (x, y));
                 let idx = x + w * y;
                 if label + 1 == area {
                     self.pieces[idx] = 0;
@@ -430,14 +430,14 @@ mod tests {
             p.try_apply_move(Move::new(Direction::Down, 2));
             p.try_apply_move(Move::new(Direction::Right, 3));
             assert_eq!(p.try_piece_at(0), Some(1));
-            assert_eq!(p.try_piece_at_xy(0, 0), Some(1));
+            assert_eq!(p.try_piece_at_xy((0, 0)), Some(1));
             assert_eq!(p.try_piece_at(12), Some(0));
-            assert_eq!(p.try_piece_at_xy(0, 3), Some(0));
+            assert_eq!(p.try_piece_at_xy((0, 3)), Some(0));
             assert_eq!(p.try_piece_at(13), Some(13));
-            assert_eq!(p.try_piece_at_xy(1, 3), Some(13));
+            assert_eq!(p.try_piece_at_xy((1, 3)), Some(13));
             assert_eq!(p.try_piece_at(24), None);
-            assert_eq!(p.try_piece_at_xy(4, 0), None);
-            assert_eq!(p.try_piece_at_xy(0, 6), None);
+            assert_eq!(p.try_piece_at_xy((4, 0)), None);
+            assert_eq!(p.try_piece_at_xy((0, 6)), None);
         }
 
         #[test]

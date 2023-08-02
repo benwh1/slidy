@@ -18,14 +18,12 @@ pub enum ColorSchemeError {
     InvalidSize(Size),
 
     /// Returned when the `(x, y)` position is outside the bounds of the puzzle.
-    #[error("PositionOutOfBounds: position ({x}, {y}) is out of bounds on a {size} puzzle.")]
+    #[error("PositionOutOfBounds: position {pos:?} is out of bounds on a {size} puzzle.")]
     PositionOutOfBounds {
         /// Size of the puzzle.
         size: Size,
-        /// x coordinate of the position.
-        x: usize,
-        /// y coordinate of the position.
-        y: usize,
+        /// Piece position.
+        pos: (usize, usize),
     },
 }
 
@@ -39,19 +37,19 @@ pub trait ColorScheme {
     /// See [`ColorScheme::try_color`].
     ///
     /// This function may not check whether `size` is a valid puzzle size for the color scheme, or
-    /// whether `(x, y)` is within the bounds of the puzzle. If these conditions are not satisfied,
+    /// whether `pos` is within the bounds of the puzzle. If these conditions are not satisfied,
     /// the function may panic or return any other color.
     #[must_use]
-    fn color(&self, size: Size, x: usize, y: usize) -> Rgba;
+    fn color(&self, size: Size, pos: (usize, usize)) -> Rgba;
 
-    /// Returns the color of the piece in position `(x, y)` on a solved puzzle of the given size.
-    fn try_color(&self, size: Size, x: usize, y: usize) -> Result<Rgba, ColorSchemeError> {
+    /// Returns the color of the piece in position `pos` on a solved puzzle of the given size.
+    fn try_color(&self, size: Size, pos: (usize, usize)) -> Result<Rgba, ColorSchemeError> {
         if !self.is_valid_size(size) {
             Err(ColorSchemeError::InvalidSize(size))
-        } else if !size.is_within_bounds((x, y)) {
-            Err(ColorSchemeError::PositionOutOfBounds { size, x, y })
+        } else if !size.is_within_bounds(pos) {
+            Err(ColorSchemeError::PositionOutOfBounds { size, pos })
         } else {
-            Ok(self.color(size, x, y))
+            Ok(self.color(size, pos))
         }
     }
 }
@@ -61,8 +59,8 @@ impl<T: ColorScheme + ?Sized> ColorScheme for Box<T> {
         (**self).is_valid_size(size)
     }
 
-    fn color(&self, size: Size, x: usize, y: usize) -> Rgba {
-        (**self).color(size, x, y)
+    fn color(&self, size: Size, pos: (usize, usize)) -> Rgba {
+        (**self).color(size, pos)
     }
 }
 
@@ -97,8 +95,8 @@ impl<L: Label, C: Coloring> ColorScheme for Scheme<L, C> {
         self.label.is_valid_size(size)
     }
 
-    fn color(&self, size: Size, x: usize, y: usize) -> Rgba {
-        let label = self.label.position_label(size, x, y);
+    fn color(&self, size: Size, pos: (usize, usize)) -> Rgba {
+        let label = self.label.position_label(size, pos);
         let num_labels = self.label.num_labels(size);
         self.coloring.color(label, num_labels)
     }
@@ -180,8 +178,8 @@ impl<S: ColorScheme, List: AsRef<[S]>> ColorScheme for SchemeList<S, List> {
         self.schemes.as_ref()[self.index].is_valid_size(size)
     }
 
-    fn color(&self, size: Size, x: usize, y: usize) -> Rgba {
-        self.schemes.as_ref()[self.index].color(size, x, y)
+    fn color(&self, size: Size, pos: (usize, usize)) -> Rgba {
+        self.schemes.as_ref()[self.index].color(size, pos)
     }
 }
 
@@ -194,7 +192,7 @@ impl ColorScheme for Black {
         true
     }
 
-    fn color(&self, _size: Size, _x: usize, _y: usize) -> Rgba {
+    fn color(&self, _size: Size, _pos: (usize, usize)) -> Rgba {
         Rgba::new(0.0, 0.0, 0.0, 1.0)
     }
 }

@@ -71,7 +71,7 @@ impl<C: ColorScheme> ColorScheme for Tiled<C> {
         true
     }
 
-    fn color(&self, size: Size, x: usize, y: usize) -> Rgba {
+    fn color(&self, size: Size, (x, y): (usize, usize)) -> Rgba {
         let (width, height) = size.into();
         let (gw, gh) = self.grid_size.into();
 
@@ -96,7 +96,7 @@ impl<C: ColorScheme> ColorScheme for Tiled<C> {
         );
 
         Size::new(tile_grid_w, tile_grid_h)
-            .map(|size| self.color_scheme.color(size, tx, ty))
+            .map(|size| self.color_scheme.color(size, (tx, ty)))
             .unwrap_or_default()
     }
 }
