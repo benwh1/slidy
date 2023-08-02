@@ -4,6 +4,8 @@ use std::{collections::BTreeMap, ops::Range};
 
 use thiserror::Error;
 
+use crate::puzzle::size::Size;
+
 use super::label::Label;
 
 /// Error type for [`Rect`].
@@ -227,16 +229,17 @@ impl RectPartition {
 impl Label for RectPartition {
     /// [`RectPartition`] is only a valid label when the puzzle size equals the size of the
     /// partitioned rectangle.
-    fn is_valid_size(&self, width: usize, height: usize) -> bool {
+    fn is_valid_size(&self, size: Size) -> bool {
+        let (width, height) = size.into();
         self.rect().size() == (width as u32, height as u32)
     }
 
-    fn position_label(&self, _width: usize, _height: usize, x: usize, y: usize) -> usize {
+    fn position_label(&self, _size: Size, x: usize, y: usize) -> usize {
         let (x, y) = (x as u32, y as u32);
         self.rects.iter().position(|r| r.contains(x, y)).unwrap()
     }
 
-    fn num_labels(&self, _width: usize, _height: usize) -> usize {
+    fn num_labels(&self, _size: Size) -> usize {
         self.num_rects()
     }
 }

@@ -1,5 +1,7 @@
 //! Defines the 8 symmetries of a square as label modifiers.
 
+use crate::puzzle::size::Size;
+
 use super::label::{BijectiveLabel, Label};
 
 macro_rules! define_sym {
@@ -32,116 +34,119 @@ define_sym!(
 );
 
 impl<L: Label> Label for Id<L> {
-    fn is_valid_size(&self, width: usize, height: usize) -> bool {
-        self.0.is_valid_size(width, height)
+    fn is_valid_size(&self, size: Size) -> bool {
+        self.0.is_valid_size(size)
     }
 
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        self.0.position_label(width, height, x, y)
+    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+        self.0.position_label(size, x, y)
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        self.0.num_labels(width, height)
+    fn num_labels(&self, size: Size) -> usize {
+        self.0.num_labels(size)
     }
 }
 
 impl<L: Label> Label for RotateCw<L> {
-    fn is_valid_size(&self, width: usize, height: usize) -> bool {
-        self.0.is_valid_size(height, width)
+    fn is_valid_size(&self, size: Size) -> bool {
+        self.0.is_valid_size(size.transpose())
     }
 
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        self.0.position_label(height, width, y, width - 1 - x)
+    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+        self.0
+            .position_label(size.transpose(), y, size.width() - 1 - x)
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        self.0.num_labels(height, width)
+    fn num_labels(&self, size: Size) -> usize {
+        self.0.num_labels(size.transpose())
     }
 }
 
 impl<L: Label> Label for RotateCcw<L> {
-    fn is_valid_size(&self, width: usize, height: usize) -> bool {
-        self.0.is_valid_size(height, width)
+    fn is_valid_size(&self, size: Size) -> bool {
+        self.0.is_valid_size(size.transpose())
     }
 
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        self.0.position_label(height, width, height - 1 - y, x)
+    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+        self.0
+            .position_label(size.transpose(), size.height() - 1 - y, x)
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        self.0.num_labels(height, width)
+    fn num_labels(&self, size: Size) -> usize {
+        self.0.num_labels(size.transpose())
     }
 }
 
 impl<L: Label> Label for RotateHalf<L> {
-    fn is_valid_size(&self, width: usize, height: usize) -> bool {
-        self.0.is_valid_size(width, height)
+    fn is_valid_size(&self, size: Size) -> bool {
+        self.0.is_valid_size(size)
     }
 
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        self.0
-            .position_label(width, height, width - 1 - x, height - 1 - y)
+    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+        let (width, height) = size.into();
+        self.0.position_label(size, width - 1 - x, height - 1 - y)
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        self.0.num_labels(width, height)
+    fn num_labels(&self, size: Size) -> usize {
+        self.0.num_labels(size)
     }
 }
 
 impl<L: Label> Label for ReflectVertical<L> {
-    fn is_valid_size(&self, width: usize, height: usize) -> bool {
-        self.0.is_valid_size(width, height)
+    fn is_valid_size(&self, size: Size) -> bool {
+        self.0.is_valid_size(size)
     }
 
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        self.0.position_label(width, height, x, height - 1 - y)
+    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+        self.0.position_label(size, x, size.height() - 1 - y)
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        self.0.num_labels(width, height)
+    fn num_labels(&self, size: Size) -> usize {
+        self.0.num_labels(size)
     }
 }
 
 impl<L: Label> Label for ReflectHorizontal<L> {
-    fn is_valid_size(&self, width: usize, height: usize) -> bool {
-        self.0.is_valid_size(width, height)
+    fn is_valid_size(&self, size: Size) -> bool {
+        self.0.is_valid_size(size)
     }
 
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        self.0.position_label(width, height, width - 1 - x, y)
+    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+        self.0.position_label(size, size.width() - 1 - x, y)
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        self.0.num_labels(width, height)
+    fn num_labels(&self, size: Size) -> usize {
+        self.0.num_labels(size)
     }
 }
 
 impl<L: Label> Label for ReflectDiagonal<L> {
-    fn is_valid_size(&self, width: usize, height: usize) -> bool {
-        self.0.is_valid_size(height, width)
+    fn is_valid_size(&self, size: Size) -> bool {
+        self.0.is_valid_size(size.transpose())
     }
 
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        self.0.position_label(height, width, y, x)
+    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+        self.0.position_label(size.transpose(), y, x)
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        self.0.num_labels(height, width)
+    fn num_labels(&self, size: Size) -> usize {
+        self.0.num_labels(size.transpose())
     }
 }
 
 impl<L: Label> Label for ReflectAntidiagonal<L> {
-    fn is_valid_size(&self, width: usize, height: usize) -> bool {
-        self.0.is_valid_size(height, width)
+    fn is_valid_size(&self, size: Size) -> bool {
+        self.0.is_valid_size(size.transpose())
     }
 
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+        let (width, height) = size.into();
         self.0
-            .position_label(height, width, height - 1 - y, width - 1 - x)
+            .position_label(size.transpose(), height - 1 - y, width - 1 - x)
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        self.0.num_labels(height, width)
+    fn num_labels(&self, size: Size) -> usize {
+        self.0.num_labels(size.transpose())
     }
 }
 
@@ -162,15 +167,16 @@ mod tests {
         ($label:ty, $($w:literal x $h:literal : $labels:expr),+ $(,)?) => {
             paste::paste! {
                 mod [< $label:snake >] {
-                    use crate::puzzle::label::label::{Label, RowGrids};
+                    use crate::puzzle::{label::label::{Label, RowGrids}, size::Size};
                     use super::{$label};
 
                     $(#[test]
                     fn [< test_ $label:snake _ $w x $h >] () {
+                        let size = Size::new($w, $h).unwrap();
                         let labels = (0..$w * $h)
-                            .map(|i| $label(RowGrids).position_label($w, $h, i % $w, i / $w))
+                            .map(|i| $label(RowGrids).position_label(size, i % $w, i / $w))
                             .collect::<Vec<_>>();
-                        let num_labels = $label(RowGrids).num_labels($w, $h);
+                        let num_labels = $label(RowGrids).num_labels(size);
                         let expected_num_labels = $labels.iter().max().unwrap() + 1;
                         assert_eq!(labels, $labels);
                         assert_eq!(num_labels, expected_num_labels);

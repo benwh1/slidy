@@ -54,6 +54,23 @@ impl Size {
     pub fn is_within_bounds(&self, (x, y): (usize, usize)) -> bool {
         x < self.width() && y < self.height()
     }
+
+    /// The size of the transposed puzzle (width and height swapped).
+    pub fn transpose(&self) -> Self {
+        Self(self.1, self.0)
+    }
+
+    /// The square of size equal to the minimum of the width and height of `self`.
+    pub fn shrink_to_square(&self) -> Self {
+        let s = self.0.min(self.1);
+        Self(s, s)
+    }
+
+    /// The square of size equal to the maximum of the width and height of `self`.self) -> Self {
+    pub fn expand_to_square(&self) -> Self {
+        let s = self.0.max(self.1);
+        Self(s, s)
+    }
 }
 
 impl Into<(usize, usize)> for Size {

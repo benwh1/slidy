@@ -5,27 +5,20 @@ use std::cmp::Ordering;
 use blanket::blanket;
 use thiserror::Error;
 
+use crate::puzzle::size::Size;
+
 /// Error type for [`Label`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum LabelError {
     /// Returned when the given puzzle size is incompatible with the label.
-    #[error("InvalidSize: {width}x{height} is not a valid size")]
-    InvalidSize {
-        /// Width of the puzzle.
-        width: usize,
-        /// Height of the puzzle.
-        height: usize,
-    },
+    #[error("InvalidSize: {0} is not a valid size")]
+    InvalidSize(Size),
 
     /// Returned when the `(x, y)` position is outside the bounds of the puzzle.
-    #[error(
-        "PositionOutOfBounds: position ({x}, {y}) is out of bounds on a {width}x{height} puzzle."
-    )]
+    #[error("PositionOutOfBounds: position ({x}, {y}) is out of bounds on a {size} puzzle.")]
     PositionOutOfBounds {
-        /// Width of the puzzle.
-        width: usize,
-        /// Height of the puzzle.
-        height: usize,
+        /// Size of the puzzle.
+        size: Size,
         /// x coordinate of the position.
         x: usize,
         /// y coordinate of the position.
@@ -39,69 +32,58 @@ pub enum LabelError {
 pub trait Label {
     /// Checks if this `Label` can be used with a given puzzle size.
     #[must_use]
-    fn is_valid_size(&self, width: usize, height: usize) -> bool;
+    fn is_valid_size(&self, size: Size) -> bool;
 
-    /// Returns the label of `(x, y)` on a `width x height` puzzle.
+    /// Returns the label of `(x, y)` on a puzzle of the given size.
     ///
-    /// The label must be an integer from 0 to `self.num_labels(width, height) - 1`.
+    /// The label must be an integer from 0 to `self.num_labels(size) - 1`.
     ///
-    /// This function may not check whether `width x height` is a valid puzzle size for the label,
-    /// or whether `(x, y)` is within the bounds of the puzzle. If these conditions are not
-    /// satisfied, the function may panic or return an invalid label, e.g. an integer greater than
-    /// or equal to `self.num_labels(width, height)`.
+    /// This function may not check whether `size` is a valid puzzle size for the label, or whether
+    /// `(x, y)` is within the bounds of the puzzle. If these conditions are not satisfied, the
+    /// function may panic or return an invalid label, e.g. an integer greater than or equal to
+    /// `self.num_labels(size)`.
     #[must_use]
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize;
+    fn position_label(&self, size: Size, x: usize, y: usize) -> usize;
 
     /// See [`Self::position_label`].
-    fn try_position_label(
-        &self,
-        width: usize,
-        height: usize,
-        x: usize,
-        y: usize,
-    ) -> Result<usize, LabelError> {
-        if !self.is_valid_size(width, height) {
-            Err(LabelError::InvalidSize { width, height })
-        } else if x >= width || y >= height {
-            Err(LabelError::PositionOutOfBounds {
-                width,
-                height,
-                x,
-                y,
-            })
+    fn try_position_label(&self, size: Size, x: usize, y: usize) -> Result<usize, LabelError> {
+        if !self.is_valid_size(size) {
+            Err(LabelError::InvalidSize(size))
+        } else if !size.is_within_bounds((x, y)) {
+            Err(LabelError::PositionOutOfBounds { size, x, y })
         } else {
-            Ok(self.position_label(width, height, x, y))
+            Ok(self.position_label(size, x, y))
         }
     }
 
     /// Returns the total number of distinct labels across all `(x, y)` positions in the puzzle.
     ///
-    /// This function may not check whether `width x height` is a valid puzzle size for the label.
-    /// If it is not, the function may panic or return an invalid number.
+    /// This function may not check whether `size` is a valid puzzle size for the label. If it is
+    /// not, the function may panic or return an invalid number.
     #[must_use]
-    fn num_labels(&self, width: usize, height: usize) -> usize;
+    fn num_labels(&self, size: Size) -> usize;
 
     /// See [`Self::num_labels`].
-    fn try_num_labels(&self, width: usize, height: usize) -> Result<usize, LabelError> {
-        if self.is_valid_size(width, height) {
-            Ok(self.num_labels(width, height))
+    fn try_num_labels(&self, size: Size) -> Result<usize, LabelError> {
+        if self.is_valid_size(size) {
+            Ok(self.num_labels(size))
         } else {
-            Err(LabelError::InvalidSize { width, height })
+            Err(LabelError::InvalidSize(size))
         }
     }
 }
 
 impl<T: Label + ?Sized> Label for Box<T> {
-    fn is_valid_size(&self, width: usize, height: usize) -> bool {
-        (**self).is_valid_size(width, height)
+    fn is_valid_size(&self, size: Size) -> bool {
+        (**self).is_valid_size(size)
     }
 
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        (**self).position_label(width, height, x, y)
+    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+        (**self).position_label(size, x, y)
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        (**self).num_labels(width, height)
+    fn num_labels(&self, size: Size) -> usize {
+        (**self).num_labels(size)
     }
 }
 
@@ -164,67 +146,67 @@ impl BijectiveLabel for FringeGrids {}
 impl BijectiveLabel for SpiralGrids {}
 
 impl Label for Trivial {
-    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+    fn is_valid_size(&self, _size: Size) -> bool {
         true
     }
 
-    fn position_label(&self, _: usize, _: usize, _: usize, _: usize) -> usize {
+    fn position_label(&self, _size: Size, _x: usize, _y: usize) -> usize {
         0
     }
 
-    fn num_labels(&self, _: usize, _: usize) -> usize {
+    fn num_labels(&self, _size: Size) -> usize {
         1
     }
 }
 
 impl Label for RowGrids {
-    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+    fn is_valid_size(&self, _size: Size) -> bool {
         true
     }
 
-    fn position_label(&self, width: usize, _height: usize, x: usize, y: usize) -> usize {
-        x + width * y
+    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+        x + size.width() * y
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        width * height
+    fn num_labels(&self, size: Size) -> usize {
+        size.area()
     }
 }
 
 impl Label for Rows {
-    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+    fn is_valid_size(&self, _size: Size) -> bool {
         true
     }
 
-    fn position_label(&self, _width: usize, _height: usize, _x: usize, y: usize) -> usize {
+    fn position_label(&self, _size: Size, _x: usize, y: usize) -> usize {
         y
     }
 
-    fn num_labels(&self, _width: usize, height: usize) -> usize {
-        height
+    fn num_labels(&self, size: Size) -> usize {
+        size.height()
     }
 }
 
 impl Label for Fringe {
-    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+    fn is_valid_size(&self, _size: Size) -> bool {
         true
     }
 
-    fn position_label(&self, _width: usize, _height: usize, x: usize, y: usize) -> usize {
+    fn position_label(&self, _size: Size, x: usize, y: usize) -> usize {
         x.min(y)
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        width.min(height)
+    fn num_labels(&self, size: Size) -> usize {
+        size.width().min(size.height())
     }
 }
 
 impl Label for FringeGrids {
-    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+    fn is_valid_size(&self, _size: Size) -> bool {
         true
     }
 
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
         // Which (non-split) fringe is (x, y) in?
         let fringe = x.min(y);
 
@@ -232,6 +214,7 @@ impl Label for FringeGrids {
         let vertical_part = x < y;
 
         // Sum w+h-1-2k, k=0..f-1 = f(w+h-f) = number of tiles in previous fringes
+        let (width, height) = size.into();
         let previous_fringes = fringe * (width + height - fringe);
 
         // How many pieces before this one in the current fringe?
@@ -244,17 +227,18 @@ impl Label for FringeGrids {
         previous_fringes + current_fringe
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        width * height
+    fn num_labels(&self, size: Size) -> usize {
+        size.area()
     }
 }
 
 impl Label for SquareFringe {
-    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+    fn is_valid_size(&self, _size: Size) -> bool {
         true
     }
 
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+        let (width, height) = size.into();
         match width.cmp(&height) {
             // Puzzle is taller than it is wide
             Ordering::Less => {
@@ -265,25 +249,26 @@ impl Label for SquareFringe {
                 }
                 // Square part of the puzzle
                 else {
-                    diff + Fringe.position_label(width, width, x, y - diff)
+                    diff + Fringe.position_label(size, x, y - diff)
                 }
             }
-            Ordering::Equal => Fringe.position_label(width, height, x, y),
-            Ordering::Greater => self.position_label(height, width, y, x),
+            Ordering::Equal => Fringe.position_label(size, x, y),
+            Ordering::Greater => self.position_label(size.transpose(), y, x),
         }
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        Fringe.num_labels(width, height) + width.abs_diff(height)
+    fn num_labels(&self, size: Size) -> usize {
+        let (width, height) = size.into();
+        Fringe.num_labels(size) + width.abs_diff(height)
     }
 }
 
 impl Label for SplitFringe {
-    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+    fn is_valid_size(&self, _size: Size) -> bool {
         true
     }
 
-    fn position_label(&self, _width: usize, _height: usize, x: usize, y: usize) -> usize {
+    fn position_label(&self, _size: Size, x: usize, y: usize) -> usize {
         // Which (non-split) fringe is (x, y) in?
         let fringe = x.min(y);
 
@@ -293,17 +278,19 @@ impl Label for SplitFringe {
         2 * fringe + usize::from(vertical_part)
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
+    fn num_labels(&self, size: Size) -> usize {
+        let (width, height) = size.into();
         2 * width.min(height) - usize::from(height <= width)
     }
 }
 
 impl Label for SplitSquareFringe {
-    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+    fn is_valid_size(&self, _size: Size) -> bool {
         true
     }
 
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+        let (width, height) = size.into();
         let d = width.abs_diff(height);
 
         match width.cmp(&height) {
@@ -311,48 +298,50 @@ impl Label for SplitSquareFringe {
                 if y < d {
                     y
                 } else {
-                    d + SplitFringe.position_label(width, width, x, y - d)
+                    d + SplitFringe.position_label(size, x, y - d)
                 }
             }
-            Ordering::Equal => SplitFringe.position_label(width, width, x, y),
+            Ordering::Equal => SplitFringe.position_label(size, x, y),
             Ordering::Greater => {
                 if x < d {
                     x
                 } else {
-                    d + SplitFringe.position_label(height, height, x - d, y)
+                    d + SplitFringe.position_label(size, x - d, y)
                 }
             }
         }
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
+    fn num_labels(&self, size: Size) -> usize {
+        let (width, height) = size.into();
         let diff = width.abs_diff(height);
-        let min = width.min(height);
 
-        diff + SplitFringe.num_labels(min, min)
+        diff + SplitFringe.num_labels(size.shrink_to_square())
     }
 }
 
 impl Label for Diagonals {
-    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+    fn is_valid_size(&self, _size: Size) -> bool {
         true
     }
 
-    fn position_label(&self, _width: usize, _height: usize, x: usize, y: usize) -> usize {
+    fn position_label(&self, _size: Size, x: usize, y: usize) -> usize {
         x + y
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
+    fn num_labels(&self, size: Size) -> usize {
+        let (width, height) = size.into();
         width + height - 1
     }
 }
 
 impl Label for LastTwoRows {
-    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+    fn is_valid_size(&self, _size: Size) -> bool {
         true
     }
 
-    fn position_label(&self, _width: usize, height: usize, x: usize, y: usize) -> usize {
+    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+        let height = size.height();
         if y < height - 2 {
             y
         } else {
@@ -360,56 +349,60 @@ impl Label for LastTwoRows {
         }
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        width + height - 2
+    fn num_labels(&self, size: Size) -> usize {
+        size.width() + size.height() - 2
     }
 }
 
 impl Label for SplitLastTwoRows {
-    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+    fn is_valid_size(&self, _size: Size) -> bool {
         true
     }
 
-    fn position_label(&self, _width: usize, height: usize, x: usize, y: usize) -> usize {
-        if y < height - 2 {
+    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+        if y < size.height() - 2 {
             y
         } else {
             x
         }
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
+    fn num_labels(&self, size: Size) -> usize {
+        let (width, height) = size.into();
         width.max(height - 2)
     }
 }
 
 impl Label for ConcentricRectangles {
-    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+    fn is_valid_size(&self, _size: Size) -> bool {
         true
     }
 
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
+    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+        let (width, height) = size.into();
         x.min(y).min(width - 1 - x).min(height - 1 - y)
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
+    fn num_labels(&self, size: Size) -> usize {
+        let (width, height) = size.into();
         width.min(height).div_ceil(2)
     }
 }
 
 impl Label for Spiral {
-    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+    fn is_valid_size(&self, _size: Size) -> bool {
         true
     }
 
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        let rect_label = ConcentricRectangles.position_label(width, height, x, y);
+    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+        let rect_label = ConcentricRectangles.position_label(size, x, y);
 
         // Calculate the values (x, y, width, height) if we were to strip off any outer rectangles
         // from the puzzle.
         // e.g. the piece in position (1, 1) on a 4x5 puzzle becomes the piece in position (0, 0)
         // on a 2x3 puzzle when we remove the outer rectangle, so we would have
         // (rx, ry, rw, rh) = (0, 0, 2, 3).
+        let (width, height) = size.into();
         let (rx, ry, rw, rh) = (
             x - rect_label,
             y - rect_label,
@@ -437,7 +430,9 @@ impl Label for Spiral {
         4 * rect_label + rect_side
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
+    fn num_labels(&self, size: Size) -> usize {
+        let (width, height) = size.into();
+
         // 4 * number of rectangles of width and height > 1, plus 1 if the innermost rectangle has
         // width or height 1.
         4 * width.min(height).div_floor(2) + width.min(height) % 2
@@ -445,14 +440,15 @@ impl Label for Spiral {
 }
 
 impl Label for SpiralGrids {
-    fn is_valid_size(&self, _width: usize, _height: usize) -> bool {
+    fn is_valid_size(&self, _size: Size) -> bool {
         true
     }
 
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        let rect_label = ConcentricRectangles.position_label(width, height, x, y);
+    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+        let rect_label = ConcentricRectangles.position_label(size, x, y);
 
         // See `Spiral::position_label`
+        let (width, height) = size.into();
         let (rx, ry, rw, rh) = (
             x - rect_label,
             y - rect_label,
@@ -482,8 +478,8 @@ impl Label for SpiralGrids {
         num_outer_pieces + rect_pieces
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        width * height
+    fn num_labels(&self, size: Size) -> usize {
+        size.area()
     }
 }
 
@@ -493,14 +489,15 @@ mod tests {
         ($label:ty, $($w:literal x $h:literal : $labels:expr),+ $(,)?) => {
             paste::paste! {
                 mod [< $label:snake >] {
-                    use crate::puzzle::label::label::{Label, $label};
+                    use crate::puzzle::{label::label::{Label, $label}, size::Size};
 
                     $(#[test]
                     fn [< test_ $label:snake _ $w x $h >] () {
+                        let size = Size::new($w, $h).unwrap();
                         let labels = (0..$w * $h)
-                            .map(|i| $label.position_label($w, $h, i % $w, i / $w))
+                            .map(|i| $label.position_label(size, i % $w, i / $w))
                             .collect::<Vec<_>>();
-                        let num_labels = $label.num_labels($w, $h);
+                        let num_labels = $label.num_labels(size);
                         let expected_num_labels = $labels.iter().max().unwrap() + 1;
                         assert_eq!(labels, $labels);
                         assert_eq!(num_labels, expected_num_labels);

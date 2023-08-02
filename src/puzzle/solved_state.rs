@@ -21,7 +21,8 @@ impl<L: Label> SolvedState for L {
     where
         Puzzle: SlidingPuzzle,
     {
-        let (w, h) = puzzle.size().into();
+        let size = puzzle.size();
+        let (w, h) = size.into();
         if puzzle.gap_position_xy() != (w - 1, h - 1) {
             return false;
         }
@@ -32,10 +33,10 @@ impl<L: Label> SolvedState for L {
             .all(|(x, y)| {
                 // Label of piece in position (x, y)
                 let (sx, sy) = puzzle.solved_pos_xy(puzzle.piece_at_xy(x, y));
-                let piece_label = self.try_position_label(w, h, sx, sy);
+                let piece_label = self.try_position_label(size, sx, sy);
 
                 // Label of piece in position (x, y) on a solved puzzle
-                let solved_label = self.try_position_label(w, h, x, y);
+                let solved_label = self.try_position_label(size, x, y);
 
                 piece_label == solved_label
             })

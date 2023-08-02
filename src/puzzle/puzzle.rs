@@ -139,7 +139,7 @@ impl SlidingPuzzle for Puzzle {
         let area = self.area();
         for y in 0..h {
             for x in 0..w {
-                let label = label.position_label(w, h, x, y);
+                let label = label.position_label(self.size(), x, y);
                 let idx = x + w * y;
                 if label + 1 == area {
                     self.pieces[idx] = 0;

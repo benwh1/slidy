@@ -2,6 +2,8 @@
 
 use thiserror::Error;
 
+use crate::puzzle::size::Size;
+
 use super::label::Label;
 
 /// Scales a [`Label`] up by a horizontal factor and a vertical factor. For example, consider the
@@ -35,24 +37,44 @@ impl<L: Label> Scaled<L> {
 }
 
 impl<L: Label> Label for Scaled<L> {
-    fn is_valid_size(&self, width: usize, height: usize) -> bool {
-        let width = width.div_ceil(self.factor.0 as usize);
-        let height = height.div_ceil(self.factor.1 as usize);
-        self.label.is_valid_size(width, height)
+    fn is_valid_size(&self, size: Size) -> bool {
+        let (width, height) = size.into();
+        let (sw, sh) = (
+            width.div_ceil(self.factor.0 as usize),
+            height.div_ceil(self.factor.1 as usize),
+        );
+
+        Size::new(sw, sh)
+            .map(|size| self.label.is_valid_size(size))
+            .unwrap_or_default()
     }
 
-    fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
-        let width = width.div_ceil(self.factor.0 as usize);
-        let height = height.div_ceil(self.factor.1 as usize);
-        let x = x.div_floor(self.factor.0 as usize);
-        let y = y.div_floor(self.factor.1 as usize);
-        self.label.position_label(width, height, x, y)
+    fn position_label(&self, size: Size, x: usize, y: usize) -> usize {
+        let (width, height) = size.into();
+        let (sw, sh) = (
+            width.div_ceil(self.factor.0 as usize),
+            height.div_ceil(self.factor.1 as usize),
+        );
+        let (x, y) = (
+            x.div_floor(self.factor.0 as usize),
+            y.div_floor(self.factor.1 as usize),
+        );
+
+        Size::new(sw, sh)
+            .map(|size| self.label.position_label(size, x, y))
+            .unwrap_or_default()
     }
 
-    fn num_labels(&self, width: usize, height: usize) -> usize {
-        let width = width.div_ceil(self.factor.0 as usize);
-        let height = height.div_ceil(self.factor.1 as usize);
-        self.label.num_labels(width, height)
+    fn num_labels(&self, size: Size) -> usize {
+        let (width, height) = size.into();
+        let (sw, sh) = (
+            width.div_ceil(self.factor.0 as usize),
+            height.div_ceil(self.factor.1 as usize),
+        );
+
+        Size::new(sw, sh)
+            .map(|size| self.label.num_labels(size))
+            .unwrap_or_default()
     }
 }
 
@@ -64,12 +86,13 @@ mod tests {
 
     #[test]
     fn test_scaled_row_grids() {
+        let size = Size::new(8, 5).unwrap();
         let label = Scaled::new(&RowGrids, (3, 2)).unwrap();
 
         let labels = (0..40)
-            .map(|i| label.position_label(8, 5, i % 8, i / 8))
+            .map(|i| label.position_label(size, i % 8, i / 8))
             .collect::<Vec<_>>();
-        let num_labels = label.num_labels(8, 5);
+        let num_labels = label.num_labels(size);
 
         #[rustfmt::skip]
         assert_eq!(labels, vec![

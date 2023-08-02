@@ -151,10 +151,10 @@ where
     /// Reset the puzzle to the solved state as defined by a [`BijectiveLabel`]
     fn reset_to_label<L: BijectiveLabel>(&mut self, label: &L) {
         let (w, h) = self.size().into();
-        let area = <Self::Piece as NumCast>::from(w * h).unwrap();
+        let area = <Self::Piece as NumCast>::from(self.size().area()).unwrap();
         for y in 0..h {
             for x in 0..w {
-                let label = label.position_label(w, h, x, y);
+                let label = label.position_label(self.size(), x, y);
                 let piece = {
                     let a = <Self::Piece as NumCast>::from(label).unwrap() + Self::Piece::one();
                     if a == area {

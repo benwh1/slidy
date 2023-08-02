@@ -13,7 +13,10 @@ use svg::{
 };
 use thiserror::Error;
 
-use crate::puzzle::color_scheme::{Black, SchemeList};
+use crate::puzzle::{
+    color_scheme::{Black, SchemeList},
+    size::Size,
+};
 
 use super::{color_scheme::ColorScheme, sliding_puzzle::SlidingPuzzle};
 
@@ -21,15 +24,8 @@ use super::{color_scheme::ColorScheme, sliding_puzzle::SlidingPuzzle};
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum RendererError {
     /// Returned when the given puzzle size is incompatible with the label.
-    #[error(
-        "IncompatibleLabel: puzzle size ({width}x{height}) can not be used with the given label"
-    )]
-    IncompatibleLabel {
-        /// Width of the puzzle.
-        width: usize,
-        /// Height of the puzzle.
-        height: usize,
-    },
+    #[error("IncompatibleLabel: puzzle size ({0}) can not be used with the given label")]
+    IncompatibleLabel(Size),
 }
 
 /// A font that can be used with [`Renderer`].
@@ -401,10 +397,11 @@ impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
         Puzzle: SlidingPuzzle,
         Puzzle::Piece: Display,
     {
-        let (width, height) = puzzle.size().into();
+        let size = puzzle.size();
+        let (width, height) = size.into();
 
-        if !self.scheme.is_valid_size(width, height) {
-            return Err(RendererError::IncompatibleLabel { width, height });
+        if !self.scheme.is_valid_size(size) {
+            return Err(RendererError::IncompatibleLabel(size));
         }
 
         let mut group = Group::new();
@@ -429,7 +426,7 @@ impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
         Puzzle: SlidingPuzzle,
         Puzzle::Piece: Display,
     {
-        let (width, height) = puzzle.size().into();
+        let size = puzzle.size();
 
         let border_thickness = self
             .borders
@@ -454,7 +451,7 @@ impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
         let subscheme_color = self
             .scheme
             .subscheme()
-            .map(|subscheme| subscheme.color(width, height, solved_pos.0, solved_pos.1));
+            .map(|subscheme| subscheme.color(size, solved_pos.0, solved_pos.1));
 
         // Macro to get the color that we want for text and border colors, as a hex string.
         // If `self.subscheme_style` is TextColor or BorderColor, then this will override the
@@ -467,7 +464,7 @@ impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
                     c
                 } else {
                     // If no override, then we use the text or border scheme color.
-                    $scheme.color(width, height, solved_pos.0, solved_pos.1)
+                    $scheme.color(size, solved_pos.0, solved_pos.1)
                 };
 
                 // Format as hex string
@@ -480,7 +477,7 @@ impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
             let fill = {
                 let color: Rgba<_, u8> = self
                     .scheme
-                    .color(width, height, solved_pos.0, solved_pos.1)
+                    .color(size, solved_pos.0, solved_pos.1)
                     .into_format();
                 format!("#{color:x}")
             };
@@ -550,10 +547,11 @@ impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
         Puzzle: SlidingPuzzle,
         Puzzle::Piece: Display,
     {
-        let (width, height) = puzzle.size().into();
+        let size = puzzle.size();
+        let (width, height) = size.into();
 
-        if !self.scheme.is_valid_size(width, height) {
-            return Err(RendererError::IncompatibleLabel { width, height });
+        if !self.scheme.is_valid_size(size) {
+            return Err(RendererError::IncompatibleLabel(size));
         }
 
         let border_thickness = self
