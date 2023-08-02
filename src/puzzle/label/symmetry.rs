@@ -90,7 +90,7 @@ impl<L: Label> Label for RotateHalf<L> {
 
 impl<L: Label> Label for ReflectVertical<L> {
     fn is_valid_size(&self, width: usize, height: usize) -> bool {
-        self.0.is_valid_size(height, width)
+        self.0.is_valid_size(width, height)
     }
 
     fn position_label(&self, width: usize, height: usize, x: usize, y: usize) -> usize {
