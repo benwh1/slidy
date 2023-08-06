@@ -13,6 +13,12 @@ use thiserror::Error;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Size(usize, usize);
 
+impl Default for Size {
+    fn default() -> Self {
+        Self(4, 4)
+    }
+}
+
 /// Error type for [`Size::new`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum SizeError {
