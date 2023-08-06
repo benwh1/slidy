@@ -6,6 +6,7 @@ use std::{
     str::FromStr,
 };
 
+use num_traits::AsPrimitive;
 use thiserror::Error;
 
 /// The size of a [`SlidingPuzzle`].
@@ -84,6 +85,12 @@ impl Size {
     #[must_use]
     pub fn is_square(&self) -> bool {
         self.width() == self.height()
+    }
+
+    /// The number of solvable states of a puzzle of size `self`.
+    #[must_use]
+    pub fn num_states(&self) -> u128 {
+        (1..=self.area().as_()).product()
     }
 }
 
