@@ -79,6 +79,12 @@ impl Size {
         let s = self.0.max(self.1);
         Self(s, s)
     }
+
+    /// Returns true if the width and height are equal, and false otherwise.
+    #[must_use]
+    pub fn is_square(&self) -> bool {
+        self.width() == self.height()
+    }
 }
 
 #[allow(clippy::from_over_into)]
