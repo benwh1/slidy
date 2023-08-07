@@ -11,14 +11,17 @@ use std::{
 use itertools::Itertools;
 use thiserror::Error;
 
-use crate::algorithm::{
-    as_slice::AsAlgorithmSlice,
-    display::{
-        algorithm::{AlgorithmDisplay, DisplaySpaced, DisplayUnspaced},
-        r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
+use crate::{
+    algorithm::{
+        as_slice::AsAlgorithmSlice,
+        display::{
+            algorithm::{AlgorithmDisplay, DisplaySpaced, DisplayUnspaced},
+            r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
+        },
+        metric::Metric,
+        slice::AlgorithmSlice,
     },
-    metric::Metric,
-    slice::AlgorithmSlice,
+    puzzle::sliding_puzzle::SlidingPuzzle,
 };
 
 use super::{direction::Direction, r#move::r#move::Move};
@@ -233,6 +236,13 @@ impl Algorithm {
                     .and_then(|mv| Move::new_nonzero(mv.direction, range.end - end_total).ok()),
             })
         }
+    }
+
+    /// Checks if `self` is a solution of `puzzle`.
+    #[must_use]
+    pub fn is_solution_of<Puzzle: SlidingPuzzle + Clone>(&self, mut puzzle: Puzzle) -> bool {
+        let b = puzzle.try_apply_alg(self);
+        b && puzzle.is_solved()
     }
 
     /// Helper function for creating a [`DisplaySpaced<DisplayLongSpaced>`] around `self`.
