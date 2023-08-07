@@ -178,8 +178,12 @@ where
         P::Piece: AsPrimitive<Self::Piece>,
         Self::Piece: 'static,
     {
-        for i in 0..other.area() {
-            self.swap_pieces(i, self.piece_position(other.piece_at(i).as_()));
+        if !self.try_set_state(other) {
+            panic!(
+                "sizes of `self` ({}) and `other` ({}) must be equal",
+                self.size(),
+                other.size()
+            );
         }
     }
 
@@ -192,7 +196,9 @@ where
         Self::Piece: 'static,
     {
         if self.size() == other.size() {
-            self.set_state(other);
+            for i in 0..other.area() {
+                self.swap_pieces(i, self.piece_position(other.piece_at(i).as_()));
+            }
             true
         } else {
             false
