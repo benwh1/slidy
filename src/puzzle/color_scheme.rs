@@ -65,6 +65,7 @@ impl<T: ColorScheme + ?Sized> ColorScheme for Box<T> {
 }
 
 /// A color scheme formed by composing a [`Label`] and a [`Coloring`].
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Scheme<L: Label, C: Coloring> {
     label: L,
     coloring: C,
@@ -104,6 +105,7 @@ impl<L: Label, C: Coloring> ColorScheme for Scheme<L, C> {
 
 /// A list of [`ColorScheme`]s and an index, indicating which color scheme is currently "active".
 /// The implementation of [`ColorScheme`] for this type uses the active scheme.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SchemeList<S: ColorScheme, List: AsRef<[S]>> {
     schemes: List,
     index: usize,
