@@ -1,6 +1,11 @@
 //! Defines the [`AlgorithmSlice`] type.
 
-use std::{fmt::Display, iter};
+use std::{
+    fmt::Display,
+    iter::{self, Sum},
+};
+
+use num_traits::{AsPrimitive, PrimInt};
 
 use crate::{
     algorithm::{
@@ -30,20 +35,29 @@ pub struct AlgorithmSlice<'a> {
 impl AlgorithmSlice<'_> {
     /// The length of the slice in the [`Metric`] `M`.
     #[must_use]
-    pub fn len<M: Metric>(&self) -> u32 {
-        self.moves().map(|m| M::len(m)).sum()
+    pub fn len<M: Metric, T: PrimInt + Sum + 'static>(&self) -> T
+    where
+        u32: AsPrimitive<T>,
+    {
+        self.moves().map(|m| M::len::<T>(m)).sum()
     }
 
     /// The length of the slice in the [`Stm`] [`Metric`].
     #[must_use]
-    pub fn len_stm(&self) -> u32 {
-        self.len::<Stm>()
+    pub fn len_stm<T: PrimInt + Sum + 'static>(&self) -> T
+    where
+        u32: AsPrimitive<T>,
+    {
+        self.len::<Stm, T>()
     }
 
     /// The length of the slice in the [`Mtm`] [`Metric`].
     #[must_use]
-    pub fn len_mtm(&self) -> u32 {
-        self.len::<Mtm>()
+    pub fn len_mtm<T: PrimInt + Sum + 'static>(&self) -> T
+    where
+        u32: AsPrimitive<T>,
+    {
+        self.len::<Mtm, T>()
     }
 
     /// Checks if the slice is empty.

@@ -3,12 +3,13 @@
 use std::{
     cmp::Ordering,
     fmt::Display,
-    iter,
+    iter::{self, Sum},
     ops::{Add, AddAssign, Range},
     str::FromStr,
 };
 
 use itertools::Itertools;
+use num_traits::{AsPrimitive, PrimInt};
 use thiserror::Error;
 
 use crate::{
@@ -65,19 +66,28 @@ impl Algorithm {
 
     /// The length of the algorithm in the [`Metric`] `M`.
     #[must_use]
-    pub fn len<M: Metric>(&self) -> u32 {
-        self.as_slice().len::<M>()
+    pub fn len<M: Metric, T: PrimInt + Sum + 'static>(&self) -> T
+    where
+        u32: AsPrimitive<T>,
+    {
+        self.as_slice().len::<M, T>()
     }
 
     /// The length of the algorithm in the [`Stm`] [`Metric`].
     #[must_use]
-    pub fn len_stm(&self) -> u32 {
+    pub fn len_stm<T: PrimInt + Sum + 'static>(&self) -> T
+    where
+        u32: AsPrimitive<T>,
+    {
         self.as_slice().len_stm()
     }
 
     /// The length of the algorithm in the [`Mtm`] [`Metric`].
     #[must_use]
-    pub fn len_mtm(&self) -> u32 {
+    pub fn len_mtm<T: PrimInt + Sum + 'static>(&self) -> T
+    where
+        u32: AsPrimitive<T>,
+    {
         self.as_slice().len_mtm()
     }
 
