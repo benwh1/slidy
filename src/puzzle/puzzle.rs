@@ -60,6 +60,37 @@ impl Puzzle {
         }
     }
 
+    /// Create a new [`Puzzle`] from a list of numbers and a size.
+    pub fn with_pieces(pieces: Vec<u32>, size: Size) -> Result<Self, PuzzleError> {
+        let (w, h) = size.into();
+
+        let mut gap = None;
+        let mut seen = HashSet::new();
+        for (i, &n) in pieces.iter().enumerate() {
+            if n as usize >= w * h {
+                return Err(PuzzleError::PieceOutOfRange(n));
+            }
+            if seen.contains(&n) {
+                return Err(PuzzleError::DuplicatePiece(n));
+            }
+
+            seen.insert(n);
+
+            if n == 0 {
+                gap = Some(i);
+            }
+        }
+
+        // At this point, `gap` is guaranteed to be Some because we found w * h non-negative
+        // integers, all less than w * h, with no duplicates, so 0 must have occurred somewhere.
+        // So it is safe to call unwrap.
+        Ok(Self {
+            pieces,
+            size,
+            gap: gap.unwrap(),
+        })
+    }
+
     /// Create a new [`Puzzle`] from a 2D grid of numbers.
     pub fn new_from_grid(grid: Vec<Vec<u32>>) -> Result<Self, PuzzleError> {
         if grid.is_empty() {
@@ -78,35 +109,10 @@ impl Puzzle {
             return Err(PuzzleError::UnequalRowLengths);
         }
 
+        let pieces = grid.into_iter().flatten().collect();
         let size = Size::new(w, h).map_err(PuzzleError::InvalidSize)?;
 
-        let mut gap = None;
-        let mut pieces = HashSet::new();
-        for (y, row) in grid.iter().enumerate() {
-            for (x, &n) in row.iter().enumerate() {
-                if n as usize >= w * h {
-                    return Err(PuzzleError::PieceOutOfRange(n));
-                }
-                if pieces.contains(&n) {
-                    return Err(PuzzleError::DuplicatePiece(n));
-                }
-
-                pieces.insert(n);
-
-                if n == 0 {
-                    gap = Some(x + w * y);
-                }
-            }
-        }
-
-        // At this point, `gap` is guaranteed to be Some because we found w * h non-negative
-        // integers, all less than w * h, with no duplicates, so 0 must have occurred somewhere.
-        // So it is safe to call unwrap.
-        Ok(Self {
-            pieces: grid.into_iter().flatten().collect(),
-            size,
-            gap: gap.unwrap(),
-        })
+        Self::with_pieces(pieces, size)
     }
 
     /// Equivalent to [`DisplayInline::new`].
@@ -298,6 +304,14 @@ mod tests {
                 gap: 15
             }
         );
+    }
+
+    #[test]
+    fn test_with_pieces() {
+        let size = Size::default();
+        let pieces = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0];
+        let p = Puzzle::with_pieces(pieces, size);
+        assert!(p.is_ok());
     }
 
     #[test]
