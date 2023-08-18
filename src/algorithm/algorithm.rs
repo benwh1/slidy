@@ -414,22 +414,22 @@ mod tests {
     #[test]
     fn test_len() {
         let a = Algorithm::from_str("ULDR").unwrap();
-        assert_eq!(a.len_stm(), 4);
-        assert_eq!(a.len_mtm(), 4);
+        assert_eq!(a.len_stm::<u32>(), 4);
+        assert_eq!(a.len_mtm::<u32>(), 4);
     }
 
     #[test]
     fn test_len_2() {
         let a = Algorithm::from_str("U3L6D2R20").unwrap();
-        assert_eq!(a.len_stm(), 31);
-        assert_eq!(a.len_mtm(), 4);
+        assert_eq!(a.len_stm::<u32>(), 31);
+        assert_eq!(a.len_mtm::<u32>(), 4);
     }
 
     #[test]
     fn test_len_3() {
         let a = Algorithm::from_str("UUU3").unwrap();
-        assert_eq!(a.len_stm(), 5);
-        assert_eq!(a.len_mtm(), 3);
+        assert_eq!(a.len_stm::<u32>(), 5);
+        assert_eq!(a.len_mtm::<u32>(), 3);
     }
 
     #[test]

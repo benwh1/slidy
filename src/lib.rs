@@ -63,7 +63,7 @@
 //!     let mut solver = Solver::new(&ManhattanDistance);
 //!     let solution = solver.solve(&puzzle)?;
 //!
-//!     println!("Solution: {} ({} moves)", solution, solution.len_stm());
+//!     println!("Solution: {} ({} moves)", solution, solution.len_stm::<u32>());
 //!
 //!     puzzle.apply_alg(&solution);
 //!     assert!(puzzle.is_solved());

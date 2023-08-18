@@ -5,6 +5,7 @@ use palette::rgb::Rgba;
 use crate::puzzle::{color_scheme::ColorScheme, size::Size};
 
 /// A [`ColorScheme`] applied to a fixed-size rectangle, and then tiled across the puzzle.
+#[derive(Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Tiled<C: ColorScheme> {
     color_scheme: C,
     grid_size: Size,

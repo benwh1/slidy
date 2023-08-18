@@ -262,7 +262,7 @@ mod tests {
         for start in 0..34 {
             for end in start..34 {
                 let slice = alg.try_slice(start..end)?;
-                assert_eq!(slice.len_stm(), end - start);
+                assert_eq!(slice.len_stm::<u32>(), end - start);
             }
         }
 
