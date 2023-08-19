@@ -96,7 +96,7 @@ impl Size {
     /// The number of solvable states of a puzzle of size `self`.
     #[must_use]
     pub fn num_states(&self) -> u128 {
-        (1..=self.area().as_()).product()
+        (1..=self.area().as_()).product::<u128>() / 2
     }
 }
 
