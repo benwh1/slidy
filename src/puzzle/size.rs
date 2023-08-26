@@ -100,10 +100,9 @@ impl Size {
     }
 }
 
-#[allow(clippy::from_over_into)]
-impl Into<(usize, usize)> for Size {
-    fn into(self) -> (usize, usize) {
-        (self.width(), self.height())
+impl From<Size> for (usize, usize) {
+    fn from(value: Size) -> Self {
+        (value.width(), value.height())
     }
 }
 
