@@ -50,6 +50,7 @@ pub enum Font<'a> {
 }
 
 /// Struct containing the information needed to draw the borders of the puzzle.
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub struct Borders<S: ColorScheme> {
     scheme: S,
     thickness: f32,
@@ -99,6 +100,7 @@ impl<S: ColorScheme> Borders<S> {
 }
 
 /// Struct containing the information needed to draw text on the pieces of the puzzle.
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub struct Text<'a, S: ColorScheme> {
     scheme: S,
     font: Font<'a>,
@@ -215,6 +217,7 @@ pub enum SubschemeStyle {
 }
 
 /// Used to build a [`Renderer`].
+#[derive(Clone, Debug, PartialEq)]
 pub struct RendererBuilder<
     'a,
     List: AsRef<[S]>,
@@ -235,6 +238,7 @@ pub struct RendererBuilder<
 }
 
 /// Draws a [`SlidingPuzzle`] as an SVG image.
+#[derive(Clone, Debug, PartialEq)]
 pub struct Renderer<
     'a,
     List: AsRef<[S]>,
