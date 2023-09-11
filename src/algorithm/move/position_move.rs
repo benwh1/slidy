@@ -12,12 +12,17 @@ use crate::{
     puzzle::sliding_puzzle::SlidingPuzzle,
 };
 
+#[cfg(feature = "serde")]
+use serde_derive::{Deserialize, Serialize};
+
 /// Represents a move of the piece in the given position.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PositionMove(pub usize, pub usize);
 
 /// Error type for the implementation of [`TryIntoMove`] for [`PositionMove`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum TryPositionMoveIntoMoveError {
     /// Returned when the piece can not be moved.
     #[error("InvalidMove: position ({0}, {1}) can not be moved")]

@@ -20,8 +20,12 @@ use crate::puzzle::{
 
 use super::{color_scheme::ColorScheme, sliding_puzzle::SlidingPuzzle};
 
+#[cfg(feature = "serde")]
+use serde_derive::{Deserialize, Serialize};
+
 /// Error type for [`Renderer`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum RendererError {
     /// Returned when the given puzzle size is incompatible with the label.
     #[error("IncompatibleLabel: puzzle size ({0}) can not be used with the given label")]
@@ -206,6 +210,7 @@ impl<'a, S: ColorScheme> Text<'a, S> {
 ///
 /// The default value is [`SubschemeStyle::Rectangle`].
 #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum SubschemeStyle {
     /// Draw the subscheme as a small rectangle at the bottom of each piece.
     #[default]

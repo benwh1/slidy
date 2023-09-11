@@ -7,6 +7,9 @@ use num_traits::AsPrimitive;
 use palette::{rgb::Rgba, Gradient, Hsl, Hsla, IntoColor, Mix};
 use thiserror::Error;
 
+#[cfg(feature = "serde")]
+use serde_derive::{Deserialize, Serialize};
+
 /// Provides a function mapping labels to colors.
 ///
 /// See also: [`crate::puzzle::label::label::Label`].
@@ -39,6 +42,7 @@ impl<T: Coloring + ?Sized> Coloring for Box<T> {
 
 /// Error type for [`ColorList`]
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ColorListError {
     /// Returned when [`ColorList::new`] is given an empty list.
     #[error("EmptyColorList: color list must be non-empty")]
@@ -47,38 +51,46 @@ pub enum ColorListError {
 
 /// A [`Coloring`] that always produces the same color.
 #[derive(Clone, Debug, Default, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Monochrome {
     color: Rgba,
 }
 
 /// A [`Coloring`] that cycles through a given list of colors.
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ColorList {
     colors: Vec<Rgba>,
 }
 
 /// A [`Coloring`] that produces rainbow colors.
 #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Rainbow;
 
 /// Similar to [`Rainbow`] but produces slightly different colors.
 #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RainbowFull;
 
 /// Similar to [`Rainbow`] but produces brighter, more pastel-like colors.
 #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RainbowBright;
 
 /// Combination of [`RainbowBright`] and [`RainbowFull`].
 #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RainbowBrightFull;
 
 /// Given a [`Coloring`] `T`, makes the colors brighter when `label` is even.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AlternatingBrightness<C: Coloring>(pub C);
 
 /// Given a [`Coloring`] `C`, adds a fixed constant to the HSL lightness value.
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AddLightness<C: Coloring> {
     coloring: C,
     lightness: f32,

@@ -7,8 +7,12 @@ use std::{
 };
 use thiserror::Error;
 
+#[cfg(feature = "serde")]
+use serde_derive::{Deserialize, Serialize};
+
 /// The directions in which a piece can be moved.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Direction {
     /// Moving a piece below the gap upwards.
     Up,
@@ -58,6 +62,7 @@ impl Display for Direction {
 
 /// Error type for [`TryFrom<char>`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ParseDirectionError {
     /// Found a character other than U, L, D, R.
     #[error("InvalidCharacter: character {0} must be one of 'U', 'L', 'D', 'R'")]

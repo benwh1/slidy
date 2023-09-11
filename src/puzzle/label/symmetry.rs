@@ -4,11 +4,15 @@ use crate::puzzle::size::Size;
 
 use super::label::{BijectiveLabel, Label};
 
+#[cfg(feature = "serde")]
+use serde_derive::{Deserialize, Serialize};
+
 macro_rules! define_sym {
     ($($(#[$annot:meta])* $name:ident),* $(,)?) => {
         $(
             $(#[$annot])*
             #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+            #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
             pub struct $name<L: Label>(pub L);
         )*
     };

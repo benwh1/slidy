@@ -9,8 +9,12 @@ use std::{
 use num_traits::AsPrimitive;
 use thiserror::Error;
 
+#[cfg(feature = "serde")]
+use serde_derive::{Deserialize, Serialize};
+
 /// The size of a [`SlidingPuzzle`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Size(usize, usize);
 
 impl Default for Size {
@@ -21,6 +25,7 @@ impl Default for Size {
 
 /// Error type for [`Size::new`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum SizeError {
     /// Returned from [`Size::new`] when the width or height is less than 2.
     #[error("InvalidSize: width ({0}) and height ({1}) must be greater than or equal to 2")]

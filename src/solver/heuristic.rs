@@ -5,6 +5,9 @@ use num_traits::{AsPrimitive, PrimInt, Unsigned, Zero};
 
 use crate::puzzle::sliding_puzzle::SlidingPuzzle;
 
+#[cfg(feature = "serde")]
+use serde_derive::{Deserialize, Serialize};
+
 /// Provides a function returning a lower bound on the number of moves needed to solve a puzzle.
 pub trait Heuristic<Puzzle, T>
 where
@@ -18,6 +21,7 @@ where
 
 /// Manhattan distance heuristic.
 #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ManhattanDistance;
 
 impl<Puzzle, T> Heuristic<Puzzle, T> for ManhattanDistance

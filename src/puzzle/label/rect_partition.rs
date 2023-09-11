@@ -8,8 +8,12 @@ use crate::puzzle::size::Size;
 
 use super::label::Label;
 
+#[cfg(feature = "serde")]
+use serde_derive::{Deserialize, Serialize};
+
 /// Error type for [`Rect`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum RectError {
     /// Returned when the width (`right - left`) or height (`bottom - top`) are negative.
     #[error("InvalidSize: width and height of the rectangle must be positive")]
@@ -20,6 +24,7 @@ pub enum RectError {
 ///
 /// Used to define a [`RectPartition`].
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Rect {
     left: u32,
     top: u32,
@@ -77,6 +82,7 @@ impl Rect {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub(super) struct PiecewiseConstant {
     data: BTreeMap<u32, u32>,
     domain: Range<u32>,
@@ -140,12 +146,14 @@ impl PiecewiseConstant {
 
 /// A partition of a rectangle into smaller rectangles.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RectPartition {
     pub(in crate::puzzle) rects: Vec<Rect>,
 }
 
 /// Error type for [`RectPartition`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum RectPartitionError {
     /// Returned from [`RectPartition::new`] when given an empty vector.
     #[error("Empty: a partition must contain at least one `Rect`")]

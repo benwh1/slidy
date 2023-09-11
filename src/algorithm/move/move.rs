@@ -9,8 +9,12 @@ use crate::algorithm::{
     display::r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort, MoveDisplay},
 };
 
+#[cfg(feature = "serde")]
+use serde_derive::{Deserialize, Serialize};
+
 /// A (possibly multi-tile) move of a puzzle. Contains a direction and an amount.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Move {
     pub(crate) direction: Direction,
     pub(crate) amount: u32,
@@ -18,6 +22,7 @@ pub struct Move {
 
 /// Represents the sum of two moves.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MoveSum {
     /// The sum of two moves that are in the same or opposite directions is another move.
     Ok(Move),
@@ -28,6 +33,7 @@ pub enum MoveSum {
 
 /// Error type for [`Move`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MoveError {
     /// Returned when the amount 0 is passed to [`Move::new_nonzero`].
     #[error("ZeroAmount: move amount must be greater than 0")]

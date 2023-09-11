@@ -15,8 +15,13 @@ num-traits = "0.2.15"
 palette = "0.6.1"
 rand = "0.8.5"
 regex = "1.9.1"
+serde = { version = "1.0.188", optional = true }
+serde_derive = { version = "1.0.188", optional = true }
 svg = "0.13.1"
 thiserror = "1.0.43"
 
 [dev-dependencies]
 paste = "1.0.14"
+
+[features]
+serde = ["palette/serializing", "dep:serde", "dep:serde_derive"]

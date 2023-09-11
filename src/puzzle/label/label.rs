@@ -7,8 +7,12 @@ use thiserror::Error;
 
 use crate::puzzle::size::Size;
 
+#[cfg(feature = "serde")]
+use serde_derive::{Deserialize, Serialize};
+
 /// Error type for [`Label`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum LabelError {
     /// Returned when the given puzzle size is incompatible with the label.
     #[error("InvalidSize: {0} is not a valid size")]
@@ -96,6 +100,7 @@ macro_rules! define_label {
             ///
             /// Valid with all puzzle sizes.
             #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+            #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
             pub struct $name;
         )*
     };
