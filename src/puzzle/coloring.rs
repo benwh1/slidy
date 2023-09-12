@@ -254,8 +254,6 @@ impl<C: Curve<f32, Output = LinSrgba>> Coloring for Gradient<C> {
 
 #[cfg(test)]
 mod tests {
-    use palette::LinSrgba;
-
     use super::*;
 
     #[test]
@@ -390,25 +388,47 @@ mod tests {
 
     #[test]
     fn test_gradient() {
-        let g = Gradient::with_domain(vec![
+        let g = Gradient::linear(vec![
             (0.0, LinSrgba::new(1.0, 0.0, 0.5, 1.0)),
             (0.5, LinSrgba::new(0.5, 0.25, 1.0, 0.5)),
             (0.8, LinSrgba::new(0.5, 0.75, 0.5, 1.0)),
             (1.0, LinSrgba::new(0.0, 0.5, 0.2, 1.0)),
-        ]);
+        ])
+        .unwrap();
 
         let expected = vec![
-            Some(LinSrgba::new(1.0, 0.0, 0.5, 1.0).into_color()),
-            Some(LinSrgba::new(0.8, 0.10, 0.7, 0.8).into_color()),
-            Some(LinSrgba::new(0.6, 0.20, 0.9, 0.6).into_color()),
-            Some(LinSrgba::new(0.5, 5.0 / 12.0, 5.0 / 6.0, 2.0 / 3.0).into_color()),
-            Some(LinSrgba::new(0.5, 0.75, 0.5, 1.0).into_color()),
-            Some(LinSrgba::new(0.0, 0.5, 0.2, 1.0).into_color()),
+            Some(LinSrgba::new(1.0, 0.0, 0.5, 1.0)),
+            Some(LinSrgba::new(0.8, 0.10, 0.7, 0.8)),
+            Some(LinSrgba::new(0.6, 0.20, 0.9, 0.6)),
+            Some(LinSrgba::new(0.5, 5.0 / 12.0, 5.0 / 6.0, 2.0 / 3.0)),
+            Some(LinSrgba::new(0.5, 0.75, 0.5, 1.0)),
+            Some(LinSrgba::new(0.0, 0.5, 0.2, 1.0)),
             None,
-        ];
+        ]
+        .into_iter()
+        .map(|c| {
+            c.map(|c| {
+                let c: Rgba = c.into_color();
+                c.into_components()
+            })
+        })
+        .collect::<Vec<_>>();
 
         for i in 0..7 {
-            assert_eq!(g.try_color(i, 6), expected[i]);
+            let color = g.try_color(i, 6).map(|c| c.into_components());
+
+            match (color, expected[i]) {
+                (None, None) => {}
+                (None, Some(_)) | (Some(_), None) => panic!("One color is None, the other is Some"),
+                (Some((cr, cg, cb, ca)), Some((er, eg, eb, ea))) => {
+                    assert!(
+                        (er - cr).abs() < 1e-6
+                            && (eg - cg).abs() < 1e-6
+                            && (eb - cb).abs() < 1e-6
+                            && (ea - ca).abs() < 1e-6
+                    )
+                }
+            }
         }
     }
 }
