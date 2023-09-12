@@ -1,10 +1,13 @@
 //! Defines the [`Coloring`] trait and several implementations.
 
-use std::ops::Div;
+use std::cmp::Ordering;
 
 use blanket::blanket;
-use num_traits::AsPrimitive;
-use palette::{rgb::Rgba, Gradient, Hsl, Hsla, IntoColor, Mix};
+use enterpolation::{
+    linear::{Linear, LinearError},
+    Curve, Identity, Sorted,
+};
+use palette::{rgb::Rgba, FromColor, Hsl, Hsla, IntoColor, LinSrgba};
 use thiserror::Error;
 
 #[cfg(feature = "serde")]
@@ -94,6 +97,11 @@ pub struct AlternatingBrightness<C: Coloring>(pub C);
 pub struct AddLightness<C: Coloring> {
     coloring: C,
     lightness: f32,
+}
+
+/// A [`Coloring`] that produces a gradient effect by interpolating between a given list of colors.
+pub struct Gradient<C: Curve<f32, Output = LinSrgba>> {
+    gradient: C,
 }
 
 impl Monochrome {
@@ -211,21 +219,36 @@ impl<C: Coloring> Coloring for AddLightness<C> {
     }
 }
 
-impl<C, T> Coloring for Gradient<C, T>
-where
-    C: Mix + Clone + IntoColor<Rgba>,
-    T: AsRef<[(C::Scalar, C)]>,
-    usize: AsPrimitive<C::Scalar>,
-    C::Scalar: Div + 'static,
-{
+impl Gradient<Linear<Sorted<Vec<f32>>, Vec<LinSrgba>, Identity>> {
+    /// Creates a new [`Gradient`] from a list of `(t, color)` pairs using linear interpolation,
+    /// where the `t`s are values from 0 to 1 defining how the colors should be spread out.
+    pub fn linear<Color>(mut points: Vec<(f32, Color)>) -> Result<Self, LinearError>
+    where
+        LinSrgba: FromColor<Color>,
+    {
+        points.sort_by(|(a, _), (b, _)| a.partial_cmp(b).unwrap_or(Ordering::Less));
+
+        let knots = points.iter().map(|&(x, _)| x).collect::<Vec<_>>();
+        let colors = points
+            .into_iter()
+            .map(|(_, c)| c)
+            .map(LinSrgba::from_color)
+            .collect::<Vec<_>>();
+
+        let gradient = Linear::builder().elements(colors).knots(knots).build()?;
+        Ok(Self { gradient })
+    }
+}
+
+impl<C: Curve<f32, Output = LinSrgba>> Coloring for Gradient<C> {
     fn color(&self, label: usize, num_labels: usize) -> Rgba {
         let point = if num_labels < 2 {
-            0.as_()
+            0.0
         } else {
-            label.as_() / (num_labels - 1).as_()
+            label as f32 / (num_labels - 1) as f32
         };
 
-        self.get(point).into_color()
+        self.gradient.gen(point).into_color()
     }
 }
 

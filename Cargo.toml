@@ -9,6 +9,7 @@ repository = "https://github.com/benwh1/slidy/"
 
 [dependencies]
 blanket = "0.3.0"
+enterpolation = "0.2.1"
 itertools = "0.11.0"
 lazy_static = "1.4.0"
 num-traits = "0.2.15"
