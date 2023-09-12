@@ -104,6 +104,9 @@ pub struct Gradient<C: Curve<f32, Output = LinSrgba>> {
     gradient: C,
 }
 
+/// Type alias of a [`Gradient`] that uses linear interpolation.
+pub type LinearGradient = Gradient<Linear<Sorted<Vec<f32>>, Vec<LinSrgba>, Identity>>;
+
 impl Monochrome {
     /// Creates a new [`Monochrome`] that always produces `color`.
     #[must_use]
@@ -219,7 +222,7 @@ impl<C: Coloring> Coloring for AddLightness<C> {
     }
 }
 
-impl Gradient<Linear<Sorted<Vec<f32>>, Vec<LinSrgba>, Identity>> {
+impl LinearGradient {
     /// Creates a new [`Gradient`] from a list of `(t, color)` pairs using linear interpolation,
     /// where the `t`s are values from 0 to 1 defining how the colors should be spread out.
     pub fn linear<Color>(mut points: Vec<(f32, Color)>) -> Result<Self, LinearError>
