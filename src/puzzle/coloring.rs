@@ -414,10 +414,10 @@ mod tests {
         })
         .collect::<Vec<_>>();
 
-        for i in 0..7 {
+        for (i, expected) in expected.iter().enumerate() {
             let color = g.try_color(i, 6).map(|c| c.into_components());
 
-            match (color, expected[i]) {
+            match (color, expected) {
                 (None, None) => {}
                 (None, Some(_)) | (Some(_), None) => panic!("One color is None, the other is Some"),
                 (Some((cr, cg, cb, ca)), Some((er, eg, eb, ea))) => {
@@ -426,7 +426,7 @@ mod tests {
                             && (eg - cg).abs() < 1e-6
                             && (eb - cb).abs() < 1e-6
                             && (ea - ca).abs() < 1e-6
-                    )
+                    );
                 }
             }
         }
