@@ -12,14 +12,14 @@ blanket = "0.3.0"
 enterpolation = "0.2.1"
 itertools = "0.11.0"
 lazy_static = "1.4.0"
-num-traits = "0.2.15"
-palette = "0.6.1"
+num-traits = "0.2.16"
+palette = "0.7.3"
 rand = "0.8.5"
-regex = "1.9.1"
+regex = "1.9.5"
 serde = { version = "1.0.188", optional = true }
 serde_derive = { version = "1.0.188", optional = true }
 svg = "0.13.1"
-thiserror = "1.0.43"
+thiserror = "1.0.48"
 
 [dev-dependencies]
 paste = "1.0.14"
