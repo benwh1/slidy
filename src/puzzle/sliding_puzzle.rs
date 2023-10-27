@@ -60,8 +60,7 @@ where
     /// # Panics
     ///
     /// Panics if there is no piece `piece` (i.e. if `piece` is out of the valid range for the
-    /// puzzle, or if a function like [`SlidingPuzzle::set_piece`] has been used to create an
-    /// invalid state, i.e. a state with no piece `piece`).
+    /// puzzle).
     #[must_use]
     fn piece_position(&self, piece: Self::Piece) -> usize {
         self.try_piece_position(piece).unwrap()
@@ -642,6 +641,8 @@ where
     }
 
     /// Checks if it is possible to apply the given [`Algorithm`].
+    ///
+    /// [`Algorithm`]: ../../algorithm/algorithm.html
     #[must_use]
     fn can_apply_alg<'a, Alg: AsAlgorithmSlice<'a>>(&self, alg: &'a Alg) -> bool {
         let (mut gx, mut gy) = self.gap_position_xy();
@@ -671,6 +672,8 @@ where
     ///
     /// If `self.can_apply_alg(alg)` is false, the function may panic or the puzzle may be
     /// transformed in an invalid way.
+    ///
+    /// [`Algorithm`]: ../../algorithm/algorithm.html
     fn apply_alg<'a, Alg: AsAlgorithmSlice<'a>>(&mut self, alg: &'a Alg) {
         for m in alg.as_slice().moves() {
             self.apply_move(m);

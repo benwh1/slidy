@@ -194,6 +194,8 @@ impl<S: ColorScheme, List: AsRef<[S]>> ColorScheme for SchemeList<S, List> {
 
 /// A [`ColorScheme`] that always outputs black. This is just to make using [`Renderer`] more
 /// convenient (because most of the time, we probably want black text and black borders).
+///
+/// [`Renderer`]: ../renderer.html
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Black;

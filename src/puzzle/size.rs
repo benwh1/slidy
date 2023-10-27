@@ -1,4 +1,6 @@
 //! Defines a struct representing the size of a [`SlidingPuzzle`].
+//!
+//! [`SlidingPuzzle`]: ../sliding_puzzle.html
 
 use std::{
     fmt::{Display, Write},
@@ -13,6 +15,8 @@ use thiserror::Error;
 use serde_derive::{Deserialize, Serialize};
 
 /// The size of a [`SlidingPuzzle`].
+///
+/// [`SlidingPuzzle`]: ../sliding_puzzle.html
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Size(usize, usize);

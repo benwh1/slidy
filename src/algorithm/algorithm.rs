@@ -30,7 +30,7 @@ use super::{direction::Direction, r#move::r#move::Move};
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 
-/// Error type for [`Algorithm::slice`].
+/// Error type for [`Algorithm::try_slice`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum SliceError {
@@ -79,6 +79,8 @@ impl Algorithm {
     }
 
     /// The length of the algorithm in the [`Stm`] [`Metric`].
+    ///
+    /// [`Stm`]: ../metric.html
     #[must_use]
     pub fn len_stm<T: PrimInt + Sum + 'static>(&self) -> T
     where
@@ -88,6 +90,8 @@ impl Algorithm {
     }
 
     /// The length of the algorithm in the [`Mtm`] [`Metric`].
+    ///
+    /// [`Mtm`]: ../metric.html
     #[must_use]
     pub fn len_mtm<T: PrimInt + Sum + 'static>(&self) -> T
     where

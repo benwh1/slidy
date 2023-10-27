@@ -86,9 +86,9 @@ impl<S: ColorScheme> Borders<S> {
 
     /// Set the border color scheme.
     ///
-    /// If the main color scheme (see [`Renderer::scheme`]) has a subscheme, and the subscheme
-    /// style (see [`Renderer::subscheme_style`]) is [`SubschemeStyle::BorderColor`], then the
-    /// subscheme color will override the border scheme.
+    /// If the main color scheme (see [`RendererBuilder::with_scheme`]) has a subscheme, and the
+    /// subscheme style (see [`RendererBuilder::subscheme_style`]) is
+    /// [`SubschemeStyle::BorderColor`], then the subscheme color will override the border scheme.
     #[must_use]
     pub fn scheme(mut self, scheme: S) -> Self {
         self.scheme = scheme;
@@ -140,9 +140,9 @@ impl<'a, S: ColorScheme> Text<'a, S> {
 
     /// Set the text color scheme.
     ///
-    /// If the main color scheme (see [`Renderer::scheme`]) has a subscheme, and the subscheme
-    /// style (see [`Renderer::subscheme_style`]) is [`SubschemeStyle::TextColor`], then the
-    /// subscheme color will override the text scheme.
+    /// If the main color scheme (see [`RendererBuilder::with_scheme`]) has a subscheme, and the
+    /// subscheme style (see [`RendererBuilder::subscheme_style`]) is
+    /// [`SubschemeStyle::TextColor`], then the subscheme color will override the text scheme.
     #[must_use]
     pub fn scheme(mut self, scheme: S) -> Self {
         self.scheme = scheme;

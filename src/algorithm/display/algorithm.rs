@@ -1,4 +1,6 @@
 //! Defines ways in which an [`Algorithm`] can be displayed.
+//!
+//! [`Algorithm`]: ../../algorithm.html
 
 use super::r#move::MoveDisplay;
 use crate::algorithm::{as_slice::AsAlgorithmSlice, slice::AlgorithmSlice};
