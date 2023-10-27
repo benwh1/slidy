@@ -100,6 +100,8 @@ pub struct AddLightness<C: Coloring> {
 }
 
 /// A [`Coloring`] that produces a gradient effect by interpolating between a given list of colors.
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Gradient<C: Curve<f32, Output = LinSrgba>> {
     gradient: C,
 }

@@ -25,4 +25,9 @@ thiserror = "1.0.48"
 paste = "1.0.14"
 
 [features]
-serde = ["palette/serializing", "dep:serde", "dep:serde_derive"]
+serde = [
+    "enterpolation/serde",
+    "palette/serializing",
+    "dep:serde",
+    "dep:serde_derive",
+]
