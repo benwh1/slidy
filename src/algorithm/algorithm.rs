@@ -51,7 +51,6 @@ pub enum SliceError {
 
 /// A sequence of moves.
 #[derive(Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Algorithm {
     pub(super) moves: Vec<Move>,
 }
@@ -376,6 +375,28 @@ impl FromStr for Algorithm {
         }
 
         Ok(alg)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl serde::Serialize for Algorithm {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let str = self.to_string();
+        serializer.serialize_str(&str)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for Algorithm {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let alg_str = String::deserialize(deserializer)?;
+        Algorithm::from_str(&alg_str).map_err(serde::de::Error::custom)
     }
 }
 
