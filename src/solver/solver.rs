@@ -180,3 +180,34 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use crate::{
+        puzzle::{
+            label::labels::{RowGrids, Rows},
+            puzzle::Puzzle,
+        },
+        solver::heuristic::ManhattanDistance,
+    };
+
+    use super::*;
+
+    #[test]
+    fn test_row_grids_manhattan() {
+        let mut solver = Solver::new(&ManhattanDistance, &RowGrids);
+        let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
+        let solution = solver.solve(&puzzle).unwrap();
+        assert_eq!(solution.len_stm::<u32>(), 31);
+    }
+
+    #[test]
+    fn test_rows_manhattan() {
+        let mut solver = Solver::new(&ManhattanDistance, &Rows);
+        let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
+        let solution = solver.solve(&puzzle).unwrap();
+        assert_eq!(solution.len_stm::<u32>(), 23);
+    }
+}
