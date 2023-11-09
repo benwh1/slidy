@@ -656,7 +656,9 @@ where
                 Direction::Right => (gx.checked_sub(amount), Some(gy)),
             };
 
-            if let (Some(new_gx), Some(new_gy)) = (new_gx, new_gy) && self.size().is_within_bounds((new_gx, new_gy)) {
+            if let (Some(new_gx), Some(new_gy)) = (new_gx, new_gy)
+                && self.size().is_within_bounds((new_gx, new_gy))
+            {
                 (gx, gy) = (new_gx, new_gy);
             } else {
                 return false;

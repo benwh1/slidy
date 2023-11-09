@@ -108,7 +108,9 @@ impl AlgorithmSlice<'_> {
             }
         }
 
-        if let Some(m) = acc_move && m.amount != 0 {
+        if let Some(m) = acc_move
+            && m.amount != 0
+        {
             moves.push(m);
         }
 

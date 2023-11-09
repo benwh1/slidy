@@ -467,7 +467,9 @@ impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
         // schemes that we have in self.text_scheme and self.borders.unwrap().scheme.
         macro_rules! color {
             ($scheme:expr, $subscheme:expr) => {{
-                let color = if let Some(c) = subscheme_color && self.subscheme_style == Some($subscheme) {
+                let color = if let Some(c) = subscheme_color
+                    && self.subscheme_style == Some($subscheme)
+                {
                     // There is a subscheme color, and the subscheme style overrides the other
                     // scheme (text or border scheme).
                     c
