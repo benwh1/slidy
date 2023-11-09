@@ -7,7 +7,8 @@ use thiserror::Error;
 
 use crate::{
     algorithm::{algorithm::Algorithm, direction::Direction, r#move::r#move::Move},
-    puzzle::{sliding_puzzle::SlidingPuzzle, solved_state::SolvedState},
+    puzzle::{label::labels::RowGrids, sliding_puzzle::SlidingPuzzle, solved_state::SolvedState},
+    solver::heuristic::ManhattanDistance,
 };
 
 use super::heuristic::Heuristic;
@@ -87,6 +88,15 @@ where
     heuristic: &'a H,
     solved_state: &'a S,
     phantom_t: PhantomData<T>,
+}
+
+impl<Puzzle> Default for Solver<'static, Puzzle, u8, RowGrids, ManhattanDistance>
+where
+    Puzzle: SlidingPuzzle + Clone,
+{
+    fn default() -> Self {
+        Self::new_with_t(&ManhattanDistance, &RowGrids)
+    }
 }
 
 impl<'a, Puzzle, S, H> Solver<'a, Puzzle, u8, S, H>
