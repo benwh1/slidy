@@ -3,13 +3,15 @@
 use itertools::Itertools;
 use num_traits::{AsPrimitive, PrimInt, Unsigned, Zero};
 
-use crate::puzzle::sliding_puzzle::SlidingPuzzle;
+use crate::puzzle::{
+    label::labels::RowGrids, sliding_puzzle::SlidingPuzzle, solved_state::SolvedState,
+};
 
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 
 /// Provides a function returning a lower bound on the number of moves needed to solve a puzzle.
-pub trait Heuristic<T: PrimInt + Unsigned> {
+pub trait Heuristic<S: SolvedState, T: PrimInt + Unsigned> {
     /// Returns a lower bound on the number of moves needed to solve `puzzle`.
     #[must_use]
     fn bound<P: SlidingPuzzle>(&self, puzzle: &P) -> T;
@@ -20,7 +22,7 @@ pub trait Heuristic<T: PrimInt + Unsigned> {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ManhattanDistance;
 
-impl<T: PrimInt + Unsigned + 'static> Heuristic<T> for ManhattanDistance
+impl<T: PrimInt + Unsigned + 'static> Heuristic<RowGrids, T> for ManhattanDistance
 where
     usize: AsPrimitive<T>,
 {
