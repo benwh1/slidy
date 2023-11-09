@@ -9,14 +9,10 @@ use crate::puzzle::sliding_puzzle::SlidingPuzzle;
 use serde_derive::{Deserialize, Serialize};
 
 /// Provides a function returning a lower bound on the number of moves needed to solve a puzzle.
-pub trait Heuristic<Puzzle, T>
-where
-    Puzzle: SlidingPuzzle,
-    T: PrimInt + Unsigned,
-{
+pub trait Heuristic<T: PrimInt + Unsigned> {
     /// Returns a lower bound on the number of moves needed to solve `puzzle`.
     #[must_use]
-    fn bound(&self, puzzle: &Puzzle) -> T;
+    fn bound<P: SlidingPuzzle>(&self, puzzle: &P) -> T;
 }
 
 /// Manhattan distance heuristic.
@@ -24,13 +20,11 @@ where
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ManhattanDistance;
 
-impl<Puzzle, T> Heuristic<Puzzle, T> for ManhattanDistance
+impl<T: PrimInt + Unsigned + 'static> Heuristic<T> for ManhattanDistance
 where
-    Puzzle: SlidingPuzzle,
-    T: PrimInt + Unsigned + 'static,
     usize: AsPrimitive<T>,
 {
-    fn bound(&self, puzzle: &Puzzle) -> T {
+    fn bound<P: SlidingPuzzle>(&self, puzzle: &P) -> T {
         let (w, h) = puzzle.size().into();
         (0..w)
             .cartesian_product(0..h)
@@ -38,7 +32,7 @@ where
                 let piece = puzzle.piece_at_xy((x, y));
                 let (a, b) = puzzle.solved_pos_xy(piece);
 
-                if piece == Puzzle::Piece::zero() {
+                if piece == P::Piece::zero() {
                     0
                 } else {
                     x.abs_diff(a) + y.abs_diff(b)

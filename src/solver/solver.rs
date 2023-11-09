@@ -78,7 +78,7 @@ pub struct Solver<'a, Puzzle, T, H>
 where
     Puzzle: SlidingPuzzle + Clone,
     T: PrimInt + Unsigned + 'static,
-    H: Heuristic<Puzzle, T>,
+    H: Heuristic<T>,
     u8: AsPrimitive<T>,
 {
     stack: Stack,
@@ -90,7 +90,7 @@ where
 impl<'a, Puzzle, H> Solver<'a, Puzzle, u8, H>
 where
     Puzzle: SlidingPuzzle + Clone,
-    H: Heuristic<Puzzle, u8>,
+    H: Heuristic<u8>,
 {
     /// Creates a new [`Solver`] using the given heuristic.
     pub fn new(heuristic: &'a H) -> Self {
@@ -107,7 +107,7 @@ impl<'a, Puzzle, T, H> Solver<'a, Puzzle, T, H>
 where
     Puzzle: SlidingPuzzle + Clone,
     T: PrimInt + Unsigned + 'static,
-    H: Heuristic<Puzzle, T>,
+    H: Heuristic<T>,
     u8: AsPrimitive<T>,
 {
     /// Constructs a new [`Solver`] for solving `puzzle`.
