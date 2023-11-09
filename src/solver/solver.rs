@@ -7,7 +7,7 @@ use thiserror::Error;
 
 use crate::{
     algorithm::{algorithm::Algorithm, direction::Direction, r#move::r#move::Move},
-    puzzle::sliding_puzzle::SlidingPuzzle,
+    puzzle::{sliding_puzzle::SlidingPuzzle, solved_state::SolvedState},
 };
 
 use super::heuristic::Heuristic;
@@ -74,58 +74,61 @@ pub enum SolverError {
 /// `T` should be chosen such that the maximum length of a potential solution is less than the
 /// maximum value of a `T`. In almost all cases, `T = u8` should be used.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Solver<'a, Puzzle, T, H>
+pub struct Solver<'a, Puzzle, T, S, H>
 where
     Puzzle: SlidingPuzzle + Clone,
     T: PrimInt + Unsigned + 'static,
-    H: Heuristic<T>,
+    S: SolvedState,
+    H: Heuristic<S, T>,
     u8: AsPrimitive<T>,
 {
     stack: Stack,
     phantom_puzzle: PhantomData<Puzzle>,
     heuristic: &'a H,
+    solved_state: &'a S,
     phantom_t: PhantomData<T>,
 }
 
-impl<'a, Puzzle, H> Solver<'a, Puzzle, u8, H>
+impl<'a, Puzzle, S, H> Solver<'a, Puzzle, u8, S, H>
 where
     Puzzle: SlidingPuzzle + Clone,
-    H: Heuristic<u8>,
+    S: SolvedState,
+    H: Heuristic<S, u8>,
 {
     /// Creates a new [`Solver`] using the given heuristic.
-    pub fn new(heuristic: &'a H) -> Self {
+    pub fn new(heuristic: &'a H, solved_state: &'a S) -> Self {
         Self {
             stack: Stack::default(),
             phantom_puzzle: PhantomData,
             heuristic,
+            solved_state,
             phantom_t: PhantomData,
         }
     }
 }
 
-impl<'a, Puzzle, T, H> Solver<'a, Puzzle, T, H>
+impl<'a, Puzzle, T, S, H> Solver<'a, Puzzle, T, S, H>
 where
     Puzzle: SlidingPuzzle + Clone,
     T: PrimInt + Unsigned + 'static,
-    H: Heuristic<T>,
+    S: SolvedState,
+    H: Heuristic<S, T>,
     u8: AsPrimitive<T>,
 {
     /// Constructs a new [`Solver`] for solving `puzzle`.
-    pub fn new_with_t(heuristic: &'a H) -> Self {
+    pub fn new_with_t(heuristic: &'a H, solved_state: &'a S) -> Self {
         Self {
             stack: Stack::default(),
             phantom_puzzle: PhantomData,
             heuristic,
+            solved_state,
             phantom_t: PhantomData::<T>,
         }
     }
 
     fn dfs(&mut self, puzzle: &mut Puzzle, depth: T) -> bool {
         if depth == T::zero() {
-            if puzzle.is_solved() {
-                return true;
-            }
-            return false;
+            return self.solved_state.is_solved(puzzle);
         }
 
         let bound = self.heuristic.bound(puzzle);
