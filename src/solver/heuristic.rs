@@ -72,10 +72,10 @@ where
         let (gx, gy) = puzzle.gap_position_xy();
         let (sx, sy) = puzzle.solved_pos_xy(P::Piece::zero());
 
-        let adjusted_md = if md % 2 != (gx.abs_diff(sx) + gy.abs_diff(sy)) % 2 {
-            md + 1
-        } else {
+        let adjusted_md = if md % 2 == (gx.abs_diff(sx) + gy.abs_diff(sy)) % 2 {
             md
+        } else {
+            md + 1
         };
 
         adjusted_md.as_()
