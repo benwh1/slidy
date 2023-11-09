@@ -60,7 +60,7 @@
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     let mut puzzle = Puzzle::from_str("0 10 6 4/1 5 14 15/13 11 8 7/3 2 9 12")?;
 //!
-//!     let mut solver = Solver::new(&ManhattanDistance);
+//!     let mut solver = Solver::default();
 //!     let solution = solver.solve(&puzzle)?;
 //!
 //!     println!("Solution: {} ({} moves)", solution, solution.len_stm::<u32>());
