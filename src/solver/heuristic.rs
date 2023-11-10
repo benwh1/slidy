@@ -4,7 +4,7 @@ use itertools::Itertools;
 use num_traits::{AsPrimitive, PrimInt, Unsigned, Zero};
 
 use crate::puzzle::{
-    label::labels::{RowGrids, Rows},
+    label::labels::{Checkerboard, Diagonals, Fringe, RowGrids, Rows, Trivial},
     sliding_puzzle::SlidingPuzzle,
     solved_state::SolvedState,
 };
@@ -23,6 +23,17 @@ pub trait Heuristic<S: SolvedState, T: PrimInt + Unsigned> {
 #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ManhattanDistance;
+
+impl<T: PrimInt + Unsigned + 'static> Heuristic<Trivial, T> for ManhattanDistance
+where
+    usize: AsPrimitive<T>,
+{
+    fn bound<P: SlidingPuzzle>(&self, puzzle: &P) -> T {
+        let (w, h) = puzzle.size().into();
+        let (gx, gy) = puzzle.gap_position_xy();
+        (w + h - 2 - gx - gy).as_()
+    }
+}
 
 macro_rules! impl_manhattan {
     ($label:ty, $dist:expr, $parity_fix:literal $(,)?) => {
@@ -75,3 +86,21 @@ impl_manhattan!(
 );
 
 impl_manhattan!(Rows, |(_, y), (_, sy)| y.abs_diff(sy), true);
+
+impl_manhattan!(
+    Fringe,
+    |(x, y), (sx, sy)| x.abs_diff(sx).min(y.abs_diff(sy)),
+    true
+);
+
+impl_manhattan!(
+    Diagonals,
+    |(x, y), (sx, sy)| (x + y).abs_diff(sx + sy),
+    true
+);
+
+impl_manhattan!(
+    Checkerboard,
+    |(x, y), (sx, sy)| usize::from((x + y) % 2 != (sx + sy) % 2),
+    true
+);
