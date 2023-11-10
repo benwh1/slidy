@@ -8,7 +8,7 @@ use thiserror::Error;
 use crate::{
     algorithm::{algorithm::Algorithm, direction::Direction, r#move::r#move::Move},
     puzzle::{label::labels::RowGrids, sliding_puzzle::SlidingPuzzle, solved_state::SolvedState},
-    solver::heuristic::ManhattanDistance,
+    solver::heuristic::manhattan::ManhattanDistance,
 };
 
 use super::heuristic::Heuristic;
@@ -200,7 +200,7 @@ mod tests {
             label::labels::{RowGrids, Rows},
             puzzle::Puzzle,
         },
-        solver::heuristic::ManhattanDistance,
+        solver::heuristic::manhattan::ManhattanDistance,
     };
 
     use super::*;
