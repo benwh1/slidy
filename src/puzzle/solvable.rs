@@ -5,8 +5,8 @@
 
 use super::{
     label::label::{
-        ConcentricRectangles, Diagonals, Fringe, LastTwoRows, RowGrids, Rows, Spiral, SplitFringe,
-        SplitLastTwoRows, SplitSquareFringe, SquareFringe, Trivial,
+        Checkerboard, ConcentricRectangles, Diagonals, Fringe, LastTwoRows, RowGrids, Rows, Spiral,
+        SplitFringe, SplitLastTwoRows, SplitSquareFringe, SquareFringe, Trivial,
     },
     sliding_puzzle::SlidingPuzzle,
 };
@@ -100,6 +100,7 @@ always_solvable!(
     LastTwoRows,
     SplitLastTwoRows,
     ConcentricRectangles,
+    Checkerboard,
 );
 
 impl<Puzzle> Solvable<Puzzle> for Spiral

@@ -12,8 +12,8 @@ pub mod labels {
 
     pub use super::{
         label::{
-            BijectiveLabel, ConcentricRectangles, Diagonals, Fringe, FringeGrids, Label,
-            LabelError, LastTwoRows, RowGrids, Rows, Spiral, SpiralGrids, SplitFringe,
+            BijectiveLabel, Checkerboard, ConcentricRectangles, Diagonals, Fringe, FringeGrids,
+            Label, LabelError, LastTwoRows, RowGrids, Rows, Spiral, SpiralGrids, SplitFringe,
             SplitLastTwoRows, SplitSquareFringe, SquareFringe, Trivial,
         },
         rect_partition::{RectPartition, RectPartitionError},

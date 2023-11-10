@@ -142,6 +142,9 @@ define_label!(
     Spiral,
     /// Same as [`Spiral`] but every piece gets a distinct label.
     SpiralGrids,
+    /// Assigns 0 to the top left, then 1 to the pieces adjacent to the top left, then 0 to the
+    /// pieces adjacent to those, etc.
+    Checkerboard,
 );
 
 impl BijectiveLabel for RowGrids {}
@@ -483,6 +486,20 @@ impl Label for SpiralGrids {
 
     fn num_labels(&self, size: Size) -> usize {
         size.area()
+    }
+}
+
+impl Label for Checkerboard {
+    fn is_valid_size(&self, _size: Size) -> bool {
+        true
+    }
+
+    fn position_label(&self, _size: Size, (x, y): (usize, usize)) -> usize {
+        (x + y) % 2
+    }
+
+    fn num_labels(&self, _size: Size) -> usize {
+        2
     }
 }
 
@@ -866,6 +883,30 @@ mod tests {
             15, 16, 17, 18, 19,  6,
             14, 23, 22, 21, 20,  7,
             13, 12, 11, 10,  9,  8,
+        ],
+    );
+
+    test_label!(
+        Checkerboard,
+        4 x 4: [
+            0, 1, 0, 1,
+            1, 0, 1, 0,
+            0, 1, 0, 1,
+            1, 0, 1, 0,
+        ],
+        4 x 6: [
+            0, 1, 0, 1,
+            1, 0, 1, 0,
+            0, 1, 0, 1,
+            1, 0, 1, 0,
+            0, 1, 0, 1,
+            1, 0, 1, 0,
+        ],
+        6 x 4: [
+            0, 1, 0, 1, 0, 1,
+            1, 0, 1, 0, 1, 0,
+            0, 1, 0, 1, 0, 1,
+            1, 0, 1, 0, 1, 0,
         ],
     );
 }
