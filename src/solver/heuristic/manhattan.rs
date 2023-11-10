@@ -4,9 +4,6 @@
 use itertools::Itertools;
 use num_traits::{AsPrimitive, PrimInt, Unsigned, Zero};
 
-#[cfg(feature = "serde")]
-use serde_derive::{Deserialize, Serialize};
-
 use crate::{
     puzzle::{
         label::labels::{Checkerboard, Diagonals, Fringe, RowGrids, Rows, Trivial},
@@ -18,7 +15,6 @@ use crate::{
 
 /// Manhattan distance heuristic.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ManhattanDistance<'a, S: SolvedState>(pub &'a S);
 
 impl<T: PrimInt + Unsigned + 'static> Heuristic<T> for ManhattanDistance<'_, Trivial>
