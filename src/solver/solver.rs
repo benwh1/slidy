@@ -80,7 +80,7 @@ where
     Puzzle: SlidingPuzzle + Clone,
     T: PrimInt + Unsigned + 'static,
     S: SolvedState,
-    H: Heuristic<S, T>,
+    H: Heuristic<T>,
     u8: AsPrimitive<T>,
 {
     stack: Stack,
@@ -90,12 +90,12 @@ where
     phantom_t: PhantomData<T>,
 }
 
-impl<Puzzle> Default for Solver<'static, Puzzle, u8, RowGrids, ManhattanDistance>
+impl<Puzzle> Default for Solver<'static, Puzzle, u8, RowGrids, ManhattanDistance<'static, RowGrids>>
 where
     Puzzle: SlidingPuzzle + Clone,
 {
     fn default() -> Self {
-        Self::new_with_t(&ManhattanDistance, &RowGrids)
+        Self::new_with_t(&ManhattanDistance(&RowGrids), &RowGrids)
     }
 }
 
@@ -103,7 +103,7 @@ impl<'a, Puzzle, S, H> Solver<'a, Puzzle, u8, S, H>
 where
     Puzzle: SlidingPuzzle + Clone,
     S: SolvedState,
-    H: Heuristic<S, u8>,
+    H: Heuristic<u8>,
 {
     /// Creates a new [`Solver`] using the given heuristic.
     pub fn new(heuristic: &'a H, solved_state: &'a S) -> Self {
@@ -122,7 +122,7 @@ where
     Puzzle: SlidingPuzzle + Clone,
     T: PrimInt + Unsigned + 'static,
     S: SolvedState,
-    H: Heuristic<S, T>,
+    H: Heuristic<T>,
     u8: AsPrimitive<T>,
 {
     /// Constructs a new [`Solver`] for solving `puzzle`.
@@ -207,7 +207,7 @@ mod tests {
 
     #[test]
     fn test_row_grids_manhattan() {
-        let mut solver = Solver::new(&ManhattanDistance, &RowGrids);
+        let mut solver = Solver::new(&ManhattanDistance(&RowGrids), &RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_stm::<u32>(), 31);
@@ -215,7 +215,7 @@ mod tests {
 
     #[test]
     fn test_rows_manhattan() {
-        let mut solver = Solver::new(&ManhattanDistance, &Rows);
+        let mut solver = Solver::new(&ManhattanDistance(&Rows), &Rows);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_stm::<u32>(), 23);

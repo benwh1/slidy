@@ -5,10 +5,10 @@ pub mod manhattan;
 
 use num_traits::{PrimInt, Unsigned};
 
-use crate::puzzle::{sliding_puzzle::SlidingPuzzle, solved_state::SolvedState};
+use crate::puzzle::sliding_puzzle::SlidingPuzzle;
 
 /// Provides a function returning a lower bound on the number of moves needed to solve a puzzle.
-pub trait Heuristic<S: SolvedState, T: PrimInt + Unsigned> {
+pub trait Heuristic<T: PrimInt + Unsigned> {
     /// Returns a lower bound on the number of moves needed to solve `puzzle`.
     #[must_use]
     fn bound<P: SlidingPuzzle>(&self, puzzle: &P) -> T;

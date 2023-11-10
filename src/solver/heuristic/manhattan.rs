@@ -11,16 +11,17 @@ use crate::{
     puzzle::{
         label::labels::{Checkerboard, Diagonals, Fringe, RowGrids, Rows, Trivial},
         sliding_puzzle::SlidingPuzzle,
+        solved_state::SolvedState,
     },
     solver::heuristic::Heuristic,
 };
 
 /// Manhattan distance heuristic.
-#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct ManhattanDistance;
+pub struct ManhattanDistance<'a, S: SolvedState>(pub &'a S);
 
-impl<T: PrimInt + Unsigned + 'static> Heuristic<Trivial, T> for ManhattanDistance
+impl<T: PrimInt + Unsigned + 'static> Heuristic<T> for ManhattanDistance<'_, Trivial>
 where
     usize: AsPrimitive<T>,
 {
@@ -33,7 +34,7 @@ where
 
 macro_rules! impl_manhattan {
     ($label:ty, $dist:expr, $parity_fix:literal $(,)?) => {
-        impl<T: PrimInt + Unsigned + 'static> Heuristic<$label, T> for ManhattanDistance
+        impl<T: PrimInt + Unsigned + 'static> Heuristic<T> for ManhattanDistance<'_, $label>
         where
             usize: AsPrimitive<T>,
         {
