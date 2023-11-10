@@ -52,9 +52,11 @@ macro_rules! impl_manhattan {
                 if $parity_fix {
                     // Make sure the parity is correct (some positions will give an even bound for a position
                     // that takes an odd number of moves, etc.)
-                    let pos = puzzle.gap_position_xy();
-                    let solved_pos = puzzle.solved_pos_xy(P::Piece::zero());
-                    let parity = dist(pos, solved_pos) % 2;
+                    let (x, y) = puzzle.gap_position_xy();
+                    let (sx, sy) = puzzle.solved_pos_xy(P::Piece::zero());
+
+                    // Actual Manhattan distance, not `dist`
+                    let parity = (x.abs_diff(sx) + y.abs_diff(sy)) % 2;
 
                     let adjusted_md = if md % 2 == parity { md } else { md + 1 };
                     adjusted_md.as_()
