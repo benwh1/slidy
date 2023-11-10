@@ -54,7 +54,7 @@
 //!
 //! use slidy::{
 //!     puzzle::{puzzle::Puzzle, sliding_puzzle::SlidingPuzzle},
-//!     solver::{heuristic::ManhattanDistance, solver::Solver},
+//!     solver::solver::Solver,
 //! };
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
