@@ -119,3 +119,65 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    macro_rules! test_manhattan_distance {
+        ($label:ty, $($w:literal x $h:literal, $solved_pos:literal : $dists:expr),+ $(,)?) => {
+            paste::paste! {
+                mod [< $label:snake >] {
+                    use super::*;
+                    use crate::puzzle::size::Size;
+
+                    $(#[test]
+                    fn [< test_ $label:snake _ $w x $h _ $solved_pos >] () {
+                        let size = Size::new($w, $h).unwrap();
+                        let md = ManhattanDistance(&$label);
+                        let dists = (0..$w * $h)
+                            .map(|i| md.dist((i % $w, i / $w), ($solved_pos % $w, $solved_pos / $w), size))
+                            .collect::<Vec<_>>();
+                        assert_eq!(dists, $dists);
+                    })*
+                }
+            }
+        };
+    }
+
+    test_manhattan_distance!(
+        RowGrids,
+        4 x 4, 2 : [
+            2, 1, 0, 1,
+            3, 2, 1, 2,
+            4, 3, 2, 3,
+            5, 4, 3, 4,
+        ],
+    );
+
+    test_manhattan_distance!(
+        Rows,
+        4 x 4, 5 : [
+            1, 1, 1, 1,
+            0, 0, 0, 0,
+            1, 1, 1, 1,
+            2, 2, 2, 2,
+        ],
+    );
+
+    test_manhattan_distance!(
+        Fringe,
+        4 x 4, 9 : [
+            2, 1, 1, 1,
+            1, 0, 0, 0,
+            1, 0, 1, 1,
+            1, 0, 1, 2,
+        ],
+        6 x 4, 17 : [
+            4, 3, 2, 2, 2, 2,
+            3, 2, 1, 1, 1, 1,
+            2, 1, 0, 0, 0, 0,
+            2, 1, 0, 1, 1, 1,
+        ],
+    );
+}
