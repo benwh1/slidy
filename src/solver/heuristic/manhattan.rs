@@ -6,7 +6,9 @@ use num_traits::{AsPrimitive, PrimInt, Unsigned, Zero};
 
 use crate::{
     puzzle::{
-        label::labels::{Checkerboard, Diagonals, Fringe, Label, RowGrids, Rows, Trivial},
+        label::labels::{
+            Checkerboard, Diagonals, Fringe, Label, RowGrids, Rows, SplitFringe, Trivial,
+        },
         size::Size,
         sliding_puzzle::SlidingPuzzle,
         solved_state::SolvedState,
@@ -65,6 +67,18 @@ impl Distance for ManhattanDistance<'_, Fringe> {
         fringe.saturating_sub(x)
             + fringe.saturating_sub(y)
             + x.saturating_sub(fringe).min(y.saturating_sub(fringe))
+    }
+}
+
+impl Distance for ManhattanDistance<'_, SplitFringe> {
+    const HAS_PARITY_CONSTRAINT: bool = false;
+
+    fn dist(&self, (x, y): (usize, usize), (sx, sy): (usize, usize), _size: Size) -> usize {
+        if sx < sy {
+            x.abs_diff(sx) + (sx + 1).saturating_sub(y)
+        } else {
+            y.abs_diff(sy) + sy.saturating_sub(x)
+        }
     }
 }
 
@@ -181,6 +195,34 @@ mod tests {
             3, 2, 1, 1, 1, 1,
             2, 1, 0, 0, 0, 0,
             2, 1, 0, 1, 1, 1,
+        ],
+    );
+
+    test_manhattan_distance!(
+        SplitFringe,
+        4 x 4, 5 : [
+            2, 1, 1, 1,
+            1, 0, 0, 0,
+            2, 1, 1, 1,
+            3, 2, 2, 2,
+        ],
+        4 x 4, 9 : [
+            3, 2, 3, 4,
+            2, 1, 2, 3,
+            1, 0, 1, 2,
+            1, 0, 1, 2,
+        ],
+        6 x 4, 17 : [
+            4, 3, 2, 2, 2, 2,
+            3, 2, 1, 1, 1, 1,
+            2, 1, 0, 0, 0, 0,
+            3, 2, 1, 1, 1, 1,
+        ],
+        6 x 4, 20 : [
+            5, 4, 3, 4, 5, 6,
+            4, 3, 2, 3, 4, 5,
+            3, 2, 1, 2, 3, 4,
+            2, 1, 0, 1, 2, 3,
         ],
     );
 }
