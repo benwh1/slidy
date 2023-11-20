@@ -6,7 +6,8 @@ use num_traits::{AsPrimitive, PrimInt, Unsigned, Zero};
 
 use crate::{
     puzzle::{
-        label::labels::{Checkerboard, Diagonals, Fringe, RowGrids, Rows, Trivial},
+        label::labels::{Checkerboard, Diagonals, Fringe, Label, RowGrids, Rows, Trivial},
+        size::Size,
         sliding_puzzle::SlidingPuzzle,
         solved_state::SolvedState,
     },
@@ -28,72 +29,93 @@ where
     }
 }
 
-macro_rules! impl_manhattan {
-    ($label:ty, $dist:expr, $parity_fix:literal $(,)?) => {
-        impl<T: PrimInt + Unsigned + 'static> Heuristic<T> for ManhattanDistance<'_, $label>
-        where
-            usize: AsPrimitive<T>,
-        {
-            fn bound<P: SlidingPuzzle>(&self, puzzle: &P) -> T {
-                let dist: fn((usize, usize), (usize, usize)) -> usize = $dist;
+/// Defines a function computing the shortest distance of a piece from a solved position.
+pub trait Distance {
+    /// True if the sum of `self.dist(pos, solved_pos, size)` over all non-gap tiles of a puzzle is
+    /// guaranteed to be equal to the length of a solution of the puzzle mod 2
+    const HAS_PARITY_CONSTRAINT: bool;
 
-                let (w, h) = puzzle.size().into();
-                let md = (0..w)
-                    .cartesian_product(0..h)
-                    .map(|pos| {
-                        let piece = puzzle.piece_at_xy(pos);
-                        let solved_pos = puzzle.solved_pos_xy(piece);
-                        let md = dist(pos, solved_pos);
-
-                        if piece == P::Piece::zero() {
-                            0
-                        } else {
-                            md
-                        }
-                    })
-                    .sum::<usize>();
-
-                if $parity_fix {
-                    // Make sure the parity is correct (some positions will give an even bound for a position
-                    // that takes an odd number of moves, etc.)
-                    let (x, y) = puzzle.gap_position_xy();
-                    let (sx, sy) = puzzle.solved_pos_xy(P::Piece::zero());
-
-                    // Actual Manhattan distance, not `dist`
-                    let parity = (x.abs_diff(sx) + y.abs_diff(sy)) % 2;
-
-                    let adjusted_md = if md % 2 == parity { md } else { md + 1 };
-                    adjusted_md.as_()
-                } else {
-                    md.as_()
-                }
-            }
-        }
-    };
+    /// Suppose the solved position of the piece in position `pos` is `solved_pos`, then this
+    /// function returns the minimum Manhattan distance from `pos` to any position where the piece
+    /// is considered solved (according to some [`SolvedState`]).
+    fn dist(&self, pos: (usize, usize), solved_pos: (usize, usize), size: Size) -> usize;
 }
 
-impl_manhattan!(
-    RowGrids,
-    |(x, y), (sx, sy)| x.abs_diff(sx) + y.abs_diff(sy),
-    false,
-);
+impl Distance for ManhattanDistance<'_, RowGrids> {
+    const HAS_PARITY_CONSTRAINT: bool = true;
 
-impl_manhattan!(Rows, |(_, y), (_, sy)| y.abs_diff(sy), true);
+    fn dist(&self, (x, y): (usize, usize), (sx, sy): (usize, usize), _size: Size) -> usize {
+        x.abs_diff(sx) + y.abs_diff(sy)
+    }
+}
 
-impl_manhattan!(
-    Fringe,
-    |(x, y), (sx, sy)| x.abs_diff(sx).min(y.abs_diff(sy)),
-    true
-);
+impl Distance for ManhattanDistance<'_, Rows> {
+    const HAS_PARITY_CONSTRAINT: bool = false;
 
-impl_manhattan!(
-    Diagonals,
-    |(x, y), (sx, sy)| (x + y).abs_diff(sx + sy),
-    true
-);
+    fn dist(&self, (_, y): (usize, usize), (_, sy): (usize, usize), _size: Size) -> usize {
+        y.abs_diff(sy)
+    }
+}
 
-impl_manhattan!(
-    Checkerboard,
-    |(x, y), (sx, sy)| usize::from((x + y) % 2 != (sx + sy) % 2),
-    true
-);
+impl Distance for ManhattanDistance<'_, Fringe> {
+    const HAS_PARITY_CONSTRAINT: bool = false;
+
+    fn dist(&self, (x, y): (usize, usize), (sx, sy): (usize, usize), _size: Size) -> usize {
+        x.abs_diff(sx).min(y.abs_diff(sy))
+    }
+}
+
+impl Distance for ManhattanDistance<'_, Diagonals> {
+    const HAS_PARITY_CONSTRAINT: bool = false;
+
+    fn dist(&self, (x, y): (usize, usize), (sx, sy): (usize, usize), _size: Size) -> usize {
+        (x + y).abs_diff(sx + sy)
+    }
+}
+
+impl Distance for ManhattanDistance<'_, Checkerboard> {
+    const HAS_PARITY_CONSTRAINT: bool = false;
+
+    fn dist(&self, (x, y): (usize, usize), (sx, sy): (usize, usize), _size: Size) -> usize {
+        usize::from((x + y) % 2 != (sx + sy) % 2)
+    }
+}
+
+impl<T: PrimInt + Unsigned + 'static, L: Label> Heuristic<T> for ManhattanDistance<'_, L>
+where
+    usize: AsPrimitive<T>,
+    Self: Distance,
+{
+    fn bound<P: SlidingPuzzle>(&self, puzzle: &P) -> T {
+        let (w, h) = puzzle.size().into();
+        let md = (0..w)
+            .cartesian_product(0..h)
+            .map(|pos| {
+                let piece = puzzle.piece_at_xy(pos);
+                let solved_pos = puzzle.solved_pos_xy(piece);
+                let md = self.dist(pos, solved_pos, puzzle.size());
+
+                if piece == P::Piece::zero() {
+                    0
+                } else {
+                    md
+                }
+            })
+            .sum::<usize>();
+
+        if Self::HAS_PARITY_CONSTRAINT {
+            md.as_()
+        } else {
+            // Make sure the parity is correct (some positions will give an even bound for a position
+            // that takes an odd number of moves, etc.)
+            let (x, y) = puzzle.gap_position_xy();
+            let (sx, sy) = puzzle.solved_pos_xy(P::Piece::zero());
+
+            // Actual Manhattan distance, not `dist`
+            let parity = (x.abs_diff(sx) + y.abs_diff(sy)) % 2;
+
+            let adjusted_md = if md % 2 == parity { md } else { md + 1 };
+            adjusted_md.as_()
+        }
+    }
+}
