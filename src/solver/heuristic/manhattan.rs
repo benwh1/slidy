@@ -60,8 +60,11 @@ impl Distance for ManhattanDistance<'_, Rows> {
 impl Distance for ManhattanDistance<'_, Fringe> {
     const HAS_PARITY_CONSTRAINT: bool = false;
 
-    fn dist(&self, (x, y): (usize, usize), (sx, sy): (usize, usize), _size: Size) -> usize {
-        x.abs_diff(sx).min(y.abs_diff(sy))
+    fn dist(&self, (x, y): (usize, usize), (sx, sy): (usize, usize), size: Size) -> usize {
+        let fringe = Fringe.position_label(size, (sx, sy));
+        fringe.saturating_sub(x)
+            + fringe.saturating_sub(y)
+            + x.saturating_sub(fringe).min(y.saturating_sub(fringe))
     }
 }
 
