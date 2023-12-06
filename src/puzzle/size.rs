@@ -137,6 +137,10 @@ pub enum ParseSizeError {
     /// The height could not be parsed as an integer.
     #[error("ParseWidthError: {0}")]
     ParseHeightError(ParseIntError),
+
+    /// The width and height were both parsed as integers, but one of them was less than 2.
+    #[error("SizeError: {0}")]
+    SizeError(SizeError),
 }
 
 impl FromStr for Size {
@@ -147,7 +151,7 @@ impl FromStr for Size {
     /// - `WxH` for some integer strings `W` and `H`, representing the width and height.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Ok(s) = s.parse::<usize>() {
-            Ok(Self(s, s))
+            Self::new(s, s).map_err(ParseSizeError::SizeError)
         } else {
             let (w, h) = s.split_once('x').ok_or(ParseSizeError::ParseError)?;
             let (w, h) = (
@@ -158,7 +162,7 @@ impl FromStr for Size {
                     .parse::<usize>()
                     .map_err(ParseSizeError::ParseHeightError)?,
             );
-            Ok(Self(w, h))
+            Self::new(w, h).map_err(ParseSizeError::SizeError)
         }
     }
 }
