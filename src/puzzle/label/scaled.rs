@@ -39,6 +39,16 @@ impl<L: Label> Scaled<L> {
             Ok(Self { label, factor })
         }
     }
+
+    /// Returns a reference to the inner [`Label`].
+    pub fn inner(&self) -> &L {
+        &self.label
+    }
+
+    /// Returns the horizontal and vertical scaling factors.
+    pub fn scale(&self) -> (u32, u32) {
+        self.factor
+    }
 }
 
 impl<L: Label> Label for Scaled<L> {

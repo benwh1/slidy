@@ -28,6 +28,11 @@ impl<C: ColorScheme> Tiled<C> {
     pub fn inner(&self) -> &C {
         &self.color_scheme
     }
+
+    /// The size of the grid that the [`ColorScheme`] is tiled across.
+    pub fn grid_size(&self) -> Size {
+        self.grid_size
+    }
 }
 
 impl<C: ColorScheme> ColorScheme for Tiled<C> {
