@@ -100,6 +100,20 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_new() {
+        assert!(Scaled::new(RowGrids, (0, 1)).is_err());
+        assert!(Scaled::new(RowGrids, (1, 0)).is_err());
+        assert!(Scaled::new(RowGrids, (1, 1)).is_ok());
+        assert!(Scaled::new(RowGrids, (3, 5)).is_ok());
+    }
+
+    #[test]
+    fn test_scale() {
+        let label = Scaled::new(RowGrids, (3, 5)).unwrap();
+        assert_eq!(label.scale(), (3, 5));
+    }
+
+    #[test]
     fn test_scaled_row_grids() {
         let size = Size::new(8, 5).unwrap();
         let label = Scaled::new(&RowGrids, (3, 2)).unwrap();

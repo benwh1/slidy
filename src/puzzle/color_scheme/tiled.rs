@@ -105,3 +105,75 @@ impl<C: ColorScheme> ColorScheme for Tiled<C> {
             .unwrap_or_default()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::puzzle::{color_scheme::Scheme, coloring::Rainbow, label::labels::RowGrids};
+
+    use super::*;
+
+    #[test]
+    fn test_grid_size() {
+        let color_scheme = Scheme::new(RowGrids, Rainbow);
+        let grid_size = Size::new(5, 3).unwrap();
+        let tiled = Tiled::new(color_scheme, grid_size);
+
+        assert_eq!(tiled.grid_size(), grid_size);
+    }
+
+    #[test]
+    fn test_color() {
+        let color_scheme = Scheme::new(RowGrids, Rainbow);
+        let grid_size = Size::new(5, 3).unwrap();
+        let tiled = Tiled::new(color_scheme, grid_size);
+
+        let size = Size::new(14, 14).unwrap();
+
+        for x in [0, 5] {
+            for y in [0, 3, 6, 9] {
+                for dx in 0..5 {
+                    for dy in 0..3 {
+                        assert_eq!(
+                            tiled.color(size, (x + dx, y + dy)),
+                            tiled.color(size, (dx, dy)),
+                        );
+                    }
+                }
+            }
+        }
+
+        let size2 = Size::new(4, 3).unwrap();
+        for y in [0, 3, 6, 9] {
+            for dx in 0..4 {
+                for dy in 0..3 {
+                    assert_eq!(
+                        tiled.color(size, (10 + dx, y + dy)),
+                        tiled.color(size2, (dx, dy)),
+                    );
+                }
+            }
+        }
+
+        let size3 = Size::new(5, 2).unwrap();
+        for x in [0, 5] {
+            for dx in 0..5 {
+                for dy in 0..2 {
+                    assert_eq!(
+                        tiled.color(size, (x + dx, 12 + dy)),
+                        tiled.color(size3, (dx, dy)),
+                    );
+                }
+            }
+        }
+
+        let size4 = Size::new(4, 2).unwrap();
+        for dx in 0..4 {
+            for dy in 0..2 {
+                assert_eq!(
+                    tiled.color(size, (10 + dx, 12 + dy)),
+                    tiled.color(size4, (dx, dy)),
+                );
+            }
+        }
+    }
+}
