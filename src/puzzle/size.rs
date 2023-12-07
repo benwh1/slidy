@@ -166,3 +166,114 @@ impl FromStr for Size {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new() {
+        assert_eq!(Size::new(2, 2), Ok(Size(2, 2)));
+        assert_eq!(Size::new(2, 3), Ok(Size(2, 3)));
+        assert_eq!(Size::new(3, 2), Ok(Size(3, 2)));
+        assert_eq!(Size::new(3, 3), Ok(Size(3, 3)));
+        assert_eq!(Size::new(1, 1), Err(SizeError::InvalidSize(1, 1)));
+        assert_eq!(Size::new(1, 2), Err(SizeError::InvalidSize(1, 2)));
+        assert_eq!(Size::new(2, 1), Err(SizeError::InvalidSize(2, 1)));
+        assert_eq!(Size::new(0, 0), Err(SizeError::InvalidSize(0, 0)));
+        assert_eq!(Size::new(0, 1), Err(SizeError::InvalidSize(0, 1)));
+        assert_eq!(Size::new(1, 0), Err(SizeError::InvalidSize(1, 0)));
+    }
+
+    #[test]
+    fn test_width() {
+        assert_eq!(Size::new(2, 3).unwrap().width(), 2);
+    }
+
+    #[test]
+    fn test_height() {
+        assert_eq!(Size::new(2, 3).unwrap().height(), 3);
+    }
+
+    #[test]
+    fn test_area() {
+        assert_eq!(Size::new(2, 3).unwrap().area(), 6);
+    }
+
+    #[test]
+    fn test_num_pieces() {
+        assert_eq!(Size::new(2, 3).unwrap().num_pieces(), 5);
+    }
+
+    #[test]
+    fn test_is_within_bounds() {
+        assert_eq!(Size::new(2, 3).unwrap().is_within_bounds((0, 0)), true);
+        assert_eq!(Size::new(2, 3).unwrap().is_within_bounds((1, 2)), true);
+        assert_eq!(Size::new(2, 3).unwrap().is_within_bounds((2, 3)), false);
+        assert_eq!(Size::new(2, 3).unwrap().is_within_bounds((3, 2)), false);
+    }
+
+    #[test]
+    fn test_transpose() {
+        assert_eq!(Size::new(2, 3).unwrap().transpose(), Size(3, 2));
+    }
+
+    #[test]
+    fn test_shrink_to_square() {
+        assert_eq!(Size::new(2, 5).unwrap().shrink_to_square(), Size(2, 2));
+        assert_eq!(Size::new(5, 2).unwrap().shrink_to_square(), Size(2, 2));
+        assert_eq!(Size::new(5, 5).unwrap().shrink_to_square(), Size(5, 5));
+    }
+
+    #[test]
+    fn test_expand_to_square() {
+        assert_eq!(Size::new(2, 5).unwrap().expand_to_square(), Size(5, 5));
+        assert_eq!(Size::new(5, 2).unwrap().expand_to_square(), Size(5, 5));
+        assert_eq!(Size::new(5, 5).unwrap().expand_to_square(), Size(5, 5));
+    }
+
+    #[test]
+    fn test_is_square() {
+        assert_eq!(Size::new(2, 5).unwrap().is_square(), false);
+        assert_eq!(Size::new(5, 2).unwrap().is_square(), false);
+        assert_eq!(Size::new(5, 5).unwrap().is_square(), true);
+    }
+
+    #[test]
+    fn test_num_states() {
+        assert_eq!(Size::new(2, 2).unwrap().num_states(), 12);
+        assert_eq!(Size::new(2, 3).unwrap().num_states(), 360);
+        assert_eq!(Size::new(3, 2).unwrap().num_states(), 360);
+        assert_eq!(Size::new(3, 3).unwrap().num_states(), 181440);
+        assert_eq!(Size::new(4, 4).unwrap().num_states(), 10461394944000);
+        assert_eq!(
+            Size::new(5, 5).unwrap().num_states(),
+            7755605021665492992000000
+        );
+        assert_eq!(
+            Size::new(17, 2).unwrap().num_states(),
+            147616399519802070423809304821760000000
+        );
+    }
+
+    #[test]
+    fn test_into_usize_usize() {
+        let (w, h) = Size(2, 3).into();
+        assert_eq!((w, h), (2, 3));
+    }
+
+    #[test]
+    fn test_display() {
+        assert_eq!(Size(2, 3).to_string(), "2x3");
+    }
+
+    #[test]
+    fn test_parse() {
+        assert_eq!("2x3".parse::<Size>(), Ok(Size(2, 3)));
+        assert_eq!(" 2x3 ".parse::<Size>(), Ok(Size(2, 3)));
+        assert_eq!("2 x 3".parse::<Size>(), Ok(Size(2, 3)));
+        assert_eq!(" 2 x3 ".parse::<Size>(), Ok(Size(2, 3)));
+        assert_eq!("2".parse::<Size>(), Ok(Size(2, 2)));
+        assert_eq!(" 2 ".parse::<Size>(), Ok(Size(2, 2)));
+    }
+}
