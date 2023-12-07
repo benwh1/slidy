@@ -150,7 +150,7 @@ impl FromStr for Size {
     /// - `N` for some integer string `N`, representing a size where width and height are equal,
     /// - `WxH` for some integer strings `W` and `H`, representing the width and height.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if let Ok(s) = s.parse::<usize>() {
+        if let Ok(s) = s.trim().parse::<usize>() {
             Self::new(s, s).map_err(ParseSizeError::SizeError)
         } else {
             let (w, h) = s.split_once('x').ok_or(ParseSizeError::ParseError)?;
