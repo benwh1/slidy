@@ -78,7 +78,7 @@
 //! use palette::rgb::Rgba;
 //! use slidy::puzzle::{
 //!     color_scheme::{Scheme, SchemeList},
-//!     coloring::{Monochrome, RainbowBrightFull},
+//!     coloring::{Monochrome, RainbowBright},
 //!     label::labels::{SplitFringe, Trivial},
 //!     puzzle::Puzzle,
 //!     render::{Borders, RendererBuilder, Text},
@@ -91,15 +91,12 @@
 //!     )];
 //!     let scheme_list = SchemeList::new(&schemes)?;
 //!
+//!     let border_scheme = Scheme::new(SplitFringe, RainbowBright::default());
+//!     let text_scheme = Scheme::new(Trivial, Monochrome::new(Rgba::new(1.0, 1.0, 1.0, 1.0)));
+//!
 //!     let renderer = RendererBuilder::with_scheme(&scheme_list)
-//!         .borders(Borders::with_scheme(Scheme::new(SplitFringe, RainbowBrightFull)).thickness(5.0))
-//!         .text(
-//!             Text::with_scheme(Scheme::new(
-//!                 Trivial,
-//!                 Monochrome::new(Rgba::new(1.0, 1.0, 1.0, 1.0)),
-//!             ))
-//!             .font_size(40.0),
-//!         )
+//!         .borders(Borders::with_scheme(border_scheme).thickness(5.0))
+//!         .text(Text::with_scheme(text_scheme).font_size(40.0))
 //!         .background_color(Rgba::new(0.05, 0.05, 0.05, 1.0))
 //!         .tile_size(75.0)
 //!         .tile_gap(5.0)
