@@ -441,7 +441,7 @@ impl Label for Spiral {
 
         // 4 * number of rectangles of width and height > 1, plus 1 if the innermost rectangle has
         // width or height 1.
-        4 * width.min(height).div_floor(2) + width.min(height) % 2
+        4 * (width.min(height) / 2) + width.min(height) % 2
     }
 }
 

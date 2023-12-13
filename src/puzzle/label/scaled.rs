@@ -70,10 +70,7 @@ impl<L: Label> Label for Scaled<L> {
             width.div_ceil(self.factor.0 as usize),
             height.div_ceil(self.factor.1 as usize),
         );
-        let (x, y) = (
-            x.div_floor(self.factor.0 as usize),
-            y.div_floor(self.factor.1 as usize),
-        );
+        let (x, y) = (x / self.factor.0 as usize, y / self.factor.1 as usize);
 
         Size::new(sw, sh)
             .map(|size| self.label.position_label(size, (x, y)))

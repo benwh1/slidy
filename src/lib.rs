@@ -128,8 +128,6 @@
 //! any unsafe code, and most of them are just a call to `foo` or a re-implementation of `foo`
 //! using other unchecked functions.
 
-#![feature(if_let_guard)]
-#![feature(int_roundings)]
 #![feature(iter_intersperse)]
 #![feature(let_chains)]
 #![feature(slice_group_by)]
