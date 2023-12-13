@@ -67,24 +67,26 @@ pub struct ColorList {
 }
 
 /// A [`Coloring`] that produces rainbow colors.
-#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct Rainbow;
+pub struct Rainbow {
+    /// The minimum hue value, in degrees. This will be used to color the first label.
+    pub min_hue: f32,
 
-/// Similar to [`Rainbow`] but produces slightly different colors.
-#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct RainbowFull;
+    /// The maximum hue value, in degrees. This will be used to color the last label.
+    pub max_hue: f32,
+}
 
 /// Similar to [`Rainbow`] but produces brighter, more pastel-like colors.
-#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct RainbowBright;
+pub struct RainbowBright {
+    /// The minimum hue value, in degrees. This will be used to color the first label.
+    pub min_hue: f32,
 
-/// Combination of [`RainbowBright`] and [`RainbowFull`].
-#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct RainbowBrightFull;
+    /// The maximum hue value, in degrees. This will be used to color the last label.
+    pub max_hue: f32,
+}
 
 /// Given a [`Coloring`] `T`, makes the colors brighter when `label` is even.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -150,38 +152,49 @@ impl Default for ColorList {
 
 impl Coloring for Rainbow {
     fn color(&self, label: usize, num_labels: usize) -> Rgba {
-        let frac = label as f32 / num_labels as f32;
-        Hsl::new(330.0 * frac, 1.0, 0.5).into_color()
-    }
-}
-
-impl Coloring for RainbowFull {
-    fn color(&self, label: usize, num_labels: usize) -> Rgba {
         if num_labels <= 1 {
             Hsl::new(0.0, 1.0, 0.5).into_color()
         } else {
-            Rainbow.color(label, num_labels - 1)
+            // Interpolate between the min and max hues
+            let frac = label as f32 / (num_labels - 1) as f32;
+            let hue = self.min_hue + (self.max_hue - self.min_hue) * frac;
+            let hue = hue % 360.0;
+            Hsl::new(hue, 1.0, 0.5).into_color()
+        }
+    }
+}
+
+impl Default for Rainbow {
+    fn default() -> Self {
+        Self {
+            min_hue: 0.0,
+            max_hue: 330.0,
         }
     }
 }
 
 impl Coloring for RainbowBright {
     fn color(&self, label: usize, num_labels: usize) -> Rgba {
-        let frac = label as f32 / num_labels as f32;
-        let hue = 330.0 * frac;
-        let lum = 0.5
-            + 0.25 * f32::cos(std::f32::consts::TAU * (0.65 + hue / 720.0))
-            + 0.35 * f32::exp(-hue / 100.0);
-        Hsl::new(hue, 1.0, lum).into_color()
-    }
-}
-
-impl Coloring for RainbowBrightFull {
-    fn color(&self, label: usize, num_labels: usize) -> Rgba {
         if num_labels <= 1 {
             Hsl::new(0.0, 1.0, 0.5).into_color()
         } else {
-            RainbowBright.color(label, num_labels - 1)
+            // Interpolate between the min and max hues
+            let frac = label as f32 / (num_labels - 1) as f32;
+            let hue = self.min_hue + (self.max_hue - self.min_hue) * frac;
+            let hue = hue % 360.0;
+            let lum = 0.5
+                + 0.25 * f32::cos(std::f32::consts::TAU * (0.65 + hue / 720.0))
+                + 0.35 * f32::exp(-hue / 100.0);
+            Hsl::new(hue, 1.0, lum).into_color()
+        }
+    }
+}
+
+impl Default for RainbowBright {
+    fn default() -> Self {
+        Self {
+            min_hue: 0.0,
+            max_hue: 330.0,
         }
     }
 }
@@ -311,46 +324,7 @@ mod tests {
 
     #[test]
     fn test_rainbow() {
-        let a = Rainbow;
-
-        assert_eq!(
-            a.try_color(0, 1),
-            Some(Hsl::new(0.0, 1.0, 0.5).into_color())
-        );
-        assert_eq!(a.try_color(1, 1), None);
-
-        assert_eq!(
-            a.try_color(0, 2),
-            Some(Hsl::new(0.0, 1.0, 0.5).into_color())
-        );
-        assert_eq!(
-            a.try_color(1, 2),
-            Some(Hsl::new(165.0, 1.0, 0.5).into_color())
-        );
-        assert_eq!(a.try_color(2, 2), None);
-
-        assert_eq!(
-            a.try_color(0, 4),
-            Some(Hsl::new(0.0, 1.0, 0.5).into_color())
-        );
-        assert_eq!(
-            a.try_color(1, 4),
-            Some(Hsl::new(82.5, 1.0, 0.5).into_color())
-        );
-        assert_eq!(
-            a.try_color(2, 4),
-            Some(Hsl::new(165.0, 1.0, 0.5).into_color())
-        );
-        assert_eq!(
-            a.try_color(3, 4),
-            Some(Hsl::new(247.5, 1.0, 0.5).into_color())
-        );
-        assert_eq!(a.try_color(4, 4), None);
-    }
-
-    #[test]
-    fn test_rainbow_full() {
-        let a = RainbowFull;
+        let a = Rainbow::default();
 
         assert_eq!(
             a.try_color(0, 1),

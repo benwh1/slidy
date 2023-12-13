@@ -114,7 +114,7 @@ mod tests {
 
     #[test]
     fn test_grid_size() {
-        let color_scheme = Scheme::new(RowGrids, Rainbow);
+        let color_scheme = Scheme::new(RowGrids, Rainbow::default());
         let grid_size = Size::new(5, 3).unwrap();
         let tiled = Tiled::new(color_scheme, grid_size);
 
@@ -123,7 +123,7 @@ mod tests {
 
     #[test]
     fn test_color() {
-        let color_scheme = Scheme::new(RowGrids, Rainbow);
+        let color_scheme = Scheme::new(RowGrids, Rainbow::default());
         let grid_size = Size::new(5, 3).unwrap();
         let tiled = Tiled::new(color_scheme, grid_size);
 
