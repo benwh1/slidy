@@ -106,6 +106,131 @@ impl<C: ColorScheme> ColorScheme for Tiled<C> {
     }
 }
 
+/// A [`ColorScheme`] applied to a fixed-size rectangle, and then tiled across the puzzle
+/// recursively.
+#[derive(Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct RecursiveTiled<C: ColorScheme> {
+    color_scheme: C,
+    grid_sizes: Vec<Size>,
+}
+
+impl<C: ColorScheme> RecursiveTiled<C> {
+    /// Creates a new [`RecursiveTiled`] from a [`ColorScheme`] and a list of grid sizes.
+    pub fn new(color_scheme: C, grid_sizes: Vec<Size>) -> Self {
+        Self {
+            color_scheme,
+            grid_sizes,
+        }
+    }
+
+    /// Returns a reference to the inner [`ColorScheme`].
+    pub fn inner(&self) -> &C {
+        &self.color_scheme
+    }
+
+    /// The sizes of the grids that the [`ColorScheme`] is tiled across.
+    pub fn grid_sizes(&self) -> &[Size] {
+        &self.grid_sizes
+    }
+
+    fn is_valid_size_helper(&self, size: Size, start_idx: usize) -> bool {
+        if let Some(&grid_size) = self.grid_sizes.get(start_idx) {
+            let (width, height) = size.into();
+            let (grid_width, grid_height) = grid_size.into();
+
+            let has_top_left_region = width >= grid_width && height >= grid_height;
+            let has_top_right_region = width % grid_width != 0 && height >= grid_height;
+            let has_bottom_left_region = width >= grid_width && height % grid_height != 0;
+            let has_bottom_right_region = width % grid_width != 0 && height % grid_height != 0;
+
+            if has_top_left_region && !self.is_valid_size_helper(grid_size, start_idx + 1) {
+                return false;
+            }
+
+            if has_top_right_region
+                && !self.is_valid_size_helper(
+                    Size::new(width % grid_width, grid_height).unwrap(),
+                    start_idx + 1,
+                )
+            {
+                return false;
+            }
+
+            if has_bottom_left_region
+                && !self.is_valid_size_helper(
+                    Size::new(grid_width, height % grid_height).unwrap(),
+                    start_idx + 1,
+                )
+            {
+                return false;
+            }
+
+            if has_bottom_right_region
+                && !self.is_valid_size_helper(
+                    Size::new(width % grid_width, height % grid_height).unwrap(),
+                    start_idx + 1,
+                )
+            {
+                return false;
+            }
+
+            true
+        } else if let Some(&last_size) = self.grid_sizes.last() {
+            self.color_scheme.is_valid_size(last_size)
+        } else {
+            false
+        }
+    }
+
+    fn color_helper(&self, size: Size, (x, y): (usize, usize), start_idx: usize) -> Rgba {
+        if let Some(&grid_size) = self.grid_sizes.get(start_idx) {
+            let (width, height) = size.into();
+            let (grid_width, grid_height) = grid_size.into();
+
+            if x < (width / grid_width) * grid_width {
+                if y < (height / grid_height) * grid_height {
+                    // Top left region
+                    self.color_helper(grid_size, (x % grid_width, y % grid_height), start_idx + 1)
+                } else {
+                    // Bottom left region
+                    self.color_helper(
+                        Size::new(grid_width, height % grid_height).unwrap(),
+                        (x % grid_width, y % grid_height),
+                        start_idx + 1,
+                    )
+                }
+            } else if y < (height / grid_height) * grid_height {
+                // Top right region
+                self.color_helper(
+                    Size::new(width % grid_width, grid_height).unwrap(),
+                    (x % grid_width, y % grid_height),
+                    start_idx + 1,
+                )
+            } else {
+                // Bottom right region
+                self.color_helper(
+                    Size::new(width % grid_width, height % grid_height).unwrap(),
+                    (x % grid_width, y % grid_height),
+                    start_idx + 1,
+                )
+            }
+        } else {
+            self.color_scheme.color(size, (x, y))
+        }
+    }
+}
+
+impl<C: ColorScheme> ColorScheme for RecursiveTiled<C> {
+    fn is_valid_size(&self, size: Size) -> bool {
+        self.is_valid_size_helper(size, 0)
+    }
+
+    fn color(&self, size: Size, pos: (usize, usize)) -> Rgba {
+        self.color_helper(size, pos, 0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::puzzle::{color_scheme::Scheme, coloring::Rainbow, label::labels::RowGrids};
