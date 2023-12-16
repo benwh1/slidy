@@ -75,17 +75,9 @@ pub struct Rainbow {
 
     /// The maximum hue value, in degrees. This will be used to color the last label.
     pub max_hue: f32,
-}
 
-/// Similar to [`Rainbow`] but produces brighter, more pastel-like colors.
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct RainbowBright {
-    /// The minimum hue value, in degrees. This will be used to color the first label.
-    pub min_hue: f32,
-
-    /// The maximum hue value, in degrees. This will be used to color the last label.
-    pub max_hue: f32,
+    /// Brightness adjustment. Affects red and blue more than other colors.
+    pub brightness: f32,
 }
 
 /// Given a [`Coloring`] `T`, makes the colors brighter when `label` is even.
@@ -159,7 +151,11 @@ impl Coloring for Rainbow {
             let frac = label as f32 / (num_labels - 1) as f32;
             let hue = self.min_hue + (self.max_hue - self.min_hue) * frac;
             let hue = hue % 360.0;
-            Hsl::new(hue, 1.0, 0.5).into_color()
+            let lum = 0.5
+                + (0.25 * f32::cos(std::f32::consts::TAU * (0.65 + hue / 720.0))
+                    + 0.35 * f32::exp(-hue / 100.0))
+                    * self.brightness;
+            Hsl::new(hue, 1.0, lum).into_color()
         }
     }
 }
@@ -169,32 +165,7 @@ impl Default for Rainbow {
         Self {
             min_hue: 0.0,
             max_hue: 330.0,
-        }
-    }
-}
-
-impl Coloring for RainbowBright {
-    fn color(&self, label: usize, num_labels: usize) -> Rgba {
-        if num_labels <= 1 {
-            Hsl::new(0.0, 1.0, 0.5).into_color()
-        } else {
-            // Interpolate between the min and max hues
-            let frac = label as f32 / (num_labels - 1) as f32;
-            let hue = self.min_hue + (self.max_hue - self.min_hue) * frac;
-            let hue = hue % 360.0;
-            let lum = 0.5
-                + 0.25 * f32::cos(std::f32::consts::TAU * (0.65 + hue / 720.0))
-                + 0.35 * f32::exp(-hue / 100.0);
-            Hsl::new(hue, 1.0, lum).into_color()
-        }
-    }
-}
-
-impl Default for RainbowBright {
-    fn default() -> Self {
-        Self {
-            min_hue: 0.0,
-            max_hue: 330.0,
+            brightness: 1.0,
         }
     }
 }
