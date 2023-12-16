@@ -295,7 +295,11 @@ mod tests {
 
     #[test]
     fn test_rainbow() {
-        let a = Rainbow::default();
+        let a = Rainbow {
+            min_hue: 0.0,
+            max_hue: 330.0,
+            brightness: 0.0,
+        };
 
         assert_eq!(
             a.try_color(0, 1),

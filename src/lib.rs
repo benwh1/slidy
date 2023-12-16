@@ -78,7 +78,7 @@
 //! use palette::rgb::Rgba;
 //! use slidy::puzzle::{
 //!     color_scheme::{Scheme, SchemeList},
-//!     coloring::{Monochrome, RainbowBright},
+//!     coloring::{Monochrome, Rainbow},
 //!     label::labels::{SplitFringe, Trivial},
 //!     puzzle::Puzzle,
 //!     render::{Borders, RendererBuilder, Text},
@@ -91,7 +91,7 @@
 //!     )];
 //!     let scheme_list = SchemeList::new(&schemes)?;
 //!
-//!     let border_scheme = Scheme::new(SplitFringe, RainbowBright::default());
+//!     let border_scheme = Scheme::new(SplitFringe, Rainbow::default());
 //!     let text_scheme = Scheme::new(Trivial, Monochrome::new(Rgba::new(1.0, 1.0, 1.0, 1.0)));
 //!
 //!     let renderer = RendererBuilder::with_scheme(&scheme_list)
