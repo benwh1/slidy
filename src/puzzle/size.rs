@@ -207,10 +207,10 @@ mod tests {
 
     #[test]
     fn test_is_within_bounds() {
-        assert_eq!(Size::new(2, 3).unwrap().is_within_bounds((0, 0)), true);
-        assert_eq!(Size::new(2, 3).unwrap().is_within_bounds((1, 2)), true);
-        assert_eq!(Size::new(2, 3).unwrap().is_within_bounds((2, 3)), false);
-        assert_eq!(Size::new(2, 3).unwrap().is_within_bounds((3, 2)), false);
+        assert!(Size::new(2, 3).unwrap().is_within_bounds((0, 0)));
+        assert!(Size::new(2, 3).unwrap().is_within_bounds((1, 2)));
+        assert!(!Size::new(2, 3).unwrap().is_within_bounds((2, 3)));
+        assert!(!Size::new(2, 3).unwrap().is_within_bounds((3, 2)));
     }
 
     #[test]
@@ -234,9 +234,9 @@ mod tests {
 
     #[test]
     fn test_is_square() {
-        assert_eq!(Size::new(2, 5).unwrap().is_square(), false);
-        assert_eq!(Size::new(5, 2).unwrap().is_square(), false);
-        assert_eq!(Size::new(5, 5).unwrap().is_square(), true);
+        assert!(!Size::new(2, 5).unwrap().is_square());
+        assert!(!Size::new(5, 2).unwrap().is_square());
+        assert!(Size::new(5, 5).unwrap().is_square());
     }
 
     #[test]
