@@ -56,7 +56,8 @@ pub enum ColorListError {
 #[derive(Clone, Debug, Default, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Monochrome {
-    color: Rgba,
+    /// The color that this [`Coloring`] always produces.
+    pub color: Rgba,
 }
 
 /// A [`Coloring`] that cycles through a given list of colors.
