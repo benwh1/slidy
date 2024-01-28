@@ -142,6 +142,11 @@ impl<S: ColorScheme, List: AsRef<[S]>> SchemeList<S, List> {
         }
     }
 
+    /// Returns a reference to the list of schemes.
+    pub fn schemes(&self) -> &[S] {
+        self.schemes.as_ref()
+    }
+
     /// Increments the index by 1. Returns true if the index changed, or false if the last scheme
     /// was already active.
     pub fn increment_index(&mut self) -> bool {
