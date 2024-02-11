@@ -185,7 +185,7 @@ impl RectPartition {
 
         let mut height_map = PiecewiseConstant::new(left..right, top);
 
-        for slice in rects.group_by(|a, b| a.top == b.top) {
+        for slice in rects.chunk_by(|a, b| a.top == b.top) {
             for rect in slice {
                 let height = height_map.range_value(rect.left..rect.right);
                 if let Some(height) = height
