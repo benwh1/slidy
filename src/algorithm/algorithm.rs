@@ -962,8 +962,6 @@ mod tests {
 mod benchmarks {
     extern crate test;
 
-    use std::str::FromStr;
-
     use test::Bencher;
 
     use super::*;

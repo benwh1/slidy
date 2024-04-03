@@ -195,13 +195,7 @@ where
 mod tests {
     use std::str::FromStr;
 
-    use crate::{
-        puzzle::{
-            label::labels::{RowGrids, Rows},
-            puzzle::Puzzle,
-        },
-        solver::heuristic::manhattan::ManhattanDistance,
-    };
+    use crate::puzzle::{label::labels::Rows, puzzle::Puzzle};
 
     use super::*;
 

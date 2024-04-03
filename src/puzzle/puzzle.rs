@@ -688,7 +688,6 @@ mod tests {
 
     mod from_str {
         use super::*;
-        use std::str::FromStr;
 
         #[test]
         fn test_from_str() {
@@ -740,8 +739,6 @@ mod tests {
 #[cfg(test)]
 mod benchmarks {
     extern crate test;
-
-    use std::str::FromStr;
 
     use test::{black_box, Bencher};
 
