@@ -132,6 +132,48 @@ impl Distance for ManhattanDistance<'_, SplitFringe> {
     }
 }
 
+impl Distance for ManhattanDistance<'_, SplitSquareFringe> {
+    const HAS_PARITY_CONSTRAINT: bool = false;
+
+    fn dist(&self, (x, y): (usize, usize), (sx, sy): (usize, usize), size: Size) -> usize {
+        // Same as for `SplitFringe` above, but using `SplitFringe` for the square part.
+        let (w, h) = size.into();
+        match w.cmp(&h) {
+            Ordering::Less => {
+                if sy < h.saturating_sub(w) {
+                    y.abs_diff(sy)
+                } else {
+                    let size_diff = h - w;
+                    let vertical_distance = size_diff.saturating_sub(y);
+                    let square_distance = ManhattanDistance(&SplitFringe).dist(
+                        (x, y.saturating_sub(size_diff)),
+                        (sx, sy - size_diff),
+                        size.shrink_to_square(),
+                    );
+
+                    vertical_distance + square_distance
+                }
+            }
+            Ordering::Equal => ManhattanDistance(&SplitFringe).dist((x, y), (sx, sy), size),
+            Ordering::Greater => {
+                if sx < w.saturating_sub(h) {
+                    x.abs_diff(sx)
+                } else {
+                    let size_diff = w - h;
+                    let horizontal_distance = size_diff.saturating_sub(x);
+                    let square_distance = ManhattanDistance(&SplitFringe).dist(
+                        (x.saturating_sub(size_diff), y),
+                        (sx - size_diff, sy),
+                        size.shrink_to_square(),
+                    );
+
+                    horizontal_distance + square_distance
+                }
+            }
+        }
+    }
+}
+
 impl Distance for ManhattanDistance<'_, Diagonals> {
     const HAS_PARITY_CONSTRAINT: bool = false;
 
@@ -297,6 +339,30 @@ mod tests {
             4, 3, 2, 3, 4, 5,
             3, 2, 1, 2, 3, 4,
             2, 1, 0, 1, 2, 3,
+        ],
+    );
+
+    test_manhattan_distance!(
+        SplitSquareFringe,
+        4 x 4, 9 : [
+            3, 2, 3, 4,
+            2, 1, 2, 3,
+            1, 0, 1, 2,
+            1, 0, 1, 2,
+        ],
+        6 x 4, 17 : [
+            6, 5, 4, 3, 2, 2,
+            5, 4, 3, 2, 1, 1,
+            4, 3, 2, 1, 0, 0,
+            5, 4, 3, 2, 1, 1,
+        ],
+        4 x 6, 5 : [
+            1, 1, 1, 1,
+            0, 0, 0, 0,
+            1, 1, 1, 1,
+            2, 2, 2, 2,
+            3, 3, 3, 3,
+            4, 4, 4, 4,
         ],
     );
 }
