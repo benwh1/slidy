@@ -1,13 +1,16 @@
 //! Defines the [`ManhattanDistance`] heuristic, which is the sum of the manhattan distances of
 //! each piece from it's solved position.
 
+use std::cmp::Ordering;
+
 use itertools::Itertools;
 use num_traits::{AsPrimitive, PrimInt, Unsigned, Zero};
 
 use crate::{
     puzzle::{
         label::labels::{
-            Checkerboard, Diagonals, Fringe, Label, RowGrids, Rows, SplitFringe, Trivial,
+            Checkerboard, Diagonals, Fringe, Label, RowGrids, Rows, SplitFringe, SplitSquareFringe,
+            SquareFringe, Trivial,
         },
         size::Size,
         sliding_puzzle::SlidingPuzzle,
@@ -67,6 +70,53 @@ impl Distance for ManhattanDistance<'_, Fringe> {
         fringe.saturating_sub(x)
             + fringe.saturating_sub(y)
             + x.saturating_sub(fringe).min(y.saturating_sub(fringe))
+    }
+}
+
+impl Distance for ManhattanDistance<'_, SquareFringe> {
+    const HAS_PARITY_CONSTRAINT: bool = false;
+
+    fn dist(&self, (x, y): (usize, usize), (sx, sy): (usize, usize), size: Size) -> usize {
+        let (w, h) = size.into();
+        match w.cmp(&h) {
+            Ordering::Less => {
+                if sy < h.saturating_sub(w) {
+                    // Solved position is above the square part. Distance is the vertical distance
+                    // from the current row to the target row.
+                    y.abs_diff(sy)
+                } else {
+                    // Solved position is within the square part. Distance is the number of rows
+                    // we need to move down to reach the square part (or 0 if we are already in the
+                    // square part), plus the distance within the square part.
+                    let size_diff = h - w;
+                    let vertical_distance = size_diff.saturating_sub(y);
+                    let square_distance = ManhattanDistance(&Fringe).dist(
+                        (x, y.saturating_sub(size_diff)),
+                        (sx, sy - size_diff),
+                        size.shrink_to_square(),
+                    );
+
+                    vertical_distance + square_distance
+                }
+            }
+            Ordering::Equal => ManhattanDistance(&Fringe).dist((x, y), (sx, sy), size),
+            Ordering::Greater => {
+                // Same as above, but for the horizontal direction.
+                if sx < w.saturating_sub(h) {
+                    x.abs_diff(sx)
+                } else {
+                    let size_diff = w - h;
+                    let horizontal_distance = size_diff.saturating_sub(x);
+                    let square_distance = ManhattanDistance(&Fringe).dist(
+                        (x.saturating_sub(size_diff), y),
+                        (sx - size_diff, sy),
+                        size.shrink_to_square(),
+                    );
+
+                    horizontal_distance + square_distance
+                }
+            }
+        }
     }
 }
 
@@ -195,6 +245,30 @@ mod tests {
             3, 2, 1, 1, 1, 1,
             2, 1, 0, 0, 0, 0,
             2, 1, 0, 1, 1, 1,
+        ],
+    );
+
+    test_manhattan_distance!(
+        SquareFringe,
+        4 x 4, 9 : [
+            2, 1, 1, 1,
+            1, 0, 0, 0,
+            1, 0, 1, 1,
+            1, 0, 1, 2,
+        ],
+        6 x 4, 17 : [
+            6, 5, 4, 3, 2, 2,
+            5, 4, 3, 2, 1, 1,
+            4, 3, 2, 1, 0, 0,
+            4, 3, 2, 1, 0, 1,
+        ],
+        4 x 6, 5 : [
+            1, 1, 1, 1,
+            0, 0, 0, 0,
+            1, 1, 1, 1,
+            2, 2, 2, 2,
+            3, 3, 3, 3,
+            4, 4, 4, 4,
         ],
     );
 
