@@ -347,16 +347,16 @@ impl Label for LastTwoRows {
     }
 
     fn position_label(&self, size: Size, (x, y): (u64, u64)) -> u64 {
-        let height = size.height();
-        if y < height - 2 {
+        let h = size.height().saturating_sub(2);
+        if y < h {
             y
         } else {
-            height - 2 + x
+            h + x
         }
     }
 
     fn num_labels(&self, size: Size) -> u64 {
-        size.width() + size.height() - 2
+        size.width() + size.height().saturating_sub(2)
     }
 }
 
@@ -366,7 +366,7 @@ impl Label for SplitLastTwoRows {
     }
 
     fn position_label(&self, size: Size, (x, y): (u64, u64)) -> u64 {
-        if y < size.height() - 2 {
+        if y < size.height().saturating_sub(2) {
             y
         } else {
             x
@@ -375,7 +375,7 @@ impl Label for SplitLastTwoRows {
 
     fn num_labels(&self, size: Size) -> u64 {
         let (width, height) = size.into();
-        width.max(height - 2)
+        width.max(height.saturating_sub(2))
     }
 }
 
@@ -539,6 +539,15 @@ mod tests {
 
     test_label!(
         RowGrids,
+        1 x 4: [
+            0,
+            1,
+            2,
+            3,
+        ],
+        4 x 1: [
+            0, 1, 2, 3,
+        ],
         4 x 4: [
              0,  1,  2,  3,
              4,  5,  6,  7,
@@ -563,6 +572,15 @@ mod tests {
 
     test_label!(
         Rows,
+        1 x 4: [
+            0,
+            1,
+            2,
+            3,
+        ],
+        4 x 1: [
+            0, 0, 0, 0,
+        ],
         4 x 4: [
             0, 0, 0, 0,
             1, 1, 1, 1,
@@ -587,6 +605,15 @@ mod tests {
 
     test_label!(
         Fringe,
+        1 x 4: [
+            0,
+            0,
+            0,
+            0,
+        ],
+        4 x 1: [
+            0, 0, 0, 0,
+        ],
         4 x 4: [
             0, 0, 0, 0,
             0, 1, 1, 1,
@@ -611,6 +638,15 @@ mod tests {
 
     test_label!(
         FringeGrids,
+        1 x 4: [
+            0,
+            1,
+            2,
+            3,
+        ],
+        4 x 1: [
+            0, 1, 2, 3,
+        ],
         4 x 4: [
             0,  1,  2,  3,
             4,  7,  8,  9,
@@ -635,6 +671,15 @@ mod tests {
 
     test_label!(
         SquareFringe,
+        1 x 4: [
+            0,
+            1,
+            2,
+            3,
+        ],
+        4 x 1: [
+            0, 1, 2, 3,
+        ],
         4 x 4: [
             0, 0, 0, 0,
             0, 1, 1, 1,
@@ -659,6 +704,15 @@ mod tests {
 
     test_label!(
         SplitFringe,
+        1 x 4: [
+            0,
+            1,
+            1,
+            1,
+        ],
+        4 x 1: [
+            0, 0, 0, 0,
+        ],
         4 x 4: [
             0, 0, 0, 0,
             1, 2, 2, 2,
@@ -683,6 +737,15 @@ mod tests {
 
     test_label!(
         SplitSquareFringe,
+        1 x 4: [
+            0,
+            1,
+            2,
+            3,
+        ],
+        4 x 1: [
+            0, 1, 2, 3,
+        ],
         4 x 4: [
             0, 0, 0, 0,
             1, 2, 2, 2,
@@ -707,6 +770,15 @@ mod tests {
 
     test_label!(
         Diagonals,
+        1 x 4: [
+            0,
+            1,
+            2,
+            3,
+        ],
+        4 x 1: [
+            0, 1, 2, 3,
+        ],
         4 x 4: [
             0, 1, 2, 3,
             1, 2, 3, 4,
@@ -731,6 +803,15 @@ mod tests {
 
     test_label!(
         LastTwoRows,
+        1 x 4: [
+            0,
+            1,
+            2,
+            2,
+        ],
+        4 x 1: [
+            0, 1, 2, 3,
+        ],
         4 x 4: [
             0, 0, 0, 0,
             1, 1, 1, 1,
@@ -765,6 +846,15 @@ mod tests {
 
     test_label!(
         SplitLastTwoRows,
+        1 x 4: [
+            0,
+            1,
+            0,
+            0,
+        ],
+        4 x 1: [
+            0, 1, 2, 3,
+        ],
         4 x 4: [
             0, 0, 0, 0,
             1, 1, 1, 1,
@@ -799,6 +889,15 @@ mod tests {
 
     test_label!(
         ConcentricRectangles,
+        1 x 4: [
+            0,
+            0,
+            0,
+            0,
+        ],
+        4 x 1: [
+            0, 0, 0, 0,
+        ],
         4 x 4: [
             0, 0, 0, 0,
             0, 1, 1, 0,
@@ -840,6 +939,15 @@ mod tests {
 
     test_label!(
         Spiral,
+        1 x 4: [
+            0,
+            0,
+            0,
+            0,
+        ],
+        4 x 1: [
+            0, 0, 0, 0,
+        ],
         4 x 4: [
             0, 0, 0, 1,
             3, 4, 5, 1,
@@ -864,6 +972,15 @@ mod tests {
 
     test_label!(
         SpiralGrids,
+        1 x 4: [
+            0,
+            1,
+            2,
+            3,
+        ],
+        4 x 1: [
+            0, 1, 2, 3,
+        ],
         4 x 4: [
              0,  1,  2,  3,
             11, 12, 13,  4,
@@ -904,6 +1021,15 @@ mod tests {
 
     test_label!(
         Checkerboard,
+        1 x 4: [
+            0,
+            1,
+            0,
+            1,
+        ],
+        4 x 1: [
+            0, 1, 0, 1,
+        ],
         4 x 4: [
             0, 1, 0, 1,
             1, 0, 1, 0,
