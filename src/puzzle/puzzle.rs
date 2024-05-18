@@ -224,7 +224,7 @@ impl SlidingPuzzle for Puzzle {
 
 impl Default for Puzzle {
     fn default() -> Self {
-        Self::new(Size::new(4, 4).unwrap())
+        Self::new(Size::default())
     }
 }
 
