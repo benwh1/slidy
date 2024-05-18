@@ -49,7 +49,7 @@ where
             }
         };
 
-        let n = puzzle.num_pieces();
+        let n = puzzle.num_pieces() as usize;
         let mut seen = vec![false; n];
         let mut parity = false;
         for i in 0..n {
@@ -62,7 +62,7 @@ where
             while !seen[index] {
                 seen[index] = true;
                 cycle_len += 1;
-                index = puzzle.solved_pos(piece_at(index));
+                index = puzzle.solved_pos(piece_at(index as u64)) as usize;
             }
 
             if cycle_len % 2 == 0 {

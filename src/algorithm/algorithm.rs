@@ -36,16 +36,16 @@ use serde_derive::{Deserialize, Serialize};
 pub enum SliceError {
     /// The input range is unordered, e.g. `10..5`.
     #[error("UnorderedRange: range {0:?} is not ordered")]
-    UnorderedRange(Range<u32>),
+    UnorderedRange(Range<u64>),
 
     /// The input range goes beyond the bounds of the [`Algorithm`].
     #[error("OutOfRange: slice is out of range (range is {range:?} but length is {len})")]
     OutOfRange {
         /// The range that was given as input.
-        range: Range<u32>,
+        range: Range<u64>,
 
         /// The length of the [`Algorithm`].
-        len: u32,
+        len: u64,
     },
 }
 
@@ -72,7 +72,7 @@ impl Algorithm {
     #[must_use]
     pub fn len<M: Metric, T: PrimInt + Sum + 'static>(&self) -> T
     where
-        u32: AsPrimitive<T>,
+        u64: AsPrimitive<T>,
     {
         self.as_slice().len::<M, T>()
     }
@@ -83,7 +83,7 @@ impl Algorithm {
     #[must_use]
     pub fn len_stm<T: PrimInt + Sum + 'static>(&self) -> T
     where
-        u32: AsPrimitive<T>,
+        u64: AsPrimitive<T>,
     {
         self.as_slice().len_stm()
     }
@@ -94,7 +94,7 @@ impl Algorithm {
     #[must_use]
     pub fn len_mtm<T: PrimInt + Sum + 'static>(&self) -> T
     where
-        u32: AsPrimitive<T>,
+        u64: AsPrimitive<T>,
     {
         self.as_slice().len_mtm()
     }
@@ -198,7 +198,7 @@ impl Algorithm {
     }
 
     /// Returns an [`AlgorithmSlice`] containing the (single-tile) moves in the range `range`.
-    pub fn try_slice(&self, range: Range<u32>) -> Result<AlgorithmSlice, SliceError> {
+    pub fn try_slice(&self, range: Range<u64>) -> Result<AlgorithmSlice, SliceError> {
         if range.start > range.end {
             return Err(SliceError::UnorderedRange(range));
         }
@@ -337,6 +337,8 @@ impl FromStr for Algorithm {
             }
             // The number after a move
             else if let Some(d) = c.to_digit(10) {
+                let d = d as u64;
+
                 // Must have a direction before an amount
                 if dir.is_none() {
                     return Err(ParseAlgorithmError::MissingDirection);
@@ -848,7 +850,7 @@ mod tests {
 
         #[test]
         fn test_from_str_14() {
-            let a = Algorithm::from_str("U10000000000");
+            let a = Algorithm::from_str("U100000000000000000000");
             assert_eq!(a, Err(ParseAlgorithmError::Overflow));
         }
 

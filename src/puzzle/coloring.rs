@@ -24,11 +24,11 @@ pub trait Coloring {
     /// This function does not check that `label` is within bounds (i.e. `label < num_labels`).
     /// If it is not, the function may panic or return any other color.
     #[must_use]
-    fn color(&self, label: usize, num_labels: usize) -> Rgba;
+    fn color(&self, label: u64, num_labels: u64) -> Rgba;
 
     /// See [`Coloring::color`].
     #[must_use]
-    fn try_color(&self, label: usize, num_labels: usize) -> Option<Rgba> {
+    fn try_color(&self, label: u64, num_labels: u64) -> Option<Rgba> {
         if label < num_labels {
             Some(self.color(label, num_labels))
         } else {
@@ -38,7 +38,7 @@ pub trait Coloring {
 }
 
 impl<T: Coloring + ?Sized> Coloring for Box<T> {
-    fn color(&self, label: usize, num_labels: usize) -> Rgba {
+    fn color(&self, label: u64, num_labels: u64) -> Rgba {
         (**self).color(label, num_labels)
     }
 }
@@ -113,7 +113,7 @@ impl Monochrome {
 }
 
 impl Coloring for Monochrome {
-    fn color(&self, _label: usize, _num_labels: usize) -> Rgba {
+    fn color(&self, _label: u64, _num_labels: u64) -> Rgba {
         self.color
     }
 }
@@ -130,8 +130,8 @@ impl ColorList {
 }
 
 impl Coloring for ColorList {
-    fn color(&self, label: usize, _num_labels: usize) -> Rgba {
-        self.colors[label % self.colors.len()]
+    fn color(&self, label: u64, _num_labels: u64) -> Rgba {
+        self.colors[label as usize % self.colors.len()]
     }
 }
 
@@ -144,7 +144,7 @@ impl Default for ColorList {
 }
 
 impl Coloring for Rainbow {
-    fn color(&self, label: usize, num_labels: usize) -> Rgba {
+    fn color(&self, label: u64, num_labels: u64) -> Rgba {
         if num_labels <= 1 {
             Hsl::new(0.0, 1.0, 0.5).into_color()
         } else {
@@ -172,7 +172,7 @@ impl Default for Rainbow {
 }
 
 impl<C: Coloring> Coloring for AlternatingBrightness<C> {
-    fn color(&self, label: usize, num_labels: usize) -> Rgba {
+    fn color(&self, label: u64, num_labels: u64) -> Rgba {
         let l = (label / 2) * 2;
         let color = self.0.color(l, num_labels);
         if label == l {
@@ -199,7 +199,7 @@ impl<C: Coloring> AddLightness<C> {
 impl<C: Coloring> Coloring for AddLightness<C> {
     /// Calls `self.coloring.color` and adds `self.lightness` to the HSL lightness value.
     /// The lightness is clamped to the interval `[0.0, 1.0]`.
-    fn color(&self, label: usize, num_labels: usize) -> Rgba {
+    fn color(&self, label: u64, num_labels: u64) -> Rgba {
         let color = self.coloring.color(label, num_labels);
         let color: Hsla = color.into_color();
         let (h, s, l, a) = color.into_components();
@@ -231,7 +231,7 @@ impl LinearGradient {
 }
 
 impl<C: Curve<f32, Output = LinSrgba>> Coloring for Gradient<C> {
-    fn color(&self, label: usize, num_labels: usize) -> Rgba {
+    fn color(&self, label: u64, num_labels: u64) -> Rgba {
         let point = if num_labels < 2 {
             0.0
         } else {
@@ -370,7 +370,7 @@ mod tests {
         .collect::<Vec<_>>();
 
         for (i, expected) in expected.iter().enumerate() {
-            let color = g.try_color(i, 6).map(|c| c.into_components());
+            let color = g.try_color(i as u64, 6).map(|c| c.into_components());
 
             match (color, expected) {
                 (None, None) => {}

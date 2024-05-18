@@ -17,7 +17,7 @@ use serde_derive::{Deserialize, Serialize};
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Move {
     pub(crate) direction: Direction,
-    pub(crate) amount: u32,
+    pub(crate) amount: u64,
 }
 
 /// Represents the sum of two moves.
@@ -43,12 +43,12 @@ pub enum MoveError {
 impl Move {
     /// Creates a new [`Move`].
     #[must_use]
-    pub fn new(direction: Direction, amount: u32) -> Self {
+    pub fn new(direction: Direction, amount: u64) -> Self {
         Self { direction, amount }
     }
 
     /// Creates a new [`Move`] with the requirement that `amount` must be non-zero.
-    pub fn new_nonzero(direction: Direction, amount: u32) -> Result<Self, MoveError> {
+    pub fn new_nonzero(direction: Direction, amount: u64) -> Result<Self, MoveError> {
         if amount == 0 {
             Err(MoveError::ZeroAmount)
         } else {
@@ -64,7 +64,7 @@ impl Move {
 
     /// Returns the number of pieces moved.
     #[must_use]
-    pub fn amount(&self) -> u32 {
+    pub fn amount(&self) -> u64 {
         self.amount
     }
 

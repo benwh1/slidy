@@ -27,7 +27,7 @@ pub enum ColorSchemeError {
         /// Size of the puzzle.
         size: Size,
         /// Piece position.
-        pos: (usize, usize),
+        pos: (u64, u64),
     },
 }
 
@@ -44,10 +44,10 @@ pub trait ColorScheme {
     /// whether `pos` is within the bounds of the puzzle. If these conditions are not satisfied,
     /// the function may panic or return any other color.
     #[must_use]
-    fn color(&self, size: Size, pos: (usize, usize)) -> Rgba;
+    fn color(&self, size: Size, pos: (u64, u64)) -> Rgba;
 
     /// Returns the color of the piece in position `pos` on a solved puzzle of the given size.
-    fn try_color(&self, size: Size, pos: (usize, usize)) -> Result<Rgba, ColorSchemeError> {
+    fn try_color(&self, size: Size, pos: (u64, u64)) -> Result<Rgba, ColorSchemeError> {
         if !self.is_valid_size(size) {
             Err(ColorSchemeError::InvalidSize(size))
         } else if !size.is_within_bounds(pos) {
@@ -63,7 +63,7 @@ impl<T: ColorScheme + ?Sized> ColorScheme for Box<T> {
         (**self).is_valid_size(size)
     }
 
-    fn color(&self, size: Size, pos: (usize, usize)) -> Rgba {
+    fn color(&self, size: Size, pos: (u64, u64)) -> Rgba {
         (**self).color(size, pos)
     }
 }
@@ -101,7 +101,7 @@ impl<L: Label, C: Coloring> ColorScheme for Scheme<L, C> {
         self.label.is_valid_size(size)
     }
 
-    fn color(&self, size: Size, pos: (usize, usize)) -> Rgba {
+    fn color(&self, size: Size, pos: (u64, u64)) -> Rgba {
         let label = self.label.position_label(size, pos);
         let num_labels = self.label.num_labels(size);
         self.coloring.color(label, num_labels)
@@ -192,7 +192,7 @@ impl<S: ColorScheme, List: AsRef<[S]>> ColorScheme for SchemeList<S, List> {
         self.schemes.as_ref()[self.index].is_valid_size(size)
     }
 
-    fn color(&self, size: Size, pos: (usize, usize)) -> Rgba {
+    fn color(&self, size: Size, pos: (u64, u64)) -> Rgba {
         self.schemes.as_ref()[self.index].color(size, pos)
     }
 }
@@ -210,7 +210,7 @@ impl ColorScheme for Black {
         true
     }
 
-    fn color(&self, _size: Size, _pos: (usize, usize)) -> Rgba {
+    fn color(&self, _size: Size, _pos: (u64, u64)) -> Rgba {
         Rgba::new(0.0, 0.0, 0.0, 1.0)
     }
 }

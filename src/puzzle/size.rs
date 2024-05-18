@@ -19,7 +19,7 @@ use serde_derive::{Deserialize, Serialize};
 /// [`SlidingPuzzle`]: ../sliding_puzzle.html
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct Size(usize, usize);
+pub struct Size(u64, u64);
 
 impl Default for Size {
     fn default() -> Self {
@@ -33,12 +33,12 @@ impl Default for Size {
 pub enum SizeError {
     /// Returned from [`Size::new`] when the width or height is less than 2.
     #[error("InvalidSize: width ({0}) and height ({1}) must be greater than or equal to 2")]
-    InvalidSize(usize, usize),
+    InvalidSize(u64, u64),
 }
 
 impl Size {
     /// Creates a new [`Size`] with the given `width` and `height`.
-    pub fn new(width: usize, height: usize) -> Result<Self, SizeError> {
+    pub fn new(width: u64, height: u64) -> Result<Self, SizeError> {
         if width >= 2 && height >= 2 {
             Ok(Self(width, height))
         } else {
@@ -48,31 +48,31 @@ impl Size {
 
     /// The width of the [`Size`].
     #[must_use]
-    pub fn width(&self) -> usize {
+    pub fn width(&self) -> u64 {
         self.0
     }
 
     /// The height of the [`Size`].
     #[must_use]
-    pub fn height(&self) -> usize {
+    pub fn height(&self) -> u64 {
         self.1
     }
 
     /// The product of the width and height.
     #[must_use]
-    pub fn area(&self) -> usize {
+    pub fn area(&self) -> u64 {
         self.width() * self.height()
     }
 
     /// The number of pieces in a puzzle of this size. Equals `self.area() - 1`.
     #[must_use]
-    pub fn num_pieces(&self) -> usize {
+    pub fn num_pieces(&self) -> u64 {
         self.area() - 1
     }
 
     /// Checks whether a position `(x, y)` is within bounds on a puzzle of this size.
     #[must_use]
-    pub fn is_within_bounds(&self, (x, y): (usize, usize)) -> bool {
+    pub fn is_within_bounds(&self, (x, y): (u64, u64)) -> bool {
         x < self.width() && y < self.height()
     }
 
@@ -109,7 +109,7 @@ impl Size {
     }
 }
 
-impl From<Size> for (usize, usize) {
+impl From<Size> for (u64, u64) {
     fn from(value: Size) -> Self {
         (value.width(), value.height())
     }
@@ -150,16 +150,16 @@ impl FromStr for Size {
     /// - `N` for some integer string `N`, representing a size where width and height are equal,
     /// - `WxH` for some integer strings `W` and `H`, representing the width and height.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if let Ok(s) = s.trim().parse::<usize>() {
+        if let Ok(s) = s.trim().parse::<u64>() {
             Self::new(s, s).map_err(ParseSizeError::SizeError)
         } else {
             let (w, h) = s.split_once('x').ok_or(ParseSizeError::ParseError)?;
             let (w, h) = (
                 w.trim()
-                    .parse::<usize>()
+                    .parse::<u64>()
                     .map_err(ParseSizeError::ParseWidthError)?,
                 h.trim()
-                    .parse::<usize>()
+                    .parse::<u64>()
                     .map_err(ParseSizeError::ParseHeightError)?,
             );
             Self::new(w, h).map_err(ParseSizeError::SizeError)

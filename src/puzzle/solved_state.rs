@@ -29,7 +29,7 @@ impl<L: Label> SolvedState for L {
 
         (0..w)
             .cartesian_product(0..h)
-            .take(w * h - 1)
+            .take(size.num_pieces() as usize)
             .all(|(x, y)| {
                 // Label of piece in position (x, y)
                 let solved_pos = puzzle.solved_pos_xy(puzzle.piece_at_xy((x, y)));

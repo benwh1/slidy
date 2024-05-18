@@ -12,7 +12,7 @@ pub trait Metric {
     /// The length of a [`Move`].
     fn len<T: PrimInt + 'static>(mv: Move) -> T
     where
-        u32: AsPrimitive<T>;
+        u64: AsPrimitive<T>;
 }
 
 /// Single tile move metric, where moves like U5 have length 5, etc.
@@ -29,7 +29,7 @@ impl Metric for Stm {
     #[inline]
     fn len<T: PrimInt + 'static>(mv: Move) -> T
     where
-        u32: AsPrimitive<T>,
+        u64: AsPrimitive<T>,
     {
         mv.amount().as_()
     }
@@ -39,7 +39,7 @@ impl Metric for Mtm {
     #[inline]
     fn len<T: PrimInt + 'static>(_: Move) -> T
     where
-        u32: AsPrimitive<T>,
+        u64: AsPrimitive<T>,
     {
         T::one()
     }

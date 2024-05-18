@@ -18,7 +18,7 @@ use serde_derive::{Deserialize, Serialize};
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Scaled<L: Label> {
     label: L,
-    factor: (u32, u32),
+    factor: (u64, u64),
 }
 
 /// Error type for [`Scaled`].
@@ -32,7 +32,7 @@ pub enum ScaledError {
 
 impl<L: Label> Scaled<L> {
     /// Creates a new [`Scaled`] from a [`Label`] and scaling factors.
-    pub fn new(label: L, factor: (u32, u32)) -> Result<Self, ScaledError> {
+    pub fn new(label: L, factor: (u64, u64)) -> Result<Self, ScaledError> {
         if factor.0 == 0 || factor.1 == 0 {
             Err(ScaledError::ZeroScale)
         } else {
@@ -46,7 +46,7 @@ impl<L: Label> Scaled<L> {
     }
 
     /// Returns the horizontal and vertical scaling factors.
-    pub fn scale(&self) -> (u32, u32) {
+    pub fn scale(&self) -> (u64, u64) {
         self.factor
     }
 }
@@ -55,8 +55,8 @@ impl<L: Label> Label for Scaled<L> {
     fn is_valid_size(&self, size: Size) -> bool {
         let (width, height) = size.into();
         let (sw, sh) = (
-            width.div_ceil(self.factor.0 as usize),
-            height.div_ceil(self.factor.1 as usize),
+            width.div_ceil(self.factor.0),
+            height.div_ceil(self.factor.1),
         );
 
         Size::new(sw, sh)
@@ -64,24 +64,24 @@ impl<L: Label> Label for Scaled<L> {
             .unwrap_or_default()
     }
 
-    fn position_label(&self, size: Size, (x, y): (usize, usize)) -> usize {
+    fn position_label(&self, size: Size, (x, y): (u64, u64)) -> u64 {
         let (width, height) = size.into();
         let (sw, sh) = (
-            width.div_ceil(self.factor.0 as usize),
-            height.div_ceil(self.factor.1 as usize),
+            width.div_ceil(self.factor.0),
+            height.div_ceil(self.factor.1),
         );
-        let (x, y) = (x / self.factor.0 as usize, y / self.factor.1 as usize);
+        let (x, y) = (x / self.factor.0, y / self.factor.1);
 
         Size::new(sw, sh)
             .map(|size| self.label.position_label(size, (x, y)))
             .unwrap_or_default()
     }
 
-    fn num_labels(&self, size: Size) -> usize {
+    fn num_labels(&self, size: Size) -> u64 {
         let (width, height) = size.into();
         let (sw, sh) = (
-            width.div_ceil(self.factor.0 as usize),
-            height.div_ceil(self.factor.1 as usize),
+            width.div_ceil(self.factor.0),
+            height.div_ceil(self.factor.1),
         );
 
         Size::new(sw, sh)

@@ -26,15 +26,15 @@ pub enum RectError {
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Rect {
-    left: u32,
-    top: u32,
-    right: u32,
-    bottom: u32,
+    left: u64,
+    top: u64,
+    right: u64,
+    bottom: u64,
 }
 
 impl Rect {
     /// Creates a new [`Rect`] given the coordinates of the top left and bottom right points.
-    pub fn new(top_left: (u32, u32), bottom_right: (u32, u32)) -> Result<Self, RectError> {
+    pub fn new(top_left: (u64, u64), bottom_right: (u64, u64)) -> Result<Self, RectError> {
         let (top, left, bottom, right) = (top_left.1, top_left.0, bottom_right.1, bottom_right.0);
         if bottom > top && right > left {
             Ok(Self {
@@ -50,13 +50,13 @@ impl Rect {
 
     /// Width of the rectangle.
     #[must_use]
-    pub fn width(&self) -> u32 {
+    pub fn width(&self) -> u64 {
         self.right - self.left
     }
 
     /// Height of the rectangle.
     #[must_use]
-    pub fn height(&self) -> u32 {
+    pub fn height(&self) -> u64 {
         self.bottom - self.top
     }
 
@@ -64,19 +64,19 @@ impl Rect {
     /// edges, but does not contain the bottom and right edges or the top right and bottom left
     /// corners.
     #[must_use]
-    pub fn contains(&self, x: u32, y: u32) -> bool {
+    pub fn contains(&self, x: u64, y: u64) -> bool {
         self.left <= x && x < self.right && self.top <= y && y < self.bottom
     }
 
     /// The top left corner
     #[must_use]
-    pub fn top_left(&self) -> (u32, u32) {
+    pub fn top_left(&self) -> (u64, u64) {
         (self.left, self.top)
     }
 
     /// Size of the rectangle in the form `(width, height)`.
     #[must_use]
-    pub fn size(&self) -> (u32, u32) {
+    pub fn size(&self) -> (u64, u64) {
         (self.right - self.left, self.bottom - self.top)
     }
 }
@@ -84,18 +84,18 @@ impl Rect {
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub(super) struct PiecewiseConstant {
-    data: BTreeMap<u32, u32>,
-    domain: Range<u32>,
+    data: BTreeMap<u64, u64>,
+    domain: Range<u64>,
 }
 
 impl PiecewiseConstant {
-    pub(super) fn new(domain: Range<u32>, value: u32) -> Self {
+    pub(super) fn new(domain: Range<u64>, value: u64) -> Self {
         let mut data = BTreeMap::new();
         data.insert(domain.start, value);
         Self { data, domain }
     }
 
-    pub(super) fn value(&self, x: u32) -> u32 {
+    pub(super) fn value(&self, x: u64) -> u64 {
         let x = x.clamp(self.domain.start, self.domain.end);
         self.data
             .range(self.domain.start..=x)
@@ -104,7 +104,7 @@ impl PiecewiseConstant {
             .unwrap()
     }
 
-    pub(super) fn range_value(&self, range: Range<u32>) -> Option<u32> {
+    pub(super) fn range_value(&self, range: Range<u64>) -> Option<u64> {
         let v = self.value(range.start);
         if self.data.range(range).map(|(_, &v)| v).all(|x| x == v) {
             Some(v)
@@ -113,7 +113,7 @@ impl PiecewiseConstant {
         }
     }
 
-    pub(super) fn set_range_value(&mut self, range: Range<u32>, value: u32) {
+    pub(super) fn set_range_value(&mut self, range: Range<u64>, value: u64) {
         // Keys that define values of the function within `range`
         let keys = self
             .data
@@ -164,9 +164,9 @@ pub enum RectPartitionError {
     #[error("NotPartition: the square at ({x}, {y}) is not covered exactly once")]
     NotPartition {
         /// x coordinate of a position that is not covered by exactly one rectangle.
-        x: u32,
+        x: u64,
         /// y coordinate of a position that is not covered by exactly one rectangle.
-        y: u32,
+        y: u64,
     },
 }
 
@@ -241,16 +241,15 @@ impl Label for RectPartition {
     /// partitioned rectangle.
     fn is_valid_size(&self, size: Size) -> bool {
         let (width, height) = size.into();
-        self.rect().size() == (width as u32, height as u32)
+        self.rect().size() == (width, height)
     }
 
-    fn position_label(&self, _size: Size, (x, y): (usize, usize)) -> usize {
-        let (x, y) = (x as u32, y as u32);
-        self.rects.iter().position(|r| r.contains(x, y)).unwrap()
+    fn position_label(&self, _size: Size, (x, y): (u64, u64)) -> u64 {
+        self.rects.iter().position(|r| r.contains(x, y)).unwrap() as u64
     }
 
-    fn num_labels(&self, _size: Size) -> usize {
-        self.num_rects()
+    fn num_labels(&self, _size: Size) -> u64 {
+        self.num_rects() as u64
     }
 }
 

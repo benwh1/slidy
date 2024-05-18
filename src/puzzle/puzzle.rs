@@ -20,9 +20,9 @@ use serde_derive::{Deserialize, Serialize};
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Puzzle {
-    pieces: Vec<u32>,
+    pieces: Vec<u64>,
     size: Size,
-    gap: usize,
+    gap: u64,
 }
 
 /// Error type for [`Puzzle`].
@@ -43,11 +43,11 @@ pub enum PuzzleError {
 
     /// Returned when the puzzle has a piece out of range (0 to `width * height - 1`).
     #[error("PieceOutOfRange: piece {0} is out of range")]
-    PieceOutOfRange(u32),
+    PieceOutOfRange(u64),
 
     /// Returned when the puzzle has multiple pieces with the same number.
     #[error("DuplicatePiece: piece {0} appears more than once")]
-    DuplicatePiece(u32),
+    DuplicatePiece(u64),
 }
 
 impl Puzzle {
@@ -56,7 +56,7 @@ impl Puzzle {
     pub fn new(size: Size) -> Self {
         Self {
             pieces: {
-                let mut v: Vec<u32> = (1..size.area() as u32).collect();
+                let mut v: Vec<u64> = (1..size.area()).collect();
                 v.push(0);
                 v
             },
@@ -66,13 +66,11 @@ impl Puzzle {
     }
 
     /// Create a new [`Puzzle`] from a list of numbers and a size.
-    pub fn with_pieces(pieces: Vec<u32>, size: Size) -> Result<Self, PuzzleError> {
-        let (w, h) = size.into();
-
+    pub fn with_pieces(pieces: Vec<u64>, size: Size) -> Result<Self, PuzzleError> {
         let mut gap = None;
         let mut seen = HashSet::new();
         for (i, &n) in pieces.iter().enumerate() {
-            if n as usize >= w * h {
+            if n as u64 >= size.area() {
                 return Err(PuzzleError::PieceOutOfRange(n));
             }
             if seen.contains(&n) {
@@ -82,7 +80,7 @@ impl Puzzle {
             seen.insert(n);
 
             if n == 0 {
-                gap = Some(i);
+                gap = Some(i as u64);
             }
         }
 
@@ -97,7 +95,7 @@ impl Puzzle {
     }
 
     /// Create a new [`Puzzle`] from a 2D grid of numbers.
-    pub fn new_from_grid(grid: Vec<Vec<u32>>) -> Result<Self, PuzzleError> {
+    pub fn new_from_grid(grid: Vec<Vec<u64>>) -> Result<Self, PuzzleError> {
         if grid.is_empty() {
             return Err(PuzzleError::Empty);
         }
@@ -106,11 +104,11 @@ impl Puzzle {
             return Err(PuzzleError::Empty);
         }
 
-        let w = grid[0].len();
-        let h = grid.len();
+        let w = grid[0].len() as u64;
+        let h = grid.len() as u64;
 
         // Check if all rows are the same length
-        if grid.iter().any(|r| r.len() != w) {
+        if grid.iter().any(|r| r.len() as u64 != w) {
             return Err(PuzzleError::UnequalRowLengths);
         }
 
@@ -134,7 +132,7 @@ impl Puzzle {
 }
 
 impl SlidingPuzzle for Puzzle {
-    type Piece = u32;
+    type Piece = u64;
 
     #[inline]
     fn size(&self) -> Size {
@@ -142,7 +140,7 @@ impl SlidingPuzzle for Puzzle {
     }
 
     #[inline]
-    fn gap_position(&self) -> usize {
+    fn gap_position(&self) -> u64 {
         self.gap
     }
 
@@ -154,10 +152,10 @@ impl SlidingPuzzle for Puzzle {
                 let label = label.position_label(self.size(), (x, y));
                 let idx = x + w * y;
                 if label + 1 == area {
-                    self.pieces[idx] = 0;
+                    self.pieces[idx as usize] = 0;
                     self.gap = idx;
                 } else {
-                    self.pieces[idx] = label as u32 + 1;
+                    self.pieces[idx as usize] = label + 1;
                 }
             }
         }
@@ -169,41 +167,41 @@ impl SlidingPuzzle for Puzzle {
         Self::Piece: 'static,
     {
         for i in 0..other.area() {
-            self.pieces[i] = other.piece_at_unchecked(i).as_();
+            self.pieces[i as usize] = other.piece_at_unchecked(i).as_();
         }
     }
 
     #[inline]
-    fn solved_pos(&self, piece: u32) -> usize {
+    fn solved_pos(&self, piece: u64) -> u64 {
         if piece == 0 {
             self.num_pieces()
         } else {
-            piece as usize - 1
+            piece - 1
         }
     }
 
     #[inline]
-    fn piece_at(&self, idx: usize) -> u32 {
-        self.pieces[idx]
+    fn piece_at(&self, idx: u64) -> u64 {
+        self.pieces[idx as usize]
     }
 
     #[inline]
-    unsafe fn piece_at_unchecked(&self, idx: usize) -> u32 {
-        *self.pieces.get_unchecked(idx)
+    unsafe fn piece_at_unchecked(&self, idx: u64) -> u64 {
+        *self.pieces.get_unchecked(idx as usize)
     }
 
-    fn swap_pieces(&mut self, idx1: usize, idx2: usize) {
-        self.pieces.swap(idx1, idx2);
-        if self.pieces[idx1] == 0 {
+    fn swap_pieces(&mut self, idx1: u64, idx2: u64) {
+        self.pieces.swap(idx1 as usize, idx2 as usize);
+        if self.pieces[idx1 as usize] == 0 {
             self.gap = idx1;
-        } else if self.pieces[idx2] == 0 {
+        } else if self.pieces[idx2 as usize] == 0 {
             self.gap = idx2;
         }
     }
 
     #[inline]
-    unsafe fn swap_pieces_unchecked(&mut self, idx1: usize, idx2: usize) {
-        self.pieces.swap_unchecked(idx1, idx2);
+    unsafe fn swap_pieces_unchecked(&mut self, idx1: u64, idx2: u64) {
+        self.pieces.swap_unchecked(idx1 as usize, idx2 as usize);
         if self.piece_at_unchecked(idx1) == 0 {
             self.gap = idx1;
         } else if self.piece_at_unchecked(idx2) == 0 {
@@ -211,15 +209,15 @@ impl SlidingPuzzle for Puzzle {
         }
     }
 
-    fn swap_piece_with_gap(&mut self, idx: usize) {
-        self.pieces[self.gap] = self.pieces[idx];
-        self.pieces[idx] = 0;
+    fn swap_piece_with_gap(&mut self, idx: u64) {
+        self.pieces[self.gap as usize] = self.pieces[idx as usize];
+        self.pieces[idx as usize] = 0;
         self.gap = idx;
     }
 
-    unsafe fn swap_piece_with_gap_unchecked(&mut self, idx: usize) {
-        *self.pieces.get_unchecked_mut(self.gap) = self.piece_at_unchecked(idx);
-        *self.pieces.get_unchecked_mut(idx) = 0;
+    unsafe fn swap_piece_with_gap_unchecked(&mut self, idx: u64) {
+        *self.pieces.get_unchecked_mut(self.gap as usize) = self.piece_at_unchecked(idx);
+        *self.pieces.get_unchecked_mut(idx as usize) = 0;
         self.gap = idx;
     }
 }
@@ -268,7 +266,7 @@ impl FromStr for Puzzle {
             static ref RE: Regex = Regex::new(r"\d+|\n|/").unwrap();
         }
 
-        let mut grid: Vec<Vec<u32>> = Vec::new();
+        let mut grid: Vec<Vec<u64>> = Vec::new();
         let mut row = Vec::new();
         for m in RE.find_iter(s) {
             let m = m.as_str();
@@ -280,7 +278,7 @@ impl FromStr for Puzzle {
                 }
                 // Must be a number
                 _ => {
-                    let n = m.parse::<u32>().map_err(ParsePuzzleError::ParseIntError)?;
+                    let n = m.parse::<u64>().map_err(ParsePuzzleError::ParseIntError)?;
                     row.push(n);
                 }
             }

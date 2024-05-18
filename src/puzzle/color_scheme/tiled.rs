@@ -76,7 +76,7 @@ impl<C: ColorScheme> ColorScheme for Tiled<C> {
         true
     }
 
-    fn color(&self, size: Size, (x, y): (usize, usize)) -> Rgba {
+    fn color(&self, size: Size, (x, y): (u64, u64)) -> Rgba {
         let (width, height) = size.into();
         let (gw, gh) = self.grid_size.into();
 
@@ -183,7 +183,7 @@ impl<C: ColorScheme> RecursiveTiled<C> {
         }
     }
 
-    fn color_helper(&self, size: Size, (x, y): (usize, usize), start_idx: usize) -> Rgba {
+    fn color_helper(&self, size: Size, (x, y): (u64, u64), start_idx: usize) -> Rgba {
         if let Some(&grid_size) = self.grid_sizes.get(start_idx) {
             let (width, height) = size.into();
             let (grid_width, grid_height) = grid_size.into();
@@ -226,7 +226,7 @@ impl<C: ColorScheme> ColorScheme for RecursiveTiled<C> {
         self.is_valid_size_helper(size, 0)
     }
 
-    fn color(&self, size: Size, pos: (usize, usize)) -> Rgba {
+    fn color(&self, size: Size, pos: (u64, u64)) -> Rgba {
         self.color_helper(size, pos, 0)
     }
 }

@@ -57,8 +57,8 @@ where
         let (w, h) = puzzle.size().into();
         let (d, r) = (rng.gen_range(0..h), rng.gen_range(0..w));
 
-        puzzle.apply_move(Move::new(Direction::Down, d as u32));
-        puzzle.apply_move(Move::new(Direction::Right, r as u32));
+        puzzle.apply_move(Move::new(Direction::Down, d));
+        puzzle.apply_move(Move::new(Direction::Right, r));
     }
 }
 
@@ -116,12 +116,12 @@ where
 {
     fn scramble_with_rng<R: Rng>(&self, puzzle: &mut Puzzle, rng: &mut R) {
         let n = puzzle.num_pieces();
-        let cycle_len = (self.length as usize).min(if n % 2 == 0 { n - 1 } else { n });
+        let cycle_len = (self.length).min(if n % 2 == 0 { n - 1 } else { n });
         let max = if cycle_len % 2 == 0 { n - 2 } else { n };
-        let pieces = rand::seq::index::sample(rng, max, cycle_len);
+        let pieces = rand::seq::index::sample(rng, max as usize, cycle_len as usize);
 
-        for i in 1..cycle_len {
-            puzzle.try_swap_pieces(pieces.index(0), pieces.index(i));
+        for i in 1..cycle_len as usize {
+            puzzle.try_swap_pieces(pieces.index(0) as u64, pieces.index(i) as u64);
         }
 
         if self.length % 2 == 0 {

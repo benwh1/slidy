@@ -18,7 +18,7 @@ use serde_derive::{Deserialize, Serialize};
 /// Represents a move of the piece in the given position.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct PositionMove(pub usize, pub usize);
+pub struct PositionMove(pub u64, pub u64);
 
 /// Error type for the implementation of [`TryIntoMove`] for [`PositionMove`].
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -26,7 +26,7 @@ pub struct PositionMove(pub usize, pub usize);
 pub enum TryPositionMoveIntoMoveError {
     /// Returned when the piece can not be moved.
     #[error("InvalidMove: position ({0}, {1}) can not be moved")]
-    InvalidMove(usize, usize),
+    InvalidMove(u64, u64),
 }
 
 impl<Puzzle: SlidingPuzzle> TryIntoMove<Puzzle> for PositionMove {
@@ -39,15 +39,15 @@ impl<Puzzle: SlidingPuzzle> TryIntoMove<Puzzle> for PositionMove {
             let (gx, gy) = puzzle.gap_position_xy();
             if x == gx {
                 match y.cmp(&gy) {
-                    Ordering::Less => Ok(Move::new(Direction::Down, (gy - y) as u32)),
-                    Ordering::Greater => Ok(Move::new(Direction::Up, (y - gy) as u32)),
+                    Ordering::Less => Ok(Move::new(Direction::Down, gy - y)),
+                    Ordering::Greater => Ok(Move::new(Direction::Up, y - gy)),
                     Ordering::Equal => Ok(Move::new(Direction::Up, 0)),
                 }
             } else {
                 // We must have y == gy here
                 match x.cmp(&gx) {
-                    Ordering::Less => Ok(Move::new(Direction::Right, (gx - x) as u32)),
-                    Ordering::Greater => Ok(Move::new(Direction::Left, (x - gx) as u32)),
+                    Ordering::Less => Ok(Move::new(Direction::Right, gx - x)),
+                    Ordering::Greater => Ok(Move::new(Direction::Left, x - gx)),
                     Ordering::Equal => Ok(Move::new(Direction::Right, 0)),
                 }
             }

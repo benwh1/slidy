@@ -37,7 +37,7 @@ impl AlgorithmSlice<'_> {
     #[must_use]
     pub fn len<M: Metric, T: PrimInt + Sum + 'static>(&self) -> T
     where
-        u32: AsPrimitive<T>,
+        u64: AsPrimitive<T>,
     {
         self.moves().map(|m| M::len::<T>(m)).sum()
     }
@@ -46,7 +46,7 @@ impl AlgorithmSlice<'_> {
     #[must_use]
     pub fn len_stm<T: PrimInt + Sum + 'static>(&self) -> T
     where
-        u32: AsPrimitive<T>,
+        u64: AsPrimitive<T>,
     {
         self.len::<Stm, T>()
     }
@@ -55,7 +55,7 @@ impl AlgorithmSlice<'_> {
     #[must_use]
     pub fn len_mtm<T: PrimInt + Sum + 'static>(&self) -> T
     where
-        u32: AsPrimitive<T>,
+        u64: AsPrimitive<T>,
     {
         self.len::<Mtm, T>()
     }
@@ -137,8 +137,8 @@ impl AlgorithmSlice<'_> {
     #[must_use]
     pub fn min_applicable_size(&self) -> Option<Size> {
         // Gap position where (0, 0) is the bottom right position, increasing up and left
-        let (mut max_gx, mut max_gy) = (0u32, 0u32);
-        let (mut gx, mut gy) = (0u32, 0u32);
+        let (mut max_gx, mut max_gy) = (0u64, 0u64);
+        let (mut gx, mut gy) = (0u64, 0u64);
 
         for mv in self.moves() {
             let n = mv.amount;
@@ -155,7 +155,7 @@ impl AlgorithmSlice<'_> {
             max_gy = max_gy.max(gy);
         }
 
-        Size::new(1 + max_gx as usize, 1 + max_gy as usize).ok()
+        Size::new(1 + max_gx, 1 + max_gy).ok()
     }
 
     /// An iterator over the single-tile moves in the slice.
@@ -264,7 +264,7 @@ mod tests {
         for start in 0..34 {
             for end in start..34 {
                 let slice = alg.try_slice(start..end)?;
-                assert_eq!(slice.len_stm::<u32>(), end - start);
+                assert_eq!(slice.len_stm::<u64>(), end - start);
             }
         }
 

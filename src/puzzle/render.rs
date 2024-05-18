@@ -430,7 +430,7 @@ impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
 
     /// Draws the piece of `puzzle` at position `(x, y)` as an SVG image, wrapped in an SVG group
     /// element.
-    pub fn render_piece<Puzzle>(&self, puzzle: &Puzzle, (x, y): (usize, usize)) -> Group
+    pub fn render_piece<Puzzle>(&self, puzzle: &Puzzle, (x, y): (u64, u64)) -> Group
     where
         Puzzle: SlidingPuzzle,
         Puzzle::Piece: Display,
