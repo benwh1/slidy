@@ -467,7 +467,7 @@ impl Label for SpiralGrids {
         let num_outer_pieces = 2 * rect_label * (width + height - 2 * rect_label);
 
         // Find which side of the rectangle the piece is on, and count how many pieces came before
-        let rect_pieces = if rw.min(rh) == 1 || (ry == 0 && rx < rw - 1) {
+        let rect_pieces = if ry == 0 && rx < rw - 1 {
             // Top row
             rx
         } else if rx == rw - 1 && ry < rh - 1 {
@@ -883,6 +883,22 @@ mod tests {
             15, 16, 17, 18, 19,  6,
             14, 23, 22, 21, 20,  7,
             13, 12, 11, 10,  9,  8,
+        ],
+        5 x 7: [
+             0,  1,  2,  3,  4,
+            19, 20, 21, 22,  5,
+            18, 31, 32, 23,  6,
+            17, 30, 33, 24,  7,
+            16, 29, 34, 25,  8,
+            15, 28, 27, 26,  9,
+            14, 13, 12, 11, 10,
+        ],
+        7 x 5: [
+             0,  1,  2,  3,  4,  5,  6,
+            19, 20, 21, 22, 23, 24,  7,
+            18, 31, 32, 33, 34, 25,  8,
+            17, 30, 29, 28, 27, 26,  9,
+            16, 15, 14, 13, 12, 11, 10,
         ],
     );
 
