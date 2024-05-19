@@ -172,13 +172,27 @@ always_solvable_except_trivial_size!(
 
 #[cfg(test)]
 mod tests {
-    mod row_grids {
-        use crate::puzzle::{label::label::RowGrids, puzzle::Puzzle, solvable::Solvable};
-        use std::str::FromStr;
+    use std::str::FromStr;
 
-        #[test]
-        fn test_solvable() {
-            let solvable = vec![
+    use crate::puzzle::puzzle::Puzzle;
+
+    use super::*;
+
+    fn test<S: Solvable<Puzzle>>(solvable: &[&str], unsolvable: &[&str]) {
+        for s in solvable {
+            let p = Puzzle::from_str(s).unwrap();
+            assert!(S::is_solvable(&p));
+        }
+        for s in unsolvable {
+            let p = Puzzle::from_str(s).unwrap();
+            assert!(!S::is_solvable(&p));
+        }
+    }
+
+    #[test]
+    fn test_row_grids() {
+        test::<RowGrids>(
+            &[
                 "1 2 3 0",
                 "1 0 2 3",
                 "1/2/3/0",
@@ -187,8 +201,8 @@ mod tests {
                 "2 3 1 4/5 6 7 8/9 10 11 12/13 14 15 0",
                 "0 8 7/6 5 4/3 2 1",
                 "3 1/2 0",
-            ];
-            let unsolvable = vec![
+            ],
+            &[
                 "1 3 0 2",
                 "0 3 1 2",
                 "1/3/0/2",
@@ -197,15 +211,114 @@ mod tests {
                 "4 8 12 0/3 7 11 15/2 6 10 14/1 5 9 13",
                 "4 5 6/1 2 3/7 8 0",
                 "3 1 8/6 2 0/5 4 7",
-            ];
-            for s in solvable {
-                let p = Puzzle::from_str(s).unwrap();
-                assert!(RowGrids::is_solvable(&p));
-            }
-            for s in unsolvable {
-                let p = Puzzle::from_str(s).unwrap();
-                assert!(!RowGrids::is_solvable(&p));
-            }
-        }
+            ],
+        );
+    }
+
+    #[test]
+    fn test_rows() {
+        test::<Rows>(
+            &[
+                "1 3 2 0",
+                "0 3 2 1",
+                "1/2/3/0",
+                "1/0/2/3",
+                "1 2 3 4/5 6 7 8/9 10 11 12/13 15 14 0",
+                "3 1/2 0",
+            ],
+            &["1/3/2/0", "0/3/2/1"],
+        );
+    }
+
+    #[test]
+    fn test_square_fringe() {
+        test::<SquareFringe>(
+            &[
+                "1 2 3 0",
+                "0 1 2 3",
+                "1/2/3/0",
+                "1/0/2/3",
+                "1 2 3 4/5 6 7 8/9 10 11 12/13 15 14 0",
+                "3 1/2 0",
+            ],
+            &["1 3 2 0", "0 3 2 1", "1/3/2/0", "0/3/2/1"],
+        );
+    }
+
+    #[test]
+    fn test_split_fringe() {
+        test::<SplitFringe>(
+            &[
+                "1 3 2 0",
+                "0 3 2 1",
+                "1/3/2/0",
+                "0/1/2/3",
+                "1 2 3 4/5 6 7 8/9 10 11 12/13 15 14 0",
+                "3 1/2 0",
+            ],
+            &["2/1/3/0", "2/0/3/1", "0/3/1/2"],
+        );
+    }
+
+    #[test]
+    fn test_split_square_fringe() {
+        test::<SplitSquareFringe>(
+            &[
+                "1 2 3 0",
+                "0 1 2 3",
+                "1/2/3/0",
+                "1/0/2/3",
+                "1 2 3 4/5 6 7 8/9 10 11 12/13 15 14 0",
+                "3 1/2 0",
+            ],
+            &["1 3 2 0", "0 3 2 1", "1/3/2/0", "0/3/2/1"],
+        );
+    }
+
+    #[test]
+    fn test_last_two_rows() {
+        test::<LastTwoRows>(
+            &[
+                "1 2 3 0",
+                "0 1 2 3",
+                "1/2/3/0",
+                "1/0/2/3",
+                "1 2 3 4/5 6 7 8/9 10 11 12/13 15 14 0",
+                "3 1/2 0",
+            ],
+            &["1 3 2 0", "0 3 2 1", "1/3/2/0", "0/3/2/1"],
+        );
+    }
+
+    #[test]
+    fn test_split_last_two_rows() {
+        test::<SplitLastTwoRows>(
+            &[
+                "1 2 3 0",
+                "0 1 2 3",
+                "1/2/3/0",
+                "1/0/2/3",
+                "3/2/1/0",
+                "3/0/2/1",
+                "1 2 3 4/5 6 7 8/9 10 11 12/13 15 14 0",
+                "3 1/2 0",
+            ],
+            &["3/1/2/0", "2/0/3/1", "1/0/3/2", "0/3/1/2"],
+        );
+    }
+
+    #[test]
+    fn test_spiral() {
+        test::<Spiral>(
+            &[
+                "1 3 2 0",
+                "0 3 2 1",
+                "1/3/2/0",
+                "0/3/2/1",
+                "1 2 3 4/5 6 7 8/9 10 11 12/13 15 14 0",
+                "3 1/2 0",
+            ],
+            &["1 3/2 0", "0 3/1 2"],
+        );
     }
 }
