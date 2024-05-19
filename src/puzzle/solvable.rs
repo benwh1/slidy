@@ -3,6 +3,10 @@
 //!
 //! [`slidy::label::label`]: ../label/label/index.html
 
+use num_traits::ToPrimitive;
+
+use crate::puzzle::label::label::Label;
+
 use super::{
     label::label::{
         Checkerboard, ConcentricRectangles, Diagonals, Fringe, LastTwoRows, RowGrids, Rows, Spiral,
@@ -24,11 +28,42 @@ where
     fn is_solvable(puzzle: &Puzzle) -> bool;
 }
 
+fn trivial_size_solvable<P: SlidingPuzzle, L: Label>(puzzle: &P, label: &L) -> bool {
+    // To check if a 1xn or nx1 puzzle is solvable, we do the following:
+    // 1. Ignore the gap piece
+    // 2. Enumerate the pieces
+    // 3. Check if, for each pair (idx, piece), we have label(idx+1) == label(piece)
+    let (w, h) = puzzle.size().into();
+    if w == 1 {
+        (0..h)
+            .map(|i| puzzle.piece_at(i).to_u64().unwrap())
+            .filter(|&p| p != 0)
+            .enumerate()
+            .all(|(i, p)| {
+                label.position_label(puzzle.size(), (0, i as u64))
+                    == label.position_label(puzzle.size(), (0, p - 1))
+            })
+    } else {
+        (0..w)
+            .map(|i| puzzle.piece_at(i).to_u64().unwrap())
+            .filter(|&p| p != 0)
+            .enumerate()
+            .all(|(i, p)| {
+                label.position_label(puzzle.size(), (i as u64, 0))
+                    == label.position_label(puzzle.size(), (p - 1, 0))
+            })
+    }
+}
+
 impl<Puzzle> Solvable<Puzzle> for RowGrids
 where
     Puzzle: SlidingPuzzle,
 {
     fn is_solvable(puzzle: &Puzzle) -> bool {
+        if puzzle.size().width() == 1 || puzzle.size().height() == 1 {
+            return trivial_size_solvable(puzzle, &Self);
+        }
+
         // Closure to get the piece that would be in position (x, y), if we do L* U* to move the
         // gap to the bottom right corner
         let (w, h) = puzzle.size().into();
@@ -74,35 +109,6 @@ where
     }
 }
 
-macro_rules! always_solvable {
-    ($($t:ty),* $(,)?) => {
-        $(
-            impl<Puzzle> Solvable<Puzzle> for $t
-            where
-                Puzzle: SlidingPuzzle,
-            {
-                fn is_solvable(_puzzle: &Puzzle) -> bool {
-                    true
-                }
-            }
-        )*
-    };
-}
-
-always_solvable!(
-    Trivial,
-    Rows,
-    Fringe,
-    SquareFringe,
-    SplitFringe,
-    SplitSquareFringe,
-    Diagonals,
-    LastTwoRows,
-    SplitLastTwoRows,
-    ConcentricRectangles,
-    Checkerboard,
-);
-
 impl<Puzzle> Solvable<Puzzle> for Spiral
 where
     Puzzle: SlidingPuzzle,
@@ -118,6 +124,52 @@ where
     }
 }
 
+macro_rules! always_solvable {
+    ($($t:ty),* $(,)?) => {
+        $(
+            impl<Puzzle> Solvable<Puzzle> for $t
+            where
+                Puzzle: SlidingPuzzle,
+            {
+                fn is_solvable(_puzzle: &Puzzle) -> bool {
+                    true
+                }
+            }
+        )*
+    };
+}
+
+macro_rules! always_solvable_except_trivial_size {
+    ($($t:ty),* $(,)?) => {
+        $(
+            impl<Puzzle> Solvable<Puzzle> for $t
+            where
+                Puzzle: SlidingPuzzle,
+            {
+                fn is_solvable(puzzle: &Puzzle) -> bool {
+                    if puzzle.size().width() == 1 || puzzle.size().height() == 1 {
+                        trivial_size_solvable(puzzle, &Self)
+                    } else {
+                        true
+                    }
+                }
+            }
+        )*
+    };
+}
+
+always_solvable!(Trivial, Fringe, ConcentricRectangles, Checkerboard);
+
+always_solvable_except_trivial_size!(
+    Rows,
+    SquareFringe,
+    SplitFringe,
+    SplitSquareFringe,
+    Diagonals,
+    LastTwoRows,
+    SplitLastTwoRows,
+);
+
 #[cfg(test)]
 mod tests {
     mod row_grids {
@@ -127,12 +179,20 @@ mod tests {
         #[test]
         fn test_solvable() {
             let solvable = vec![
+                "1 2 3 0",
+                "1 0 2 3",
+                "1/2/3/0",
+                "1/0/2/3",
                 "1 2 3 4/5 6 7 8/9 10 11 12/13 14 15 0",
                 "2 3 1 4/5 6 7 8/9 10 11 12/13 14 15 0",
                 "0 8 7/6 5 4/3 2 1",
                 "3 1/2 0",
             ];
             let unsolvable = vec![
+                "1 3 0 2",
+                "0 3 1 2",
+                "1/3/0/2",
+                "0/3/1/2",
                 "2 1 3 4/5 6 7 8/9 10 11 12/13 14 15 0",
                 "4 8 12 0/3 7 11 15/2 6 10 14/1 5 9 13",
                 "4 5 6/1 2 3/7 8 0",
