@@ -2,7 +2,7 @@
 
 use palette::rgb::Rgba;
 
-use crate::puzzle::{color_scheme::ColorScheme, size::Size};
+use crate::puzzle::{color_scheme::ColorScheme, label::rect_partition::Rect, size::Size};
 
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
@@ -219,6 +219,52 @@ impl<C: ColorScheme> RecursiveTiled<C> {
             self.color_scheme.color(size, (x, y))
         }
     }
+
+    fn grid_containing_position_helper(
+        &self,
+        (x, y): (u64, u64),
+        (width, height): (u64, u64),
+        (left, top): (u64, u64),
+        start_idx: usize,
+    ) -> Rect {
+        self.grid_sizes
+            .get(start_idx)
+            .map(|&grid_size| {
+                let (grid_width, grid_height) = grid_size.into();
+
+                let grid_x = x / grid_width;
+                let grid_y = y / grid_height;
+
+                let subgrid_width = if x < (width / grid_width) * grid_width {
+                    grid_width
+                } else {
+                    width % grid_width
+                };
+
+                let subgrid_height = if y < (height / grid_height) * grid_height {
+                    grid_height
+                } else {
+                    height % grid_height
+                };
+
+                let (x, y) = (x % grid_width, y % grid_height);
+
+                let rect = self.grid_containing_position_helper(
+                    (x, y),
+                    (subgrid_width, subgrid_height),
+                    (left + grid_x * grid_width, top + grid_y * grid_height),
+                    start_idx + 1,
+                );
+
+                rect
+            })
+            .unwrap_or_else(|| Rect::new((left, top), (left + width, top + height)).unwrap())
+    }
+
+    /// Returns the grid containing the piece at position `pos`.
+    pub fn grid_containing_position(&self, size: Size, pos: (u64, u64)) -> Rect {
+        self.grid_containing_position_helper(pos, size.into(), (0, 0), 0)
+    }
 }
 
 impl<C: ColorScheme> ColorScheme for RecursiveTiled<C> {
@@ -297,6 +343,61 @@ mod tests {
                 assert_eq!(
                     tiled.color(size, (10 + dx, 12 + dy)),
                     tiled.color(size4, (dx, dy)),
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_grid_containing_position() {
+        let color_scheme = Scheme::new(RowGrids, Rainbow::default());
+        let size = Size::new(12, 7).unwrap();
+        let rec = RecursiveTiled::new(
+            color_scheme,
+            vec![Size::new(5, 5).unwrap(), Size::new(3, 2).unwrap()],
+        );
+
+        let r = |x, y, w, h| Rect::new((x, y), (x + w, y + h)).unwrap();
+
+        let rects = [
+            r(0, 0, 3, 2),
+            r(3, 0, 2, 2),
+            r(5, 0, 3, 2),
+            r(8, 0, 2, 2),
+            r(10, 0, 2, 2),
+            r(0, 2, 3, 2),
+            r(3, 2, 2, 2),
+            r(5, 2, 3, 2),
+            r(8, 2, 2, 2),
+            r(10, 2, 2, 2),
+            r(0, 4, 3, 1),
+            r(3, 4, 2, 1),
+            r(5, 4, 3, 1),
+            r(8, 4, 2, 1),
+            r(10, 4, 2, 1),
+            r(0, 5, 3, 2),
+            r(3, 5, 2, 2),
+            r(5, 5, 3, 2),
+            r(8, 5, 2, 2),
+            r(10, 5, 2, 2),
+        ];
+
+        #[rustfmt::skip]
+        let grid = [
+             0,  0,  0,  1,  1,  2,  2,  2,  3,  3,  4,  4,
+             0,  0,  0,  1,  1,  2,  2,  2,  3,  3,  4,  4,
+             5,  5,  5,  6,  6,  7,  7,  7,  8,  8,  9,  9,
+             5,  5,  5,  6,  6,  7,  7,  7,  8,  8,  9,  9,
+            10, 10, 10, 11, 11, 12, 12, 12, 13, 13, 14, 14,
+            15, 15, 15, 16, 16, 17, 17, 17, 18, 18, 19, 19,
+            15, 15, 15, 16, 16, 17, 17, 17, 18, 18, 19, 19,
+        ];
+
+        for y in 0..7 {
+            for x in 0..12 {
+                assert_eq!(
+                    rec.grid_containing_position(size, (x, y)),
+                    rects[grid[(x + y * 12) as usize]].clone(),
                 );
             }
         }
