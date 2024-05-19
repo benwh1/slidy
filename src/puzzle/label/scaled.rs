@@ -130,4 +130,30 @@ mod tests {
         ]);
         assert_eq!(num_labels, 9);
     }
+
+    #[test]
+    fn test_scaled_row_grids_2() {
+        let size = Size::new(10, 10).unwrap();
+        let label = Scaled::new(&RowGrids, (10, 5)).unwrap();
+
+        let labels = (0..100)
+            .map(|i| label.position_label(size, (i % 10, i / 10)))
+            .collect::<Vec<_>>();
+        let num_labels = label.num_labels(size);
+
+        #[rustfmt::skip]
+        assert_eq!(labels, vec![
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        ]);
+        assert_eq!(num_labels, 2);
+    }
 }
