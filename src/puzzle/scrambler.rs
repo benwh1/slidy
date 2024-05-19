@@ -65,6 +65,20 @@ where
     fn scramble_with_rng<R: Rng>(&self, puzzle: &mut Puzzle, rng: &mut R) {
         puzzle.reset();
 
+        let (w, h) = puzzle.size().into();
+
+        if w == 1 {
+            let d = rng.gen_range(0..h);
+            puzzle.apply_move(Move::new(Direction::Down, d));
+            return;
+        }
+
+        if h == 1 {
+            let r = rng.gen_range(0..w);
+            puzzle.apply_move(Move::new(Direction::Right, r));
+            return;
+        }
+
         let n = puzzle.num_pieces();
         let mut parity = false;
         for i in 0..n - 2 {
@@ -84,7 +98,6 @@ where
         }
 
         // Move blank to a random position
-        let (w, h) = puzzle.size().into();
         let (d, r) = (rng.gen_range(0..h), rng.gen_range(0..w));
 
         puzzle.apply_move(Move::new(Direction::Down, d));
@@ -186,11 +199,11 @@ mod tests {
 
     mod random_state {
         use super::*;
-        use crate::puzzle::{label::label::RowGrids, size::Size, solvable::Solvable};
+        use crate::puzzle::{label::label::RowGrids, solvable::Solvable};
 
         #[test]
         fn test_solvable() {
-            for (w, h) in [(2, 2), (4, 4), (10, 2), (20, 20)] {
+            for (w, h) in [(1, 1), (1, 4), (4, 1), (2, 2), (4, 4), (10, 2), (20, 20)] {
                 let mut p = Puzzle::new(Size::new(w, h).unwrap());
                 let x = RandomState;
                 for _ in 0..100 {
