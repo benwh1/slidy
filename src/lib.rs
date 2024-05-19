@@ -63,7 +63,7 @@
 //!     let mut solver = Solver::default();
 //!     let solution = solver.solve(&puzzle)?;
 //!
-//!     println!("Solution: {} ({} moves)", solution, solution.len_stm::<u32>());
+//!     println!("Solution: {} ({} moves)", solution, solution.len_stm::<u64>());
 //!
 //!     puzzle.apply_alg(&solution);
 //!     assert!(puzzle.is_solved());

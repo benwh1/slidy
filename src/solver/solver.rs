@@ -204,7 +204,7 @@ mod tests {
         let mut solver = Solver::new(&ManhattanDistance(&RowGrids), &RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
-        assert_eq!(solution.len_stm::<u32>(), 31);
+        assert_eq!(solution.len_stm::<u64>(), 31);
     }
 
     #[test]
@@ -212,6 +212,6 @@ mod tests {
         let mut solver = Solver::new(&ManhattanDistance(&Rows), &Rows);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
-        assert_eq!(solution.len_stm::<u32>(), 23);
+        assert_eq!(solution.len_stm::<u64>(), 23);
     }
 }
