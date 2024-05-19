@@ -483,7 +483,7 @@ where
     #[must_use]
     fn can_apply_move(&self, mv: Move) -> bool {
         let (gx, gy) = self.gap_position_xy();
-        let amount = mv.amount as u64;
+        let amount = mv.amount;
         match mv.direction {
             Direction::Up => gy + amount < self.size().height(),
             Direction::Left => gx + amount < self.size().width(),
@@ -644,12 +644,11 @@ where
         let (mut gx, mut gy) = self.gap_position_xy();
 
         for m in alg.as_slice().moves() {
-            let amount = m.amount.try_into().unwrap();
             let (new_gx, new_gy) = match m.direction {
-                Direction::Up => (Some(gx), gy.checked_add(amount)),
-                Direction::Left => (gx.checked_add(amount), Some(gy)),
-                Direction::Down => (Some(gx), gy.checked_sub(amount)),
-                Direction::Right => (gx.checked_sub(amount), Some(gy)),
+                Direction::Up => (Some(gx), gy.checked_add(m.amount)),
+                Direction::Left => (gx.checked_add(m.amount), Some(gy)),
+                Direction::Down => (Some(gx), gy.checked_sub(m.amount)),
+                Direction::Right => (gx.checked_sub(m.amount), Some(gy)),
             };
 
             if let (Some(new_gx), Some(new_gy)) = (new_gx, new_gy)

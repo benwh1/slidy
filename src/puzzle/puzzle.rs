@@ -70,7 +70,7 @@ impl Puzzle {
         let mut gap = None;
         let mut seen = HashSet::new();
         for (i, &n) in pieces.iter().enumerate() {
-            if n as u64 >= size.area() {
+            if n >= size.area() {
                 return Err(PuzzleError::PieceOutOfRange(n));
             }
             if seen.contains(&n) {

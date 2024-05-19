@@ -20,7 +20,7 @@ impl<'a> AsAlgorithmSlice<'a> for Algorithm {
 }
 
 impl<'a> AsAlgorithmSlice<'a> for AlgorithmSlice<'a> {
-    fn as_slice(&'a self) -> AlgorithmSlice<'a> {
+    fn as_slice(&'a self) -> Self {
         *self
     }
 }
