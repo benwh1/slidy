@@ -11,27 +11,24 @@ use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
 
 /// Trait defining a scrambling algorithm.
-pub trait Scrambler<Puzzle>
-where
-    Puzzle: SlidingPuzzle,
-{
+pub trait Scrambler {
     /// Checks if this `Scrambler` can be used with a given puzzle size.
     #[must_use]
     fn is_valid_size(&self, size: Size) -> bool;
 
     /// Equivalent to [`Scrambler::try_scramble_with_rng`] using [`rand::thread_rng`].
-    fn try_scramble(&self, puzzle: &mut Puzzle) -> bool {
+    fn try_scramble<P: SlidingPuzzle>(&self, puzzle: &mut P) -> bool {
         self.try_scramble_with_rng(puzzle, &mut rand::thread_rng())
     }
 
     /// Equivalent to [`Scrambler::scramble_with_rng`] using [`rand::thread_rng`].
-    fn scramble(&self, puzzle: &mut Puzzle) {
+    fn scramble<P: SlidingPuzzle>(&self, puzzle: &mut P) {
         self.scramble_with_rng(puzzle, &mut rand::thread_rng());
     }
 
     /// Scrambles the puzzle using a given [`Rng`]. If the puzzle is not of a valid size for the
     /// scrambler, the function returns false and the puzzle is not modified.
-    fn try_scramble_with_rng<R: Rng>(&self, puzzle: &mut Puzzle, rng: &mut R) -> bool {
+    fn try_scramble_with_rng<P: SlidingPuzzle, R: Rng>(&self, puzzle: &mut P, rng: &mut R) -> bool {
         if self.is_valid_size(puzzle.size()) {
             self.scramble_with_rng(puzzle, rng);
             true
@@ -45,7 +42,7 @@ where
     /// This function may not check whether the puzzle is of a valid size for the scrambler. If it
     /// is not, then the function may panic or scramble the puzzle into an unsolvable or invalid
     /// state.
-    fn scramble_with_rng<R: Rng>(&self, puzzle: &mut Puzzle, rng: &mut R);
+    fn scramble_with_rng<P: SlidingPuzzle, R: Rng>(&self, puzzle: &mut P, rng: &mut R);
 }
 
 /// Random state scrambler. Scrambles the puzzle in such a way that every solvable state is equally
@@ -54,15 +51,12 @@ where
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RandomState;
 
-impl<Puzzle> Scrambler<Puzzle> for RandomState
-where
-    Puzzle: SlidingPuzzle,
-{
+impl Scrambler for RandomState {
     fn is_valid_size(&self, _: Size) -> bool {
         true
     }
 
-    fn scramble_with_rng<R: Rng>(&self, puzzle: &mut Puzzle, rng: &mut R) {
+    fn scramble_with_rng<P: SlidingPuzzle, R: Rng>(&self, puzzle: &mut P, rng: &mut R) {
         puzzle.reset();
 
         let (w, h) = puzzle.size().into();
@@ -121,10 +115,7 @@ pub struct RandomMoves {
     pub allow_illegal_moves: bool,
 }
 
-impl<Puzzle> Scrambler<Puzzle> for RandomMoves
-where
-    Puzzle: SlidingPuzzle,
-{
+impl Scrambler for RandomMoves {
     fn is_valid_size(&self, size: Size) -> bool {
         // If the puzzle is 1xn or nx1 and we don't allow backtracking or illegal moves, then after
         // n-1 moves, there will be no legal moves, and the `while` loop in `scramble_with_rng`
@@ -139,7 +130,7 @@ where
         }
     }
 
-    fn scramble_with_rng<R: Rng>(&self, puzzle: &mut Puzzle, rng: &mut R) {
+    fn scramble_with_rng<P: SlidingPuzzle, R: Rng>(&self, puzzle: &mut P, rng: &mut R) {
         let mut last_dir = None::<Direction>;
         for _ in 0..self.moves {
             let dir = {
@@ -167,16 +158,13 @@ pub struct Cycle {
     pub length: u64,
 }
 
-impl<Puzzle> Scrambler<Puzzle> for Cycle
-where
-    Puzzle: SlidingPuzzle,
-{
+impl Scrambler for Cycle {
     fn is_valid_size(&self, size: Size) -> bool {
         // We can't do any cycles on a 1xn or nx1 puzzle.
         size.width() > 1 && size.height() > 1
     }
 
-    fn scramble_with_rng<R: Rng>(&self, puzzle: &mut Puzzle, rng: &mut R) {
+    fn scramble_with_rng<P: SlidingPuzzle, R: Rng>(&self, puzzle: &mut P, rng: &mut R) {
         let n = puzzle.num_pieces();
         let cycle_len = (self.length).min(if n % 2 == 0 { n - 1 } else { n });
         let max = if cycle_len % 2 == 0 { n - 2 } else { n };
