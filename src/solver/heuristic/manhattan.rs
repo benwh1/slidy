@@ -23,11 +23,12 @@ use crate::{
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ManhattanDistance<'a, S: SolvedState>(pub &'a S);
 
-impl<T: PrimInt + Unsigned + 'static> Heuristic<T> for ManhattanDistance<'_, Trivial>
+impl<P: SlidingPuzzle, T: PrimInt + Unsigned + 'static> Heuristic<P, T>
+    for ManhattanDistance<'_, Trivial>
 where
     u64: AsPrimitive<T>,
 {
-    fn bound<P: SlidingPuzzle>(&self, puzzle: &P) -> T {
+    fn bound(&self, puzzle: &P) -> T {
         let (w, h) = puzzle.size().into();
         let (gx, gy) = puzzle.gap_position_xy();
         (w + h - 2 - gx - gy).as_()
@@ -190,12 +191,13 @@ impl Distance for ManhattanDistance<'_, Checkerboard> {
     }
 }
 
-impl<T: PrimInt + Unsigned + 'static, L: Label> Heuristic<T> for ManhattanDistance<'_, L>
+impl<P: SlidingPuzzle, T: PrimInt + Unsigned + 'static, L: Label> Heuristic<P, T>
+    for ManhattanDistance<'_, L>
 where
     u64: AsPrimitive<T>,
     Self: Distance,
 {
-    fn bound<P: SlidingPuzzle>(&self, puzzle: &P) -> T {
+    fn bound(&self, puzzle: &P) -> T {
         let (w, h) = puzzle.size().into();
         let md = (0..w)
             .cartesian_product(0..h)

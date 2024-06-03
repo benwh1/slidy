@@ -80,7 +80,7 @@ where
     Puzzle: SlidingPuzzle + Clone,
     T: PrimInt + Unsigned + 'static,
     S: SolvedState,
-    H: Heuristic<T>,
+    H: Heuristic<Puzzle, T>,
     u8: AsPrimitive<T>,
 {
     stack: Stack,
@@ -103,7 +103,7 @@ impl<'a, Puzzle, S, H> Solver<'a, Puzzle, u8, S, H>
 where
     Puzzle: SlidingPuzzle + Clone,
     S: SolvedState,
-    H: Heuristic<u8>,
+    H: Heuristic<Puzzle, u8>,
 {
     /// Creates a new [`Solver`] using the given heuristic.
     pub fn new(heuristic: &'a H, solved_state: &'a S) -> Self {
@@ -122,7 +122,7 @@ where
     Puzzle: SlidingPuzzle + Clone,
     T: PrimInt + Unsigned + 'static,
     S: SolvedState,
-    H: Heuristic<T>,
+    H: Heuristic<Puzzle, T>,
     u8: AsPrimitive<T>,
 {
     /// Constructs a new [`Solver`] for solving `puzzle`.
