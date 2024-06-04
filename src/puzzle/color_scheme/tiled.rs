@@ -227,9 +227,9 @@ impl<C: ColorScheme> RecursiveTiled<C> {
         (left, top): (u64, u64),
         start_idx: usize,
     ) -> Rect {
-        self.grid_sizes
-            .get(start_idx)
-            .map(|&grid_size| {
+        self.grid_sizes.get(start_idx).map_or_else(
+            || Rect::new((left, top), (left + width, top + height)).unwrap(),
+            |&grid_size| {
                 let (grid_width, grid_height) = grid_size.into();
 
                 let grid_x = x / grid_width;
@@ -249,16 +249,14 @@ impl<C: ColorScheme> RecursiveTiled<C> {
 
                 let (x, y) = (x % grid_width, y % grid_height);
 
-                let rect = self.grid_containing_position_helper(
+                self.grid_containing_position_helper(
                     (x, y),
                     (subgrid_width, subgrid_height),
                     (left + grid_x * grid_width, top + grid_y * grid_height),
                     start_idx + 1,
-                );
-
-                rect
-            })
-            .unwrap_or_else(|| Rect::new((left, top), (left + width, top + height)).unwrap())
+                )
+            },
+        )
     }
 
     /// Returns the grid containing the piece at position `pos`.
