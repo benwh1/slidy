@@ -696,4 +696,77 @@ where
             self.apply_move_unchecked(m);
         }
     }
+
+    /// Checks if it is possible to embed `self` into `puzzle`.
+    #[must_use]
+    fn can_embed_into(&self, puzzle: &Self) -> bool {
+        let (w, h) = self.size().into();
+        let (gx, gy) = puzzle.gap_position_xy();
+        gx >= w - 1 && gy >= h - 1
+    }
+
+    /// Embeds `self` into `puzzle`. This is equivalent to finding a solution of `self`, then
+    /// applying the inverse to `puzzle`.
+    ///
+    /// # Panics
+    ///
+    /// If `self.can_embed_into(puzzle)` is false, the function may panic or `puzzle` may be
+    /// transformed in an invalid way.
+    fn embed_into(&self, puzzle: &mut Self) {
+        if !self.try_embed_into(puzzle) {
+            panic!("failed to embed `self` into `puzzle`");
+        }
+    }
+
+    /// See [`SlidingPuzzle::embed_into`].
+    ///
+    /// Returns `true` if the puzzle was embedded successfully, `false` otherwise.
+    fn try_embed_into(&self, puzzle: &mut Self) -> bool {
+        let (w, h) = self.size().into();
+        let (gx, gy) = puzzle.gap_position_xy();
+        let (Some(left), Some(top)) = (gx.checked_sub(w - 1), gy.checked_sub(h - 1)) else {
+            return false;
+        };
+
+        let mut seen = vec![false; self.area() as usize];
+
+        for y in 0..h {
+            for x in 0..w {
+                let i = (x + y * w) as usize;
+                if seen[i] {
+                    continue;
+                }
+
+                // Find the cycle starting at `i`
+                let mut cycle = Vec::new();
+                let mut index = i;
+                while !seen[index] {
+                    seen[index] = true;
+                    cycle.push(index);
+                    index = self.solved_pos(self.piece_at(index as u64)) as usize;
+                }
+
+                // Apply the cycle to `puzzle`
+                let mut index = cycle[0];
+                for &next in cycle.iter().skip(1) {
+                    let idx = index as u64;
+                    let nxt = next as u64;
+
+                    let (ix, iy) = (idx % w, idx / w);
+                    let (nx, ny) = (nxt % w, nxt / w);
+
+                    puzzle.swap_pieces_xy((ix + left, iy + top), (nx + left, ny + top));
+
+                    index = next;
+                }
+            }
+        }
+
+        true
+    }
+
+    /// See [`SlidingPuzzle::embed_into`].
+    unsafe fn embed_into_unchecked(&self, puzzle: &mut Self) {
+        self.embed_into(puzzle);
+    }
 }

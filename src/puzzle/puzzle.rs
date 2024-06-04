@@ -682,6 +682,36 @@ mod tests {
                 vec![5, 1, 7, 3, 9, 2, 11, 4, 13, 6, 10, 8, 14, 15, 12, 0]
             );
         }
+
+        #[test]
+        fn test_embed_into() {
+            let p = Puzzle::from_str("5 13 3 2/6 1 14 0/15 7 9 8/10 12 11 4").unwrap();
+            let mut p2 = Puzzle::from_str("42 25 52 8 26 63 16 39/27 62 4 45 40 59 58 55/56 17 57 35 6 15 20 38/51 24 53 31 13 33 3 23/54 14 48 29 5 2 37 46/10 12 28 30 18 0 36 19/32 41 44 50 22 7 60 49/21 34 61 11 43 1 47 9").unwrap();
+            let expected = Puzzle::from_str("42 25 52 8 26 63 16 39/27 62 4 45 40 59 58 55/56 17 53 28 6 35 20 38/51 24 31 57 30 0 3 23/54 14 18 13 48 33 37 46/10 12 29 2 5 15 36 19/32 41 44 50 22 7 60 49/21 34 61 11 43 1 47 9").unwrap();
+            assert!(p.try_embed_into(&mut p2));
+            assert_eq!(p2, expected);
+        }
+
+        #[test]
+        fn test_embed_into_2() {
+            let p = Puzzle::from_str("1 5 9 13/2 6 10 14/3 7 11 15/4 8 12 0").unwrap();
+            let mut p2 = p.clone();
+            let expected = Puzzle::default();
+            assert!(p.try_embed_into(&mut p2));
+            assert_eq!(p2, expected);
+        }
+
+        #[test]
+        fn test_embed_into_3() {
+            let p = Puzzle::from_str("0 3/2 1").unwrap();
+            let mut p2 = Puzzle::default();
+            let expected = Puzzle::from_str("0 5 3 4/2 1 10 8/9 7 6 15/13 14 12 11").unwrap();
+            assert!(p.try_embed_into(&mut p2));
+            assert!(p.try_embed_into(&mut p2));
+            assert!(p.try_embed_into(&mut p2));
+            assert!(!p.try_embed_into(&mut p2));
+            assert_eq!(p2, expected);
+        }
     }
 
     mod from_str {
