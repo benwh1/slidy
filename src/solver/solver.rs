@@ -147,8 +147,12 @@ where
             return false;
         }
 
-        use Direction::*;
-        for d in [Up, Left, Down, Right] {
+        for d in [
+            Direction::Up,
+            Direction::Down,
+            Direction::Left,
+            Direction::Right,
+        ] {
             if self.stack.top() == Some(d.inverse()) {
                 continue;
             }
