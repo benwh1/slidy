@@ -5,8 +5,10 @@ use std::{cmp::Ordering, fmt::Display, num::ParseIntError, ops::Add, str::FromSt
 use thiserror::Error;
 
 use crate::algorithm::{
+    as_slice::AsAlgorithmSlice,
     direction::{Direction, ParseDirectionError},
     display::r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort, MoveDisplay},
+    slice::AlgorithmSlice,
 };
 
 #[cfg(feature = "serde")]
@@ -196,6 +198,16 @@ impl Add for Move {
             MoveSum::Ok(rhs)
         } else {
             MoveSum::Invalid
+        }
+    }
+}
+
+impl AsAlgorithmSlice<'_> for Move {
+    fn as_slice(&self) -> AlgorithmSlice<'_> {
+        AlgorithmSlice {
+            first: Some(*self),
+            middle: &[],
+            last: None,
         }
     }
 }
