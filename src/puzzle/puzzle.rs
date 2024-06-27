@@ -277,9 +277,8 @@ impl FromStr for Puzzle {
                     current_row_length += 1;
                     current_number = None;
                 }
-            } else if c.is_ascii_digit() {
-                let n = c.to_digit(10).unwrap() as u64;
-                current_number = Some(current_number.unwrap_or(0) * 10 + n);
+            } else if let Some(n) = c.to_digit(10) {
+                current_number = Some(current_number.unwrap_or(0) * 10 + n as u64);
             } else {
                 return Err(ParsePuzzleError::InvalidCharacter(c));
             }
