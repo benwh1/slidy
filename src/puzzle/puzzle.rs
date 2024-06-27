@@ -7,10 +7,8 @@ use super::{
     label::labels::BijectiveLabel,
     sliding_puzzle::SlidingPuzzle,
 };
-use lazy_static::lazy_static;
 use num_traits::AsPrimitive;
-use regex::Regex;
-use std::{collections::HashSet, fmt::Display, num::ParseIntError, str::FromStr};
+use std::{collections::HashSet, fmt::Display, str::FromStr};
 use thiserror::Error;
 
 #[cfg(feature = "serde")]
@@ -241,10 +239,6 @@ pub enum ParsePuzzleError {
     #[error("InvalidCharacter: character {0} is invalid")]
     InvalidCharacter(char),
 
-    /// Returned when an integer parse fails.
-    #[error("ParseIntError: {0}")]
-    ParseIntError(ParseIntError),
-
     /// Returned when the string is parsed successfully, but creating a [`Puzzle`] fails.
     #[error("PuzzleError: {0}")]
     PuzzleError(PuzzleError),
@@ -254,40 +248,61 @@ impl FromStr for Puzzle {
     type Err = ParsePuzzleError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // Verify that no invalid characters are used
+        let mut pieces = Vec::new();
+        let mut row_length = None;
+        let mut num_rows = 0;
+        let mut current_row_length = 0;
+        let mut current_number = None;
+
         for c in s.chars() {
-            if !(c.is_whitespace() || c.is_ascii_digit() || c == '/') {
+            if c == '/' || c == '\n' {
+                if let Some(n) = current_number {
+                    pieces.push(n);
+                    current_row_length += 1;
+                    current_number = None;
+                }
+
+                if row_length.is_some_and(|l| l != current_row_length) {
+                    return Err(ParsePuzzleError::PuzzleError(
+                        PuzzleError::UnequalRowLengths,
+                    ));
+                }
+
+                row_length = Some(current_row_length);
+                current_row_length = 0;
+                num_rows += 1;
+            } else if c.is_whitespace() {
+                if let Some(n) = current_number {
+                    pieces.push(n);
+                    current_row_length += 1;
+                    current_number = None;
+                }
+            } else if c.is_ascii_digit() {
+                let n = c.to_digit(10).unwrap() as u64;
+                current_number = Some(current_number.unwrap_or(0) * 10 + n);
+            } else {
                 return Err(ParsePuzzleError::InvalidCharacter(c));
             }
         }
 
-        // Match on numbers, slashes, new lines
-        lazy_static! {
-            static ref RE: Regex = Regex::new(r"\d+|\n|/").unwrap();
+        if let Some(n) = current_number {
+            pieces.push(n);
+            current_row_length += 1;
         }
 
-        let mut grid: Vec<Vec<u64>> = Vec::new();
-        let mut row = Vec::new();
-        for m in RE.find_iter(s) {
-            let m = m.as_str();
-            match m {
-                // End of a row
-                "\n" | "/" => {
-                    grid.push(row);
-                    row = Vec::new();
-                }
-                // Must be a number
-                _ => {
-                    let n = m.parse::<u64>().map_err(ParsePuzzleError::ParseIntError)?;
-                    row.push(n);
-                }
-            }
+        if row_length.is_some_and(|l| l != current_row_length) {
+            return Err(ParsePuzzleError::PuzzleError(
+                PuzzleError::UnequalRowLengths,
+            ));
         }
 
-        // Append the last row
-        grid.push(row);
+        row_length = Some(current_row_length);
+        num_rows += 1;
 
-        Self::new_from_grid(grid).map_err(ParsePuzzleError::PuzzleError)
+        let size = Size::new(row_length.unwrap_or_default(), num_rows)
+            .map_err(|s| ParsePuzzleError::PuzzleError(PuzzleError::InvalidSize(s)))?;
+
+        Self::with_pieces(pieces, size).map_err(ParsePuzzleError::PuzzleError)
     }
 }
 
