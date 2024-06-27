@@ -8,7 +8,7 @@ use super::{
     sliding_puzzle::SlidingPuzzle,
 };
 use num_traits::AsPrimitive;
-use std::{collections::HashSet, fmt::Display, str::FromStr};
+use std::{fmt::Display, str::FromStr};
 use thiserror::Error;
 
 #[cfg(feature = "serde")]
@@ -66,16 +66,16 @@ impl Puzzle {
     /// Create a new [`Puzzle`] from a list of numbers and a size.
     pub fn with_pieces(pieces: Vec<u64>, size: Size) -> Result<Self, PuzzleError> {
         let mut gap = None;
-        let mut seen = HashSet::new();
+        let mut seen = vec![false; size.area() as usize];
         for (i, &n) in pieces.iter().enumerate() {
             if n >= size.area() {
                 return Err(PuzzleError::PieceOutOfRange(n));
             }
-            if seen.contains(&n) {
+            if seen[n as usize] {
                 return Err(PuzzleError::DuplicatePiece(n));
             }
 
-            seen.insert(n);
+            seen[n as usize] = true;
 
             if n == 0 {
                 gap = Some(i as u64);
