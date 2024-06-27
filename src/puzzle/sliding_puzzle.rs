@@ -402,6 +402,66 @@ where
         self.swap_pieces_unchecked(x1 + w * y1, x2 + w * y2);
     }
 
+    /// See [`SlidingPuzzle::swap_pieces`].
+    ///
+    /// This function exists as an optimization of `swap_pieces` for the case where the pieces are
+    /// known to not be the gap piece. In this case, depending on the implementation of the puzzle,
+    /// we may be able to eliminate some checks (e.g. updating the gap position).
+    ///
+    /// # Panics
+    ///
+    /// If one of the pieces is the gap piece, the function may panic or the puzzle may be
+    /// transformed in an invalid way.
+    #[inline]
+    fn swap_non_gap_pieces(&mut self, idx1: u64, idx2: u64) {
+        self.swap_pieces(idx1, idx2);
+    }
+
+    /// See [`SlidingPuzzle::swap_non_gap_pieces`].
+    ///
+    /// Returns `true` if `idx1` and `idx2` are within the valid range for the puzzle, neither one
+    /// is the gap piece, and the pieces were successfully swapped, and `false` otherwise.
+    #[inline]
+    fn try_swap_non_gap_pieces(&mut self, idx1: u64, idx2: u64) -> bool {
+        let gap = self.gap_position();
+        if idx1 != gap && idx2 != gap {
+            self.try_swap_pieces(idx1, idx2)
+        } else {
+            false
+        }
+    }
+
+    /// See [`SlidingPuzzle::swap_non_gap_pieces`].
+    #[inline]
+    unsafe fn swap_non_gap_pieces_unchecked(&mut self, idx1: u64, idx2: u64) {
+        self.swap_pieces_unchecked(idx1, idx2);
+    }
+
+    /// See [`SlidingPuzzle::swap_non_gap_pieces`] and [`SlidingPuzzle::swap_pieces_xy`].
+    #[inline]
+    fn swap_non_gap_pieces_xy(&mut self, (x1, y1): (u64, u64), (x2, y2): (u64, u64)) {
+        let w = self.size().width();
+        self.swap_non_gap_pieces(x1 + w * y1, x2 + w * y2);
+    }
+
+    /// See [`SlidingPuzzle::swap_non_gap_pieces_xy`]
+    #[inline]
+    fn try_swap_non_gap_pieces_xy(&mut self, pos1: (u64, u64), pos2: (u64, u64)) -> bool {
+        let w = self.size().width();
+        self.try_swap_non_gap_pieces(pos1.0 + w * pos1.1, pos2.0 + w * pos2.1)
+    }
+
+    /// See [`SlidingPuzzle::swap_non_gap_pieces_xy`]
+    #[inline]
+    unsafe fn swap_non_gap_pieces_xy_unchecked(
+        &mut self,
+        (x1, y1): (u64, u64),
+        (x2, y2): (u64, u64),
+    ) {
+        let w = self.size().width();
+        self.swap_non_gap_pieces_unchecked(x1 + w * y1, x2 + w * y2);
+    }
+
     /// Swaps piece in position `idx` with the gap.
     #[inline]
     fn swap_piece_with_gap(&mut self, idx: u64) {

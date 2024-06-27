@@ -207,6 +207,14 @@ impl SlidingPuzzle for Puzzle {
         }
     }
 
+    fn swap_non_gap_pieces(&mut self, idx1: u64, idx2: u64) {
+        self.pieces.swap(idx1 as usize, idx2 as usize);
+    }
+
+    unsafe fn swap_non_gap_pieces_unchecked(&mut self, idx1: u64, idx2: u64) {
+        self.pieces.swap_unchecked(idx1 as usize, idx2 as usize);
+    }
+
     fn swap_piece_with_gap(&mut self, idx: u64) {
         self.pieces[self.gap as usize] = self.pieces[idx as usize];
         self.pieces[idx as usize] = 0;
@@ -488,6 +496,25 @@ mod tests {
             let mut p = Puzzle::new(Size::new(4, 4).unwrap());
             p.try_swap_pieces(0, 15);
             assert_eq!(p.gap_position(), 0);
+        }
+
+        #[test]
+        fn test_swap_non_gap_pieces() {
+            let mut p = Puzzle::new(Size::new(4, 4).unwrap());
+            p.try_swap_non_gap_pieces(0, 6);
+            assert_eq!(p.try_piece_at(0), Some(7));
+            assert_eq!(p.try_piece_at(6), Some(1));
+            p.try_swap_non_gap_pieces_xy((0, 0), (2, 1));
+            assert_eq!(p.try_piece_at(0), Some(1));
+            assert_eq!(p.try_piece_at(6), Some(7));
+        }
+
+        #[test]
+        fn test_swap_non_gap_pieces_2() {
+            let mut p = Puzzle::new(Size::new(4, 4).unwrap());
+            let p2 = p.clone();
+            assert!(!p.try_swap_non_gap_pieces(0, 15));
+            assert_eq!(p, p2);
         }
 
         #[test]

@@ -81,14 +81,14 @@ impl Scrambler for RandomState {
 
             // Swap and check if we need to toggle parity
             if i != j {
-                puzzle.try_swap_pieces(i, j);
+                puzzle.swap_non_gap_pieces(i, j);
                 parity = !parity;
             }
         }
 
         // Swap the last two pieces if necessary to make it solvable
         if parity {
-            puzzle.try_swap_pieces(n - 2, n - 1);
+            puzzle.swap_non_gap_pieces(n - 2, n - 1);
         }
 
         // Move blank to a random position
