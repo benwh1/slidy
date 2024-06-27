@@ -142,6 +142,27 @@ impl SlidingPuzzle for Puzzle {
         self.gap
     }
 
+    fn try_gap_position(&self) -> Option<u64> {
+        Some(self.gap)
+    }
+
+    unsafe fn gap_position_unchecked(&self) -> u64 {
+        self.gap
+    }
+
+    fn gap_position_xy(&self) -> (u64, u64) {
+        let w = self.size.width();
+        (self.gap % w, self.gap / w)
+    }
+
+    fn try_gap_position_xy(&self) -> Option<(u64, u64)> {
+        Some(self.gap_position_xy())
+    }
+
+    unsafe fn gap_position_xy_unchecked(&self) -> (u64, u64) {
+        self.gap_position_xy()
+    }
+
     fn reset_to_label<L: BijectiveLabel>(&mut self, label: &L) {
         let (w, h) = self.size().into();
         let area = self.area();
