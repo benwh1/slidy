@@ -23,6 +23,7 @@ thiserror = "1.0.48"
 
 [dev-dependencies]
 paste = "1.0.14"
+rand_xoshiro = "0.6.0"
 
 [features]
 serde = [

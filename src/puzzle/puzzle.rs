@@ -768,9 +768,14 @@ mod tests {
 mod benchmarks {
     extern crate test;
 
+    use rand::SeedableRng;
+    use rand_xoshiro::Xoroshiro128StarStar;
     use test::{black_box, Bencher};
 
-    use crate::algorithm::algorithm::Algorithm;
+    use crate::{
+        algorithm::algorithm::Algorithm,
+        puzzle::scrambler::{RandomState, Scrambler},
+    };
 
     use super::*;
 
@@ -849,5 +854,17 @@ mod benchmarks {
         )
         .unwrap();
         b.iter(|| black_box(p.can_apply_alg(&a)));
+    }
+
+    #[bench]
+    fn bench_from_str(b: &mut Bencher) {
+        let mut rng = Xoroshiro128StarStar::seed_from_u64(0);
+        let mut puzzle = Puzzle::new(Size::new(50, 50).unwrap());
+        RandomState.scramble_with_rng(&mut puzzle, &mut rng);
+        let s = puzzle.to_string();
+
+        b.iter(|| {
+            black_box(Puzzle::from_str(&s).unwrap());
+        });
     }
 }
