@@ -203,3 +203,24 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod benchmarks {
+    extern crate test;
+
+    use rand::SeedableRng;
+    use rand_xoshiro::Xoroshiro128StarStar;
+    use test::Bencher;
+
+    use crate::puzzle::puzzle::Puzzle;
+
+    use super::*;
+
+    #[bench]
+    fn bench_random_state(b: &mut Bencher) {
+        let mut p = Puzzle::new(Size::new(100, 100).unwrap());
+        let mut rng = Xoroshiro128StarStar::seed_from_u64(0);
+
+        b.iter(|| RandomState.scramble_with_rng(&mut p, &mut rng));
+    }
+}
