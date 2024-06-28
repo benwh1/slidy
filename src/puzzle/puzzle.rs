@@ -919,6 +919,16 @@ mod benchmarks {
     }
 
     #[bench]
+    fn bench_apply_alg(b: &mut Bencher) {
+        let mut p = Puzzle::default();
+        let a = Algorithm::from_str(
+            "DR2D2LULURUR2DL2DRU2RD2LDRULULDRDL2URDLU3RDLUR3DLDLU2RD3LU3R2DLD2LULU2",
+        )
+        .unwrap();
+        b.iter(|| black_box(p.apply_alg(&a)));
+    }
+
+    #[bench]
     fn bench_from_str(b: &mut Bencher) {
         let mut rng = Xoroshiro128StarStar::seed_from_u64(0);
         let mut puzzle = Puzzle::new(Size::new(50, 50).unwrap());
