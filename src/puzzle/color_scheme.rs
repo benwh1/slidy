@@ -169,6 +169,18 @@ impl<S: ColorScheme, List: AsRef<[S]>> SchemeList<S, List> {
         }
     }
 
+    /// Returns the index of the currently active scheme.
+    #[must_use]
+    pub fn current_scheme_index(&self) -> usize {
+        self.index
+    }
+
+    /// Returns the number of schemes in the list.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.schemes.as_ref().len()
+    }
+
     /// Returns a reference to the scheme that is currently active.
     #[must_use]
     pub fn current_scheme(&self) -> &S {
