@@ -14,11 +14,10 @@ use svg::{
 use thiserror::Error;
 
 use crate::puzzle::{
-    color_scheme::{Black, SchemeList},
+    color_scheme::{Black, ColorScheme, SchemeList},
     size::Size,
+    sliding_puzzle::SlidingPuzzle,
 };
-
-use super::{color_scheme::ColorScheme, sliding_puzzle::SlidingPuzzle};
 
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};

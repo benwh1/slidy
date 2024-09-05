@@ -1,15 +1,15 @@
 //! Defines an implementation of the [`SlidingPuzzle`] trait.
 
-use crate::puzzle::size::{Size, SizeError};
-
-use super::{
-    display::{DisplayGrid, DisplayInline},
-    label::label::BijectiveLabel,
-    sliding_puzzle::SlidingPuzzle,
-};
 use num_traits::AsPrimitive;
 use std::{fmt::Display, str::FromStr};
 use thiserror::Error;
+
+use crate::puzzle::{
+    display::{DisplayGrid, DisplayInline},
+    label::label::BijectiveLabel,
+    size::{Size, SizeError},
+    sliding_puzzle::SlidingPuzzle,
+};
 
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};

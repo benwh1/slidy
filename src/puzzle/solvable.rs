@@ -5,12 +5,10 @@
 
 use num_traits::ToPrimitive;
 
-use crate::puzzle::label::label::Label;
-
-use super::{
+use crate::puzzle::{
     label::label::{
-        Checkerboard, ConcentricRectangles, Diagonals, Fringe, LastTwoRows, RowGrids, Rows, Spiral,
-        SplitFringe, SplitLastTwoRows, SplitSquareFringe, SquareFringe, Trivial,
+        Checkerboard, ConcentricRectangles, Diagonals, Fringe, Label, LastTwoRows, RowGrids, Rows,
+        Spiral, SplitFringe, SplitLastTwoRows, SplitSquareFringe, SquareFringe, Trivial,
     },
     sliding_puzzle::SlidingPuzzle,
 };

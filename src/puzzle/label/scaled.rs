@@ -2,9 +2,7 @@
 
 use thiserror::Error;
 
-use crate::puzzle::size::Size;
-
-use super::label::Label;
+use crate::puzzle::{label::label::Label, size::Size};
 
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};

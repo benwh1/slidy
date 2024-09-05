@@ -2,9 +2,11 @@
 //!
 //! [`Algorithm`]: ../../algorithm.html
 
-use super::r#move::MoveDisplay;
-use crate::algorithm::{as_slice::AsAlgorithmSlice, slice::AlgorithmSlice};
 use std::{fmt::Display, marker::PhantomData};
+
+use crate::algorithm::{
+    as_slice::AsAlgorithmSlice, display::r#move::MoveDisplay, slice::AlgorithmSlice,
+};
 
 /// Marker trait for structs that are used to display algorithms
 pub trait AlgorithmDisplay<'a> {

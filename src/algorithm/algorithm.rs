@@ -15,17 +15,17 @@ use thiserror::Error;
 use crate::{
     algorithm::{
         as_slice::AsAlgorithmSlice,
+        direction::Direction,
         display::{
             algorithm::{AlgorithmDisplay, DisplaySpaced, DisplayUnspaced},
             r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
         },
         metric::Metric,
+        r#move::r#move::Move,
         slice::AlgorithmSlice,
     },
     puzzle::sliding_puzzle::SlidingPuzzle,
 };
-
-use super::{direction::Direction, r#move::r#move::Move};
 
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};

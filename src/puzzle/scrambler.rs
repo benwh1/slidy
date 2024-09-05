@@ -1,11 +1,11 @@
 //! Defines the [`Scrambler`] trait and several implementations.
 
-use super::sliding_puzzle::SlidingPuzzle;
+use rand::Rng;
+
 use crate::{
     algorithm::{direction::Direction, r#move::r#move::Move},
-    puzzle::size::Size,
+    puzzle::{size::Size, sliding_puzzle::SlidingPuzzle},
 };
-use rand::Rng;
 
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};

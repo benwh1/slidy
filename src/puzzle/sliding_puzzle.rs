@@ -10,11 +10,12 @@ use crate::{
         r#move::{position_move::PositionMove, r#move::Move, try_into_move::TryIntoMove},
     },
     puzzle::{
-        label::label::BijectiveLabel, size::Size, solvable::Solvable, solved_state::SolvedState,
+        label::label::{BijectiveLabel, RowGrids},
+        size::Size,
+        solvable::Solvable,
+        solved_state::SolvedState,
     },
 };
-
-use super::label::label::RowGrids;
 
 /// The main trait defining the properties of a sliding puzzle.
 ///

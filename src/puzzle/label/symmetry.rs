@@ -1,8 +1,9 @@
 //! Defines the 8 symmetries of a square as label modifiers.
 
-use crate::puzzle::size::Size;
-
-use super::label::{BijectiveLabel, Label};
+use crate::puzzle::{
+    label::label::{BijectiveLabel, Label},
+    size::Size,
+};
 
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
