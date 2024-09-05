@@ -4,7 +4,7 @@ use crate::puzzle::size::{Size, SizeError};
 
 use super::{
     display::{DisplayGrid, DisplayInline},
-    label::labels::BijectiveLabel,
+    label::label::BijectiveLabel,
     sliding_puzzle::SlidingPuzzle,
 };
 use num_traits::AsPrimitive;

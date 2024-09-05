@@ -277,7 +277,7 @@ impl<C: ColorScheme> ColorScheme for RecursiveTiled<C> {
 
 #[cfg(test)]
 mod tests {
-    use crate::puzzle::{color_scheme::Scheme, coloring::Rainbow, label::labels::RowGrids};
+    use crate::puzzle::{color_scheme::Scheme, coloring::Rainbow, label::label::RowGrids};
 
     use super::*;
 

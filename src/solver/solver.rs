@@ -7,7 +7,7 @@ use thiserror::Error;
 
 use crate::{
     algorithm::{algorithm::Algorithm, direction::Direction, r#move::r#move::Move},
-    puzzle::{label::labels::RowGrids, sliding_puzzle::SlidingPuzzle, solved_state::SolvedState},
+    puzzle::{label::label::RowGrids, sliding_puzzle::SlidingPuzzle, solved_state::SolvedState},
     solver::heuristic::manhattan::ManhattanDistance,
 };
 
@@ -199,7 +199,7 @@ where
 mod tests {
     use std::str::FromStr;
 
-    use crate::puzzle::{label::labels::Rows, puzzle::Puzzle};
+    use crate::puzzle::{label::label::Rows, puzzle::Puzzle};
 
     use super::*;
 

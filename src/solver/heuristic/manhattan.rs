@@ -8,7 +8,7 @@ use num_traits::{AsPrimitive, PrimInt, Unsigned, Zero};
 
 use crate::{
     puzzle::{
-        label::labels::{
+        label::label::{
             Checkerboard, Diagonals, Fringe, Label, RowGrids, Rows, SplitFringe, SplitSquareFringe,
             SquareFringe, Trivial,
         },
