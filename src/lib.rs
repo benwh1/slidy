@@ -79,7 +79,7 @@
 //! use slidy::puzzle::{
 //!     color_scheme::{Scheme, SchemeList},
 //!     coloring::{Monochrome, Rainbow},
-//!     label::labels::{SplitFringe, Trivial},
+//!     label::label::{SplitFringe, Trivial},
 //!     puzzle::Puzzle,
 //!     render::{Borders, RendererBuilder, Text},
 //! };
