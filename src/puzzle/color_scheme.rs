@@ -177,6 +177,7 @@ impl<S: ColorScheme, List: AsRef<[S]>> SchemeList<S, List> {
 
     /// Returns the number of schemes in the list.
     #[must_use]
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
         self.schemes.as_ref().len()
     }

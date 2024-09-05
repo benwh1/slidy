@@ -28,7 +28,7 @@ use crate::{
 /// - Position 0 is the top left
 /// - Position 1 is to the right of position 0
 /// - If `w` is the width of the puzzle, then position `w-1` is the top right corner and position
-/// `w` is below position 0
+///   `w` is below position 0
 /// - Position `N` is the bottom right corner
 #[allow(clippy::missing_safety_doc)]
 pub trait SlidingPuzzle
