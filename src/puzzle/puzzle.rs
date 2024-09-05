@@ -163,6 +163,15 @@ impl SlidingPuzzle for Puzzle {
         self.gap_position_xy()
     }
 
+    fn reset(&mut self) {
+        self.pieces
+            .iter_mut()
+            .enumerate()
+            .for_each(|(i, p)| *p = (i + 1) as u64);
+        self.gap = self.size().num_pieces();
+        self.pieces[self.gap as usize] = 0;
+    }
+
     fn reset_to_label<L: BijectiveLabel>(&mut self, label: &L) {
         let (w, h) = self.size().into();
         let area = self.area();
