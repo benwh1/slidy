@@ -507,7 +507,7 @@ impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
             let fill = color!(text.scheme, SubschemeStyle::TextColor);
             let (tx, ty) = text.position;
 
-            TextElement::new()
+            TextElement::new("")
                 .set("x", rect_pos.0 + self.tile_size * tx)
                 .set("y", rect_pos.1 + self.tile_size * ty)
                 .set("fill", fill)
