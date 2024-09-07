@@ -35,8 +35,7 @@ define_display!(
     /// # Example
     ///
     /// ```
-    /// #![feature(iter_intersperse)]
-    ///
+    /// use itertools::Itertools;
     /// use slidy::puzzle::{display::DisplayGrid, puzzle::Puzzle};
     ///
     /// fn main() {
