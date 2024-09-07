@@ -835,7 +835,7 @@ mod tests {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(feature = "nightly", test))]
 mod benchmarks {
     extern crate test;
 

@@ -128,7 +128,7 @@
 //!   any unsafe code, and most of them are just a call to `foo` or a re-implementation of `foo`
 //!   using other unchecked functions.
 
-#![cfg_attr(test, feature(test))]
+#![cfg_attr(feature = "nightly", feature(test))]
 #![allow(clippy::module_inception)]
 #![warn(clippy::must_use_candidate)]
 #![deny(clippy::use_self)]
