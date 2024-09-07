@@ -115,8 +115,10 @@ impl Algorithm {
     /// If the previous move is in the same direction as the appended move, they are combined into
     /// a single move.
     pub fn push_combine(&mut self, m: Move) {
-        if let Some(other) = self.moves.last_mut()
-            && m.direction == other.direction
+        if let Some(other) = self
+            .moves
+            .last_mut()
+            .filter(|other| m.direction == other.direction)
         {
             other.amount += m.amount;
         } else {

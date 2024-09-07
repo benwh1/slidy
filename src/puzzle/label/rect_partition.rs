@@ -186,9 +186,7 @@ impl RectPartition {
         for slice in rects.chunk_by(|a, b| a.top == b.top) {
             for rect in slice {
                 let height = height_map.range_value(rect.left..rect.right);
-                if let Some(height) = height
-                    && height == rect.top
-                {
+                if height == Some(rect.top) {
                     height_map.set_range_value(rect.left..rect.right, rect.bottom);
                 } else {
                     return Err(RectPartitionError::NotPartition {

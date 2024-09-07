@@ -128,10 +128,7 @@
 //!   any unsafe code, and most of them are just a call to `foo` or a re-implementation of `foo`
 //!   using other unchecked functions.
 
-#![feature(iter_intersperse)]
-#![feature(let_chains)]
-#![feature(slice_swap_unchecked)]
-#![feature(test)]
+#![cfg_attr(test, feature(test))]
 #![allow(clippy::module_inception)]
 #![warn(clippy::must_use_candidate)]
 #![deny(clippy::use_self)]

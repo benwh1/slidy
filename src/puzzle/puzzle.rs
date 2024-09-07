@@ -229,7 +229,7 @@ impl SlidingPuzzle for Puzzle {
 
     #[inline]
     unsafe fn swap_pieces_unchecked(&mut self, idx1: u64, idx2: u64) {
-        self.pieces.swap_unchecked(idx1 as usize, idx2 as usize);
+        self.pieces.swap(idx1 as usize, idx2 as usize);
         if self.piece_at_unchecked(idx1) == 0 {
             self.gap = idx1;
         } else if self.piece_at_unchecked(idx2) == 0 {
@@ -242,7 +242,7 @@ impl SlidingPuzzle for Puzzle {
     }
 
     unsafe fn swap_non_gap_pieces_unchecked(&mut self, idx1: u64, idx2: u64) {
-        self.pieces.swap_unchecked(idx1 as usize, idx2 as usize);
+        self.swap_non_gap_pieces(idx1, idx2);
     }
 
     fn swap_piece_with_gap(&mut self, idx: u64) {

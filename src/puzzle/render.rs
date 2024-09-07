@@ -466,16 +466,12 @@ impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
         // schemes that we have in self.text_scheme and self.borders.unwrap().scheme.
         macro_rules! color {
             ($scheme:expr, $subscheme:expr) => {{
-                let color = if let Some(c) = subscheme_color
-                    && self.subscheme_style == Some($subscheme)
-                {
-                    // There is a subscheme color, and the subscheme style overrides the other
-                    // scheme (text or border scheme).
-                    c
-                } else {
-                    // If no override, then we use the text or border scheme color.
-                    $scheme.color(size, solved_pos)
-                };
+                // If there is a subscheme color, and the subscheme style overrides the other
+                // scheme (text or border scheme), then we use the subscheme color.
+                // Otherwise, we use the text or border scheme color.
+                let color = subscheme_color
+                    .filter(|_| self.subscheme_style == Some($subscheme))
+                    .unwrap_or_else(|| $scheme.color(size, solved_pos));
 
                 // Format as hex string
                 let color: Rgba<_, u8> = color.into_format();
@@ -514,26 +510,22 @@ impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
                 .add(TextNode::new(piece.to_string()))
         });
 
-        let subscheme_render = if let Some(subcolor) = subscheme_color
-            && self.subscheme_style == Some(SubschemeStyle::Rectangle)
-        {
-            let fill = {
-                let color: Rgba<_, u8> = subcolor.into_format();
-                format!("#{color:x}")
-            };
+        let subscheme_render = subscheme_color
+            .filter(|_| self.subscheme_style == Some(SubschemeStyle::Rectangle))
+            .map(|subcolor| {
+                let fill = {
+                    let color: Rgba<_, u8> = subcolor.into_format();
+                    format!("#{color:x}")
+                };
 
-            let subrect_pos = (0.15, 0.8);
+                let subrect_pos = (0.15, 0.8);
 
-            Some(
                 Rectangle::new()
                     .set("x", rect_pos.0 + self.tile_size * subrect_pos.0)
                     .set("y", rect_pos.1 + self.tile_size * subrect_pos.1)
                     .set("class", "sub")
-                    .set("fill", fill),
-            )
-        } else {
-            None
-        };
+                    .set("fill", fill)
+            });
 
         let mut group = Group::new().add(rect);
 

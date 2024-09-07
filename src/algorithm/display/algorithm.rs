@@ -2,7 +2,10 @@
 //!
 //! [`Algorithm`]: ../../algorithm.html
 
-use std::{fmt::Display, marker::PhantomData};
+use std::{
+    fmt::{Display, Write as _},
+    marker::PhantomData,
+};
 
 use crate::algorithm::{
     as_slice::AsAlgorithmSlice, display::r#move::MoveDisplay, slice::AlgorithmSlice,
@@ -46,14 +49,18 @@ define_display!(
 
 impl<'a, T: MoveDisplay + Display> Display for DisplaySpaced<'a, T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(
-            &self
-                .algorithm
-                .moves()
-                .map(|m| T::new(m).to_string())
-                .intersperse(" ".to_string())
-                .collect::<String>(),
-        )
+        let mut moves = self.algorithm.moves();
+
+        if let Some(first) = moves.next() {
+            f.write_str(&T::new(first).to_string())?;
+        }
+
+        for m in moves {
+            f.write_char(' ')?;
+            f.write_str(&T::new(m).to_string())?;
+        }
+
+        Ok(())
     }
 }
 
