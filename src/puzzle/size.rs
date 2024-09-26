@@ -32,8 +32,8 @@ impl Default for Size {
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum SizeError {
-    /// Returned from [`Size::new`] when the width or height is less than 2.
-    #[error("InvalidSize: width ({0}) and height ({1}) must be greater than or equal to 2")]
+    /// Returned from [`Size::new`] when the width or height is 0.
+    #[error("InvalidSize: width ({0}) and height ({1}) must be greater than 0")]
     InvalidSize(u64, u64),
 }
 
