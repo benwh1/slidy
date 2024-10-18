@@ -4,7 +4,7 @@
 //! [`slidy::label::label`]: ../label/label/index.html
 
 use crate::puzzle::{label::label::Label, sliding_puzzle::SlidingPuzzle};
-use itertools::Itertools;
+use itertools::Itertools as _;
 
 /// Defines a solved state.
 pub trait SolvedState {

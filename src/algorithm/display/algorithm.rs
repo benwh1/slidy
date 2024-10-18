@@ -47,7 +47,7 @@ define_display!(
     DisplayUnspaced
 );
 
-impl<'a, T: MoveDisplay + Display> Display for DisplaySpaced<'a, T> {
+impl<T: MoveDisplay + Display> Display for DisplaySpaced<'_, T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut moves = self.algorithm.moves();
 
@@ -64,7 +64,7 @@ impl<'a, T: MoveDisplay + Display> Display for DisplaySpaced<'a, T> {
     }
 }
 
-impl<'a, T: MoveDisplay + Display> Display for DisplayUnspaced<'a, T> {
+impl<T: MoveDisplay + Display> Display for DisplayUnspaced<'_, T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for m in self.algorithm.moves() {
             T::new(m).fmt(f)?;

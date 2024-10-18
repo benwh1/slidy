@@ -3,12 +3,12 @@
 //! [`SlidingPuzzle`]: ../sliding_puzzle.html
 
 use std::{
-    fmt::{Display, Write},
+    fmt::{Display, Write as _},
     num::{NonZeroU64, ParseIntError},
     str::FromStr,
 };
 
-use num_traits::AsPrimitive;
+use num_traits::AsPrimitive as _;
 use thiserror::Error;
 
 #[cfg(feature = "serde")]

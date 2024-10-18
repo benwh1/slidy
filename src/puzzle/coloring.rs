@@ -7,7 +7,7 @@ use enterpolation::{
     linear::{Linear, LinearError},
     Curve, Identity, Sorted,
 };
-use palette::{rgb::Rgba, FromColor, Hsl, Hsla, IntoColor, LinSrgba};
+use palette::{rgb::Rgba, FromColor, Hsl, Hsla, IntoColor as _, LinSrgba};
 use thiserror::Error;
 
 #[cfg(feature = "serde")]

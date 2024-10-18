@@ -1,19 +1,19 @@
 //! Defines the [`SlidingPuzzle`] trait, which is the main trait defining the properties of a
 //! sliding puzzle.
 
-use num_traits::{AsPrimitive, NumCast, One, PrimInt, ToPrimitive, Zero};
+use num_traits::{AsPrimitive, NumCast, One as _, PrimInt, ToPrimitive as _, Zero as _};
 
 use crate::{
     algorithm::{
         as_slice::AsAlgorithmSlice,
         direction::Direction,
-        r#move::{position_move::PositionMove, r#move::Move, try_into_move::TryIntoMove},
+        r#move::{position_move::PositionMove, r#move::Move, try_into_move::TryIntoMove as _},
     },
     puzzle::{
         label::label::{BijectiveLabel, RowGrids},
         size::Size,
-        solvable::Solvable,
-        solved_state::SolvedState,
+        solvable::Solvable as _,
+        solved_state::SolvedState as _,
     },
 };
 

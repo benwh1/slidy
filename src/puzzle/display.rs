@@ -1,7 +1,7 @@
 //! Defines ways in which implementations of [`SlidingPuzzle`] can be displayed.
 
 use crate::puzzle::sliding_puzzle::SlidingPuzzle;
-use std::fmt::{Display, Write};
+use std::fmt::{Display, Write as _};
 
 macro_rules! define_display {
     ($($(#[$annot:meta])* $name:ident),* $(,)?) => {

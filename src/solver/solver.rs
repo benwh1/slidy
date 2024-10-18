@@ -69,9 +69,10 @@ pub enum SolverError {
     NoSolutionFound,
 }
 
-/// An optimal puzzle solver using a [`Heuristic`] `H` to speed up the search. The type parameter
-/// `T` should be chosen such that the maximum length of a potential solution is less than the
-/// maximum value of a `T`. In almost all cases, `T = u8` should be used.
+/// An optimal puzzle solver using a [`Heuristic`] `H` to speed up the search.
+///
+/// The type parameter `T` should be chosen such that the maximum length of a potential solution is
+/// less than the maximum value of a `T`. In almost all cases, `T = u8` should be used.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Solver<'a, Puzzle, T, S, H>
 where

@@ -8,16 +8,16 @@ use std::{
     str::FromStr,
 };
 
-use itertools::Itertools;
+use itertools::Itertools as _;
 use num_traits::{AsPrimitive, PrimInt};
 use thiserror::Error;
 
 use crate::{
     algorithm::{
-        as_slice::AsAlgorithmSlice,
+        as_slice::AsAlgorithmSlice as _,
         direction::Direction,
         display::{
-            algorithm::{AlgorithmDisplay, DisplaySpaced, DisplayUnspaced},
+            algorithm::{AlgorithmDisplay as _, DisplaySpaced, DisplayUnspaced},
             r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
         },
         metric::Metric,

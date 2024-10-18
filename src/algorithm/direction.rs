@@ -2,7 +2,7 @@
 
 use rand::{distributions::Standard, prelude::Distribution};
 use std::{
-    fmt::{Display, Write},
+    fmt::{Display, Write as _},
     str::FromStr,
 };
 use thiserror::Error;

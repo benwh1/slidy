@@ -12,7 +12,7 @@ use crate::{
         algorithm::Algorithm,
         direction::Direction,
         display::{
-            algorithm::{AlgorithmDisplay, DisplaySpaced, DisplayUnspaced},
+            algorithm::{AlgorithmDisplay as _, DisplaySpaced, DisplayUnspaced},
             r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
         },
         metric::{Metric, Mtm, Stm},

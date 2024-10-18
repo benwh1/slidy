@@ -2,7 +2,7 @@
 
 use std::{fmt::Display, marker::PhantomData, ops::Deref};
 
-use num_traits::Zero;
+use num_traits::Zero as _;
 use palette::rgb::Rgba;
 use svg::{
     node::{
@@ -111,7 +111,7 @@ pub struct Text<'a, S: ColorScheme> {
     position: (f32, f32),
 }
 
-impl<'a> Text<'a, Black> {
+impl Text<'_, Black> {
     /// Creates a new [`Text`] instance using the [`Black`] [`ColorScheme`].
     #[must_use]
     pub fn new() -> Self {
@@ -119,7 +119,7 @@ impl<'a> Text<'a, Black> {
     }
 }
 
-impl<'a> Default for Text<'a, Black> {
+impl Default for Text<'_, Black> {
     fn default() -> Self {
         Self::new()
     }
@@ -351,9 +351,7 @@ impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
     }
 }
 
-impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
-    Renderer<'a, List, S, T, B>
-{
+impl<List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'_, List, S, T, B> {
     /// Returns the CSS string used to style the image.
     pub fn style_string(&self) -> String {
         let font = self

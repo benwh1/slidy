@@ -7,7 +7,7 @@ use thiserror::Error;
 use crate::algorithm::{
     as_slice::AsAlgorithmSlice,
     direction::{Direction, ParseDirectionError},
-    display::r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort, MoveDisplay},
+    display::r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort, MoveDisplay as _},
     slice::AlgorithmSlice,
 };
 

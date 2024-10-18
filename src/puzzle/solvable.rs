@@ -3,7 +3,7 @@
 //!
 //! [`slidy::label::label`]: ../label/label/index.html
 
-use num_traits::ToPrimitive;
+use num_traits::ToPrimitive as _;
 
 use crate::puzzle::{
     label::label::{

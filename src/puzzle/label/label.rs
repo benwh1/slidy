@@ -136,9 +136,11 @@ define_label!(
     SplitLastTwoRows,
     /// Assigns a label to each concentric rectangle around the puzzle.
     ConcentricRectangles,
-    /// Assigns labels in a spiral pattern: the top row (minus the top right piece) gets label 0,
-    /// then the right column (minus the bottom right piece) gets label 1, then the bottom row
-    /// (minus the bottom left piece) gets label 2, etc.
+    /// Assigns labels in a spiral pattern.
+    ///
+    /// The top row (minus the top right piece) gets label 0, then the right column (minus the
+    /// bottom right piece) gets label 1, then the bottom row (minus the bottom left piece) gets
+    /// label 2, etc.
     Spiral,
     /// Same as [`Spiral`] but every piece gets a distinct label.
     SpiralGrids,

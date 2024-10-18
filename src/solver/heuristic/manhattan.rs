@@ -3,8 +3,8 @@
 
 use std::cmp::Ordering;
 
-use itertools::Itertools;
-use num_traits::{AsPrimitive, PrimInt, Unsigned, Zero};
+use itertools::Itertools as _;
+use num_traits::{AsPrimitive, PrimInt, Unsigned, Zero as _};
 
 use crate::{
     puzzle::{
