@@ -1,9 +1,11 @@
 [package]
-authors = ["Ben Whitmore"]
 name = "slidy"
 version = "0.1.0"
 edition = "2021"
-repository = "https://github.com/benwh1/slidy/"
+description = "Utilities for working with sliding puzzles"
+license = "SSPL-1.0"
+repository = "https://github.com/benwh1/slidy"
+keywords = ["puzzle", "15-puzzle"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
