@@ -27,10 +27,10 @@ impl<'a> AsAlgorithmSlice<'a> for AlgorithmSlice<'a> {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use std::str::FromStr as _;
 
     use crate::algorithm::{
-        algorithm::Algorithm, as_slice::AsAlgorithmSlice, r#move::r#move::Move,
+        algorithm::Algorithm, as_slice::AsAlgorithmSlice as _, r#move::r#move::Move,
         slice::AlgorithmSlice,
     };
 

@@ -38,7 +38,7 @@ define_display!(
     /// #     display::r#move::{DisplayLongSpaced, MoveDisplay},
     /// #     r#move::r#move::Move,
     /// # };
-    /// # use std::str::FromStr;
+    /// # use std::str::FromStr as _;
     /// let a = Move::new(Direction::Up, 5);
     /// assert_eq!(&DisplayLongSpaced::new(a).to_string(), "U U U U U");
     /// ```
@@ -53,7 +53,7 @@ define_display!(
     /// #     display::r#move::{DisplayLongUnspaced, MoveDisplay},
     /// #     r#move::r#move::Move,
     /// # };
-    /// # use std::str::FromStr;
+    /// # use std::str::FromStr as _;
     /// let a = Move::new(Direction::Up, 5);
     /// assert_eq!(&DisplayLongUnspaced::new(a).to_string(), "UUUUU");
     /// ```
@@ -68,7 +68,7 @@ define_display!(
     /// #     display::r#move::{DisplayShort, MoveDisplay},
     /// #     r#move::r#move::Move,
     /// # };
-    /// # use std::str::FromStr;
+    /// # use std::str::FromStr as _;
     /// let a = Move::new(Direction::Up, 5);
     /// assert_eq!(&DisplayShort::new(a).to_string(), "U5");
     /// ```

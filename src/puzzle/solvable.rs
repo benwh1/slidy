@@ -155,7 +155,7 @@ always_solvable_except_trivial_size!(
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use std::str::FromStr as _;
 
     use crate::puzzle::puzzle::Puzzle;
 

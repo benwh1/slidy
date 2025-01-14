@@ -77,7 +77,7 @@ impl ExactSizeIterator for Moves<'_> {}
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use std::str::FromStr as _;
 
     use crate::algorithm::{algorithm::Algorithm, r#move::r#move::Move};
 

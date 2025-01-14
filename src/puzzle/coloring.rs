@@ -248,7 +248,9 @@ mod tests {
 
     #[test]
     fn test_monochrome() {
-        let c = Rgba::new(0.2718, 0.3141, 0.6931, 0.4142);
+        use std::f32::consts::{E, LN_2, PI, SQRT_2};
+
+        let c = Rgba::new(E / 10.0, PI / 10.0, LN_2, SQRT_2 - 1.0);
         let a = Monochrome::new(c);
         assert_eq!(a.try_color(0, 3), Some(c));
         assert_eq!(a.try_color(1, 3), Some(c));

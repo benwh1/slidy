@@ -75,14 +75,15 @@ impl<T: MoveDisplay + Display> Display for DisplayUnspaced<'_, T> {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr as _;
+
     use crate::algorithm::{
         algorithm::Algorithm,
         display::{
-            algorithm::{AlgorithmDisplay, DisplaySpaced, DisplayUnspaced},
+            algorithm::{AlgorithmDisplay as _, DisplaySpaced, DisplayUnspaced},
             r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
         },
     };
-    use std::str::FromStr;
 
     #[test]
     fn test_display() {
@@ -111,7 +112,7 @@ mod tests {
 mod benchmarks {
     extern crate test;
 
-    use std::str::FromStr;
+    use std::str::FromStr as _;
 
     use test::Bencher;
 

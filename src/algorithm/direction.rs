@@ -120,7 +120,7 @@ impl Distribution<Direction> for Standard {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use std::str::FromStr as _;
 
     use crate::algorithm::direction::{Direction, ParseDirectionError};
 

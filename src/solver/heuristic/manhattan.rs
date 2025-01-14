@@ -239,15 +239,20 @@ mod tests {
         ($label:ty, $($w:literal x $h:literal, $solved_pos:literal : $dists:expr),+ $(,)?) => {
             paste::paste! {
                 mod [< $label:snake >] {
-                    use super::*;
                     use crate::puzzle::size::Size;
+
+                    use super::*;
 
                     $(#[test]
                     fn [< test_ $label:snake _ $w x $h _ $solved_pos >] () {
                         let size = Size::new($w, $h).unwrap();
                         let md = ManhattanDistance(&$label);
-                        let dists = (0..$w * $h)
-                            .map(|i| md.dist((i % $w, i / $w), ($solved_pos % $w, $solved_pos / $w), size))
+
+                        #[allow(clippy::identity_op)]
+                        let solved_pos_xy = ($solved_pos % $w, $solved_pos / $w);
+
+                        let dists = (0..size.area())
+                            .map(|i| md.dist((i % $w, i / $w), solved_pos_xy, size))
                             .collect::<Vec<_>>();
                         assert_eq!(dists, $dists);
                     })*

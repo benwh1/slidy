@@ -163,7 +163,7 @@ impl AlgorithmSlice<'_> {
     /// # Example
     ///
     /// ```
-    /// # use std::str::FromStr;
+    /// # use std::str::FromStr as _;
     /// # use slidy::algorithm::{
     /// #     algorithm::Algorithm, as_slice::AsAlgorithmSlice, direction::Direction, r#move::r#move::Move,
     /// # };
@@ -194,7 +194,7 @@ impl AlgorithmSlice<'_> {
     /// # Example
     ///
     /// ```
-    /// # use std::str::FromStr;
+    /// # use std::str::FromStr as _;
     /// # use slidy::algorithm::{
     /// #     algorithm::Algorithm, as_slice::AsAlgorithmSlice, direction::Direction, r#move::r#move::Move,
     /// # };
@@ -251,9 +251,9 @@ impl Display for AlgorithmSlice<'_> {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use std::str::FromStr as _;
 
-    use crate::algorithm::as_slice::AsAlgorithmSlice;
+    use crate::algorithm::as_slice::AsAlgorithmSlice as _;
 
     use super::*;
 

@@ -172,7 +172,8 @@ mod tests {
         ($label:ty, $($w:literal x $h:literal : $labels:expr),+ $(,)?) => {
             paste::paste! {
                 mod [< $label:snake >] {
-                    use crate::puzzle::{label::label::{Label, RowGrids}, size::Size};
+                    use crate::puzzle::{label::label::{Label as _, RowGrids}, size::Size};
+
                     use super::{$label};
 
                     $(#[test]

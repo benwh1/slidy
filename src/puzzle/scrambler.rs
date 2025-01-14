@@ -182,12 +182,14 @@ impl Scrambler for Cycle {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::puzzle::puzzle::Puzzle;
 
+    use super::*;
+
     mod random_state {
+        use crate::puzzle::{label::label::RowGrids, solvable::Solvable as _};
+
         use super::*;
-        use crate::puzzle::{label::label::RowGrids, solvable::Solvable};
 
         #[test]
         fn test_solvable() {

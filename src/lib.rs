@@ -8,7 +8,7 @@
 //! ## Apply a sequence of moves to a puzzle
 //!
 //! ```
-//! use std::str::FromStr;
+//! use std::str::FromStr as _;
 //!
 //! use slidy::{
 //!     algorithm::algorithm::Algorithm,
@@ -50,7 +50,7 @@
 //! ## Find an optimal solution
 //!
 //! ```
-//! use std::str::FromStr;
+//! use std::str::FromStr as _;
 //!
 //! use slidy::{
 //!     puzzle::{puzzle::Puzzle, sliding_puzzle::SlidingPuzzle},

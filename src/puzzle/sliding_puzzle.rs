@@ -670,7 +670,7 @@ where
     #[must_use]
     fn can_move_piece(&self, piece: Self::Piece) -> bool {
         self.try_piece_position_xy(piece)
-            .map_or(false, |pos| self.can_move_position_xy(pos))
+            .is_some_and(|pos| self.can_move_position_xy(pos))
     }
 
     /// Moves piece `n`.
@@ -688,7 +688,7 @@ where
     /// Returns `true` if the piece was moved successfully, `false` otherwise.
     fn try_move_piece(&mut self, piece: Self::Piece) -> bool {
         self.try_piece_position_xy(piece)
-            .map_or(false, |pos| self.try_move_position_xy(pos))
+            .is_some_and(|pos| self.try_move_position_xy(pos))
     }
 
     /// See [`SlidingPuzzle::move_piece`].

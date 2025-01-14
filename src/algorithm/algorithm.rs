@@ -700,7 +700,13 @@ mod tests {
         fn test_slice_2() {
             let alg = Algorithm::from_str("R2DLU10RUR2D2D3D5L5U2L").unwrap();
 
-            assert_eq!(alg.try_slice(10..5), Err(SliceError::UnorderedRange(10..5)));
+            #[allow(clippy::reversed_empty_ranges)]
+            let empty_range = 10..5;
+
+            assert_eq!(
+                alg.try_slice(empty_range.clone()),
+                Err(SliceError::UnorderedRange(empty_range))
+            );
             assert_eq!(
                 alg.try_slice(0..37),
                 Err(SliceError::OutOfRange {
@@ -719,12 +725,13 @@ mod tests {
     }
 
     mod from_str {
+        use std::str::FromStr as _;
+
         use crate::algorithm::{
             algorithm::{Algorithm, ParseAlgorithmError},
             direction::Direction,
             r#move::r#move::Move,
         };
-        use std::str::FromStr;
 
         #[test]
         fn test_from_str() {

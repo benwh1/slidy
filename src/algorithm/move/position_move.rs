@@ -59,13 +59,13 @@ impl<Puzzle: SlidingPuzzle> TryIntoMove<Puzzle> for PositionMove {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use std::str::FromStr as _;
 
     use crate::{
         algorithm::r#move::{
             position_move::{PositionMove, TryPositionMoveIntoMoveError},
             r#move::Move,
-            try_into_move::TryIntoMove,
+            try_into_move::TryIntoMove as _,
         },
         puzzle::puzzle::Puzzle,
     };

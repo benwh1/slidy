@@ -46,7 +46,7 @@ impl<L: Label> SolvedState for L {
 #[cfg(test)]
 mod tests {
     use crate::puzzle::puzzle::Puzzle;
-    use std::str::FromStr;
+    use std::str::FromStr as _;
 
     macro_rules! test_solved_state {
         (fn $name:ident, $i:literal, $label:expr, $ok:literal : $pos:literal) => {
@@ -64,8 +64,9 @@ mod tests {
         ($label:ty, $($i:literal : $ok:literal : $pos:literal),+ $(,)?) => {
             ::paste::paste! {
                 mod [< $label:snake >] {
+                    use crate::puzzle::{label::label::$label, solved_state::SolvedState as _};
+
                     use super::*;
-                    use crate::puzzle::{label::label::$label, solved_state::SolvedState};
 
                     $(test_solved_state!(
                         fn [< test_ $label:snake _ $i >] , $i, $label, $ok : $pos);

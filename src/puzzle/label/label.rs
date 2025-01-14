@@ -511,13 +511,18 @@ mod tests {
         ($label:ty, $($w:literal x $h:literal : $labels:expr),+ $(,)?) => {
             paste::paste! {
                 mod [< $label:snake >] {
-                    use crate::puzzle::{label::label::{Label, $label}, size::Size};
+                    use crate::puzzle::{label::label::{Label as _, $label}, size::Size};
 
                     $(#[test]
                     fn [< test_ $label:snake _ $w x $h >] () {
                         let size = Size::new($w, $h).unwrap();
-                        let labels = (0..$w * $h)
-                            .map(|i| $label.position_label(size, (i % $w, i / $w)))
+                        let labels = (0..size.area())
+                            .map(|i| {
+                                #[allow(clippy::modulo_one)]
+                                let position = (i % $w, i / $w);
+
+                                $label.position_label(size, position)
+                            })
                             .collect::<Vec<_>>();
                         let num_labels = $label.num_labels(size);
                         let expected_num_labels = $labels.iter().max().unwrap() + 1;
