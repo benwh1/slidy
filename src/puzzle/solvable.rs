@@ -117,7 +117,7 @@ macro_rules! always_solvable {
     ($($t:ty),* $(,)?) => {
         $(
             impl Solvable for $t {
-                fn is_solvable<P: SlidingPuzzle>(_: &P) -> bool {
+                fn is_solvable<P: SlidingPuzzle>(_puzzle: &P) -> bool {
                     true
                 }
             }

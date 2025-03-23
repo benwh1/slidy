@@ -52,7 +52,7 @@ pub trait Scrambler {
 pub struct RandomState;
 
 impl Scrambler for RandomState {
-    fn is_valid_size(&self, _: Size) -> bool {
+    fn is_valid_size(&self, _size: Size) -> bool {
         true
     }
 

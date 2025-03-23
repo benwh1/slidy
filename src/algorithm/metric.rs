@@ -37,7 +37,7 @@ impl Metric for Stm {
 
 impl Metric for Mtm {
     #[inline]
-    fn len<T: PrimInt + 'static>(_: Move) -> T
+    fn len<T: PrimInt + 'static>(_mv: Move) -> T
     where
         u64: AsPrimitive<T>,
     {
