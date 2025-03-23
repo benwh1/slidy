@@ -1,4 +1,4 @@
-//! Defines the [`ColorScheme`] trait and an implementation, as well as a recursive color scheme.
+//! Defines the [`ColorScheme`] trait.
 
 pub mod multi_layer;
 pub mod scheme_list;
@@ -34,7 +34,7 @@ pub enum ColorSchemeError {
 /// Provides a function mapping `(x, y)` coordinate on a puzzle to a color.
 #[blanket(derive(Ref, Rc, Arc, Mut))]
 pub trait ColorScheme {
-    /// Checks if this `ColorScheme` can be used with a given puzzle size.
+    /// Checks if this color scheme can be used with a given puzzle size.
     #[must_use]
     fn is_valid_size(&self, size: Size) -> bool;
 

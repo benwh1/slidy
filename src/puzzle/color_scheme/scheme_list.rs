@@ -1,3 +1,6 @@
+//! Defines the [`SchemeList`] struct, which is a [`MultiLayerColorScheme`] that consists of a list
+//! of [`ColorScheme`]s.
+
 use std::marker::PhantomData;
 
 use palette::rgb::Rgba;
@@ -55,6 +58,7 @@ impl<S: ColorScheme, List: AsRef<[S]>> SchemeList<S, List> {
         self.schemes.as_ref().len()
     }
 
+    /// Returns the given [`Layer`] of the scheme.
     pub fn layer(&self, layer: u32) -> Layer<&Self> {
         Layer {
             scheme: self,
