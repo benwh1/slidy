@@ -1,6 +1,6 @@
 //! Defines the [`Direction`] type.
 
-use rand::{distributions::Standard, prelude::Distribution};
+use rand::distr::{Distribution, StandardUniform};
 use std::{
     fmt::{Display, Write as _},
     str::FromStr,
@@ -106,9 +106,9 @@ impl FromStr for Direction {
     }
 }
 
-impl Distribution<Direction> for Standard {
+impl Distribution<Direction> for StandardUniform {
     fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Direction {
-        match rng.gen_range(0..4) {
+        match rng.random_range(0..4) {
             0 => Direction::Up,
             1 => Direction::Left,
             2 => Direction::Down,

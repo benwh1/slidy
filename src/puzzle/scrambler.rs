@@ -16,14 +16,14 @@ pub trait Scrambler {
     #[must_use]
     fn is_valid_size(&self, size: Size) -> bool;
 
-    /// Equivalent to [`Scrambler::try_scramble_with_rng`] using [`rand::thread_rng`].
+    /// Equivalent to [`Scrambler::try_scramble_with_rng`] using [`rand::rng`].
     fn try_scramble<P: SlidingPuzzle>(&self, puzzle: &mut P) -> bool {
-        self.try_scramble_with_rng(puzzle, &mut rand::thread_rng())
+        self.try_scramble_with_rng(puzzle, &mut rand::rng())
     }
 
-    /// Equivalent to [`Scrambler::scramble_with_rng`] using [`rand::thread_rng`].
+    /// Equivalent to [`Scrambler::scramble_with_rng`] using [`rand::rng`].
     fn scramble<P: SlidingPuzzle>(&self, puzzle: &mut P) {
-        self.scramble_with_rng(puzzle, &mut rand::thread_rng());
+        self.scramble_with_rng(puzzle, &mut rand::rng());
     }
 
     /// Scrambles the puzzle using a given [`Rng`]. If the puzzle is not of a valid size for the
@@ -62,13 +62,13 @@ impl Scrambler for RandomState {
         let (w, h) = puzzle.size().into();
 
         if w == 1 {
-            let d = rng.gen_range(0..h);
+            let d = rng.random_range(0..h);
             puzzle.apply_move(Move::new(Direction::Down, d));
             return;
         }
 
         if h == 1 {
-            let r = rng.gen_range(0..w);
+            let r = rng.random_range(0..w);
             puzzle.apply_move(Move::new(Direction::Right, r));
             return;
         }
@@ -77,7 +77,7 @@ impl Scrambler for RandomState {
         let mut parity = false;
         for i in 0..n - 2 {
             // Pick random element to go in position i
-            let j = rng.gen_range(i..n);
+            let j = rng.random_range(i..n);
 
             // Swap and check if we need to toggle parity
             if i != j {
@@ -92,7 +92,7 @@ impl Scrambler for RandomState {
         }
 
         // Move blank to a random position
-        let (d, r) = (rng.gen_range(0..h), rng.gen_range(0..w));
+        let (d, r) = (rng.random_range(0..h), rng.random_range(0..w));
 
         puzzle.apply_move(Move::new(Direction::Down, d));
         puzzle.apply_move(Move::new(Direction::Right, r));
@@ -134,11 +134,11 @@ impl Scrambler for RandomMoves {
         let mut last_dir = None::<Direction>;
         for _ in 0..self.moves {
             let dir = {
-                let mut d = rng.gen::<Direction>();
+                let mut d = rng.random::<Direction>();
                 while (!self.allow_backtracking && last_dir == Some(d.inverse()))
                     || (!self.allow_illegal_moves && !puzzle.can_move_dir(d))
                 {
-                    d = rng.gen();
+                    d = rng.random();
                 }
                 d
             };
