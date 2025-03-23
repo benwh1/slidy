@@ -175,6 +175,18 @@ impl<S: ColorScheme, List: AsRef<[S]>> SchemeList<S, List> {
         self.index
     }
 
+    /// Sets the current scheme to the scheme at the given index.
+    ///
+    /// Returns false if the index is out of bounds, true otherwise.
+    pub fn set_current_scheme_index(&mut self, index: usize) -> bool {
+        if index < self.len() {
+            self.index = index;
+            true
+        } else {
+            false
+        }
+    }
+
     /// Returns the number of schemes in the list.
     #[must_use]
     #[allow(clippy::len_without_is_empty)]
