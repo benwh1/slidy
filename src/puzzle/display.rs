@@ -7,7 +7,7 @@ macro_rules! define_display {
     ($($(#[$annot:meta])* $name:ident),* $(,)?) => {
         $(
             $(#[$annot])*
-            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+            #[derive(Debug)]
             pub struct $name<'a, Puzzle>
             where
                 Puzzle: SlidingPuzzle,

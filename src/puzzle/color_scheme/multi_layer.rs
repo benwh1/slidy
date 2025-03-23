@@ -14,7 +14,7 @@ use crate::puzzle::{
 use serde_derive::{Deserialize, Serialize};
 
 /// Error type for [`MultiLayerColorScheme`].
-#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MultiLayerColorSchemeError {
     /// Errors from [`ColorScheme`].
@@ -68,6 +68,7 @@ pub trait MultiLayerColorScheme {
 }
 
 /// Represents a single layer of a [`MultiLayerColorScheme`].
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Layer<S> {
     pub(super) scheme: S,
     pub(super) layer: u32,

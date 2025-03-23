@@ -16,12 +16,12 @@ use crate::{
 use serde_derive::{Deserialize, Serialize};
 
 /// Represents a move of the piece in the given position.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PositionMove(pub u64, pub u64);
 
 /// Error type for the implementation of [`TryIntoMove`] for [`PositionMove`].
-#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum TryPositionMoveIntoMoveError {
     /// Returned when the piece can not be moved.

@@ -15,7 +15,7 @@ use crate::puzzle::{
 use serde_derive::{Deserialize, Serialize};
 
 /// A sliding puzzle, with an implementation of the [`SlidingPuzzle`] trait.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Puzzle {
     pieces: Vec<u64>,
@@ -24,7 +24,7 @@ pub struct Puzzle {
 }
 
 /// Error type for [`Puzzle`].
-#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum PuzzleError {
     /// Returned when there was an error creating a [`Size`].

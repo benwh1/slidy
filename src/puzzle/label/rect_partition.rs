@@ -10,7 +10,7 @@ use crate::puzzle::{label::label::Label, size::Size};
 use serde_derive::{Deserialize, Serialize};
 
 /// Error type for [`Rect`].
-#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum RectError {
     /// Returned when the width (`right - left`) or height (`bottom - top`) are negative.
@@ -21,7 +21,7 @@ pub enum RectError {
 /// A rectangle on a grid of squares, with x increasing to the right and y increasing downwards.
 ///
 /// Used to define a [`RectPartition`].
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Rect {
     left: u64,
@@ -80,7 +80,6 @@ impl Rect {
 }
 
 #[derive(Debug)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub(super) struct PiecewiseConstant {
     data: BTreeMap<u64, u64>,
     domain: Range<u64>,
@@ -143,14 +142,14 @@ impl PiecewiseConstant {
 }
 
 /// A partition of a rectangle into smaller rectangles.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RectPartition {
     pub(in crate::puzzle) rects: Vec<Rect>,
 }
 
 /// Error type for [`RectPartition`].
-#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum RectPartitionError {
     /// Returned from [`RectPartition::new`] when given an empty vector.

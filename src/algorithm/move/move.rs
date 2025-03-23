@@ -23,7 +23,7 @@ pub struct Move {
 }
 
 /// Represents the sum of two moves.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MoveSum {
     /// The sum of two moves that are in the same or opposite directions is another move.
@@ -34,7 +34,7 @@ pub enum MoveSum {
 }
 
 /// Error type for [`Move`].
-#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MoveError {
     /// Returned when the amount 0 is passed to [`Move::new_nonzero`].

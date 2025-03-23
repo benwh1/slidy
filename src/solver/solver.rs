@@ -11,7 +11,7 @@ use crate::{
     solver::heuristic::{manhattan::ManhattanDistance, Heuristic},
 };
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 struct Stack {
     stack: [Direction; 256],
     idx: usize,
@@ -62,7 +62,7 @@ impl From<&Stack> for Algorithm {
 }
 
 /// Error type for [`Solver`].
-#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 pub enum SolverError {
     /// Returned when the search finished without finding a solution.
     #[error("NoSolutionFound: no solution was found within the range searched")]
@@ -73,7 +73,7 @@ pub enum SolverError {
 ///
 /// The type parameter `T` should be chosen such that the maximum length of a potential solution is
 /// less than the maximum value of a `T`. In almost all cases, `T = u8` should be used.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug)]
 pub struct Solver<'a, Puzzle, T, S, H>
 where
     Puzzle: SlidingPuzzle + Clone,

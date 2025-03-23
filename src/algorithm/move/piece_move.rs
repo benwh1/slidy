@@ -16,14 +16,14 @@ use crate::{
 use serde_derive::{Deserialize, Serialize};
 
 /// Represents a move of the piece with the given number.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PieceMove<Piece>(pub Piece)
 where
     Piece: PrimInt;
 
 /// Error type for the implementation of [`TryIntoMove`] for [`PieceMove`].
-#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum TryPieceMoveIntoMoveError<Piece: PrimInt> {
     /// Returned when the piece can not be moved.

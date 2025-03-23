@@ -11,7 +11,7 @@ use crate::puzzle::size::Size;
 use serde_derive::{Deserialize, Serialize};
 
 /// Error type for [`Label`].
-#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum LabelError {
     /// Returned when the given puzzle size is incompatible with the label.
@@ -99,7 +99,7 @@ macro_rules! define_label {
             $(#[$annot])*
             ///
             /// Valid with all puzzle sizes.
-            #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+            #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
             #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
             pub struct $name;
         )*

@@ -16,7 +16,7 @@ use crate::puzzle::{
 
 /// A list of [`ColorScheme`]s and an index, indicating which color scheme is currently "active".
 /// The implementation of [`ColorScheme`] for this type uses the active scheme.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SchemeList<S: ColorScheme, List: AsRef<[S]>> {
     schemes: List,
@@ -24,7 +24,7 @@ pub struct SchemeList<S: ColorScheme, List: AsRef<[S]>> {
 }
 
 /// Error type for [`SchemeList`].
-#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum SchemeListError {
     /// Returned from [`SchemeList::new`] if the list of schemes is empty.

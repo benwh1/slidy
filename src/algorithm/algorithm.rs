@@ -31,7 +31,7 @@ use crate::{
 use serde_derive::{Deserialize, Serialize};
 
 /// Error type for [`Algorithm::try_slice`].
-#[derive(Clone, Debug, Error, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum SliceError {
     /// The input range is unordered, e.g. `10..5`.
@@ -50,7 +50,7 @@ pub enum SliceError {
 }
 
 /// A sequence of moves.
-#[derive(Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Algorithm {
     pub(super) moves: Vec<Move>,
 }
@@ -300,7 +300,7 @@ impl Display for Algorithm {
 }
 
 /// Error type for [`Algorithm::from_str`].
-#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ParseAlgorithmError {
     /// Found a character that can not appear in an algorithm, e.g. "U2 R3 a D"

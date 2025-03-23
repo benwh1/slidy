@@ -2,7 +2,7 @@
 
 use crate::algorithm::{r#move::r#move::Move, slice::AlgorithmSlice};
 
-#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 enum State {
     #[default]
     First,
@@ -12,7 +12,7 @@ enum State {
 }
 
 /// Iterator over the moves of an [`AlgorithmSlice`]
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Moves<'a> {
     slice: AlgorithmSlice<'a>,
     iter_state: State,

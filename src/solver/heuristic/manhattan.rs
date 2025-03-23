@@ -20,7 +20,7 @@ use crate::{
 };
 
 /// Manhattan distance heuristic.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ManhattanDistance<'a, S: SolvedState>(pub &'a S);
 
 impl<P: SlidingPuzzle, T: PrimInt + Unsigned + 'static> Heuristic<P, T>

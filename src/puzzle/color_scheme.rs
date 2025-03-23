@@ -14,7 +14,7 @@ use crate::puzzle::{coloring::Coloring, label::label::Label, size::Size};
 use serde_derive::{Deserialize, Serialize};
 
 /// Error type for [`ColorScheme`].
-#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ColorSchemeError {
     /// Returned when the given puzzle size is incompatible with the label.
@@ -69,7 +69,7 @@ impl<T: ColorScheme + ?Sized> ColorScheme for Box<T> {
 }
 
 /// A color scheme formed by composing a [`Label`] and a [`Coloring`].
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Scheme<L: Label, C: Coloring> {
     label: L,
@@ -112,7 +112,7 @@ impl<L: Label, C: Coloring> ColorScheme for Scheme<L, C> {
 /// convenient (because most of the time, we probably want black text and black borders).
 ///
 /// [`Renderer`]: ../renderer.html
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Black;
 

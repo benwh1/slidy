@@ -15,7 +15,7 @@ macro_rules! define_display {
     ($($(#[$annot:meta])* $name:ident),* $(,)?) => {
         $(
             $(#[$annot])*
-            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+            #[derive(Clone, Debug)]
             pub struct $name(Move);
 
             impl MoveDisplay for $name {

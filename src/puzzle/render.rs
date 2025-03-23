@@ -23,7 +23,7 @@ use crate::puzzle::{
 use serde_derive::{Deserialize, Serialize};
 
 /// Error type for [`Renderer`].
-#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum RendererError {
     /// Returned when the given puzzle size is incompatible with the label.
@@ -32,7 +32,7 @@ pub enum RendererError {
 }
 
 /// A font that can be used with [`Renderer`].
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Font<'a> {
     /// A font installed on the system, specified by the font name.
     Family(&'a str),
@@ -53,7 +53,7 @@ pub enum Font<'a> {
 }
 
 /// Struct containing the information needed to draw the borders of the puzzle.
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Borders<S: ColorScheme> {
     scheme: S,
     thickness: f32,
@@ -103,7 +103,7 @@ impl<S: ColorScheme> Borders<S> {
 }
 
 /// Struct containing the information needed to draw text on the pieces of the puzzle.
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Text<'a, S: ColorScheme> {
     scheme: S,
     font: Font<'a>,
@@ -208,7 +208,7 @@ impl<'a, S: ColorScheme> Text<'a, S> {
 /// Ways that the subscheme can be displayed on the puzzle.
 ///
 /// The default value is [`SubschemeStyle::Rectangle`].
-#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum SubschemeStyle {
     /// Draw the subscheme as a small rectangle at the bottom of each piece.

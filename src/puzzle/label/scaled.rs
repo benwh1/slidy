@@ -14,7 +14,7 @@ use serde_derive::{Deserialize, Serialize};
 /// vertically, the top left 3x2 block will have the label 0, the top right 3x2 block will have the
 /// label 1, the left 3x2 block in the middle two rows will have the label 2, etc. for a total of 6
 /// distinct labels.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Scaled<L: Label> {
     label: L,
@@ -22,7 +22,7 @@ pub struct Scaled<L: Label> {
 }
 
 /// Error type for [`Scaled`].
-#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ScaledError {
     /// Returned from [`Scaled::new`] if either of the scaling factors are zero.

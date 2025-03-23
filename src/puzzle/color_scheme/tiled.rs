@@ -8,7 +8,7 @@ use crate::puzzle::{color_scheme::ColorScheme, label::rect_partition::Rect, size
 use serde_derive::{Deserialize, Serialize};
 
 /// A [`ColorScheme`] applied to a fixed-size rectangle, and then tiled across the puzzle.
-#[derive(Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Tiled<C: ColorScheme> {
     color_scheme: C,
@@ -108,7 +108,7 @@ impl<C: ColorScheme> ColorScheme for Tiled<C> {
 
 /// A [`ColorScheme`] applied to a fixed-size rectangle, and then tiled across the puzzle
 /// recursively.
-#[derive(Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RecursiveTiled<C: ColorScheme> {
     color_scheme: C,

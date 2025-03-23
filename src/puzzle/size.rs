@@ -29,7 +29,7 @@ impl Default for Size {
 }
 
 /// Error type for [`Size::new`].
-#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum SizeError {
     /// Returned from [`Size::new`] when the width or height is 0.

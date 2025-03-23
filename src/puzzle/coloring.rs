@@ -44,7 +44,7 @@ impl<T: Coloring + ?Sized> Coloring for Box<T> {
 }
 
 /// Error type for [`ColorList`]
-#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ColorListError {
     /// Returned when [`ColorList::new`] is given an empty list.
@@ -68,7 +68,7 @@ pub struct ColorList {
 }
 
 /// A [`Coloring`] that produces rainbow colors.
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Rainbow {
     /// The minimum hue value, in degrees. This will be used to color the first label.
@@ -82,12 +82,12 @@ pub struct Rainbow {
 }
 
 /// Given a [`Coloring`] `T`, makes the colors brighter when `label` is even.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AlternatingBrightness<C: Coloring>(pub C);
 
 /// Given a [`Coloring`] `C`, adds a fixed constant to the HSL lightness value.
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AddLightness<C: Coloring> {
     coloring: C,
@@ -95,7 +95,7 @@ pub struct AddLightness<C: Coloring> {
 }
 
 /// A [`Coloring`] that produces a gradient effect by interpolating between a given list of colors.
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Gradient<C: Curve<f32, Output = LinSrgba>> {
     gradient: C,
