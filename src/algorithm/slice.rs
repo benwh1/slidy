@@ -186,7 +186,7 @@ impl AlgorithmSlice<'_> {
     /// ```
     pub fn single_tile_moves(&self) -> impl Iterator<Item = Direction> + '_ {
         self.moves()
-            .flat_map(|m| iter::repeat(m.direction).take(m.amount as usize))
+            .flat_map(|m| iter::repeat_n(m.direction, m.amount as usize))
     }
 
     /// An iterator over the multi-tile moves in the slice.
