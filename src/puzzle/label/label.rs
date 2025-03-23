@@ -19,7 +19,7 @@ pub enum LabelError {
     InvalidSize(Size),
 
     /// Returned when the `(x, y)` position is outside the bounds of the puzzle.
-    #[error("PositionOutOfBounds: position {pos:?} is out of bounds on a {size} puzzle.")]
+    #[error("PositionOutOfBounds: position {pos:?} is out of bounds on a {size} puzzle")]
     PositionOutOfBounds {
         /// Size of the puzzle.
         size: Size,

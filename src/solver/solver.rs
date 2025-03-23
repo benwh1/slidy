@@ -65,7 +65,7 @@ impl From<&Stack> for Algorithm {
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum SolverError {
     /// Returned when the search finished without finding a solution.
-    #[error("NoSolutionFound: no solution was found within the range searched.")]
+    #[error("NoSolutionFound: no solution was found within the range searched")]
     NoSolutionFound,
 }
 
