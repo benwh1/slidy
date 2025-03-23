@@ -410,7 +410,6 @@ impl Add for Algorithm {
     type Output = Self;
 
     /// Concatenates the algorithms.
-    #[must_use]
     fn add(self, rhs: Self) -> Self::Output {
         let mut moves = self.moves;
         let mut moves2 = rhs.moves;

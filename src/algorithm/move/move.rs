@@ -157,7 +157,6 @@ impl FromStr for Move {
 
 impl From<Direction> for Move {
     /// Creates a [`Move`] from a [`Direction`] with `amount = 1`.
-    #[must_use]
     fn from(direction: Direction) -> Self {
         Self {
             direction,
@@ -169,7 +168,6 @@ impl From<Direction> for Move {
 impl Add for Move {
     type Output = MoveSum;
 
-    #[must_use]
     fn add(self, rhs: Self) -> Self::Output {
         if self.direction == rhs.direction {
             MoveSum::Ok(Self {
