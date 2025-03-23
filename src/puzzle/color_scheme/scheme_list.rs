@@ -14,13 +14,38 @@ use crate::puzzle::{
     size::Size,
 };
 
+#[cfg(feature = "serde")]
+use serde_derive::{Deserialize, Serialize};
+
 /// A list of [`ColorScheme`]s and an index, indicating which color scheme is currently "active".
 /// The implementation of [`ColorScheme`] for this type uses the active scheme.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(try_from = "SchemeListUnvalidated<S, List>")
+)]
 pub struct SchemeList<S: ColorScheme, List: AsRef<[S]>> {
     schemes: List,
     phantom_s: PhantomData<S>,
+}
+
+#[cfg_attr(feature = "serde", derive(Deserialize))]
+struct SchemeListUnvalidated<S: ColorScheme, List: AsRef<[S]>> {
+    schemes: List,
+    phantom_s: PhantomData<S>,
+}
+
+impl<S: ColorScheme, List: AsRef<[S]>> TryFrom<SchemeListUnvalidated<S, List>>
+    for SchemeList<S, List>
+{
+    type Error = SchemeListError;
+
+    fn try_from(value: SchemeListUnvalidated<S, List>) -> Result<Self, Self::Error> {
+        let SchemeListUnvalidated { schemes, .. } = value;
+
+        Self::new(schemes)
+    }
 }
 
 /// Error type for [`SchemeList`].

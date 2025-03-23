@@ -22,12 +22,39 @@ pub enum RectError {
 ///
 /// Used to define a [`RectPartition`].
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(try_from = "RectUnvalidated")
+)]
 pub struct Rect {
     left: u64,
     top: u64,
     right: u64,
     bottom: u64,
+}
+
+#[cfg_attr(feature = "serde", derive(Deserialize))]
+struct RectUnvalidated {
+    left: u64,
+    top: u64,
+    right: u64,
+    bottom: u64,
+}
+
+impl TryFrom<RectUnvalidated> for Rect {
+    type Error = RectError;
+
+    fn try_from(value: RectUnvalidated) -> Result<Self, Self::Error> {
+        let RectUnvalidated {
+            left,
+            top,
+            right,
+            bottom,
+        } = value;
+
+        Self::new((left, top), (right, bottom))
+    }
 }
 
 impl Rect {
@@ -143,9 +170,28 @@ impl PiecewiseConstant {
 
 /// A partition of a rectangle into smaller rectangles.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(try_from = "RectPartitionUnvalidated")
+)]
 pub struct RectPartition {
     pub(in crate::puzzle) rects: Vec<Rect>,
+}
+
+#[cfg_attr(feature = "serde", derive(Deserialize))]
+struct RectPartitionUnvalidated {
+    rects: Vec<Rect>,
+}
+
+impl TryFrom<RectPartitionUnvalidated> for RectPartition {
+    type Error = RectPartitionError;
+
+    fn try_from(value: RectPartitionUnvalidated) -> Result<Self, Self::Error> {
+        let RectPartitionUnvalidated { rects } = value;
+
+        Self::new(rects)
+    }
 }
 
 /// Error type for [`RectPartition`].

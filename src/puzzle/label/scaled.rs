@@ -15,10 +15,30 @@ use serde_derive::{Deserialize, Serialize};
 /// label 1, the left 3x2 block in the middle two rows will have the label 2, etc. for a total of 6
 /// distinct labels.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(try_from = "ScaledUnvalidated<L>")
+)]
 pub struct Scaled<L: Label> {
     label: L,
     factor: (u64, u64),
+}
+
+#[cfg_attr(feature = "serde", derive(Deserialize))]
+struct ScaledUnvalidated<L: Label> {
+    label: L,
+    factor: (u64, u64),
+}
+
+impl<L: Label> TryFrom<ScaledUnvalidated<L>> for Scaled<L> {
+    type Error = ScaledError;
+
+    fn try_from(value: ScaledUnvalidated<L>) -> Result<Self, Self::Error> {
+        let ScaledUnvalidated { label, factor } = value;
+
+        Self::new(label, factor)
+    }
 }
 
 /// Error type for [`Scaled`].

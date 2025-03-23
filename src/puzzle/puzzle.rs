@@ -16,7 +16,6 @@ use serde_derive::{Deserialize, Serialize};
 
 /// A sliding puzzle, with an implementation of the [`SlidingPuzzle`] trait.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Puzzle {
     pieces: Vec<u64>,
     size: Size,
@@ -340,6 +339,28 @@ impl FromStr for Puzzle {
             .map_err(|s| ParsePuzzleError::PuzzleError(PuzzleError::InvalidSize(s)))?;
 
         Self::with_pieces(pieces, size).map_err(ParsePuzzleError::PuzzleError)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl serde::Serialize for Puzzle {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let str = self.to_string();
+        serializer.serialize_str(&str)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for Puzzle {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let puzzle_str = String::deserialize(deserializer)?;
+        Puzzle::from_str(&puzzle_str).map_err(serde::de::Error::custom)
     }
 }
 

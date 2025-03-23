@@ -62,9 +62,28 @@ pub struct Monochrome {
 
 /// A [`Coloring`] that cycles through a given list of colors.
 #[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(try_from = "ColorListUnvalidated")
+)]
 pub struct ColorList {
     colors: Vec<Rgba>,
+}
+
+#[cfg_attr(feature = "serde", derive(Deserialize))]
+struct ColorListUnvalidated {
+    colors: Vec<Rgba>,
+}
+
+impl TryFrom<ColorListUnvalidated> for ColorList {
+    type Error = ColorListError;
+
+    fn try_from(value: ColorListUnvalidated) -> Result<Self, Self::Error> {
+        let ColorListUnvalidated { colors } = value;
+
+        Self::new(colors)
+    }
 }
 
 /// A [`Coloring`] that produces rainbow colors.
