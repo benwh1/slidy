@@ -1,6 +1,6 @@
 //! Defines the [`Renderer`] struct for creating SVG images of [`SlidingPuzzle`]s.
 
-use std::{fmt::Display, marker::PhantomData, ops::Deref};
+use std::{fmt::Display, ops::Deref};
 
 use num_traits::Zero as _;
 use palette::rgb::Rgba;
@@ -14,7 +14,7 @@ use svg::{
 use thiserror::Error;
 
 use crate::puzzle::{
-    color_scheme::{Black, ColorScheme, SchemeList},
+    color_scheme::{Black, ColorScheme},
     size::Size,
     sliding_puzzle::SlidingPuzzle,
 };
@@ -224,12 +224,13 @@ pub enum SubschemeStyle {
 #[derive(Clone, Debug, PartialEq)]
 pub struct RendererBuilder<
     'a,
-    List: AsRef<[S]>,
     S: ColorScheme = &'a dyn ColorScheme,
+    U: ColorScheme = &'a dyn ColorScheme,
     T: ColorScheme = &'a dyn ColorScheme,
     B: ColorScheme = &'a dyn ColorScheme,
 > {
-    scheme: &'a SchemeList<S, List>,
+    scheme: S,
+    subscheme: Option<U>,
     borders: Option<Borders<B>>,
     text: Option<Text<'a, T>>,
     tile_size: f32,
@@ -238,37 +239,45 @@ pub struct RendererBuilder<
     padding: f32,
     subscheme_style: Option<SubschemeStyle>,
     background_color: Rgba,
-    phantom_s: PhantomData<S>,
 }
 
 /// Draws a [`SlidingPuzzle`] as an SVG image.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Renderer<
     'a,
-    List: AsRef<[S]>,
     S: ColorScheme = &'a dyn ColorScheme,
+    U: ColorScheme = &'a dyn ColorScheme,
     T: ColorScheme = &'a dyn ColorScheme,
     B: ColorScheme = &'a dyn ColorScheme,
->(RendererBuilder<'a, List, S, T, B>);
+>(RendererBuilder<'a, S, U, T, B>);
 
-impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme> Deref
-    for Renderer<'a, List, S, T, B>
+impl<'a, S: ColorScheme, U: ColorScheme, T: ColorScheme, B: ColorScheme> Deref
+    for Renderer<'a, S, U, T, B>
 {
-    type Target = RendererBuilder<'a, List, S, T, B>;
+    type Target = RendererBuilder<'a, S, U, T, B>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
-    RendererBuilder<'a, List, S, T, B>
+impl<'a> RendererBuilder<'a> {
+    /// Create a new [`RendererBuilder`] with the default color scheme.
+    #[must_use]
+    pub fn with_dyn_scheme(scheme: &'a dyn ColorScheme) -> Self {
+        Self::with_scheme(scheme)
+    }
+}
+
+impl<'a, S: ColorScheme, U: ColorScheme, T: ColorScheme, B: ColorScheme>
+    RendererBuilder<'a, S, U, T, B>
 {
     /// Create a new [`RendererBuilder`].
     #[must_use]
-    pub fn with_scheme(scheme: &'a SchemeList<S, List>) -> Self {
+    pub fn with_scheme(scheme: S) -> Self {
         Self {
             scheme,
+            subscheme: None,
             borders: None,
             text: None,
             tile_size: 75.0,
@@ -277,14 +286,20 @@ impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
             padding: 0.0,
             subscheme_style: Some(SubschemeStyle::Rectangle),
             background_color: Rgba::new(1.0, 1.0, 1.0, 0.0),
-            phantom_s: PhantomData,
         }
     }
 
     /// Set the color scheme.
     #[must_use]
-    pub fn scheme(mut self, scheme: &'a SchemeList<S, List>) -> Self {
+    pub fn scheme(mut self, scheme: S) -> Self {
         self.scheme = scheme;
+        self
+    }
+
+    /// Set the subscheme.
+    #[must_use]
+    pub fn subscheme(mut self, subscheme: U) -> Self {
+        self.subscheme = Some(subscheme);
         self
     }
 
@@ -346,12 +361,12 @@ impl<'a, List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme>
 
     /// Builds a [`Renderer`].
     #[must_use]
-    pub fn build(self) -> Renderer<'a, List, S, T, B> {
+    pub fn build(self) -> Renderer<'a, S, U, T, B> {
         Renderer(self)
     }
 }
 
-impl<List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'_, List, S, T, B> {
+impl<S: ColorScheme, U: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'_, S, U, T, B> {
     /// Returns the CSS string used to style the image.
     pub fn style_string(&self) -> String {
         let font = self
@@ -455,8 +470,8 @@ impl<List: AsRef<[S]>, S: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<
         );
 
         let subscheme_color = self
-            .scheme
-            .subscheme()
+            .subscheme
+            .as_ref()
             .map(|subscheme| subscheme.color(size, solved_pos));
 
         // Macro to get the color that we want for text and border colors, as a hex string.

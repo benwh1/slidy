@@ -1,8 +1,8 @@
 //! Defines the [`ColorScheme`] trait and an implementation, as well as a recursive color scheme.
 
+pub mod multi_layer;
+pub mod scheme_list;
 pub mod tiled;
-
-use std::marker::PhantomData;
 
 use blanket::blanket;
 use palette::rgb::Rgba;
@@ -105,120 +105,6 @@ impl<L: Label, C: Coloring> ColorScheme for Scheme<L, C> {
         let label = self.label.position_label(size, pos);
         let num_labels = self.label.num_labels(size);
         self.coloring.color(label, num_labels)
-    }
-}
-
-/// A list of [`ColorScheme`]s and an index, indicating which color scheme is currently "active".
-/// The implementation of [`ColorScheme`] for this type uses the active scheme.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct SchemeList<S: ColorScheme, List: AsRef<[S]>> {
-    schemes: List,
-    index: usize,
-    phantom_s: PhantomData<S>,
-}
-
-/// Error type for [`SchemeList`].
-#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub enum SchemeListError {
-    /// Returned from [`SchemeList::new`] if the list of schemes is empty.
-    #[error("Empty: list of schemes must be non-empty")]
-    Empty,
-}
-
-impl<S: ColorScheme, List: AsRef<[S]>> SchemeList<S, List> {
-    /// Create a new [`SchemeList`] containing the given list of color schemes. The default index
-    /// is 0.
-    pub fn new(schemes: List) -> Result<Self, SchemeListError> {
-        if schemes.as_ref().is_empty() {
-            Err(SchemeListError::Empty)
-        } else {
-            Ok(Self {
-                schemes,
-                index: 0,
-                phantom_s: PhantomData,
-            })
-        }
-    }
-
-    /// Returns a reference to the list of schemes.
-    pub fn schemes(&self) -> &[S] {
-        self.schemes.as_ref()
-    }
-
-    /// Increments the index by 1. Returns true if the index changed, or false if the last scheme
-    /// was already active.
-    pub fn increment_index(&mut self) -> bool {
-        if self.index < self.schemes.as_ref().len() - 1 {
-            self.index += 1;
-            true
-        } else {
-            false
-        }
-    }
-
-    /// Decrements the index by 1. Returns true if the index changed, or false if the first scheme
-    /// was already active.
-    pub fn decrement_index(&mut self) -> bool {
-        if self.index > 0 {
-            self.index -= 1;
-            true
-        } else {
-            false
-        }
-    }
-
-    /// Returns the index of the currently active scheme.
-    #[must_use]
-    pub fn current_scheme_index(&self) -> usize {
-        self.index
-    }
-
-    /// Sets the current scheme to the scheme at the given index.
-    ///
-    /// Returns false if the index is out of bounds, true otherwise.
-    pub fn set_current_scheme_index(&mut self, index: usize) -> bool {
-        if index < self.len() {
-            self.index = index;
-            true
-        } else {
-            false
-        }
-    }
-
-    /// Returns the number of schemes in the list.
-    #[must_use]
-    #[allow(clippy::len_without_is_empty)]
-    pub fn len(&self) -> usize {
-        self.schemes.as_ref().len()
-    }
-
-    /// Returns a reference to the scheme that is currently active.
-    #[must_use]
-    pub fn current_scheme(&self) -> &S {
-        &self.schemes.as_ref()[self.index]
-    }
-
-    /// Returns a reference to the scheme after the one that is currently active, or `None` if the
-    /// active scheme is the last one.
-    #[must_use]
-    pub fn subscheme(&self) -> Option<&S> {
-        if self.index + 1 < self.schemes.as_ref().len() {
-            Some(&self.schemes.as_ref()[self.index + 1])
-        } else {
-            None
-        }
-    }
-}
-
-impl<S: ColorScheme, List: AsRef<[S]>> ColorScheme for SchemeList<S, List> {
-    fn is_valid_size(&self, size: Size) -> bool {
-        self.schemes.as_ref()[self.index].is_valid_size(size)
-    }
-
-    fn color(&self, size: Size, pos: (u64, u64)) -> Rgba {
-        self.schemes.as_ref()[self.index].color(size, pos)
     }
 }
 

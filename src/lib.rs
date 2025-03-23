@@ -77,26 +77,24 @@
 //! ```
 //! use palette::rgb::Rgba;
 //! use slidy::puzzle::{
-//!     color_scheme::{Scheme, SchemeList},
+//!     color_scheme::{ColorScheme, Scheme},
 //!     coloring::{Monochrome, Rainbow},
 //!     label::label::{SplitFringe, Trivial},
 //!     puzzle::Puzzle,
-//!     render::{Borders, RendererBuilder, Text},
+//!     render::{Borders, Renderer, RendererBuilder, Text},
 //! };
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     let schemes = [Scheme::new(
+//!     let scheme = Scheme::new(
 //!         Trivial,
 //!         Monochrome::new(Rgba::new(0.15, 0.15, 0.15, 1.0)),
-//!     )];
-//!     let scheme_list = SchemeList::new(&schemes)?;
-//!
+//!     );
 //!     let border_scheme = Scheme::new(SplitFringe, Rainbow::default());
 //!     let text_scheme = Scheme::new(Trivial, Monochrome::new(Rgba::new(1.0, 1.0, 1.0, 1.0)));
 //!
-//!     let renderer = RendererBuilder::with_scheme(&scheme_list)
-//!         .borders(Borders::with_scheme(border_scheme).thickness(5.0))
-//!         .text(Text::with_scheme(text_scheme).font_size(40.0))
+//!     let renderer = RendererBuilder::with_dyn_scheme(&scheme)
+//!         .borders(Borders::with_scheme(&border_scheme as &dyn ColorScheme).thickness(5.0))
+//!         .text(Text::with_scheme(&text_scheme as &dyn ColorScheme).font_size(40.0))
 //!         .background_color(Rgba::new(0.05, 0.05, 0.05, 1.0))
 //!         .tile_size(75.0)
 //!         .tile_gap(5.0)
