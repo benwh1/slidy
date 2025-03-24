@@ -264,7 +264,10 @@ impl RectPartition {
 
 impl Label for RectPartition {
     fn position_label(&self, _size: Size, (x, y): (u64, u64)) -> u64 {
-        self.rects.iter().position(|r| r.contains(x, y)).unwrap() as u64
+        self.rects
+            .iter()
+            .position(|r| r.contains(x, y))
+            .unwrap_or(self.num_rects()) as u64
     }
 
     fn num_labels(&self, _size: Size) -> u64 {
