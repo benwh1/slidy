@@ -1,5 +1,6 @@
 //! Defines the [`ColorScheme`] trait.
 
+pub mod balanced_split;
 pub mod multi_layer;
 pub mod scheme_list;
 pub mod tiled;
