@@ -271,6 +271,7 @@ impl Display for Puzzle {
 
 /// Error type for [`Puzzle::from_str`].
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ParsePuzzleError {
     /// Returned when an unexpected character is found.
     #[error("InvalidCharacter: character {0} is invalid")]
