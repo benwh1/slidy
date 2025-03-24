@@ -26,7 +26,6 @@ pub struct Stm;
 pub struct Mtm;
 
 impl Metric for Stm {
-    #[inline]
     fn len<T: PrimInt + 'static>(mv: Move) -> T
     where
         u64: AsPrimitive<T>,
@@ -36,7 +35,6 @@ impl Metric for Stm {
 }
 
 impl Metric for Mtm {
-    #[inline]
     fn len<T: PrimInt + 'static>(_mv: Move) -> T
     where
         u64: AsPrimitive<T>,
