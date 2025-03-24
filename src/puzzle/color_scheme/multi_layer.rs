@@ -69,6 +69,7 @@ pub struct Layer<S> {
 }
 
 impl<S: MultiLayerColorScheme> Layer<S> {
+    /// Creates a new [`Layer`] with the given color scheme and layer index.
     pub fn new(scheme: S, layer: u32) -> Self {
         Self { scheme, layer }
     }
