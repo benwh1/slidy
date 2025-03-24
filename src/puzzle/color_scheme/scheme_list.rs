@@ -93,13 +93,6 @@ impl<S: ColorScheme, List: AsRef<[S]>> SchemeList<S, List> {
 }
 
 impl<S: ColorScheme, List: AsRef<[S]>> MultiLayerColorScheme for SchemeList<S, List> {
-    fn is_valid_size(&self, size: Size) -> bool {
-        self.schemes
-            .as_ref()
-            .iter()
-            .all(|scheme| scheme.is_valid_size(size))
-    }
-
     fn num_layers(&self, _size: Size) -> u32 {
         self.len() as u32
     }

@@ -39,10 +39,6 @@ define_sym!(
 );
 
 impl<L: Label> Label for Id<L> {
-    fn is_valid_size(&self, size: Size) -> bool {
-        self.0.is_valid_size(size)
-    }
-
     fn position_label(&self, size: Size, pos: (u64, u64)) -> u64 {
         self.0.position_label(size, pos)
     }
@@ -53,10 +49,6 @@ impl<L: Label> Label for Id<L> {
 }
 
 impl<L: Label> Label for RotateCw<L> {
-    fn is_valid_size(&self, size: Size) -> bool {
-        self.0.is_valid_size(size.transpose())
-    }
-
     fn position_label(&self, size: Size, (x, y): (u64, u64)) -> u64 {
         self.0
             .position_label(size.transpose(), (y, size.width() - 1 - x))
@@ -68,10 +60,6 @@ impl<L: Label> Label for RotateCw<L> {
 }
 
 impl<L: Label> Label for RotateCcw<L> {
-    fn is_valid_size(&self, size: Size) -> bool {
-        self.0.is_valid_size(size.transpose())
-    }
-
     fn position_label(&self, size: Size, (x, y): (u64, u64)) -> u64 {
         self.0
             .position_label(size.transpose(), (size.height() - 1 - y, x))
@@ -83,10 +71,6 @@ impl<L: Label> Label for RotateCcw<L> {
 }
 
 impl<L: Label> Label for RotateHalf<L> {
-    fn is_valid_size(&self, size: Size) -> bool {
-        self.0.is_valid_size(size)
-    }
-
     fn position_label(&self, size: Size, (x, y): (u64, u64)) -> u64 {
         let (width, height) = size.into();
         self.0.position_label(size, (width - 1 - x, height - 1 - y))
@@ -98,10 +82,6 @@ impl<L: Label> Label for RotateHalf<L> {
 }
 
 impl<L: Label> Label for ReflectVertical<L> {
-    fn is_valid_size(&self, size: Size) -> bool {
-        self.0.is_valid_size(size)
-    }
-
     fn position_label(&self, size: Size, (x, y): (u64, u64)) -> u64 {
         self.0.position_label(size, (x, size.height() - 1 - y))
     }
@@ -112,10 +92,6 @@ impl<L: Label> Label for ReflectVertical<L> {
 }
 
 impl<L: Label> Label for ReflectHorizontal<L> {
-    fn is_valid_size(&self, size: Size) -> bool {
-        self.0.is_valid_size(size)
-    }
-
     fn position_label(&self, size: Size, (x, y): (u64, u64)) -> u64 {
         self.0.position_label(size, (size.width() - 1 - x, y))
     }
@@ -126,10 +102,6 @@ impl<L: Label> Label for ReflectHorizontal<L> {
 }
 
 impl<L: Label> Label for ReflectDiagonal<L> {
-    fn is_valid_size(&self, size: Size) -> bool {
-        self.0.is_valid_size(size.transpose())
-    }
-
     fn position_label(&self, size: Size, (x, y): (u64, u64)) -> u64 {
         self.0.position_label(size.transpose(), (y, x))
     }
@@ -140,10 +112,6 @@ impl<L: Label> Label for ReflectDiagonal<L> {
 }
 
 impl<L: Label> Label for ReflectAntidiagonal<L> {
-    fn is_valid_size(&self, size: Size) -> bool {
-        self.0.is_valid_size(size.transpose())
-    }
-
     fn position_label(&self, size: Size, (x, y): (u64, u64)) -> u64 {
         let (width, height) = size.into();
         self.0

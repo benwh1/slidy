@@ -36,46 +36,6 @@ impl<C: ColorScheme> Tiled<C> {
 }
 
 impl<C: ColorScheme> ColorScheme for Tiled<C> {
-    fn is_valid_size(&self, size: Size) -> bool {
-        // Check if the label is valid for all sizes that it will be applied to.
-        // There are at most 4 cases to check: the width could be either grid_width or
-        // width % grid_width, and similar for height.
-
-        let (width, height) = size.into();
-        let (gw, gh) = self.grid_size.into();
-
-        if width >= gw {
-            if height >= gh && !self.color_scheme.is_valid_size(self.grid_size) {
-                return false;
-            }
-            if height % gh != 0
-                && !Size::new(gw, height % gh)
-                    .map(|size| self.color_scheme.is_valid_size(size))
-                    .unwrap_or_default()
-            {
-                return false;
-            }
-        }
-        if width % gw != 0 {
-            if height >= gh
-                && !Size::new(width % gw, gh)
-                    .map(|size| self.color_scheme.is_valid_size(size))
-                    .unwrap_or_default()
-            {
-                return false;
-            }
-            if height % gh != 0
-                && !Size::new(width % gw, height % gh)
-                    .map(|size| self.color_scheme.is_valid_size(size))
-                    .unwrap_or_default()
-            {
-                return false;
-            }
-        }
-
-        true
-    }
-
     fn color(&self, size: Size, (x, y): (u64, u64)) -> Rgba {
         let (width, height) = size.into();
         let (gw, gh) = self.grid_size.into();
@@ -132,55 +92,6 @@ impl<C: ColorScheme> RecursiveTiled<C> {
     /// The sizes of the grids that the [`ColorScheme`] is tiled across.
     pub fn grid_sizes(&self) -> &[Size] {
         &self.grid_sizes
-    }
-
-    fn is_valid_size_helper(&self, size: Size, start_idx: usize) -> bool {
-        if let Some(&grid_size) = self.grid_sizes.get(start_idx) {
-            let (width, height) = size.into();
-            let (grid_width, grid_height) = grid_size.into();
-
-            let has_top_left_region = width >= grid_width && height >= grid_height;
-            let has_top_right_region = width % grid_width != 0 && height >= grid_height;
-            let has_bottom_left_region = width >= grid_width && height % grid_height != 0;
-            let has_bottom_right_region = width % grid_width != 0 && height % grid_height != 0;
-
-            if has_top_left_region && !self.is_valid_size_helper(grid_size, start_idx + 1) {
-                return false;
-            }
-
-            if has_top_right_region
-                && !self.is_valid_size_helper(
-                    Size::new(width % grid_width, grid_height).unwrap(),
-                    start_idx + 1,
-                )
-            {
-                return false;
-            }
-
-            if has_bottom_left_region
-                && !self.is_valid_size_helper(
-                    Size::new(grid_width, height % grid_height).unwrap(),
-                    start_idx + 1,
-                )
-            {
-                return false;
-            }
-
-            if has_bottom_right_region
-                && !self.is_valid_size_helper(
-                    Size::new(width % grid_width, height % grid_height).unwrap(),
-                    start_idx + 1,
-                )
-            {
-                return false;
-            }
-
-            true
-        } else if let Some(&last_size) = self.grid_sizes.last() {
-            self.color_scheme.is_valid_size(last_size)
-        } else {
-            false
-        }
     }
 
     fn color_helper(&self, size: Size, (x, y): (u64, u64), start_idx: usize) -> Rgba {
@@ -266,10 +177,6 @@ impl<C: ColorScheme> RecursiveTiled<C> {
 }
 
 impl<C: ColorScheme> ColorScheme for RecursiveTiled<C> {
-    fn is_valid_size(&self, size: Size) -> bool {
-        self.is_valid_size_helper(size, 0)
-    }
-
     fn color(&self, size: Size, pos: (u64, u64)) -> Rgba {
         self.color_helper(size, pos, 0)
     }

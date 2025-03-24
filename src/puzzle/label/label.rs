@@ -14,10 +14,6 @@ use serde_derive::{Deserialize, Serialize};
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum LabelError {
-    /// Returned when the given puzzle size is incompatible with the label.
-    #[error("InvalidSize: {0} is not a valid size")]
-    InvalidSize(Size),
-
     /// Returned when the `(x, y)` position is outside the bounds of the puzzle.
     #[error("PositionOutOfBounds: position {pos:?} is out of bounds on a {size} puzzle")]
     PositionOutOfBounds {
@@ -32,26 +28,19 @@ pub enum LabelError {
 /// label of `(x, y)`.
 #[blanket(derive(Ref, Rc, Arc, Mut))]
 pub trait Label {
-    /// Checks if this `Label` can be used with a given puzzle size.
-    #[must_use]
-    fn is_valid_size(&self, size: Size) -> bool;
-
     /// Returns the label of `(x, y)` on a puzzle of the given size.
     ///
     /// The label must be an integer from 0 to `self.num_labels(size) - 1`.
     ///
-    /// This function may not check whether `size` is a valid puzzle size for the label, or whether
-    /// `(x, y)` is within the bounds of the puzzle. If these conditions are not satisfied, the
-    /// function may panic or return an invalid label, e.g. an integer greater than or equal to
-    /// `self.num_labels(size)`.
+    /// This function may not check whether `(x, y)` is within the bounds of the puzzle. If this
+    /// condition is not satisfied, the function may panic or return an invalid label, e.g. an
+    /// integer greater than or equal to `self.num_labels(size)`.
     #[must_use]
     fn position_label(&self, size: Size, pos: (u64, u64)) -> u64;
 
     /// See [`Self::position_label`].
     fn try_position_label(&self, size: Size, pos: (u64, u64)) -> Result<u64, LabelError> {
-        if !self.is_valid_size(size) {
-            Err(LabelError::InvalidSize(size))
-        } else if !size.is_within_bounds(pos) {
+        if !size.is_within_bounds(pos) {
             Err(LabelError::PositionOutOfBounds { size, pos })
         } else {
             Ok(self.position_label(size, pos))
@@ -59,27 +48,11 @@ pub trait Label {
     }
 
     /// Returns the total number of distinct labels across all `(x, y)` positions in the puzzle.
-    ///
-    /// This function may not check whether `size` is a valid puzzle size for the label. If it is
-    /// not, the function may panic or return an invalid number.
     #[must_use]
     fn num_labels(&self, size: Size) -> u64;
-
-    /// See [`Self::num_labels`].
-    fn try_num_labels(&self, size: Size) -> Result<u64, LabelError> {
-        if self.is_valid_size(size) {
-            Ok(self.num_labels(size))
-        } else {
-            Err(LabelError::InvalidSize(size))
-        }
-    }
 }
 
 impl<T: Label + ?Sized> Label for Box<T> {
-    fn is_valid_size(&self, size: Size) -> bool {
-        (**self).is_valid_size(size)
-    }
-
     fn position_label(&self, size: Size, pos: (u64, u64)) -> u64 {
         (**self).position_label(size, pos)
     }
@@ -97,8 +70,6 @@ macro_rules! define_label {
     ($($(#[$annot:meta])* $name:ident),* $(,)?) => {
         $(
             $(#[$annot])*
-            ///
-            /// Valid with all puzzle sizes.
             #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
             #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
             pub struct $name;
@@ -154,10 +125,6 @@ impl BijectiveLabel for FringeGrids {}
 impl BijectiveLabel for SpiralGrids {}
 
 impl Label for Trivial {
-    fn is_valid_size(&self, _size: Size) -> bool {
-        true
-    }
-
     fn position_label(&self, _size: Size, _pos: (u64, u64)) -> u64 {
         0
     }
@@ -168,10 +135,6 @@ impl Label for Trivial {
 }
 
 impl Label for RowGrids {
-    fn is_valid_size(&self, _size: Size) -> bool {
-        true
-    }
-
     fn position_label(&self, size: Size, (x, y): (u64, u64)) -> u64 {
         x + size.width() * y
     }
@@ -182,10 +145,6 @@ impl Label for RowGrids {
 }
 
 impl Label for Rows {
-    fn is_valid_size(&self, _size: Size) -> bool {
-        true
-    }
-
     fn position_label(&self, _size: Size, (_, y): (u64, u64)) -> u64 {
         y
     }
@@ -196,10 +155,6 @@ impl Label for Rows {
 }
 
 impl Label for Fringe {
-    fn is_valid_size(&self, _size: Size) -> bool {
-        true
-    }
-
     fn position_label(&self, _size: Size, (x, y): (u64, u64)) -> u64 {
         x.min(y)
     }
@@ -210,10 +165,6 @@ impl Label for Fringe {
 }
 
 impl Label for FringeGrids {
-    fn is_valid_size(&self, _size: Size) -> bool {
-        true
-    }
-
     fn position_label(&self, size: Size, (x, y): (u64, u64)) -> u64 {
         // Which (non-split) fringe is (x, y) in?
         let fringe = x.min(y);
@@ -241,10 +192,6 @@ impl Label for FringeGrids {
 }
 
 impl Label for SquareFringe {
-    fn is_valid_size(&self, _size: Size) -> bool {
-        true
-    }
-
     fn position_label(&self, size: Size, (x, y): (u64, u64)) -> u64 {
         let (width, height) = size.into();
         match width.cmp(&height) {
@@ -272,10 +219,6 @@ impl Label for SquareFringe {
 }
 
 impl Label for SplitFringe {
-    fn is_valid_size(&self, _size: Size) -> bool {
-        true
-    }
-
     fn position_label(&self, _size: Size, (x, y): (u64, u64)) -> u64 {
         // Which (non-split) fringe is (x, y) in?
         let fringe = x.min(y);
@@ -293,10 +236,6 @@ impl Label for SplitFringe {
 }
 
 impl Label for SplitSquareFringe {
-    fn is_valid_size(&self, _size: Size) -> bool {
-        true
-    }
-
     fn position_label(&self, size: Size, (x, y): (u64, u64)) -> u64 {
         let (width, height) = size.into();
         let d = width.abs_diff(height);
@@ -329,10 +268,6 @@ impl Label for SplitSquareFringe {
 }
 
 impl Label for Diagonals {
-    fn is_valid_size(&self, _size: Size) -> bool {
-        true
-    }
-
     fn position_label(&self, _size: Size, (x, y): (u64, u64)) -> u64 {
         x + y
     }
@@ -344,10 +279,6 @@ impl Label for Diagonals {
 }
 
 impl Label for LastTwoRows {
-    fn is_valid_size(&self, _size: Size) -> bool {
-        true
-    }
-
     fn position_label(&self, size: Size, (x, y): (u64, u64)) -> u64 {
         let h = size.height().saturating_sub(2);
         if y < h {
@@ -363,10 +294,6 @@ impl Label for LastTwoRows {
 }
 
 impl Label for SplitLastTwoRows {
-    fn is_valid_size(&self, _size: Size) -> bool {
-        true
-    }
-
     fn position_label(&self, size: Size, (x, y): (u64, u64)) -> u64 {
         if y < size.height().saturating_sub(2) {
             y
@@ -382,10 +309,6 @@ impl Label for SplitLastTwoRows {
 }
 
 impl Label for ConcentricRectangles {
-    fn is_valid_size(&self, _size: Size) -> bool {
-        true
-    }
-
     fn position_label(&self, size: Size, (x, y): (u64, u64)) -> u64 {
         let (width, height) = size.into();
         x.min(y).min(width - 1 - x).min(height - 1 - y)
@@ -398,10 +321,6 @@ impl Label for ConcentricRectangles {
 }
 
 impl Label for Spiral {
-    fn is_valid_size(&self, _size: Size) -> bool {
-        true
-    }
-
     fn position_label(&self, size: Size, (x, y): (u64, u64)) -> u64 {
         let rect_label = ConcentricRectangles.position_label(size, (x, y));
 
@@ -448,10 +367,6 @@ impl Label for Spiral {
 }
 
 impl Label for SpiralGrids {
-    fn is_valid_size(&self, _size: Size) -> bool {
-        true
-    }
-
     fn position_label(&self, size: Size, (x, y): (u64, u64)) -> u64 {
         let rect_label = ConcentricRectangles.position_label(size, (x, y));
 
@@ -492,10 +407,6 @@ impl Label for SpiralGrids {
 }
 
 impl Label for Checkerboard {
-    fn is_valid_size(&self, _size: Size) -> bool {
-        true
-    }
-
     fn position_label(&self, _size: Size, (x, y): (u64, u64)) -> u64 {
         (x + y) % 2
     }

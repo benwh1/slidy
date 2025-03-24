@@ -255,21 +255,6 @@ impl RectPartition {
         }
     }
 
-    /// Returns the large rectangle that is being partitioned.
-    #[must_use]
-    pub(super) fn rect(&self) -> Rect {
-        let left = self.rects.iter().map(|r| r.left).min().unwrap();
-        let top = self.rects.iter().map(|r| r.top).min().unwrap();
-        let right = self.rects.iter().map(|r| r.right).max().unwrap();
-        let bottom = self.rects.iter().map(|r| r.bottom).max().unwrap();
-        Rect {
-            left,
-            top,
-            right,
-            bottom,
-        }
-    }
-
     /// Returns the number of rectangles in the partition.
     #[must_use]
     pub fn num_rects(&self) -> usize {
@@ -278,13 +263,6 @@ impl RectPartition {
 }
 
 impl Label for RectPartition {
-    /// [`RectPartition`] is only a valid label when the puzzle size equals the size of the
-    /// partitioned rectangle.
-    fn is_valid_size(&self, size: Size) -> bool {
-        let (width, height) = size.into();
-        self.rect().size() == (width, height)
-    }
-
     fn position_label(&self, _size: Size, (x, y): (u64, u64)) -> u64 {
         self.rects.iter().position(|r| r.contains(x, y)).unwrap() as u64
     }

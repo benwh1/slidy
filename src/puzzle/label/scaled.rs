@@ -72,18 +72,6 @@ impl<L: Label> Scaled<L> {
 }
 
 impl<L: Label> Label for Scaled<L> {
-    fn is_valid_size(&self, size: Size) -> bool {
-        let (width, height) = size.into();
-        let (sw, sh) = (
-            width.div_ceil(self.factor.0),
-            height.div_ceil(self.factor.1),
-        );
-
-        Size::new(sw, sh)
-            .map(|size| self.label.is_valid_size(size))
-            .unwrap_or_default()
-    }
-
     fn position_label(&self, size: Size, (x, y): (u64, u64)) -> u64 {
         let (width, height) = size.into();
         let (sw, sh) = (

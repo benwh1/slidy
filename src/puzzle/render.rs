@@ -421,10 +421,6 @@ impl<S: ColorScheme, U: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'_
         let size = puzzle.size();
         let (width, height) = size.into();
 
-        if !self.scheme.is_valid_size(size) {
-            return Err(RendererError::IncompatibleLabel(size));
-        }
-
         let mut group = Group::new();
 
         for y in 0..height {
@@ -561,10 +557,6 @@ impl<S: ColorScheme, U: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'_
     {
         let size = puzzle.size();
         let (width, height) = size.into();
-
-        if !self.scheme.is_valid_size(size) {
-            return Err(RendererError::IncompatibleLabel(size));
-        }
 
         let border_thickness = self
             .borders
