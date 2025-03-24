@@ -40,10 +40,10 @@ pub trait Label {
 
     /// See [`Self::position_label`].
     fn try_position_label(&self, size: Size, pos: (u64, u64)) -> Result<u64, LabelError> {
-        if !size.is_within_bounds(pos) {
-            Err(LabelError::PositionOutOfBounds { size, pos })
-        } else {
+        if size.is_within_bounds(pos) {
             Ok(self.position_label(size, pos))
+        } else {
+            Err(LabelError::PositionOutOfBounds { size, pos })
         }
     }
 

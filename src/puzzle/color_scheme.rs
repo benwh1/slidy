@@ -39,10 +39,10 @@ pub trait ColorScheme {
 
     /// Returns the color of the piece in position `pos` on a solved puzzle of the given size.
     fn try_color(&self, size: Size, pos: (u64, u64)) -> Result<Rgba, ColorSchemeError> {
-        if !size.is_within_bounds(pos) {
-            Err(ColorSchemeError::PositionOutOfBounds { size, pos })
-        } else {
+        if size.is_within_bounds(pos) {
             Ok(self.color(size, pos))
+        } else {
+            Err(ColorSchemeError::PositionOutOfBounds { size, pos })
         }
     }
 }
