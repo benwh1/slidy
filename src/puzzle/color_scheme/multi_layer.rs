@@ -68,6 +68,12 @@ pub struct Layer<S> {
     pub(super) layer: u32,
 }
 
+impl<S: MultiLayerColorScheme> Layer<S> {
+    pub fn new(scheme: S, layer: u32) -> Self {
+        Self { scheme, layer }
+    }
+}
+
 impl<S: MultiLayerColorScheme> ColorScheme for Layer<S> {
     fn color(&self, size: Size, pos: (u64, u64)) -> Rgba {
         self.scheme.color(size, pos, self.layer)
