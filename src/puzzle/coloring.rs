@@ -29,11 +29,7 @@ pub trait Coloring {
     /// See [`Coloring::color`].
     #[must_use]
     fn try_color(&self, label: u64, num_labels: u64) -> Option<Rgba> {
-        if label < num_labels {
-            Some(self.color(label, num_labels))
-        } else {
-            None
-        }
+        (label < num_labels).then(|| self.color(label, num_labels))
     }
 }
 
@@ -114,7 +110,7 @@ pub struct AddLightness<C: Coloring> {
 }
 
 /// A [`Coloring`] that produces a gradient effect by interpolating between a given list of colors.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Gradient<C: Curve<f32, Output = LinSrgba>> {
     gradient: C,

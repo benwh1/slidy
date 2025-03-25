@@ -142,11 +142,11 @@ impl<S: ColorScheme, C: Coloring> MultiLayerColorScheme for BalancedSplitScheme<
                 Splitting::Quarters => {
                     if width >= min_split_width {
                         split_width = true;
-                    };
+                    }
 
                     if height >= min_split_height {
                         split_height = true;
-                    };
+                    }
                 }
             }
 

@@ -130,11 +130,11 @@ impl PiecewiseConstant {
 
     pub(super) fn range_value(&self, range: Range<u64>) -> Option<u64> {
         let v = self.value(range.start);
-        if self.data.range(range).map(|(_, &v)| v).all(|x| x == v) {
-            Some(v)
-        } else {
-            None
-        }
+        self.data
+            .range(range)
+            .map(|(_, &v)| v)
+            .all(|x| x == v)
+            .then_some(v)
     }
 
     pub(super) fn set_range_value(&mut self, range: Range<u64>, value: u64) {
@@ -267,7 +267,7 @@ impl Label for RectPartition {
         self.rects
             .iter()
             .position(|r| r.contains(x, y))
-            .unwrap_or(self.num_rects()) as u64
+            .unwrap_or_else(|| self.num_rects()) as u64
     }
 
     fn num_labels(&self, _size: Size) -> u64 {

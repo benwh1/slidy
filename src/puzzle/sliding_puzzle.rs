@@ -30,7 +30,10 @@ use crate::{
 /// - If `w` is the width of the puzzle, then position `w-1` is the top right corner and position
 ///   `w` is below position 0
 /// - Position `N` is the bottom right corner
-#[allow(clippy::missing_safety_doc)]
+#[expect(
+    clippy::missing_safety_doc,
+    reason = "no actual unsafe code, only functions marked as unsafe"
+)]
 pub trait SlidingPuzzle
 where
     Self: Sized,
@@ -175,13 +178,12 @@ where
         P::Piece: AsPrimitive<Self::Piece>,
         Self::Piece: 'static,
     {
-        if !self.try_set_state(other) {
-            panic!(
-                "sizes of `self` ({}) and `other` ({}) must be equal",
-                self.size(),
-                other.size()
-            );
-        }
+        assert!(
+            self.try_set_state(other),
+            "sizes of `self` ({}) and `other` ({}) must be equal",
+            self.size(),
+            other.size(),
+        );
     }
 
     /// See [`SlidingPuzzle::set_state`].
@@ -301,11 +303,7 @@ where
     /// See [`SlidingPuzzle::piece_at`].
     #[must_use]
     fn try_piece_at(&self, idx: u64) -> Option<Self::Piece> {
-        if idx < self.area() {
-            Some(self.piece_at(idx))
-        } else {
-            None
-        }
+        (idx < self.area()).then(|| self.piece_at(idx))
     }
 
     /// See [`SlidingPuzzle::piece_at`].
@@ -327,11 +325,9 @@ where
     /// See [`SlidingPuzzle::piece_at_xy`].
     #[must_use]
     fn try_piece_at_xy(&self, pos: (u64, u64)) -> Option<Self::Piece> {
-        if self.size().is_within_bounds(pos) {
-            Some(self.piece_at_xy(pos))
-        } else {
-            None
-        }
+        self.size()
+            .is_within_bounds(pos)
+            .then(|| self.piece_at_xy(pos))
     }
 
     /// See [`SlidingPuzzle::piece_at_xy`].
@@ -622,13 +618,10 @@ where
     ///
     /// Returns `true` if the piece was moved successfully, `false` otherwise.
     fn try_move_position_xy(&mut self, (x, y): (u64, u64)) -> bool {
-        match PositionMove(x, y).try_into_move(self) {
-            Ok(mv) => {
-                self.apply_move(mv);
-                true
-            }
-            Err(_) => false,
-        }
+        PositionMove(x, y)
+            .try_into_move(self)
+            .map(|mv| self.apply_move(mv))
+            .is_ok()
     }
 
     /// See [`SlidingPuzzle::move_position_xy`].
@@ -744,9 +737,10 @@ where
     /// If `self.can_embed_into(puzzle)` is false, the function may panic or `puzzle` may be
     /// transformed in an invalid way.
     fn embed_into(&self, puzzle: &mut Self) {
-        if !self.try_embed_into(puzzle) {
-            panic!("failed to embed `self` into `puzzle`");
-        }
+        assert!(
+            self.try_embed_into(puzzle),
+            "failed to embed `self` into `puzzle`",
+        );
     }
 
     /// See [`SlidingPuzzle::embed_into`].

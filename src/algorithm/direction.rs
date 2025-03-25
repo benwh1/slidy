@@ -98,10 +98,10 @@ impl FromStr for Direction {
             "L" => Ok(Self::Left),
             "D" => Ok(Self::Down),
             "R" => Ok(Self::Right),
-            _ => Err(match s.chars().next() {
-                Some(c) => Self::Err::InvalidCharacter(c),
-                None => Self::Err::Empty,
-            }),
+            _ => Err(s
+                .chars()
+                .next()
+                .map_or(Self::Err::Empty, Self::Err::InvalidCharacter)),
         }
     }
 }

@@ -219,7 +219,7 @@ impl Algorithm {
         let (start_idx, start_total) = iter
             .clone()
             .find_position(|&i| i >= range.start)
-            .unwrap_or((self.moves.len() + 1, self.len_stm()));
+            .unwrap_or_else(|| (self.moves.len() + 1, self.len_stm()));
 
         // Find the last move where all moves up to and including this one have a combined length
         // <= range.end
@@ -227,7 +227,10 @@ impl Algorithm {
             .clone()
             .tuple_windows()
             .find_position(|&(_, j)| j > range.end)
-            .map_or((self.moves.len(), self.len_stm()), |(idx, (i, _))| (idx, i));
+            .map_or_else(
+                || (self.moves.len(), self.len_stm()),
+                |(idx, (i, _))| (idx, i),
+            );
 
         if start_idx > end_idx {
             // The beginning and the end of the slice are both within a single move, e.g. U9[3..7].
