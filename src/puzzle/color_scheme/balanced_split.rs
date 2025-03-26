@@ -195,3 +195,226 @@ impl<S: ColorScheme, C: Coloring> MultiLayerColorScheme for BalancedSplitScheme<
         self.grid_coloring.color(label, num_labels)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::puzzle::{color_scheme::Scheme, coloring::ColorList, label::label::Rows};
+
+    use super::*;
+
+    fn scheme(splitting: Splitting) -> BalancedSplitScheme<Scheme<Rows, ColorList>, ColorList> {
+        let small_colors = (0..16)
+            .map(|i| Rgba::new(i as f32 / 16.0, 0.0, 0.0, 1.0))
+            .collect();
+        let small_scheme = Scheme::new(Rows, ColorList::new(small_colors).unwrap());
+
+        let grid_colors = (0..4)
+            .map(|i| Rgba::new(i as f32 / 4.0, 0.0, 0.0, 1.0))
+            .collect();
+        let grid_coloring = ColorList::new(grid_colors).unwrap();
+
+        BalancedSplitScheme::new(small_scheme, grid_coloring, (8, 8), splitting)
+    }
+
+    fn scheme1() -> BalancedSplitScheme<Scheme<Rows, ColorList>, ColorList> {
+        scheme(Splitting::UpDown {
+            cutoff_fraction: 0.75,
+        })
+    }
+
+    fn scheme2() -> BalancedSplitScheme<Scheme<Rows, ColorList>, ColorList> {
+        scheme(Splitting::Quarters)
+    }
+
+    fn s(w: u64, h: u64) -> Size {
+        Size::new(w, h).unwrap()
+    }
+
+    #[test]
+    fn test_num_layers_1() {
+        let scheme = scheme1();
+
+        assert_eq!(scheme.num_layers(s(7, 7)), 1);
+        assert_eq!(scheme.num_layers(s(7, 8)), 2);
+        assert_eq!(scheme.num_layers(s(8, 7)), 2);
+        assert_eq!(scheme.num_layers(s(8, 8)), 3);
+        assert_eq!(scheme.num_layers(s(14, 14)), 3);
+        assert_eq!(scheme.num_layers(s(15, 15)), 5);
+        assert_eq!(scheme.num_layers(s(16, 16)), 5);
+        assert_eq!(scheme.num_layers(s(49, 49)), 7);
+        assert_eq!(scheme.num_layers(s(173, 121)), 11);
+        assert_eq!(scheme.num_layers(s(1000, 10)), 10);
+    }
+
+    #[test]
+    fn test_num_layers_2() {
+        let scheme = scheme2();
+
+        assert_eq!(scheme.num_layers(s(7, 7)), 1);
+        assert_eq!(scheme.num_layers(s(7, 8)), 2);
+        assert_eq!(scheme.num_layers(s(8, 7)), 2);
+        assert_eq!(scheme.num_layers(s(8, 8)), 2);
+        assert_eq!(scheme.num_layers(s(14, 14)), 2);
+        assert_eq!(scheme.num_layers(s(15, 15)), 3);
+        assert_eq!(scheme.num_layers(s(16, 16)), 3);
+        assert_eq!(scheme.num_layers(s(49, 49)), 4);
+        assert_eq!(scheme.num_layers(s(173, 121)), 6);
+        assert_eq!(scheme.num_layers(s(1000, 10)), 9);
+    }
+
+    #[test]
+    fn test_color_1() {
+        let scheme = scheme1();
+        let size = s(49, 15);
+
+        // Layer 0
+        for y in 0..15 {
+            for x in 0..25 {
+                let color = scheme.color(size, (x, y), 0);
+                assert_eq!(color, Rgba::new(0.0, 0.0, 0.0, 1.0));
+            }
+        }
+        for y in 0..15 {
+            for x in 25..49 {
+                let color = scheme.color(size, (x, y), 0);
+                assert_eq!(color, Rgba::new(1.0 / 4.0, 0.0, 0.0, 1.0));
+            }
+        }
+
+        // Layer 1
+        for y in 0..15 {
+            for x in 0..13 {
+                let color = scheme.color(size, (x, y), 1);
+                assert_eq!(color, Rgba::new(0.0, 0.0, 0.0, 1.0));
+            }
+        }
+        for y in 0..15 {
+            for x in 13..25 {
+                let color = scheme.color(size, (x, y), 1);
+                assert_eq!(color, Rgba::new(1.0 / 4.0, 0.0, 0.0, 1.0));
+            }
+        }
+
+        // Layer 2
+        for y in 0..8 {
+            for x in 0..13 {
+                let color = scheme.color(size, (x, y), 2);
+                assert_eq!(color, Rgba::new(0.0, 0.0, 0.0, 1.0));
+            }
+        }
+        for y in 8..15 {
+            for x in 0..13 {
+                let color = scheme.color(size, (x, y), 2);
+                assert_eq!(color, Rgba::new(1.0 / 4.0, 0.0, 0.0, 1.0));
+            }
+        }
+
+        // Layer 3
+        for y in 0..8 {
+            for x in 0..7 {
+                let color = scheme.color(size, (x, y), 3);
+                assert_eq!(color, Rgba::new(0.0, 0.0, 0.0, 1.0));
+            }
+        }
+        for y in 0..8 {
+            for x in 7..13 {
+                let color = scheme.color(size, (x, y), 3);
+                assert_eq!(color, Rgba::new(1.0 / 4.0, 0.0, 0.0, 1.0));
+            }
+        }
+
+        // Layer 4
+        for y in 0..4 {
+            for x in 0..7 {
+                let color = scheme.color(size, (x, y), 4);
+                assert_eq!(color, Rgba::new(0.0, 0.0, 0.0, 1.0));
+            }
+        }
+        for y in 4..8 {
+            for x in 0..7 {
+                let color = scheme.color(size, (x, y), 4);
+                assert_eq!(color, Rgba::new(1.0 / 4.0, 0.0, 0.0, 1.0));
+            }
+        }
+
+        // Layer 5
+        for y in 0..4 {
+            for x in 0..7 {
+                let color = scheme.color(size, (x, y), 5);
+                assert_eq!(color, Rgba::new(y as f32 / 16.0, 0.0, 0.0, 1.0));
+            }
+        }
+    }
+
+    #[test]
+    fn test_color_2() {
+        let scheme = scheme2();
+        let size = s(49, 15);
+
+        // Layer 0
+        for y in 0..8 {
+            for x in 0..25 {
+                let color = scheme.color(size, (x, y), 0);
+                assert_eq!(color, Rgba::new(0.0, 0.0, 0.0, 1.0));
+            }
+        }
+        for y in 0..8 {
+            for x in 25..49 {
+                let color = scheme.color(size, (x, y), 0);
+                assert_eq!(color, Rgba::new(1.0 / 4.0, 0.0, 0.0, 1.0));
+            }
+        }
+        for y in 8..15 {
+            for x in 0..25 {
+                let color = scheme.color(size, (x, y), 0);
+                assert_eq!(color, Rgba::new(2.0 / 4.0, 0.0, 0.0, 1.0));
+            }
+        }
+        for y in 8..15 {
+            for x in 25..49 {
+                let color = scheme.color(size, (x, y), 0);
+                assert_eq!(color, Rgba::new(3.0 / 4.0, 0.0, 0.0, 1.0));
+            }
+        }
+
+        // Layer 1
+        for y in 0..4 {
+            for x in 0..13 {
+                let color = scheme.color(size, (x, y), 1);
+                assert_eq!(color, Rgba::new(0.0, 0.0, 0.0, 1.0));
+            }
+        }
+        for y in 0..4 {
+            for x in 13..25 {
+                let color = scheme.color(size, (x, y), 1);
+                assert_eq!(color, Rgba::new(1.0 / 4.0, 0.0, 0.0, 1.0));
+            }
+        }
+        for y in 4..8 {
+            for x in 0..13 {
+                let color = scheme.color(size, (x, y), 1);
+                assert_eq!(color, Rgba::new(2.0 / 4.0, 0.0, 0.0, 1.0));
+            }
+        }
+        for y in 4..8 {
+            for x in 13..25 {
+                let color = scheme.color(size, (x, y), 1);
+                assert_eq!(color, Rgba::new(3.0 / 4.0, 0.0, 0.0, 1.0));
+            }
+        }
+
+        // Layer 2
+        for y in 0..4 {
+            for x in 0..7 {
+                let color = scheme.color(size, (x, y), 2);
+                assert_eq!(color, Rgba::new(0.0, 0.0, 0.0, 1.0));
+            }
+        }
+        for y in 0..4 {
+            for x in 7..13 {
+                let color = scheme.color(size, (x, y), 2);
+                assert_eq!(color, Rgba::new(1.0 / 4.0, 0.0, 0.0, 1.0));
+            }
+        }
+    }
+}
