@@ -7,10 +7,7 @@ use palette::rgb::Rgba;
 use thiserror::Error;
 
 use crate::puzzle::{
-    color_scheme::{
-        multi_layer::{Layer, MultiLayerColorScheme},
-        ColorScheme,
-    },
+    color_scheme::{multi_layer::MultiLayerColorScheme, ColorScheme},
     size::Size,
 };
 
@@ -75,32 +72,14 @@ impl<S: ColorScheme, List: AsRef<[S]>> SchemeList<S, List> {
     pub fn schemes(&self) -> &[S] {
         self.schemes.as_ref()
     }
-
-    /// Returns the number of schemes in the list.
-    #[must_use]
-    #[expect(
-        clippy::len_without_is_empty,
-        reason = "always non-empty by construction"
-    )]
-    pub fn len(&self) -> usize {
-        self.schemes.as_ref().len()
-    }
-
-    /// Returns the given [`Layer`] of the scheme.
-    pub fn layer(&self, layer: u32) -> Layer<&Self> {
-        Layer {
-            scheme: self,
-            layer,
-        }
-    }
 }
 
 impl<S: ColorScheme, List: AsRef<[S]>> MultiLayerColorScheme for SchemeList<S, List> {
     fn num_layers(&self, _size: Size) -> u32 {
-        self.len() as u32
+        self.schemes().len() as u32
     }
 
     fn color(&self, size: Size, pos: (u64, u64), layer: u32) -> Rgba {
-        self.layer(layer).color(size, pos)
+        self.schemes()[layer as usize].color(size, pos)
     }
 }

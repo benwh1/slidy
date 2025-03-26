@@ -4,10 +4,7 @@
 use palette::rgb::Rgba;
 
 use crate::puzzle::{
-    color_scheme::{
-        multi_layer::{Layer, MultiLayerColorScheme},
-        ColorScheme,
-    },
+    color_scheme::{multi_layer::MultiLayerColorScheme, ColorScheme},
     coloring::Coloring,
     size::Size,
 };
@@ -78,11 +75,6 @@ impl<S: ColorScheme, C: Coloring> BalancedSplitScheme<S, C> {
     /// The way that grids are split.
     pub fn splitting(&self) -> Splitting {
         self.splitting
-    }
-
-    /// Returns a [`Layer`] of the color scheme corresponding to the given layer index.
-    pub fn layer(&self, layer: u32) -> Layer<&Self> {
-        Layer::new(self, layer)
     }
 }
 

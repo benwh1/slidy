@@ -1,7 +1,6 @@
 //! Defines the [`MultiLayerColorScheme`] trait, representing a color scheme with multiple
 //! "layers" of color schemes.
 
-use blanket::blanket;
 use palette::rgb::Rgba;
 use thiserror::Error;
 
@@ -30,7 +29,6 @@ pub enum MultiLayerColorSchemeError {
 }
 
 /// Similar to [`ColorScheme`], but with multiple "layers" of color schemes.
-#[blanket(derive(Ref, Rc, Arc, Mut))]
 pub trait MultiLayerColorScheme {
     /// Returns the number of layers in the color scheme.
     #[must_use]
@@ -59,23 +57,27 @@ pub trait MultiLayerColorScheme {
             Ok(self.color(size, pos, layer))
         }
     }
+
+    /// Returns the given [`Layer`] of the scheme.
+    fn layer(&self, layer: u32) -> Layer<Self>
+    where
+        Self: Sized,
+    {
+        Layer {
+            scheme: self,
+            layer,
+        }
+    }
 }
 
 /// Represents a single layer of a [`MultiLayerColorScheme`].
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Layer<S> {
-    pub(super) scheme: S,
-    pub(super) layer: u32,
+pub struct Layer<'a, S> {
+    scheme: &'a S,
+    layer: u32,
 }
 
-impl<S: MultiLayerColorScheme> Layer<S> {
-    /// Creates a new [`Layer`] with the given color scheme and layer index.
-    pub fn new(scheme: S, layer: u32) -> Self {
-        Self { scheme, layer }
-    }
-}
-
-impl<S: MultiLayerColorScheme> ColorScheme for Layer<S> {
+impl<S: MultiLayerColorScheme> ColorScheme for Layer<'_, S> {
     fn color(&self, size: Size, pos: (u64, u64)) -> Rgba {
         self.scheme.color(size, pos, self.layer)
     }
