@@ -95,7 +95,7 @@ impl<S: ColorScheme, C: Coloring> MultiLayerColorScheme for BalancedSplitScheme<
         }
 
         match self.splitting {
-            Splitting::UpDown { .. } | Splitting::LeftRight { .. } => w_layers + h_layers,
+            Splitting::UpDown { .. } | Splitting::LeftRight { .. } => w_layers + h_layers - 1,
             Splitting::Quarters => w_layers.max(h_layers),
         }
     }
