@@ -58,15 +58,15 @@ pub trait MultiLayerColorScheme {
         }
     }
 
-    /// Returns the given [`Layer`] of the scheme.
-    fn layer(&self, layer: u32) -> Layer<Self>
+    /// Returns the given [`Layer`] of the scheme, if it exists.
+    fn layer(&self, size: Size, layer: u32) -> Option<Layer<Self>>
     where
         Self: Sized,
     {
-        Layer {
+        (layer < self.num_layers(size)).then_some(Layer {
             scheme: self,
             layer,
-        }
+        })
     }
 }
 
