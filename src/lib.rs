@@ -35,16 +35,22 @@
 //!     size::Size,
 //! };
 //!
+//! # #[cfg(feature = "thread_rng")]
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     let mut p = Puzzle::new(Size::new(5, 5)?);
 //!
 //!     for _ in 0..10 {
+//!         // Requires the `thread_rng` feature to be enabled.
+//!         // Otherwise, `scramble_with_rng` can be used with a custom `Rng`.
 //!         RandomState.scramble(&mut p);
 //!         println!("{p}");
 //!     }
 //!
 //!     Ok(())
 //! }
+//!
+//! # #[cfg(not(feature = "thread_rng"))]
+//! # fn main() {}
 //! ```
 //!
 //! ## Find an optimal solution

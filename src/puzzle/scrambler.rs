@@ -17,11 +17,13 @@ pub trait Scrambler {
     fn is_valid_size(&self, size: Size) -> bool;
 
     /// Equivalent to [`Scrambler::try_scramble_with_rng`] using [`rand::rng`].
+    #[cfg(feature = "thread_rng")]
     fn try_scramble<P: SlidingPuzzle>(&self, puzzle: &mut P) -> bool {
         self.try_scramble_with_rng(puzzle, &mut rand::rng())
     }
 
     /// Equivalent to [`Scrambler::scramble_with_rng`] using [`rand::rng`].
+    #[cfg(feature = "thread_rng")]
     fn scramble<P: SlidingPuzzle>(&self, puzzle: &mut P) {
         self.scramble_with_rng(puzzle, &mut rand::rng());
     }
@@ -187,18 +189,27 @@ mod tests {
     use super::*;
 
     mod random_state {
+        use rand::SeedableRng;
+        use rand_xoshiro::Xoroshiro128StarStar;
+
         use crate::puzzle::{label::label::RowGrids, solvable::Solvable as _};
 
         use super::*;
 
+        const SEED: [u8; 16] = [
+            160, 108, 126, 255, 147, 210, 122, 252, 71, 77, 144, 13, 167, 11, 225, 93,
+        ];
+
         #[test]
         fn test_solvable() {
+            let mut rng = Xoroshiro128StarStar::from_seed(SEED);
+
             for (w, h) in [(1, 1), (1, 4), (4, 1), (2, 2), (4, 4), (10, 2), (20, 20)] {
                 let mut p = Puzzle::new(Size::new(w, h).unwrap());
                 let x = RandomState;
                 for _ in 0..100 {
                     p.reset();
-                    x.scramble(&mut p);
+                    x.scramble_with_rng(&mut p, &mut rng);
                     assert!(RowGrids::is_solvable(&p));
                 }
             }
