@@ -9,8 +9,12 @@ use crate::puzzle::{
     size::Size,
 };
 
+#[cfg(feature = "serde")]
+use serde_derive::{Deserialize, Serialize};
+
 /// Ways of splitting the puzzle.
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Splitting {
     /// Prioritizes splitting the puzzle into the top and bottom halves.
     UpDown {
@@ -34,6 +38,7 @@ pub enum Splitting {
 /// A [`MultiLayerColorScheme`] that repeatedly splits the puzzle until reaching the minimum
 /// splitting size.
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct BalancedSplitScheme<S, C> {
     small_scheme: S,
     grid_coloring: C,
