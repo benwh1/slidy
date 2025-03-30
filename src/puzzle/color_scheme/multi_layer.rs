@@ -70,6 +70,67 @@ pub trait MultiLayerColorScheme {
     }
 }
 
+/// A [`MultiLayerColorScheme`] that is defined for a puzzle of a single size.
+pub trait FixedSizeMultiLayerColorScheme {
+    /// Returns the [`Size`] of the puzzle that this label is defined for.
+    #[must_use]
+    fn size(&self) -> Size;
+
+    /// See [`MultiLayerColorScheme::num_layers`].
+    #[must_use]
+    fn num_layers(&self) -> u32;
+
+    /// See [`MultiLayerColorScheme::color`].
+    #[must_use]
+    fn color(&self, pos: (u64, u64), layer: u32) -> Rgba;
+
+    /// See [`MultiLayerColorScheme::try_color`].
+    fn try_color(&self, pos: (u64, u64), layer: u32) -> Result<Rgba, MultiLayerColorSchemeError> {
+        let size = self.size();
+
+        if !size.is_within_bounds(pos) {
+            Err(ColorSchemeError::PositionOutOfBounds { size, pos })?
+        } else if layer >= self.num_layers() {
+            Err(MultiLayerColorSchemeError::LayerOutOfBounds { layer })
+        } else {
+            Ok(self.color(pos, layer))
+        }
+    }
+
+    /// See [`MultiLayerColorScheme::layer`].
+    fn layer(&self, layer: u32) -> Option<Layer<Self>>
+    where
+        Self: Sized,
+    {
+        (layer < self.num_layers()).then_some(Layer {
+            scheme: self,
+            layer,
+        })
+    }
+}
+
+/// A [`MultiLayerColorScheme`] restricted to a single size.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct FixedSize<S: MultiLayerColorScheme> {
+    scheme: S,
+    size: Size,
+}
+
+impl<S: MultiLayerColorScheme> FixedSizeMultiLayerColorScheme for FixedSize<S> {
+    fn size(&self) -> Size {
+        self.size
+    }
+
+    fn num_layers(&self) -> u32 {
+        self.scheme.num_layers(self.size)
+    }
+
+    fn color(&self, pos: (u64, u64), layer: u32) -> Rgba {
+        self.scheme.color(self.size, pos, layer)
+    }
+}
+
 /// Represents a single layer of a [`MultiLayerColorScheme`].
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Layer<'a, S> {

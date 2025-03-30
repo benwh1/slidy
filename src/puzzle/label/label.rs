@@ -52,6 +52,32 @@ pub trait Label {
     fn num_labels(&self, size: Size) -> u64;
 }
 
+/// A [`Label`] that is defined for a puzzle of a single size.
+pub trait FixedSizeLabel {
+    /// Returns the [`Size`] of the puzzle that this label is defined for.
+    #[must_use]
+    fn size(&self) -> Size;
+
+    /// See [`Label::position_label`].
+    #[must_use]
+    fn position_label(&self, pos: (u64, u64)) -> u64;
+
+    /// See [`Label::try_position_label`].
+    fn try_position_label(&self, pos: (u64, u64)) -> Result<u64, LabelError> {
+        let size = self.size();
+
+        if size.is_within_bounds(pos) {
+            Ok(self.position_label(pos))
+        } else {
+            Err(LabelError::PositionOutOfBounds { size, pos })
+        }
+    }
+
+    /// See [`Label::num_labels`].
+    #[must_use]
+    fn num_labels(&self) -> u64;
+}
+
 impl<T: Label + ?Sized> Label for Box<T> {
     fn position_label(&self, size: Size, pos: (u64, u64)) -> u64 {
         (**self).position_label(size, pos)
@@ -59,6 +85,42 @@ impl<T: Label + ?Sized> Label for Box<T> {
 
     fn num_labels(&self, size: Size) -> u64 {
         (**self).num_labels(size)
+    }
+}
+
+impl<T: FixedSizeLabel + ?Sized> FixedSizeLabel for Box<T> {
+    fn size(&self) -> Size {
+        (**self).size()
+    }
+
+    fn position_label(&self, pos: (u64, u64)) -> u64 {
+        (**self).position_label(pos)
+    }
+
+    fn num_labels(&self) -> u64 {
+        (**self).num_labels()
+    }
+}
+
+/// A [`Label`] restricted to a single size.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct FixedSize<L: Label> {
+    label: L,
+    size: Size,
+}
+
+impl<L: Label> FixedSizeLabel for FixedSize<L> {
+    fn size(&self) -> Size {
+        self.size
+    }
+
+    fn position_label(&self, pos: (u64, u64)) -> u64 {
+        self.label.position_label(self.size, pos)
+    }
+
+    fn num_labels(&self) -> u64 {
+        self.label.num_labels(self.size)
     }
 }
 

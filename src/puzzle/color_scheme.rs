@@ -48,9 +48,60 @@ pub trait ColorScheme {
     }
 }
 
+/// A [`ColorScheme`] that is defined for a puzzle of a single size.
+#[blanket(derive(Ref, Rc, Arc, Mut))]
+pub trait FixedSizeColorScheme {
+    /// Returns the [`Size`] of the puzzle that this label is defined for.
+    #[must_use]
+    fn size(&self) -> Size;
+
+    /// See [`ColorScheme::color`].
+    #[must_use]
+    fn color(&self, pos: (u64, u64)) -> Rgba;
+
+    /// See [`ColorScheme::try_color`].
+    fn try_color(&self, pos: (u64, u64)) -> Result<Rgba, ColorSchemeError> {
+        let size = self.size();
+
+        if size.is_within_bounds(pos) {
+            Ok(self.color(pos))
+        } else {
+            Err(ColorSchemeError::PositionOutOfBounds { size, pos })
+        }
+    }
+}
+
 impl<T: ColorScheme + ?Sized> ColorScheme for Box<T> {
     fn color(&self, size: Size, pos: (u64, u64)) -> Rgba {
         (**self).color(size, pos)
+    }
+}
+
+impl<T: FixedSizeColorScheme + ?Sized> FixedSizeColorScheme for Box<T> {
+    fn size(&self) -> Size {
+        (**self).size()
+    }
+
+    fn color(&self, pos: (u64, u64)) -> Rgba {
+        (**self).color(pos)
+    }
+}
+
+/// A [`ColorScheme`] restricted to a single size.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct FixedSize<C: ColorScheme> {
+    scheme: C,
+    size: Size,
+}
+
+impl<C: ColorScheme> FixedSizeColorScheme for FixedSize<C> {
+    fn size(&self) -> Size {
+        self.size
+    }
+
+    fn color(&self, pos: (u64, u64)) -> Rgba {
+        self.scheme.color(self.size, pos)
     }
 }
 
