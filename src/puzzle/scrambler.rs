@@ -189,7 +189,7 @@ mod tests {
     use super::*;
 
     mod random_state {
-        use rand::SeedableRng;
+        use rand::SeedableRng as _;
         use rand_xoshiro::Xoroshiro128StarStar;
 
         use crate::puzzle::{label::label::RowGrids, solvable::Solvable as _};

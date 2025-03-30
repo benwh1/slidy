@@ -65,13 +65,13 @@ pub trait ColorScheme {
     }
 }
 
-impl<'a, C: ColorScheme> ColorScheme for &'a C {
+impl<C: ColorScheme> ColorScheme for &C {
     fn color(&self, size: Size, pos: (u64, u64)) -> Rgba {
         (**self).color(size, pos)
     }
 }
 
-impl<'a, C: ColorScheme> ColorScheme for &'a mut C {
+impl<C: ColorScheme> ColorScheme for &mut C {
     fn color(&self, size: Size, pos: (u64, u64)) -> Rgba {
         (**self).color(size, pos)
     }
@@ -105,7 +105,7 @@ pub trait FixedSizeColorScheme {
     }
 }
 
-impl<'a, C: FixedSizeColorScheme> FixedSizeColorScheme for &'a C {
+impl<C: FixedSizeColorScheme> FixedSizeColorScheme for &C {
     fn size(&self) -> Size {
         (**self).size()
     }
@@ -115,7 +115,7 @@ impl<'a, C: FixedSizeColorScheme> FixedSizeColorScheme for &'a C {
     }
 }
 
-impl<'a, C: FixedSizeColorScheme> FixedSizeColorScheme for &'a mut C {
+impl<C: FixedSizeColorScheme> FixedSizeColorScheme for &mut C {
     fn size(&self) -> Size {
         (**self).size()
     }
