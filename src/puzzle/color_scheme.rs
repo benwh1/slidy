@@ -143,6 +143,18 @@ pub struct FixedSize<C: ColorScheme> {
     size: Size,
 }
 
+impl<C: ColorScheme> FixedSize<C> {
+    /// Returns a reference to the inner [`ColorScheme`].
+    pub fn inner(&self) -> &C {
+        &self.scheme
+    }
+
+    /// Extracts the inner [`ColorScheme`], consuming `self`.
+    pub fn into_inner(self) -> C {
+        self.scheme
+    }
+}
+
 impl<C: ColorScheme> FixedSizeColorScheme for FixedSize<C> {
     fn size(&self) -> Size {
         self.size

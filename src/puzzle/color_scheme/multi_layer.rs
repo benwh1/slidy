@@ -208,6 +208,18 @@ pub struct FixedSize<S: MultiLayerColorScheme> {
     size: Size,
 }
 
+impl<S: MultiLayerColorScheme> FixedSize<S> {
+    /// Returns a reference to the inner [`MultiLayerColorScheme`].
+    pub fn inner(&self) -> &S {
+        &self.scheme
+    }
+
+    /// Extracts the inner [`MultiLayerColorScheme`], consuming `self`.
+    pub fn into_inner(self) -> S {
+        self.scheme
+    }
+}
+
 impl<S: MultiLayerColorScheme> FixedSizeMultiLayerColorScheme for FixedSize<S> {
     fn size(&self) -> Size {
         self.size
