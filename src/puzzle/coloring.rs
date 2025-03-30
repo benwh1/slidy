@@ -2,7 +2,6 @@
 
 use std::cmp::Ordering;
 
-use blanket::blanket;
 use enterpolation::{
     linear::{Linear, LinearError},
     Curve, Identity, Sorted,
@@ -16,7 +15,6 @@ use serde_derive::{Deserialize, Serialize};
 /// Provides a function mapping labels to colors.
 ///
 /// See also: [`crate::puzzle::label::label::Label`].
-#[blanket(derive(Ref, Rc, Arc, Mut))]
 pub trait Coloring {
     /// Returns a color based on a label and the total number of labels, or `None` if `label` is
     /// out of bounds (i.e. `label >= num_labels`).
@@ -33,7 +31,19 @@ pub trait Coloring {
     }
 }
 
-impl<T: Coloring + ?Sized> Coloring for Box<T> {
+impl<'a, C: Coloring> Coloring for &'a C {
+    fn color(&self, label: u64, num_labels: u64) -> Rgba {
+        (**self).color(label, num_labels)
+    }
+}
+
+impl<'a, C: Coloring> Coloring for &'a mut C {
+    fn color(&self, label: u64, num_labels: u64) -> Rgba {
+        (**self).color(label, num_labels)
+    }
+}
+
+impl<C: Coloring + ?Sized> Coloring for Box<C> {
     fn color(&self, label: u64, num_labels: u64) -> Rgba {
         (**self).color(label, num_labels)
     }
