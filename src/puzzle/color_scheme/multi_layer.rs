@@ -59,7 +59,7 @@ pub trait MultiLayerColorScheme {
     }
 
     /// Returns the given [`Layer`] of the scheme, if it exists.
-    fn layer(&self, size: Size, layer: u32) -> Option<Layer<Self>>
+    fn layer(&self, size: Size, layer: u32) -> Option<Layer<&Self>>
     where
         Self: Sized,
     {
@@ -147,7 +147,7 @@ pub trait FixedSizeMultiLayerColorScheme {
     }
 
     /// See [`MultiLayerColorScheme::layer`].
-    fn layer(&self, layer: u32) -> Option<Layer<Self>>
+    fn layer(&self, layer: u32) -> Option<Layer<&Self>>
     where
         Self: Sized,
     {
@@ -224,12 +224,12 @@ impl<S: MultiLayerColorScheme> FixedSizeMultiLayerColorScheme for FixedSize<S> {
 
 /// Represents a single layer of a [`MultiLayerColorScheme`].
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Layer<'a, S> {
-    scheme: &'a S,
+pub struct Layer<S> {
+    scheme: S,
     layer: u32,
 }
 
-impl<S: MultiLayerColorScheme> ColorScheme for Layer<'_, S> {
+impl<S: MultiLayerColorScheme> ColorScheme for Layer<S> {
     fn color(&self, size: Size, pos: (u64, u64)) -> Rgba {
         self.scheme.color(size, pos, self.layer)
     }
