@@ -174,6 +174,7 @@ pub struct FixedSize<L: Label> {
     label: L,
     size: Size,
 }
+
 impl<L: Label> FixedSize<L> {
     /// Returns a reference to the inner [`Label`].
     pub fn inner(&self) -> &L {
