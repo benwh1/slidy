@@ -140,10 +140,8 @@
 
 #![cfg_attr(feature = "nightly", feature(test))]
 #![allow(clippy::module_inception)]
-#![deny(clippy::allow_attributes)]
 #![deny(clippy::as_pointer_underscore)]
 #![deny(clippy::as_ptr_cast_mut)]
-#![deny(clippy::assertions_on_result_states)]
 #![deny(clippy::bool_to_int_with_if)]
 #![deny(clippy::borrow_as_ptr)]
 #![deny(clippy::branches_sharing_code)]
