@@ -5,7 +5,6 @@ pub mod multi_layer;
 pub mod scheme_list;
 pub mod tiled;
 
-use blanket::blanket;
 use palette::rgb::Rgba;
 use thiserror::Error;
 
@@ -29,7 +28,6 @@ pub enum ColorSchemeError {
 }
 
 /// Provides a function mapping `(x, y)` coordinate on a puzzle to a color.
-#[blanket(derive(Ref, Rc, Arc, Mut))]
 pub trait ColorScheme {
     /// See [`ColorScheme::try_color`].
     ///
@@ -46,10 +44,46 @@ pub trait ColorScheme {
             Err(ColorSchemeError::PositionOutOfBounds { size, pos })
         }
     }
+
+    /// Restricts the [`ColorScheme`] to a single size.
+    #[must_use]
+    fn fixed_size(self, size: Size) -> FixedSize<Self>
+    where
+        Self: Sized,
+    {
+        FixedSize { scheme: self, size }
+    }
+
+    /// Restricts the [`ColorScheme`] to a single size, holding a reference to the inner scheme
+    /// rather than taking ownership.
+    #[must_use]
+    fn fixed_size_ref(&self, size: Size) -> FixedSize<&Self>
+    where
+        Self: Sized,
+    {
+        FixedSize { scheme: self, size }
+    }
+}
+
+impl<'a, C: ColorScheme> ColorScheme for &'a C {
+    fn color(&self, size: Size, pos: (u64, u64)) -> Rgba {
+        (**self).color(size, pos)
+    }
+}
+
+impl<'a, C: ColorScheme> ColorScheme for &'a mut C {
+    fn color(&self, size: Size, pos: (u64, u64)) -> Rgba {
+        (**self).color(size, pos)
+    }
+}
+
+impl<C: ColorScheme + ?Sized> ColorScheme for Box<C> {
+    fn color(&self, size: Size, pos: (u64, u64)) -> Rgba {
+        (**self).color(size, pos)
+    }
 }
 
 /// A [`ColorScheme`] that is defined for a puzzle of a single size.
-#[blanket(derive(Ref, Rc, Arc, Mut))]
 pub trait FixedSizeColorScheme {
     /// Returns the [`Size`] of the puzzle that this label is defined for.
     #[must_use]
@@ -71,13 +105,27 @@ pub trait FixedSizeColorScheme {
     }
 }
 
-impl<T: ColorScheme + ?Sized> ColorScheme for Box<T> {
-    fn color(&self, size: Size, pos: (u64, u64)) -> Rgba {
-        (**self).color(size, pos)
+impl<'a, C: FixedSizeColorScheme> FixedSizeColorScheme for &'a C {
+    fn size(&self) -> Size {
+        (**self).size()
+    }
+
+    fn color(&self, pos: (u64, u64)) -> Rgba {
+        (**self).color(pos)
     }
 }
 
-impl<T: FixedSizeColorScheme + ?Sized> FixedSizeColorScheme for Box<T> {
+impl<'a, C: FixedSizeColorScheme> FixedSizeColorScheme for &'a mut C {
+    fn size(&self) -> Size {
+        (**self).size()
+    }
+
+    fn color(&self, pos: (u64, u64)) -> Rgba {
+        (**self).color(pos)
+    }
+}
+
+impl<C: FixedSizeColorScheme + ?Sized> FixedSizeColorScheme for Box<C> {
     fn size(&self) -> Size {
         (**self).size()
     }

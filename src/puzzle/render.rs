@@ -224,10 +224,10 @@ pub enum SubschemeStyle {
 #[derive(Clone, Debug, PartialEq)]
 pub struct RendererBuilder<
     'a,
-    S: ColorScheme = &'a dyn ColorScheme,
-    U: ColorScheme = &'a dyn ColorScheme,
-    T: ColorScheme = &'a dyn ColorScheme,
-    B: ColorScheme = &'a dyn ColorScheme,
+    S: ColorScheme = Box<dyn ColorScheme + 'a>,
+    U: ColorScheme = Box<dyn ColorScheme + 'a>,
+    T: ColorScheme = Box<dyn ColorScheme + 'a>,
+    B: ColorScheme = Box<dyn ColorScheme + 'a>,
 > {
     scheme: S,
     subscheme: Option<U>,
@@ -245,10 +245,10 @@ pub struct RendererBuilder<
 #[derive(Clone, Debug, PartialEq)]
 pub struct Renderer<
     'a,
-    S: ColorScheme = &'a dyn ColorScheme,
-    U: ColorScheme = &'a dyn ColorScheme,
-    T: ColorScheme = &'a dyn ColorScheme,
-    B: ColorScheme = &'a dyn ColorScheme,
+    S: ColorScheme = Box<dyn ColorScheme + 'a>,
+    U: ColorScheme = Box<dyn ColorScheme + 'a>,
+    T: ColorScheme = Box<dyn ColorScheme + 'a>,
+    B: ColorScheme = Box<dyn ColorScheme + 'a>,
 >(RendererBuilder<'a, S, U, T, B>);
 
 impl<'a, S: ColorScheme, U: ColorScheme, T: ColorScheme, B: ColorScheme> Deref
@@ -264,7 +264,7 @@ impl<'a, S: ColorScheme, U: ColorScheme, T: ColorScheme, B: ColorScheme> Deref
 impl<'a> RendererBuilder<'a> {
     /// Create a new [`RendererBuilder`] with the default color scheme.
     #[must_use]
-    pub fn with_dyn_scheme(scheme: &'a dyn ColorScheme) -> Self {
+    pub fn with_dyn_scheme(scheme: Box<dyn ColorScheme + 'a>) -> Self {
         Self::with_scheme(scheme)
     }
 }

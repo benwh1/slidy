@@ -68,6 +68,55 @@ pub trait MultiLayerColorScheme {
             layer,
         })
     }
+
+    /// Restricts the [`MultiLayerColorScheme`] to a single size.
+    #[must_use]
+    fn fixed_size(self, size: Size) -> FixedSize<Self>
+    where
+        Self: Sized,
+    {
+        FixedSize { scheme: self, size }
+    }
+
+    /// Restricts the [`MultiLayerColorScheme`] to a single size, holding a reference to the inner
+    /// scheme rather than taking ownership.
+    #[must_use]
+    fn fixed_size_ref(&self, size: Size) -> FixedSize<&Self>
+    where
+        Self: Sized,
+    {
+        FixedSize { scheme: self, size }
+    }
+}
+
+impl<'a, S: MultiLayerColorScheme> MultiLayerColorScheme for &'a S {
+    fn num_layers(&self, size: Size) -> u32 {
+        (**self).num_layers(size)
+    }
+
+    fn color(&self, size: Size, pos: (u64, u64), layer: u32) -> Rgba {
+        (**self).color(size, pos, layer)
+    }
+}
+
+impl<'a, S: MultiLayerColorScheme> MultiLayerColorScheme for &'a mut S {
+    fn num_layers(&self, size: Size) -> u32 {
+        (**self).num_layers(size)
+    }
+
+    fn color(&self, size: Size, pos: (u64, u64), layer: u32) -> Rgba {
+        (**self).color(size, pos, layer)
+    }
+}
+
+impl<S: MultiLayerColorScheme + ?Sized> MultiLayerColorScheme for Box<S> {
+    fn num_layers(&self, size: Size) -> u32 {
+        (**self).num_layers(size)
+    }
+
+    fn color(&self, size: Size, pos: (u64, u64), layer: u32) -> Rgba {
+        (**self).color(size, pos, layer)
+    }
 }
 
 /// A [`MultiLayerColorScheme`] that is defined for a puzzle of a single size.
@@ -106,6 +155,48 @@ pub trait FixedSizeMultiLayerColorScheme {
             scheme: self,
             layer,
         })
+    }
+}
+
+impl<'a, S: FixedSizeMultiLayerColorScheme> FixedSizeMultiLayerColorScheme for &'a S {
+    fn size(&self) -> Size {
+        (**self).size()
+    }
+
+    fn num_layers(&self) -> u32 {
+        (**self).num_layers()
+    }
+
+    fn color(&self, pos: (u64, u64), layer: u32) -> Rgba {
+        (**self).color(pos, layer)
+    }
+}
+
+impl<'a, S: FixedSizeMultiLayerColorScheme> FixedSizeMultiLayerColorScheme for &'a mut S {
+    fn size(&self) -> Size {
+        (**self).size()
+    }
+
+    fn num_layers(&self) -> u32 {
+        (**self).num_layers()
+    }
+
+    fn color(&self, pos: (u64, u64), layer: u32) -> Rgba {
+        (**self).color(pos, layer)
+    }
+}
+
+impl<S: FixedSizeMultiLayerColorScheme + ?Sized> FixedSizeMultiLayerColorScheme for Box<S> {
+    fn size(&self) -> Size {
+        (**self).size()
+    }
+
+    fn num_layers(&self) -> u32 {
+        (**self).num_layers()
+    }
+
+    fn color(&self, pos: (u64, u64), layer: u32) -> Rgba {
+        (**self).color(pos, layer)
     }
 }
 

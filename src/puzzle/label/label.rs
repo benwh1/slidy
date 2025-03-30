@@ -2,7 +2,6 @@
 
 use std::cmp::Ordering;
 
-use blanket::blanket;
 use thiserror::Error;
 
 use crate::puzzle::size::Size;
@@ -26,7 +25,6 @@ pub enum LabelError {
 
 /// Provides a function mapping an `(x, y)` coordinate on a puzzle to a number which we call the
 /// label of `(x, y)`.
-#[blanket(derive(Ref, Rc, Arc, Mut))]
 pub trait Label {
     /// Returns the label of `(x, y)` on a puzzle of the given size.
     ///
@@ -50,6 +48,55 @@ pub trait Label {
     /// Returns the total number of distinct labels across all `(x, y)` positions in the puzzle.
     #[must_use]
     fn num_labels(&self, size: Size) -> u64;
+
+    /// Restricts the [`Label`] to a single size.
+    #[must_use]
+    fn fixed_size(self, size: Size) -> FixedSize<Self>
+    where
+        Self: Sized,
+    {
+        FixedSize { label: self, size }
+    }
+
+    /// Restricts the [`Label`] to a single size, holding a reference to the inner label rather
+    /// than taking ownership.
+    #[must_use]
+    fn fixed_size_ref(&self, size: Size) -> FixedSize<&Self>
+    where
+        Self: Sized,
+    {
+        FixedSize { label: self, size }
+    }
+}
+
+impl<'a, L: Label> Label for &'a L {
+    fn position_label(&self, size: Size, pos: (u64, u64)) -> u64 {
+        (**self).position_label(size, pos)
+    }
+
+    fn num_labels(&self, size: Size) -> u64 {
+        (**self).num_labels(size)
+    }
+}
+
+impl<'a, L: Label> Label for &'a mut L {
+    fn position_label(&self, size: Size, pos: (u64, u64)) -> u64 {
+        (**self).position_label(size, pos)
+    }
+
+    fn num_labels(&self, size: Size) -> u64 {
+        (**self).num_labels(size)
+    }
+}
+
+impl<L: Label + ?Sized> Label for Box<L> {
+    fn position_label(&self, size: Size, pos: (u64, u64)) -> u64 {
+        (**self).position_label(size, pos)
+    }
+
+    fn num_labels(&self, size: Size) -> u64 {
+        (**self).num_labels(size)
+    }
 }
 
 /// A [`Label`] that is defined for a puzzle of a single size.
@@ -78,17 +125,35 @@ pub trait FixedSizeLabel {
     fn num_labels(&self) -> u64;
 }
 
-impl<T: Label + ?Sized> Label for Box<T> {
-    fn position_label(&self, size: Size, pos: (u64, u64)) -> u64 {
-        (**self).position_label(size, pos)
+impl<'a, L: FixedSizeLabel> FixedSizeLabel for &'a L {
+    fn size(&self) -> Size {
+        (**self).size()
     }
 
-    fn num_labels(&self, size: Size) -> u64 {
-        (**self).num_labels(size)
+    fn position_label(&self, pos: (u64, u64)) -> u64 {
+        (**self).position_label(pos)
+    }
+
+    fn num_labels(&self) -> u64 {
+        (**self).num_labels()
     }
 }
 
-impl<T: FixedSizeLabel + ?Sized> FixedSizeLabel for Box<T> {
+impl<'a, L: FixedSizeLabel> FixedSizeLabel for &'a mut L {
+    fn size(&self) -> Size {
+        (**self).size()
+    }
+
+    fn position_label(&self, pos: (u64, u64)) -> u64 {
+        (**self).position_label(pos)
+    }
+
+    fn num_labels(&self) -> u64 {
+        (**self).num_labels()
+    }
+}
+
+impl<L: FixedSizeLabel + ?Sized> FixedSizeLabel for Box<L> {
     fn size(&self) -> Size {
         (**self).size()
     }
