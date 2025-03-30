@@ -83,3 +83,9 @@ impl<S: ColorScheme, List: AsRef<[S]>> MultiLayerColorScheme for SchemeList<S, L
         self.schemes()[layer as usize].color(size, pos)
     }
 }
+
+impl<S: ColorScheme> From<S> for SchemeList<S, Vec<S>> {
+    fn from(scheme: S) -> Self {
+        Self::new(vec![scheme]).unwrap()
+    }
+}
