@@ -5,7 +5,7 @@ use palette::rgb::Rgba;
 use thiserror::Error;
 
 use crate::puzzle::{
-    color_scheme::{ColorScheme, ColorSchemeError},
+    color_scheme::{ColorScheme, ColorSchemeError, FixedSizeColorScheme},
     size::Size,
 };
 
@@ -232,5 +232,15 @@ pub struct Layer<S> {
 impl<S: MultiLayerColorScheme> ColorScheme for Layer<S> {
     fn color(&self, size: Size, pos: (u64, u64)) -> Rgba {
         self.scheme.color(size, pos, self.layer)
+    }
+}
+
+impl<S: FixedSizeMultiLayerColorScheme> FixedSizeColorScheme for Layer<S> {
+    fn size(&self) -> Size {
+        self.scheme.size()
+    }
+
+    fn color(&self, pos: (u64, u64)) -> Rgba {
+        self.scheme.color(pos, self.layer)
     }
 }
