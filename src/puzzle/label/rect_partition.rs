@@ -19,6 +19,8 @@ pub enum RectError {
 }
 
 /// A rectangle on a grid of squares, with x increasing to the right and y increasing downwards.
+/// The rectangle contains the top and left edges, but does not contain the bottom and right edges,
+/// so the width is `right - left` and the height is `bottom - top`.
 ///
 /// Used to define a [`RectPartition`].
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -93,10 +95,28 @@ impl Rect {
         self.left <= x && x < self.right && self.top <= y && y < self.bottom
     }
 
-    /// The top left corner
+    /// The y-coordinate of the top edge of the rectangle.
     #[must_use]
-    pub fn top_left(&self) -> (u64, u64) {
-        (self.left, self.top)
+    pub fn top(&self) -> u64 {
+        self.top
+    }
+
+    /// The x-coordinate of the left edge of the rectangle.
+    #[must_use]
+    pub fn left(&self) -> u64 {
+        self.left
+    }
+
+    /// The y-coordinate of the bottom edge of the rectangle.
+    #[must_use]
+    pub fn bottom(&self) -> u64 {
+        self.bottom
+    }
+
+    /// The x-coordinate of the right edge of the rectangle.
+    #[must_use]
+    pub fn right(&self) -> u64 {
+        self.right
     }
 
     /// Size of the rectangle in the form `(width, height)`.
