@@ -241,6 +241,18 @@ pub struct Layer<S> {
     layer: u32,
 }
 
+impl<S: MultiLayerColorScheme> Layer<S> {
+    /// Returns a reference to the inner [`MultiLayerColorScheme`].
+    pub fn scheme(&self) -> &S {
+        &self.scheme
+    }
+
+    /// Returns the index of the layer that this [`Layer`] represents.
+    pub fn layer(&self) -> u32 {
+        self.layer
+    }
+}
+
 impl<S: MultiLayerColorScheme> ColorScheme for Layer<S> {
     fn color(&self, size: Size, pos: (u64, u64)) -> Rgba {
         self.scheme.color(size, pos, self.layer)
