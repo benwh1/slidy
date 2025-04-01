@@ -6,6 +6,7 @@
 pub mod color_scheme;
 pub mod coloring;
 pub mod display;
+pub mod grids;
 pub mod label;
 pub mod puzzle;
 pub mod render;

@@ -4,8 +4,13 @@
 use palette::rgb::Rgba;
 
 use crate::puzzle::{
-    color_scheme::{multi_layer::MultiLayerColorScheme, ColorScheme},
+    color_scheme::{
+        multi_layer::{Layer, MultiLayerColorScheme},
+        ColorScheme,
+    },
     coloring::Coloring,
+    grids::Grids,
+    label::rect_partition::Rect,
     size::Size,
 };
 
@@ -198,6 +203,82 @@ impl<S: ColorScheme, C: Coloring> MultiLayerColorScheme for BalancedSplitScheme<
         };
 
         self.grid_coloring.color(label, num_labels)
+    }
+}
+
+impl<S: ColorScheme, C: Coloring> Grids for Layer<BalancedSplitScheme<S, C>> {
+    fn grid_containing_pos(&self, size: Size, pos: (u64, u64)) -> Rect {
+        let (width, height) = size.into();
+        let (x, y) = pos;
+        let (min_split_width, min_split_height) = self.scheme().minimum_splitting_size();
+
+        let (mut left, mut top, mut right, mut bottom) = (0, 0, width, height);
+
+        let mut split_width;
+        let mut split_height;
+
+        for _ in 0..self.layer() + 1 {
+            split_width = false;
+            split_height = false;
+
+            match self.scheme().splitting() {
+                Splitting::UpDown { cutoff_fraction } => {
+                    let aspect_ratio = height as f32 / width as f32;
+
+                    if aspect_ratio >= cutoff_fraction && height >= min_split_height {
+                        split_height = true;
+                    } else {
+                        split_width = true;
+                    }
+                }
+                Splitting::LeftRight { cutoff_fraction } => {
+                    let aspect_ratio = width as f32 / height as f32;
+
+                    if aspect_ratio >= cutoff_fraction && width >= min_split_width {
+                        split_width = true;
+                    } else {
+                        split_height = true;
+                    }
+                }
+                Splitting::Quarters => {
+                    if width >= min_split_width {
+                        split_width = true;
+                    }
+
+                    if height >= min_split_height {
+                        split_height = true;
+                    }
+                }
+            }
+
+            if width < min_split_width {
+                split_width = false;
+            }
+
+            if height < min_split_height {
+                split_height = false;
+            }
+
+            if split_width {
+                let half = width.div_ceil(2);
+                if x < half {
+                    right = half;
+                } else {
+                    left = half;
+                }
+            }
+
+            if split_height {
+                let half = height.div_ceil(2);
+                if y < half {
+                    bottom = half;
+                } else {
+                    top = half;
+                }
+            }
+        }
+
+        Rect::new((left, top), (right, bottom)).unwrap()
     }
 }
 

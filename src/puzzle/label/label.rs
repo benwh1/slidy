@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 
 use thiserror::Error;
 
-use crate::puzzle::size::Size;
+use crate::puzzle::{grids::Grids, label::rect_partition::Rect, size::Size};
 
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
@@ -554,6 +554,18 @@ impl Label for Checkerboard {
         2
     }
 }
+
+macro_rules! trivial_grids {
+    ($($name:ident),* $(,)?) => {
+        $(impl Grids for $name {
+            fn grid_containing_pos(&self, _size: Size, pos: (u64, u64)) -> Rect {
+                Rect::new(pos, (pos.0 + 1, pos.1 + 1)).unwrap()
+            }
+        })*
+    };
+}
+
+trivial_grids!(RowGrids, FringeGrids, SpiralGrids);
 
 #[cfg(test)]
 mod tests {

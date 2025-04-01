@@ -2,7 +2,9 @@
 
 use palette::rgb::Rgba;
 
-use crate::puzzle::{color_scheme::ColorScheme, label::rect_partition::Rect, size::Size};
+use crate::puzzle::{
+    color_scheme::ColorScheme, grids::Grids, label::rect_partition::Rect, size::Size,
+};
 
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
@@ -131,7 +133,7 @@ impl<C: ColorScheme> RecursiveTiled<C> {
         }
     }
 
-    fn grid_containing_position_helper(
+    fn grid_containing_pos_helper(
         &self,
         (x, y): (u64, u64),
         (width, height): (u64, u64),
@@ -160,7 +162,7 @@ impl<C: ColorScheme> RecursiveTiled<C> {
 
                 let (x, y) = (x % grid_width, y % grid_height);
 
-                self.grid_containing_position_helper(
+                self.grid_containing_pos_helper(
                     (x, y),
                     (subgrid_width, subgrid_height),
                     (left + grid_x * grid_width, top + grid_y * grid_height),
@@ -169,16 +171,17 @@ impl<C: ColorScheme> RecursiveTiled<C> {
             },
         )
     }
-
-    /// Returns the grid containing the piece at position `pos`.
-    pub fn grid_containing_position(&self, size: Size, pos: (u64, u64)) -> Rect {
-        self.grid_containing_position_helper(pos, size.into(), (0, 0), 0)
-    }
 }
 
 impl<C: ColorScheme> ColorScheme for RecursiveTiled<C> {
     fn color(&self, size: Size, pos: (u64, u64)) -> Rgba {
         self.color_helper(size, pos, 0)
+    }
+}
+
+impl<S: ColorScheme> Grids for RecursiveTiled<S> {
+    fn grid_containing_pos(&self, size: Size, pos: (u64, u64)) -> Rect {
+        self.grid_containing_pos_helper(pos, size.into(), (0, 0), 0)
     }
 }
 
@@ -254,7 +257,7 @@ mod tests {
     }
 
     #[test]
-    fn test_grid_containing_position() {
+    fn test_grid_containing_pos() {
         let color_scheme = Scheme::new(RowGrids, Rainbow::default());
         let size = Size::new(12, 7).unwrap();
         let rec = RecursiveTiled::new(
@@ -301,7 +304,7 @@ mod tests {
         for y in 0..7 {
             for x in 0..12 {
                 assert_eq!(
-                    rec.grid_containing_position(size, (x, y)),
+                    rec.grid_containing_pos(size, (x, y)),
                     rects[grid[(x + y * 12) as usize]].clone(),
                 );
             }

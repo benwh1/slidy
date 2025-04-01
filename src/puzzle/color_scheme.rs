@@ -8,7 +8,12 @@ pub mod tiled;
 use palette::rgb::Rgba;
 use thiserror::Error;
 
-use crate::puzzle::{coloring::Coloring, label::label::Label, size::Size};
+use crate::puzzle::{
+    coloring::Coloring,
+    grids::Grids,
+    label::{label::Label, rect_partition::Rect},
+    size::Size,
+};
 
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
@@ -198,6 +203,12 @@ impl<L: Label, C: Coloring> ColorScheme for Scheme<L, C> {
         let label = self.label.position_label(size, pos);
         let num_labels = self.label.num_labels(size);
         self.coloring.color(label, num_labels)
+    }
+}
+
+impl<L: Label + Grids, C: Coloring> Grids for Scheme<L, C> {
+    fn grid_containing_pos(&self, size: Size, pos: (u64, u64)) -> Rect {
+        self.label().grid_containing_pos(size, pos)
     }
 }
 

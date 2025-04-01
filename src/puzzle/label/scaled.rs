@@ -2,7 +2,11 @@
 
 use thiserror::Error;
 
-use crate::puzzle::{label::label::Label, size::Size};
+use crate::puzzle::{
+    grids::Grids,
+    label::{label::Label, rect_partition::Rect},
+    size::Size,
+};
 
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
@@ -95,6 +99,24 @@ impl<L: Label> Label for Scaled<L> {
         Size::new(sw, sh)
             .map(|size| self.label.num_labels(size))
             .unwrap_or_default()
+    }
+}
+
+impl<L: Label + Grids> Grids for Scaled<L> {
+    fn grid_containing_pos(&self, size: Size, pos: (u64, u64)) -> Rect {
+        let (sx, sy) = self.scale();
+        let rect = self
+            .inner()
+            .grid_containing_pos(size, (pos.0 / sx, pos.1 / sy));
+
+        Rect::new(
+            (rect.left() * sx, rect.top() * sy),
+            (
+                (rect.right() * sx).min(size.width()),
+                (rect.bottom() * sy).min(size.height()),
+            ),
+        )
+        .unwrap()
     }
 }
 
