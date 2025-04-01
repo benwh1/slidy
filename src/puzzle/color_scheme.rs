@@ -1,4 +1,4 @@
-//! Defines the [`ColorScheme`] trait.
+//! Defines the [`ColorScheme`] trait, and some related traits and implementations.
 
 pub mod balanced_split;
 pub mod multi_layer;
