@@ -208,6 +208,12 @@ impl<S: ColorScheme, C: Coloring> MultiLayerColorScheme for BalancedSplitScheme<
 
 impl<S: ColorScheme, C: Coloring> Grids for Layer<BalancedSplitScheme<S, C>> {
     fn grid_containing_pos(&self, size: Size, pos: (u64, u64)) -> Rect {
+        self.as_ref().grid_containing_pos(size, pos)
+    }
+}
+
+impl<S: ColorScheme, C: Coloring> Grids for Layer<&BalancedSplitScheme<S, C>> {
+    fn grid_containing_pos(&self, size: Size, pos: (u64, u64)) -> Rect {
         let (width, height) = size.into();
         let (x, y) = pos;
         let (min_split_width, min_split_height) = self.scheme().minimum_splitting_size();

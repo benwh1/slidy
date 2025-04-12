@@ -251,6 +251,15 @@ impl<S: MultiLayerColorScheme> Layer<S> {
     pub fn layer(&self) -> u32 {
         self.layer
     }
+
+    /// Creates a [`Layer`] from `self`, holding a reference to the inner scheme rather than taking
+    /// ownership.
+    pub fn as_ref(&self) -> Layer<&S> {
+        Layer {
+            scheme: &self.scheme,
+            layer: self.layer,
+        }
+    }
 }
 
 impl<S: MultiLayerColorScheme> ColorScheme for Layer<S> {
