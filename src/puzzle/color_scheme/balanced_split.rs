@@ -214,11 +214,10 @@ impl<S: ColorScheme, C: Coloring> Grids for Layer<BalancedSplitScheme<S, C>> {
 
 impl<S: ColorScheme, C: Coloring> Grids for Layer<&BalancedSplitScheme<S, C>> {
     fn grid_containing_pos(&self, size: Size, pos: (u64, u64)) -> Rect {
-        let (width, height) = size.into();
         let (x, y) = pos;
         let (min_split_width, min_split_height) = self.scheme().minimum_splitting_size();
 
-        let (mut left, mut top, mut right, mut bottom) = (0, 0, width, height);
+        let (mut left, mut top, mut right, mut bottom) = (0, 0, size.width(), size.height());
 
         let mut split_width;
         let mut split_height;
@@ -226,6 +225,8 @@ impl<S: ColorScheme, C: Coloring> Grids for Layer<&BalancedSplitScheme<S, C>> {
         for _ in 0..self.layer() + 1 {
             split_width = false;
             split_height = false;
+
+            let (width, height) = (right - left, bottom - top);
 
             match self.scheme().splitting() {
                 Splitting::UpDown { cutoff_fraction } => {
