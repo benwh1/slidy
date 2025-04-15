@@ -267,7 +267,7 @@ impl<S: ColorScheme, C: Coloring> Grids for Layer<&BalancedSplitScheme<S, C>> {
             }
 
             if split_width {
-                let half = width.div_ceil(2);
+                let half = left + width.div_ceil(2);
                 if x < half {
                     right = half;
                 } else {
@@ -276,7 +276,7 @@ impl<S: ColorScheme, C: Coloring> Grids for Layer<&BalancedSplitScheme<S, C>> {
             }
 
             if split_height {
-                let half = height.div_ceil(2);
+                let half = top + height.div_ceil(2);
                 if y < half {
                     bottom = half;
                 } else {
@@ -517,19 +517,22 @@ mod tests {
         #[test]
         fn test_grids_1() {
             let scheme = scheme1();
-            let size = s(49, 15);
+            let size = s(49, 30);
 
             let rect = |n| {
                 scheme
                     .layer(size, n)
-                    .unwrap()
-                    .grid_containing_pos(size, (10, 10))
+                    .map(|l| l.grid_containing_pos(size, (19, 18)))
             };
 
-            assert_eq!(rect(0), Rect::new((0, 0), (25, 15)).unwrap());
-            assert_eq!(rect(1), Rect::new((0, 0), (13, 15)).unwrap());
-            assert_eq!(rect(2), Rect::new((0, 8), (13, 15)).unwrap());
-            assert_eq!(rect(3), Rect::new((7, 8), (13, 15)).unwrap());
+            assert_eq!(rect(0), Some(Rect::new((0, 0), (25, 30)).unwrap()));
+            assert_eq!(rect(1), Some(Rect::new((0, 15), (25, 30)).unwrap()));
+            assert_eq!(rect(2), Some(Rect::new((13, 15), (25, 30)).unwrap()));
+            assert_eq!(rect(3), Some(Rect::new((13, 15), (25, 23)).unwrap()));
+            assert_eq!(rect(4), Some(Rect::new((19, 15), (25, 23)).unwrap()));
+            assert_eq!(rect(5), Some(Rect::new((19, 15), (25, 19)).unwrap()));
+            assert_eq!(rect(6), Some(Rect::new((19, 15), (25, 19)).unwrap()));
+            assert_eq!(rect(7), None);
         }
     }
 }
