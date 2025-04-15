@@ -509,4 +509,26 @@ mod tests {
             }
         }
     }
+
+    mod grids {
+        use super::*;
+
+        #[test]
+        fn test_grids_1() {
+            let scheme = scheme1();
+            let size = s(49, 15);
+
+            let rect = |n| {
+                scheme
+                    .layer(size, n)
+                    .unwrap()
+                    .grid_containing_pos(size, (10, 10))
+            };
+
+            assert_eq!(rect(0), Rect::new((0, 0), (25, 15)).unwrap());
+            assert_eq!(rect(1), Rect::new((0, 0), (13, 15)).unwrap());
+            assert_eq!(rect(2), Rect::new((0, 8), (13, 15)).unwrap());
+            assert_eq!(rect(3), Rect::new((7, 8), (13, 15)).unwrap());
+        }
+    }
 }
