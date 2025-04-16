@@ -2,6 +2,7 @@
 //!
 //! [`Label`]: label/trait.Label.html
 
+pub mod grid;
 pub mod label;
 pub mod rect_partition;
 pub mod scaled;
