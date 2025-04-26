@@ -20,6 +20,7 @@ impl Grid {
     ///
     /// The `xs` vector contains the `x` coordinates of the vertical lines that divide the puzzle
     /// into rectangles, and likewise for `ys`.
+    #[must_use]
     pub fn new(mut xs: Vec<u64>, mut ys: Vec<u64>) -> Self {
         xs.sort_unstable();
         xs.dedup();
@@ -66,14 +67,16 @@ impl Grids for Grid {
         let left = if x == 0 { 0 } else { self.xs[x as usize - 1] };
         let top = if y == 0 { 0 } else { self.ys[y as usize - 1] };
 
-        let right = match self.xs.get(x as usize).copied() {
-            Some(v) => v.min(size.width()),
-            None => size.width(),
-        };
-        let bottom = match self.ys.get(y as usize).copied() {
-            Some(v) => v.min(size.height()),
-            None => size.height(),
-        };
+        let right = self
+            .xs
+            .get(x as usize)
+            .copied()
+            .map_or(size.width(), |right| right.min(size.width()));
+        let bottom = self
+            .ys
+            .get(y as usize)
+            .copied()
+            .map_or(size.height(), |bottom| bottom.min(size.height()));
 
         Rect::new((left, top), (right, bottom)).unwrap()
     }
