@@ -14,8 +14,7 @@ use crate::puzzle::{
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 
-/// A list of [`ColorScheme`]s and an index, indicating which color scheme is currently "active".
-/// The implementation of [`ColorScheme`] for this type uses the active scheme.
+/// A list of [`ColorScheme`]s, which can be used as a [`MultiLayerColorScheme`].
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
     feature = "serde",
@@ -55,8 +54,7 @@ pub enum SchemeListError {
 }
 
 impl<S: ColorScheme, List: AsRef<[S]>> SchemeList<S, List> {
-    /// Create a new [`SchemeList`] containing the given list of color schemes. The default index
-    /// is 0.
+    /// Create a new [`SchemeList`] containing the given list of color schemes.
     pub fn new(schemes: List) -> Result<Self, SchemeListError> {
         if schemes.as_ref().is_empty() {
             Err(SchemeListError::Empty)
