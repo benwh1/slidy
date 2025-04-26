@@ -98,12 +98,14 @@ impl Scrambler for RandomState {
         let (w, h) = puzzle.size().into();
 
         if w == 1 {
+            puzzle.reset();
             let d = rng.random_range(0..h);
             puzzle.apply_move(Move::new(Direction::Down, d));
             return;
         }
 
         if h == 1 {
+            puzzle.reset();
             let r = rng.random_range(0..w);
             puzzle.apply_move(Move::new(Direction::Right, r));
             return;
@@ -151,6 +153,8 @@ impl Scrambler for RandomMoves {
     }
 
     fn scramble_with_rng<P: SlidingPuzzle, R: Rng>(&self, puzzle: &mut P, rng: &mut R) {
+        puzzle.reset();
+
         let mut last_dir = None::<Direction>;
         for _ in 0..self.moves {
             let dir = {
@@ -185,6 +189,8 @@ impl Scrambler for Cycle {
     }
 
     fn scramble_with_rng<P: SlidingPuzzle, R: Rng>(&self, puzzle: &mut P, rng: &mut R) {
+        puzzle.reset();
+
         let n = puzzle.num_pieces();
         let cycle_len = (self.length).min(if n % 2 == 0 { n - 1 } else { n });
         let max = if cycle_len % 2 == 0 { n - 2 } else { n };
