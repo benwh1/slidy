@@ -47,33 +47,21 @@ pub trait Scrambler {
     fn scramble_with_rng<P: SlidingPuzzle, R: Rng>(&self, puzzle: &mut P, rng: &mut R);
 }
 
-/// Random state scrambler. Scrambles the puzzle in such a way that every solvable state is equally
-/// likely to occur.
+/// Random state scrambler, but leaving the gap in the bottom right corner so that the resulting
+/// state is invertible.
+///
+/// See [`RandomState`].
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct RandomState;
+pub struct RandomInvertibleState;
 
-impl Scrambler for RandomState {
-    fn is_valid_size(&self, _size: Size) -> bool {
-        true
+impl Scrambler for RandomInvertibleState {
+    fn is_valid_size(&self, size: Size) -> bool {
+        size.width() > 1 && size.height() > 1
     }
 
     fn scramble_with_rng<P: SlidingPuzzle, R: Rng>(&self, puzzle: &mut P, rng: &mut R) {
         puzzle.reset();
-
-        let (w, h) = puzzle.size().into();
-
-        if w == 1 {
-            let d = rng.random_range(0..h);
-            puzzle.apply_move(Move::new(Direction::Down, d));
-            return;
-        }
-
-        if h == 1 {
-            let r = rng.random_range(0..w);
-            puzzle.apply_move(Move::new(Direction::Right, r));
-            return;
-        }
 
         let n = puzzle.num_pieces();
         let mut parity = false;
@@ -92,6 +80,36 @@ impl Scrambler for RandomState {
         if parity {
             puzzle.swap_non_gap_pieces(n - 2, n - 1);
         }
+    }
+}
+
+/// Random state scrambler. Scrambles the puzzle in such a way that every solvable state is equally
+/// likely to occur.
+#[derive(Clone, Default, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct RandomState;
+
+impl Scrambler for RandomState {
+    fn is_valid_size(&self, _size: Size) -> bool {
+        true
+    }
+
+    fn scramble_with_rng<P: SlidingPuzzle, R: Rng>(&self, puzzle: &mut P, rng: &mut R) {
+        let (w, h) = puzzle.size().into();
+
+        if w == 1 {
+            let d = rng.random_range(0..h);
+            puzzle.apply_move(Move::new(Direction::Down, d));
+            return;
+        }
+
+        if h == 1 {
+            let r = rng.random_range(0..w);
+            puzzle.apply_move(Move::new(Direction::Right, r));
+            return;
+        }
+
+        RandomInvertibleState.scramble_with_rng(puzzle, rng);
 
         // Move blank to a random position
         let (d, r) = (rng.random_range(0..h), rng.random_range(0..w));
@@ -188,6 +206,31 @@ mod tests {
 
     use super::*;
 
+    mod random_invertible_state {
+        use rand::SeedableRng as _;
+        use rand_xoshiro::Xoroshiro128StarStar;
+
+        use super::*;
+
+        const SEED: [u8; 16] = [
+            160, 108, 126, 255, 147, 210, 122, 252, 71, 77, 144, 13, 167, 11, 225, 93,
+        ];
+
+        #[test]
+        fn test_gap_in_bottom_right() {
+            let mut rng = Xoroshiro128StarStar::from_seed(SEED);
+
+            for s in 2..10 {
+                let mut p = Puzzle::new(Size::new(s, s).unwrap());
+
+                for _ in 0..100 {
+                    RandomInvertibleState.scramble_with_rng(&mut p, &mut rng);
+                    assert_eq!(p.gap_position_xy(), (s - 1, s - 1));
+                }
+            }
+        }
+    }
+
     mod random_state {
         use rand::SeedableRng as _;
         use rand_xoshiro::Xoroshiro128StarStar;
@@ -206,10 +249,9 @@ mod tests {
 
             for (w, h) in [(1, 1), (1, 4), (4, 1), (2, 2), (4, 4), (10, 2), (20, 20)] {
                 let mut p = Puzzle::new(Size::new(w, h).unwrap());
-                let x = RandomState;
+
                 for _ in 0..100 {
-                    p.reset();
-                    x.scramble_with_rng(&mut p, &mut rng);
+                    RandomState.scramble_with_rng(&mut p, &mut rng);
                     assert!(RowGrids::is_solvable(&p));
                 }
             }
