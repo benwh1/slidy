@@ -19,7 +19,9 @@ pub struct Moves<'a> {
 }
 
 impl<'a> Moves<'a> {
-    pub(super) fn new(slice: AlgorithmSlice<'a>) -> Self {
+    /// Creates a new [`Moves`] iterator over the given [`AlgorithmSlice`].
+    #[must_use]
+    pub fn new(slice: AlgorithmSlice<'a>) -> Self {
         Self {
             slice,
             iter_state: State::First,
