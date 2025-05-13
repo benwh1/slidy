@@ -446,6 +446,18 @@ impl From<AlgorithmSlice<'_>> for Algorithm {
     }
 }
 
+impl FromIterator<Direction> for Algorithm {
+    fn from_iter<T: IntoIterator<Item = Direction>>(iter: T) -> Self {
+        Self::with_moves(iter.into_iter().map(Move::from).collect())
+    }
+}
+
+impl FromIterator<Move> for Algorithm {
+    fn from_iter<T: IntoIterator<Item = Move>>(iter: T) -> Self {
+        Self::with_moves(iter.into_iter().collect())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
