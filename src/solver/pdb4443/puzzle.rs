@@ -187,3 +187,136 @@ impl Puzzle {
         self.swap_positions(7, 11);
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn test_decode_encode_pat4() {
+        let mut puzzle = Puzzle::new();
+        let pattern = Pattern::new(&[1, 2, 5, 6, 0]);
+
+        for i in 0..524160 {
+            puzzle.decode(i, &pattern);
+            let encoded = puzzle.encode(&pattern);
+            assert_eq!(encoded, i);
+        }
+    }
+
+    #[test]
+    fn test_encode_decode_pat4() {
+        let pattern = Pattern::new(&[1, 2, 5, 6, 0]);
+
+        for a in 0..16 {
+            for b in 0..16 {
+                if a == b {
+                    continue;
+                }
+
+                for c in 0..16 {
+                    if a == c || b == c {
+                        continue;
+                    }
+
+                    for d in 0..16 {
+                        if a == d || b == d || c == d {
+                            continue;
+                        }
+
+                        for e in 0..16 {
+                            if a == e || b == e || c == e || d == e {
+                                continue;
+                            }
+
+                            let mut puzzle = Puzzle::new();
+                            puzzle.pieces = [u8::MAX; 16];
+
+                            puzzle.pieces[a as usize] = 1;
+                            puzzle.pieces[b as usize] = 2;
+                            puzzle.pieces[c as usize] = 5;
+                            puzzle.pieces[d as usize] = 6;
+                            puzzle.pieces[e as usize] = 0;
+                            puzzle.inverse[1] = a;
+                            puzzle.inverse[2] = b;
+                            puzzle.inverse[5] = c;
+                            puzzle.inverse[6] = d;
+                            puzzle.inverse[0] = e;
+
+                            let encoded = puzzle.encode(&pattern);
+                            let mut puzzle2 = Puzzle::new();
+                            puzzle2.decode(encoded, &pattern);
+
+                            assert_eq!(puzzle.pieces, puzzle2.pieces);
+                            assert_eq!(puzzle.inverse[1], puzzle2.inverse[1]);
+                            assert_eq!(puzzle.inverse[2], puzzle2.inverse[2]);
+                            assert_eq!(puzzle.inverse[5], puzzle2.inverse[5]);
+                            assert_eq!(puzzle.inverse[6], puzzle2.inverse[6]);
+                            assert_eq!(puzzle.inverse[0], puzzle2.inverse[0]);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_decode_encode_pat3() {
+        let mut puzzle = Puzzle::new();
+        let pattern = Pattern::new(&[11, 12, 15, 0]);
+
+        for i in 0..43680 {
+            puzzle.decode(i, &pattern);
+            let encoded = puzzle.encode(&pattern);
+            assert_eq!(encoded, i);
+        }
+    }
+
+    #[test]
+    fn test_encode_decode_pat3() {
+        let pattern = Pattern::new(&[11, 12, 15, 0]);
+
+        for a in 0..16 {
+            for b in 0..16 {
+                if a == b {
+                    continue;
+                }
+
+                for c in 0..16 {
+                    if a == c || b == c {
+                        continue;
+                    }
+
+                    for d in 0..16 {
+                        if a == d || b == d || c == d {
+                            continue;
+                        }
+
+                        let mut puzzle = Puzzle::new();
+                        puzzle.pieces = [u8::MAX; 16];
+
+                        puzzle.pieces[a as usize] = 11;
+                        puzzle.pieces[b as usize] = 12;
+                        puzzle.pieces[c as usize] = 15;
+                        puzzle.pieces[d as usize] = 0;
+                        puzzle.inverse[11] = a;
+                        puzzle.inverse[12] = b;
+                        puzzle.inverse[15] = c;
+                        puzzle.inverse[0] = d;
+
+                        let encoded = puzzle.encode(&pattern);
+                        let mut puzzle2 = Puzzle::new();
+                        puzzle2.decode(encoded, &pattern);
+
+                        assert_eq!(puzzle.pieces, puzzle2.pieces);
+                        assert_eq!(puzzle.inverse[11], puzzle2.inverse[11]);
+                        assert_eq!(puzzle.inverse[12], puzzle2.inverse[12]);
+                        assert_eq!(puzzle.inverse[15], puzzle2.inverse[15]);
+                        assert_eq!(puzzle.inverse[0], puzzle2.inverse[0]);
+                    }
+                }
+            }
+        }
+    }
+}
