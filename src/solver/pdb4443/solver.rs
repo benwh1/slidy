@@ -44,6 +44,11 @@ impl Solver {
     }
 
     fn dfs(&self, depth: u8, last_inverse: Option<Direction>, coords: [u32; 4]) -> bool {
+        // SAFETY: The entries in `coords` all come from encoding a puzzle (in `solve`) or from the
+        // transposition table (in `dfs`), and we have tests to guarantee that these values are all
+        // within bounds.
+        //
+        // Using `unsafe` here gives a small performance improvement.
         let heuristic = unsafe {
             self.pdb4.pdb().get_unchecked(coords[0] as usize)
                 + self.pdb4.pdb().get_unchecked(coords[1] as usize)
@@ -59,29 +64,26 @@ impl Solver {
             return true;
         }
 
-        let mt1 = unsafe {
-            *self
-                .pdb4
-                .transposition_table()
-                .get_unchecked(coords[0] as usize)
-        };
-        let mt2 = unsafe {
-            *self
-                .pdb4
-                .transposition_table()
-                .get_unchecked(coords[1] as usize)
-        };
-        let mt3 = unsafe {
-            *self
-                .pdb4
-                .transposition_table()
-                .get_unchecked(coords[2] as usize)
-        };
-        let mt4 = unsafe {
-            *self
-                .pdb3
-                .transposition_table()
-                .get_unchecked(coords[3] as usize)
+        // SAFETY: See above.
+        let (mt1, mt2, mt3, mt4) = unsafe {
+            (
+                *self
+                    .pdb4
+                    .transposition_table()
+                    .get_unchecked(coords[0] as usize),
+                *self
+                    .pdb4
+                    .transposition_table()
+                    .get_unchecked(coords[1] as usize),
+                *self
+                    .pdb4
+                    .transposition_table()
+                    .get_unchecked(coords[2] as usize),
+                *self
+                    .pdb3
+                    .transposition_table()
+                    .get_unchecked(coords[3] as usize),
+            )
         };
 
         for dir in [

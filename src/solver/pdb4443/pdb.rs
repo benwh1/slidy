@@ -147,3 +147,50 @@ impl Pdb {
         &self.pdb
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pdb4_size() {
+        let pattern = Pattern::new(&[1, 2, 5, 6, 0]);
+        let pdb = Pdb::new(pattern);
+
+        assert_eq!(pdb.transposition_table.len(), 524160);
+        assert_eq!(pdb.pdb.len(), 524160);
+    }
+
+    #[test]
+    fn test_pdb3_size() {
+        let pattern = Pattern::new(&[11, 12, 15, 0]);
+        let pdb = Pdb::new(pattern);
+
+        assert_eq!(pdb.transposition_table.len(), 43680);
+        assert_eq!(pdb.pdb.len(), 43680);
+    }
+
+    #[test]
+    fn test_transposition_table_pdb4() {
+        let pattern = Pattern::new(&[1, 2, 5, 6, 0]);
+        let pdb = Pdb::new(pattern);
+
+        for arr in pdb.transposition_table {
+            for entry in arr {
+                assert!(entry == u32::MAX || entry < 524160);
+            }
+        }
+    }
+
+    #[test]
+    fn test_transposition_table_pdb3() {
+        let pattern = Pattern::new(&[11, 12, 15, 0]);
+        let pdb = Pdb::new(pattern);
+
+        for arr in pdb.transposition_table {
+            for entry in arr {
+                assert!(entry == u32::MAX || entry < 43680);
+            }
+        }
+    }
+}
