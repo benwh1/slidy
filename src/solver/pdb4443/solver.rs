@@ -148,11 +148,17 @@ impl Solver {
 
         loop {
             if self.dfs(depth, None, coords) {
-                return Ok(self.solution[..depth as usize]
+                let mut solution = Algorithm::new();
+
+                for dir in self.solution[..depth as usize]
                     .iter()
                     .rev()
                     .map(|c| c.get())
-                    .collect::<Algorithm>());
+                {
+                    solution.push_combine(dir.into());
+                }
+
+                return Ok(solution);
             }
 
             depth += 2;
