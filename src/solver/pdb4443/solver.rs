@@ -1,5 +1,7 @@
 //! Defines the [`Solver`] struct for solving 4x4 puzzles using pattern databases.
 
+use std::cell::Cell;
+
 use num_traits::ToPrimitive as _;
 
 use crate::{
@@ -15,7 +17,7 @@ use crate::{
 pub struct Solver {
     pdb4: Pdb,
     pdb3: Pdb,
-    solution: [Direction; 80],
+    solution: [Cell<Direction>; 80],
 }
 
 impl Default for Solver {
@@ -37,11 +39,11 @@ impl Solver {
         Self {
             pdb4,
             pdb3,
-            solution: [Direction::Up; 80],
+            solution: [const { Cell::new(Direction::Up) }; 80],
         }
     }
 
-    fn dfs(&mut self, depth: u8, last_inverse: Option<Direction>, coords: [u32; 4]) -> bool {
+    fn dfs(&self, depth: u8, last_inverse: Option<Direction>, coords: [u32; 4]) -> bool {
         let heuristic = unsafe {
             self.pdb4.pdb().get_unchecked(coords[0] as usize)
                 + self.pdb4.pdb().get_unchecked(coords[1] as usize)
@@ -104,7 +106,7 @@ impl Solver {
             ];
 
             if self.dfs(depth - 1, Some(dir.inverse()), new_coords) {
-                self.solution[depth as usize - 1] = dir;
+                self.solution[depth as usize - 1].set(dir);
                 return true;
             }
         }
@@ -113,7 +115,7 @@ impl Solver {
     }
 
     /// Computes an optimal solution of `puzzle`.
-    pub fn solve<P: SlidingPuzzle>(&mut self, puzzle: &P) -> Result<Algorithm, SolverError> {
+    pub fn solve<P: SlidingPuzzle>(&self, puzzle: &P) -> Result<Algorithm, SolverError> {
         if puzzle.size() != Size::new(4, 4).unwrap() {
             return Err(SolverError::IncompatiblePuzzleSize);
         }
@@ -149,7 +151,7 @@ impl Solver {
                 return Ok(self.solution[..depth as usize]
                     .iter()
                     .rev()
-                    .copied()
+                    .map(|c| c.get())
                     .collect::<Algorithm>());
             }
 
@@ -167,7 +169,7 @@ mod tests {
     #[test]
     fn test_solver() {
         let puzzle = Puzzle::from_str("12 15 5 1/11 9 2 13/0 10 8 6/14 7 4 3").unwrap();
-        let mut solver = Solver::new();
+        let solver = Solver::new();
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_stm::<u64>(), 58);
     }
