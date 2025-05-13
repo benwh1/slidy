@@ -67,6 +67,10 @@ pub enum SolverError {
     /// Returned when the search finished without finding a solution.
     #[error("NoSolutionFound: no solution was found within the range searched")]
     NoSolutionFound,
+
+    /// Returned when the solver was given a puzzle of a size that it is not compatible with.
+    #[error("IncompatiblePuzzleSize: the puzzle size is incompatible with the solver")]
+    IncompatiblePuzzleSize,
 }
 
 /// An optimal puzzle solver using a [`Heuristic`] `H` to speed up the search.
