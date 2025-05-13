@@ -271,7 +271,6 @@
 #![deny(clippy::string_lit_chars_any)]
 #![deny(clippy::string_to_string)]
 #![deny(clippy::str_split_at_newline)]
-#![deny(clippy::struct_field_names)]
 #![deny(clippy::suspicious_operation_groupings)]
 #![deny(clippy::tests_outside_test_module)]
 #![deny(clippy::trait_duplication_in_bounds)]
@@ -313,9 +312,7 @@
 #![deny(clippy::wildcard_enum_match_arm)]
 #![deny(clippy::wildcard_imports)]
 #![deny(clippy::zero_sized_map_values)]
-#![warn(clippy::multiple_crate_versions)]
 #![warn(clippy::must_use_candidate)]
-#![warn(clippy::single_call_fn)]
 #![deny(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]
 

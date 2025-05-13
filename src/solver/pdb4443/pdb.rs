@@ -86,16 +86,15 @@ impl Pdb {
                 let new_index = entry & 0xffffff;
                 let moved_piece = (entry >> 24) as u8;
 
-                if entry != u32::MAX {
-                    if self.pdb[new_index as usize] == u8::MAX {
-                        if self.pdb[i] + moved_piece == depth {
-                            self.pdb[new_index as usize] = depth;
-                            *total += 1;
-                            changed = true;
-                            if *total == size {
-                                return true;
-                            }
-                        }
+                if entry != u32::MAX
+                    && self.pdb[new_index as usize] == u8::MAX
+                    && self.pdb[i] + moved_piece == depth
+                {
+                    self.pdb[new_index as usize] = depth;
+                    *total += 1;
+                    changed = true;
+                    if *total == size {
+                        return true;
                     }
                 }
             }

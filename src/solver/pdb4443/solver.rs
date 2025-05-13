@@ -170,7 +170,7 @@ impl Solver {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use std::str::FromStr as _;
 
     use crate::{puzzle::puzzle::Puzzle, solver::pdb4443::solver::Solver};
 

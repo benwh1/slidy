@@ -88,8 +88,8 @@ impl Puzzle {
         let n = pattern.pieces.len();
 
         let mut pos = [0; 5];
-        for i in 0..n {
-            pos[i] = self.inverse[pattern.pieces[i] as usize];
+        for (i, p) in pos.iter_mut().enumerate().take(n) {
+            *p = self.inverse[pattern.pieces[i] as usize];
         }
 
         let mut total = 0;
@@ -130,10 +130,10 @@ impl Puzzle {
 
         self.pieces = [u8::MAX; 16];
 
-        for i in 0..n {
+        for (i, &p) in pos.iter().enumerate().take(n) {
             let pattern_piece = pattern.pieces[i];
-            self.inverse[pattern_piece as usize] = pos[i] as u8;
-            self.pieces[pos[i]] = pattern_piece;
+            self.inverse[pattern_piece as usize] = p as u8;
+            self.pieces[p] = pattern_piece;
         }
     }
 
