@@ -46,6 +46,28 @@ impl Direction {
             Self::Right => Self::Down,
         }
     }
+
+    /// Reflection through the vertical axis. Swaps `Left` with `Right`.
+    #[must_use]
+    pub fn reflect_left_right(&self) -> Self {
+        match self {
+            Self::Up => Self::Up,
+            Self::Left => Self::Right,
+            Self::Down => Self::Down,
+            Self::Right => Self::Left,
+        }
+    }
+
+    /// Reflection through the horizontal axis. Swaps `Up` with `Down`.
+    #[must_use]
+    pub fn reflect_up_down(&self) -> Self {
+        match self {
+            Self::Up => Self::Down,
+            Self::Left => Self::Left,
+            Self::Down => Self::Up,
+            Self::Right => Self::Right,
+        }
+    }
 }
 
 impl Display for Direction {
