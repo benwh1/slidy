@@ -89,7 +89,7 @@ pub trait MultiLayerColorScheme {
     }
 }
 
-impl<S: MultiLayerColorScheme> MultiLayerColorScheme for &S {
+impl<S: MultiLayerColorScheme + ?Sized> MultiLayerColorScheme for &S {
     fn num_layers(&self, size: Size) -> u32 {
         (**self).num_layers(size)
     }
@@ -99,7 +99,7 @@ impl<S: MultiLayerColorScheme> MultiLayerColorScheme for &S {
     }
 }
 
-impl<S: MultiLayerColorScheme> MultiLayerColorScheme for &mut S {
+impl<S: MultiLayerColorScheme + ?Sized> MultiLayerColorScheme for &mut S {
     fn num_layers(&self, size: Size) -> u32 {
         (**self).num_layers(size)
     }
@@ -158,7 +158,7 @@ pub trait FixedSizeMultiLayerColorScheme {
     }
 }
 
-impl<S: FixedSizeMultiLayerColorScheme> FixedSizeMultiLayerColorScheme for &S {
+impl<S: FixedSizeMultiLayerColorScheme + ?Sized> FixedSizeMultiLayerColorScheme for &S {
     fn size(&self) -> Size {
         (**self).size()
     }
@@ -172,7 +172,7 @@ impl<S: FixedSizeMultiLayerColorScheme> FixedSizeMultiLayerColorScheme for &S {
     }
 }
 
-impl<S: FixedSizeMultiLayerColorScheme> FixedSizeMultiLayerColorScheme for &mut S {
+impl<S: FixedSizeMultiLayerColorScheme + ?Sized> FixedSizeMultiLayerColorScheme for &mut S {
     fn size(&self) -> Size {
         (**self).size()
     }

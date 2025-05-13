@@ -69,7 +69,7 @@ pub trait Label {
     }
 }
 
-impl<L: Label> Label for &L {
+impl<L: Label + ?Sized> Label for &L {
     fn position_label(&self, size: Size, pos: (u64, u64)) -> u64 {
         (**self).position_label(size, pos)
     }
@@ -79,7 +79,7 @@ impl<L: Label> Label for &L {
     }
 }
 
-impl<L: Label> Label for &mut L {
+impl<L: Label + ?Sized> Label for &mut L {
     fn position_label(&self, size: Size, pos: (u64, u64)) -> u64 {
         (**self).position_label(size, pos)
     }
@@ -125,7 +125,7 @@ pub trait FixedSizeLabel {
     fn num_labels(&self) -> u64;
 }
 
-impl<L: FixedSizeLabel> FixedSizeLabel for &L {
+impl<L: FixedSizeLabel + ?Sized> FixedSizeLabel for &L {
     fn size(&self) -> Size {
         (**self).size()
     }
@@ -139,7 +139,7 @@ impl<L: FixedSizeLabel> FixedSizeLabel for &L {
     }
 }
 
-impl<L: FixedSizeLabel> FixedSizeLabel for &mut L {
+impl<L: FixedSizeLabel + ?Sized> FixedSizeLabel for &mut L {
     fn size(&self) -> Size {
         (**self).size()
     }

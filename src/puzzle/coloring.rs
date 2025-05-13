@@ -31,13 +31,13 @@ pub trait Coloring {
     }
 }
 
-impl<C: Coloring> Coloring for &C {
+impl<C: Coloring + ?Sized> Coloring for &C {
     fn color(&self, label: u64, num_labels: u64) -> Rgba {
         (**self).color(label, num_labels)
     }
 }
 
-impl<C: Coloring> Coloring for &mut C {
+impl<C: Coloring + ?Sized> Coloring for &mut C {
     fn color(&self, label: u64, num_labels: u64) -> Rgba {
         (**self).color(label, num_labels)
     }
