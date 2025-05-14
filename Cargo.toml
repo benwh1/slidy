@@ -1,6 +1,6 @@
 [package]
 name = "slidy"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Utilities for working with sliding puzzles"
 license = "SSPL-1.0"
