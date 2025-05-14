@@ -437,7 +437,10 @@ mod tests {
     mod sliding_puzzle {
         use crate::{
             algorithm::{algorithm::Algorithm, direction::Direction, r#move::r#move::Move},
-            puzzle::label::label::FringeGrids,
+            puzzle::{
+                label::label::FringeGrids,
+                scrambler::{RandomInvertibleState, Scrambler},
+            },
         };
 
         use super::*;
@@ -798,6 +801,43 @@ mod tests {
             assert!(p.try_embed_into(&mut p2));
             assert!(!p.try_embed_into(&mut p2));
             assert_eq!(p2, expected);
+        }
+
+        #[test]
+        fn test_invert() {
+            let mut p = Puzzle::from_str("10 6 2 12/11 5 14 13/3 7 1 8/4 9 15 0").unwrap();
+            let p2 = Puzzle::from_str("11 3 9 13/6 2 10 12/14 1 5 4/8 7 15 0").unwrap();
+            assert!(p.try_invert());
+            assert_eq!(p, p2);
+        }
+
+        #[test]
+        fn test_invert_2() {
+            let mut p = Puzzle::from_str("10 6 2 12/11 5 14 13/3 7 1 8/4 9 0 15").unwrap();
+            assert!(!p.try_invert());
+        }
+
+        #[test]
+        fn test_invert_3() {
+            let mut p = Puzzle::new(Size::new(20, 20).unwrap());
+
+            for _ in 0..100 {
+                RandomInvertibleState.scramble(&mut p);
+
+                let p2 = p.clone();
+
+                assert!(p.try_invert());
+                assert!(p.try_invert());
+                assert_eq!(p, p2);
+            }
+        }
+
+        #[test]
+        fn test_invert_4() {
+            let mut p = Puzzle::from_str("6 13 14 11/7 1 5 8/10 9 4 12/2 3 15 0").unwrap();
+            let p2 = p.clone();
+            assert!(p.try_invert());
+            assert_eq!(p, p2);
         }
     }
 

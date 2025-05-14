@@ -794,4 +794,52 @@ where
     unsafe fn embed_into_unchecked(&self, puzzle: &mut Self) {
         self.embed_into(puzzle);
     }
+
+    /// Checks if it is possible to invert the puzzle state.
+    ///
+    /// A puzzle state is invertible if and only if the gap is in the bottom right corner.
+    #[must_use]
+    fn invertible(&self) -> bool {
+        let (w, h) = self.size().into();
+        self.piece_at_xy((w - 1, h - 1)) == Self::Piece::zero()
+    }
+
+    /// Inverts the puzzle state.
+    ///
+    /// # Panics
+    ///
+    /// If the puzzle state is not invertible, the function may panic or the puzzle may be
+    /// transformed in an invalid way.
+    fn invert(&mut self) {
+        assert!(self.try_invert(), "failed to invert `self`");
+    }
+
+    /// See [`SlidingPuzzle::invert`].
+    ///
+    /// Returns `true` if the puzzle was inverted successfully, `false` otherwise.
+    fn try_invert(&mut self) -> bool {
+        if !self.invertible() {
+            return false;
+        }
+
+        let mut inv = vec![0; self.area() as usize];
+        for i in 0..self.area() {
+            let piece = self.piece_at(self.solved_pos(<Self::Piece as NumCast>::from(i).unwrap()));
+            inv[self.solved_pos(piece) as usize] = i;
+        }
+
+        for i in 0..self.area() {
+            self.swap_pieces(
+                i,
+                self.piece_position(<Self::Piece as NumCast>::from(inv[i as usize]).unwrap()),
+            );
+        }
+
+        true
+    }
+
+    /// See [`SlidingPuzzle::invert`].
+    unsafe fn invert_unchecked(&mut self) {
+        self.invert();
+    }
 }
