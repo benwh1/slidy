@@ -38,6 +38,12 @@ impl Grid {
         Self { xs, ys }
     }
 
+    /// Creates a new empty [`Grid`].
+    #[must_use]
+    pub fn new_empty() -> Self {
+        Self::new(Vec::new(), Vec::new())
+    }
+
     /// Returns the `x` coordinates of the vertical lines that divide the puzzle into rectangles.
     #[must_use]
     pub fn xs(&self) -> &[u64] {
@@ -109,7 +115,7 @@ mod tests {
 
     #[test]
     fn test_empty_grid() {
-        let grid = Grid::new(Vec::new(), Vec::new());
+        let grid = Grid::new_empty();
         let size = s(5, 5);
 
         let expected = Rect::new((0, 0), (5, 5)).unwrap();
