@@ -6,8 +6,13 @@ use crate::puzzle::{
     size::Size,
 };
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// A [`Label`] that divides the puzzle into a grid of rectangles at the given `x` and `y`
 /// coordinates.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Grid {
     xs: Vec<u64>,
     ys: Vec<u64>,

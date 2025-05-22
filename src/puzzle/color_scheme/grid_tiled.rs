@@ -4,7 +4,12 @@ use palette::rgb::Rgba;
 
 use crate::puzzle::{color_scheme::ColorScheme, grids::Grids, label::grid::Grid, size::Size};
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// A [`ColorScheme`] tiled across the puzzle in the pattern specified by a [`Grid`].
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct GridTiled<C: ColorScheme> {
     grid: Grid,
     scheme: C,
