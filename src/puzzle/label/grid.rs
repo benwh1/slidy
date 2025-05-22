@@ -107,6 +107,21 @@ mod tests {
         Size::new(w, h).unwrap()
     }
 
+    #[test]
+    fn test_empty_grid() {
+        let grid = Grid::new(Vec::new(), Vec::new());
+        let size = s(5, 5);
+
+        let expected = Rect::new((0, 0), (5, 5)).unwrap();
+
+        for y in 0..size.height() {
+            for x in 0..size.width() {
+                let rect = grid.grid_containing_pos(size, (x, y));
+                assert_eq!(rect, expected);
+            }
+        }
+    }
+
     mod label {
         use super::*;
 
