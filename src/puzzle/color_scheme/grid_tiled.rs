@@ -2,7 +2,7 @@
 
 use palette::rgb::Rgba;
 
-use crate::puzzle::{color_scheme::ColorScheme, grids::Grids, label::grid::Grid, size::Size};
+use crate::puzzle::{color_scheme::ColorScheme, grids::Grids as _, label::grid::Grid, size::Size};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};

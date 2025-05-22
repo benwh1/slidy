@@ -439,7 +439,7 @@ mod tests {
             algorithm::{algorithm::Algorithm, direction::Direction, r#move::r#move::Move},
             puzzle::{
                 label::label::FringeGrids,
-                scrambler::{RandomInvertibleState, Scrambler},
+                scrambler::{RandomInvertibleState, Scrambler as _},
             },
         };
 
