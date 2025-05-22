@@ -20,6 +20,16 @@ impl<C: ColorScheme> GridTiled<C> {
     pub fn new(grid: Grid, scheme: C) -> Self {
         Self { grid, scheme }
     }
+
+    /// Returns a reference to the inner [`Grid`].
+    pub fn grid(&self) -> &Grid {
+        &self.grid
+    }
+
+    /// Returns a reference to the inner [`ColorScheme`].
+    pub fn scheme(&self) -> &C {
+        &self.scheme
+    }
 }
 
 impl<C: ColorScheme> ColorScheme for GridTiled<C> {
