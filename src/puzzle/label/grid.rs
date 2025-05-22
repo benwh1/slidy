@@ -38,6 +38,18 @@ impl Grid {
         Self { xs, ys }
     }
 
+    /// Returns the `x` coordinates of the vertical lines that divide the puzzle into rectangles.
+    #[must_use]
+    pub fn xs(&self) -> &[u64] {
+        &self.xs
+    }
+
+    /// Returns the `y` coordinates of the horizontal lines that divide the puzzle into rectangles.
+    #[must_use]
+    pub fn ys(&self) -> &[u64] {
+        &self.ys
+    }
+
     fn lr_count(&self, size: Size) -> u64 {
         self.xs.iter().take_while(|&&i| i < size.width()).count() as u64 + 1
     }
