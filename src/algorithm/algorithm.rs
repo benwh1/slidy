@@ -200,7 +200,7 @@ impl Algorithm {
     }
 
     /// Returns an [`AlgorithmSlice`] containing the (single-tile) moves in the range `range`.
-    pub fn try_slice(&self, range: Range<u64>) -> Result<AlgorithmSlice, SliceError> {
+    pub fn try_slice(&self, range: Range<u64>) -> Result<AlgorithmSlice<'_>, SliceError> {
         if range.start > range.end {
             return Err(SliceError::UnorderedRange(range));
         }
@@ -272,25 +272,25 @@ impl Algorithm {
 
     /// Helper function for creating a [`DisplaySpaced<DisplayLongSpaced>`] around `self`.
     #[must_use]
-    pub fn display_long_spaced(&self) -> DisplaySpaced<DisplayLongSpaced> {
+    pub fn display_long_spaced(&self) -> DisplaySpaced<'_, DisplayLongSpaced> {
         DisplaySpaced::<DisplayLongSpaced>::new(self)
     }
 
     /// Helper function for creating a [`DisplayUnspaced<DisplayLongUnspaced>`] around `self`.
     #[must_use]
-    pub fn display_long_unspaced(&self) -> DisplayUnspaced<DisplayLongUnspaced> {
+    pub fn display_long_unspaced(&self) -> DisplayUnspaced<'_, DisplayLongUnspaced> {
         DisplayUnspaced::<DisplayLongUnspaced>::new(self)
     }
 
     /// Helper function for creating a [`DisplaySpaced<DisplayShort>`] around `self`.
     #[must_use]
-    pub fn display_short_spaced(&self) -> DisplaySpaced<DisplayShort> {
+    pub fn display_short_spaced(&self) -> DisplaySpaced<'_, DisplayShort> {
         DisplaySpaced::<DisplayShort>::new(self)
     }
 
     /// Helper function for creating a [`DisplayUnspaced<DisplayShort>`] around `self`.
     #[must_use]
-    pub fn display_short_unspaced(&self) -> DisplayUnspaced<DisplayShort> {
+    pub fn display_short_unspaced(&self) -> DisplayUnspaced<'_, DisplayShort> {
         DisplayUnspaced::<DisplayShort>::new(self)
     }
 }

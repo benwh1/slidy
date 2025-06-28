@@ -117,13 +117,13 @@ impl Puzzle {
 
     /// Equivalent to [`DisplayInline::new`].
     #[must_use]
-    pub fn display_inline(&self) -> DisplayInline<Self> {
+    pub fn display_inline(&self) -> DisplayInline<'_, Self> {
         DisplayInline::new(self)
     }
 
     /// Equivalent to [`DisplayGrid::new`].
     #[must_use]
-    pub fn display_grid(&self) -> DisplayGrid<Self> {
+    pub fn display_grid(&self) -> DisplayGrid<'_, Self> {
         DisplayGrid::new(self)
     }
 }
