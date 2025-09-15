@@ -91,6 +91,11 @@ impl Puzzle {
         })
     }
 
+    /// Returns the internal vector of pieces as a slice.
+    pub fn pieces(&self) -> &[u64] {
+        &self.pieces
+    }
+
     /// Create a new [`Puzzle`] from a 2D grid of numbers.
     pub fn new_from_grid(grid: Vec<Vec<u64>>) -> Result<Self, PuzzleError> {
         if grid.is_empty() {
