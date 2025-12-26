@@ -92,6 +92,7 @@ impl Puzzle {
     }
 
     /// Returns the internal vector of pieces as a slice.
+    #[must_use]
     pub fn pieces(&self) -> &[u64] {
         &self.pieces
     }

@@ -90,16 +90,18 @@ impl Grids for Grid {
         let left = if x == 0 { 0 } else { self.xs[x as usize - 1] };
         let top = if y == 0 { 0 } else { self.ys[y as usize - 1] };
 
+        let (w, h) = size.into();
+
         let right = self
             .xs
             .get(x as usize)
             .copied()
-            .map_or(size.width(), |right| right.min(size.width()));
+            .map_or(w, |right| right.min(w));
         let bottom = self
             .ys
             .get(y as usize)
             .copied()
-            .map_or(size.height(), |bottom| bottom.min(size.height()));
+            .map_or(h, |bottom| bottom.min(h));
 
         Rect::new((left, top), (right, bottom)).unwrap()
     }

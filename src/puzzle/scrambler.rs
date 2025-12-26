@@ -192,7 +192,7 @@ impl Scrambler for Cycle {
         puzzle.reset();
 
         let n = puzzle.num_pieces();
-        let cycle_len = (self.length).min(if n % 2 == 0 { n - 1 } else { n });
+        let cycle_len = (self.length).min(if n.is_multiple_of(2) { n - 1 } else { n });
         let max = if cycle_len % 2 == 0 { n - 2 } else { n };
         let pieces = rand::seq::index::sample(rng, max as usize, cycle_len as usize);
 
@@ -200,7 +200,7 @@ impl Scrambler for Cycle {
             puzzle.try_swap_pieces(pieces.index(0) as u64, pieces.index(i) as u64);
         }
 
-        if self.length % 2 == 0 {
+        if self.length.is_multiple_of(2) {
             puzzle.try_swap_pieces(n - 2, n - 1);
         }
     }

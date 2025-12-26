@@ -64,7 +64,7 @@ impl Puzzle {
                 gap - 4
             }
             Direction::Right => {
-                if gap % 4 == 0 {
+                if gap.is_multiple_of(4) {
                     return MoveResult::CantMove;
                 }
                 gap - 1
