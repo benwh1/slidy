@@ -2,6 +2,7 @@
 
 pub mod algorithm;
 pub mod as_slice;
+pub mod axis;
 pub mod direction;
 pub mod display;
 pub mod metric;
