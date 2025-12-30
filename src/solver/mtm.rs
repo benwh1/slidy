@@ -87,7 +87,7 @@ fn decode_multiset<const LEN: usize, const DISTINCT: usize>(
     out
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 struct Puzzle {
     pieces: [u8; 16],
     gap: u8,
@@ -306,6 +306,7 @@ pub struct Solver {
     pdb: Pdb,
     solution: [Cell<Direction>; 128],
     solution_ptr: Cell<usize>,
+    puzzle: Cell<Puzzle>,
 }
 
 impl Solver {
@@ -318,10 +319,11 @@ impl Solver {
             pdb,
             solution: [const { Cell::new(Direction::Up) }; 128],
             solution_ptr: Cell::new(0),
+            puzzle: Cell::new(Puzzle::new()),
         }
     }
 
-    fn dfs(&self, depth: u8, last_axis: Option<Axis>, coord: u32, puzzle: &mut Puzzle) -> bool {
+    fn dfs(&self, depth: u8, last_axis: Option<Axis>, coord: u32) -> bool {
         let heuristic = self.pdb.pdb[coord as usize];
 
         if heuristic > depth {
@@ -329,6 +331,10 @@ impl Solver {
         }
 
         if depth == 0 {
+            let mut puzzle = self.puzzle.get();
+            for mv in &self.solution[..self.solution_ptr.get()] {
+                puzzle.do_move(mv.get(), 1);
+            }
             return puzzle.pieces == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0];
         }
 
@@ -345,20 +351,22 @@ impl Solver {
             let mut amount = 0;
             let mut next = coord;
 
-            while puzzle.do_move(dir, 1) {
-                amount += 1;
-
+            loop {
                 next = self.transposition_table.transposition_table[next as usize][dir as usize];
+
+                if next == u32::MAX {
+                    break;
+                }
+
+                amount += 1;
 
                 self.solution[self.solution_ptr.get()].set(dir);
                 self.solution_ptr.set(self.solution_ptr.get() + 1);
 
-                if self.dfs(depth - 1, Some(dir.into()), next, puzzle) {
+                if self.dfs(depth - 1, Some(dir.into()), next) {
                     return true;
                 }
             }
-
-            puzzle.do_move(dir.inverse(), amount);
 
             self.solution_ptr
                 .set(self.solution_ptr.get() - amount as usize);
@@ -379,6 +387,10 @@ impl Solver {
         for (i, piece) in pieces.iter_mut().enumerate() {
             *piece = puzzle.piece_at(i as u64).to_u8().unwrap();
         }
+        let gap = pieces.iter().position(|&p| p == 0).unwrap() as u8;
+
+        let puzzle = Puzzle { pieces, gap };
+        self.puzzle.set(puzzle);
 
         let mut coord_pieces = [0; 16];
         for (coord_piece, piece) in coord_pieces.iter_mut().zip(pieces.iter()) {
@@ -394,16 +406,11 @@ impl Solver {
         let coord = encode_multiset(coord_pieces, [1, 5, 5, 5]) as u32;
         let mut depth = self.pdb.pdb[coord as usize];
 
-        let mut puzzle = Puzzle {
-            pieces,
-            gap: pieces.iter().position(|&p| p == 0).unwrap() as u8,
-        };
-
         let timer = Instant::now();
         loop {
             println!("depth {depth} elapsed {:?}", timer.elapsed());
 
-            if self.dfs(depth, None, coord, &mut puzzle) {
+            if self.dfs(depth, None, coord) {
                 let mut solution = Algorithm::new();
 
                 for dir in self.solution[..self.solution_ptr.get()]
