@@ -10,6 +10,7 @@ keywords = ["puzzle", "15-puzzle"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+bytemuck = "1.24.0"
 enterpolation = "^0.2"
 itertools = "^0.14"
 num-traits = "^0.2"
