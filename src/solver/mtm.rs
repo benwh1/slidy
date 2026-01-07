@@ -94,9 +94,11 @@ struct Puzzle {
 }
 
 impl Puzzle {
+    const SOLVED_STATE: [u8; 16] = [1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 0];
+
     fn new() -> Self {
         Self {
-            pieces: [1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 0],
+            pieces: Self::SOLVED_STATE,
             gap: 15,
         }
     }
@@ -161,7 +163,9 @@ struct TranspositionTable {
 
 impl TranspositionTable {
     fn new() -> Self {
-        if let Ok(data) = std::fs::read("mtm_transposition_table.bin") {
+        const FILENAME: &str = "mtm_transposition_table.bin";
+
+        if let Ok(data) = std::fs::read(FILENAME) {
             let transposition_table: Box<[[u32; 4]]> =
                 bytemuck::cast_slice(&data).to_vec().into_boxed_slice();
 
@@ -196,11 +200,7 @@ impl TranspositionTable {
 
         let transposition_table = transposition_table.into_boxed_slice();
 
-        std::fs::write(
-            "mtm_transposition_table.bin",
-            bytemuck::cast_slice(&*transposition_table),
-        )
-        .unwrap();
+        std::fs::write(FILENAME, bytemuck::cast_slice(&*transposition_table)).unwrap();
 
         Self {
             transposition_table,
@@ -214,11 +214,9 @@ struct CoordPuzzle<'a> {
 }
 
 impl<'a> CoordPuzzle<'a> {
-    const SOLVED: u32 = 15;
-
     fn new(transposition_table: &'a TranspositionTable) -> Self {
         Self {
-            puzzle: Self::SOLVED,
+            puzzle: Puzzle::new().encode() as u32,
             transposition_table,
         }
     }
@@ -247,7 +245,9 @@ pub struct Pdb {
 
 impl Pdb {
     fn new(transposition_table: &TranspositionTable) -> Self {
-        if let Ok(data) = std::fs::read("mtm_pdb.bin") {
+        const FILENAME: &str = "mtm_pdb.bin";
+
+        if let Ok(data) = std::fs::read(FILENAME) {
             let pdb = data.into_boxed_slice();
 
             return Self { pdb };
@@ -295,7 +295,7 @@ impl Pdb {
 
         let pdb = pdb.into_boxed_slice();
 
-        std::fs::write("mtm_pdb.bin", &*pdb).unwrap();
+        std::fs::write(FILENAME, &*pdb).unwrap();
 
         Self { pdb }
     }
@@ -394,13 +394,7 @@ impl Solver {
 
         let mut coord_pieces = [0; 16];
         for (coord_piece, piece) in coord_pieces.iter_mut().zip(pieces.iter()) {
-            *coord_piece = match piece {
-                0 => 0,
-                1..=5 => 1,
-                6..=10 => 2,
-                11..=15 => 3,
-                _ => unreachable!(),
-            };
+            *coord_piece = Puzzle::SOLVED_STATE[(*piece as usize + 15) % 16];
         }
 
         let coord = encode_multiset(coord_pieces, [1, 5, 5, 5]) as u32;
