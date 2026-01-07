@@ -94,7 +94,7 @@ struct Puzzle {
 }
 
 impl Puzzle {
-    const SOLVED_STATE: [u8; 16] = [1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 0];
+    const SOLVED_STATE: [u8; 16] = [1, 1, 2, 2, 1, 1, 2, 2, 1, 3, 3, 2, 3, 3, 3, 0];
 
     fn new() -> Self {
         Self {
