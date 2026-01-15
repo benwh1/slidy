@@ -181,7 +181,7 @@ struct FourBitPuzzle {
 
 impl FourBitPuzzle {
     const SOLVED: u64 = 0x0FEDCBA987654321;
-    const SOLVED_REDUCED: u64 = 0x0444333322221110;
+    const SOLVED_REDUCED: u64 = 0x0444333322221111;
 
     fn new() -> Self {
         Self {
