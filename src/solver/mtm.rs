@@ -247,9 +247,14 @@ struct FourBitPuzzle {
     gap: u8,
 }
 
+#[derive(Clone, Copy, Debug)]
+struct ReducedFourBitPuzzle {
+    pieces: u64,
+    gap: u8,
+}
+
 impl FourBitPuzzle {
     const SOLVED: u64 = 0x0FEDCBA987654321;
-    const SOLVED_REDUCED: u64 = 0x0443443322332211;
 
     fn new() -> Self {
         Self {
@@ -258,9 +263,77 @@ impl FourBitPuzzle {
         }
     }
 
-    fn new_reduced() -> Self {
+    fn pieces(&self) -> [u8; 16] {
+        let mut pieces = [0; 16];
+
+        for (i, piece) in pieces.iter_mut().enumerate() {
+            *piece = ((self.pieces >> (4 * i)) & 0xF) as u8;
+        }
+
+        pieces
+    }
+
+    fn transposed(&self) -> Self {
+        let pieces = self.pieces();
+        let pos = |i| pieces.iter().position(|&x| x == i).unwrap();
+
+        let mut transposed_pieces = pieces;
+
+        transposed_pieces.swap(pos(2), pos(5));
+        transposed_pieces.swap(pos(3), pos(9));
+        transposed_pieces.swap(pos(4), pos(13));
+        transposed_pieces.swap(pos(7), pos(10));
+        transposed_pieces.swap(pos(8), pos(14));
+        transposed_pieces.swap(pos(12), pos(15));
+        transposed_pieces.swap(1, 4);
+        transposed_pieces.swap(2, 8);
+        transposed_pieces.swap(3, 12);
+        transposed_pieces.swap(6, 9);
+        transposed_pieces.swap(7, 13);
+        transposed_pieces.swap(11, 14);
+
+        Self::from(transposed_pieces)
+    }
+
+    fn reduced(&self) -> ReducedFourBitPuzzle {
+        let mut pieces = 0;
+
+        for i in 0..16 {
+            let piece = ((self.pieces >> (4 * i)) & 0xF) as usize;
+            let reduced_piece = ReducedFourBitPuzzle::SOLVED >> (4 * ((piece + 15) % 16)) & 0xF;
+            pieces |= reduced_piece << (4 * i);
+        }
+
+        ReducedFourBitPuzzle {
+            pieces,
+            gap: self.gap,
+        }
+    }
+
+    #[inline(always)]
+    fn do_move(&mut self, dir: Direction) -> bool {
+        let gap = self.gap as usize;
+        let dir = dir as usize;
+
+        let shift = SHIFTS[gap][dir] as u64;
+        let piece = ((self.pieces >> shift) & 0xF) as usize;
+
+        let mask = MASKS[gap][dir][piece];
+        self.pieces ^= mask;
+
+        let next_gap = GAPS[gap][dir];
+        self.gap = next_gap;
+
+        next_gap != gap as u8
+    }
+}
+
+impl ReducedFourBitPuzzle {
+    const SOLVED: u64 = 0x0443443322332211;
+
+    fn new() -> Self {
         Self {
-            pieces: Self::SOLVED_REDUCED,
+            pieces: Self::SOLVED,
             gap: 15,
         }
     }
@@ -433,7 +506,7 @@ impl Pdb {
 
         let mut pdb = vec![u8::MAX; SIZE];
 
-        let puzzle = FourBitPuzzle::new_reduced();
+        let puzzle = ReducedFourBitPuzzle::new();
         let solved_index = indexing_table.encode(puzzle.pieces, base_5_table) as usize;
         pdb[solved_index] = 0;
 
@@ -509,8 +582,8 @@ impl Solver {
         &self,
         depth: u8,
         last_axis: Option<Axis>,
-        mut puzzle: FourBitPuzzle,
-        mut transposed_puzzle: FourBitPuzzle,
+        mut puzzle: ReducedFourBitPuzzle,
+        mut transposed_puzzle: ReducedFourBitPuzzle,
     ) -> bool {
         let coord = self
             .indexing_table
@@ -589,33 +662,10 @@ impl Solver {
         }
 
         let four_bit_puzzle = FourBitPuzzle::from(pieces);
+        let reduced_puzzle = four_bit_puzzle.reduced();
+        let transposed_reduced_puzzle = four_bit_puzzle.transposed().reduced();
+
         self.puzzle.set(four_bit_puzzle);
-
-        const REDUCED: [u8; 16] = [0, 1, 1, 2, 2, 3, 3, 2, 2, 3, 3, 4, 4, 3, 4, 4];
-        let mut reduced_pieces = [0; 16];
-        for (reduced_piece, piece) in reduced_pieces.iter_mut().zip(pieces.iter()) {
-            *reduced_piece = REDUCED[*piece as usize];
-        }
-
-        let reduced_puzzle = FourBitPuzzle::from(reduced_pieces);
-
-        // Compute transpose (swap piece 2/piece 5, etc. then swap position 2/position 5, etc.)
-        let mut transposed_reduced_pieces = reduced_pieces;
-        let pos = |i| pieces.iter().position(|&p| p == i).unwrap();
-        transposed_reduced_pieces.swap(pos(2), pos(5));
-        transposed_reduced_pieces.swap(pos(3), pos(9));
-        transposed_reduced_pieces.swap(pos(4), pos(13));
-        transposed_reduced_pieces.swap(pos(7), pos(10));
-        transposed_reduced_pieces.swap(pos(8), pos(14));
-        transposed_reduced_pieces.swap(pos(12), pos(15));
-        transposed_reduced_pieces.swap(1, 4);
-        transposed_reduced_pieces.swap(2, 8);
-        transposed_reduced_pieces.swap(3, 12);
-        transposed_reduced_pieces.swap(6, 9);
-        transposed_reduced_pieces.swap(7, 13);
-        transposed_reduced_pieces.swap(11, 14);
-
-        let transposed_reduced_puzzle = FourBitPuzzle::from(transposed_reduced_pieces);
 
         let coord = self
             .indexing_table
@@ -674,6 +724,24 @@ mod tests {
             let mut puzzle = FourBitPuzzle::new();
             puzzle.do_move(Direction::Right);
             assert_eq!(puzzle.pieces, 0xF0EDCBA987654321);
+        }
+
+        #[test]
+        fn test_reduced() {
+            let puzzle = FourBitPuzzle::new();
+            let reduced = puzzle.reduced();
+            assert_eq!(reduced.pieces, ReducedFourBitPuzzle::SOLVED);
+        }
+
+        #[test]
+        fn test_reduced_2() {
+            let puzzle = FourBitPuzzle {
+                pieces: 0xd46f9b8ac0e51732,
+                gap: 6,
+            };
+            let reduced = puzzle.reduced();
+            assert_eq!(reduced.pieces, 0x3234342340431221);
+            assert_eq!(reduced.gap, 6);
         }
     }
 
