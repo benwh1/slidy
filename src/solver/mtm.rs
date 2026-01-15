@@ -157,6 +157,7 @@ impl FourBitPuzzle {
         }
     }
 
+    #[inline(always)]
     fn do_move(&mut self, dir: Direction) -> bool {
         let gap = self.gap;
         let other = GAPS[gap as usize][dir as usize];
@@ -292,6 +293,7 @@ impl IndexingTable {
         }
     }
 
+    #[inline(always)]
     fn encode(&self, puzzle: u64, base_5_table: &Base5Table) -> u32 {
         let high = base_5_table.table[((puzzle >> 16) & 0xFFFF) as usize] as u32
             + 625 * base_5_table.table[(puzzle & 0xFFFF) as usize] as u32;
