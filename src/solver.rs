@@ -1,6 +1,5 @@
 //! Contains everything related to finding solutions to sliding puzzles.
 
 pub mod heuristic;
-pub mod mtm;
-pub mod pdb4443;
+pub mod size4x4;
 pub mod solver;

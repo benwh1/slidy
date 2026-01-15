@@ -1,6 +1,6 @@
 use crate::{
     algorithm::direction::Direction,
-    solver::pdb4443::{
+    solver::size4x4::stm::{
         pattern::Pattern,
         puzzle::{MoveResult, Puzzle},
     },

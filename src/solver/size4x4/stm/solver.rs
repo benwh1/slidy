@@ -8,7 +8,7 @@ use crate::{
     algorithm::{algorithm::Algorithm, direction::Direction},
     puzzle::{size::Size, sliding_puzzle::SlidingPuzzle},
     solver::{
-        pdb4443::{pattern::Pattern, pdb::Pdb, puzzle::Puzzle},
+        size4x4::stm::{pattern::Pattern, pdb::Pdb, puzzle::Puzzle},
         solver::SolverError,
     },
 };
