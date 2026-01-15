@@ -89,46 +89,62 @@ fn decode_multiset<const LEN: usize, const DISTINCT: usize>(
 }
 
 const GAPS: [[u8; 4]; 16] = [
-    [4, 1, u8::MAX, u8::MAX],
-    [5, 2, u8::MAX, 0],
-    [6, 3, u8::MAX, 1],
-    [7, u8::MAX, u8::MAX, 2],
-    [8, 5, 0, u8::MAX],
+    [4, 1, 0, 0],
+    [5, 2, 1, 0],
+    [6, 3, 2, 1],
+    [7, 3, 3, 2],
+    [8, 5, 0, 4],
     [9, 6, 1, 4],
     [10, 7, 2, 5],
-    [11, u8::MAX, 3, 6],
-    [12, 9, 4, u8::MAX],
+    [11, 7, 3, 6],
+    [12, 9, 4, 8],
     [13, 10, 5, 8],
     [14, 11, 6, 9],
-    [15, u8::MAX, 7, 10],
-    [u8::MAX, 13, 8, u8::MAX],
-    [u8::MAX, 14, 9, 12],
-    [u8::MAX, 15, 10, 13],
-    [u8::MAX, u8::MAX, 11, 14],
+    [15, 11, 7, 10],
+    [12, 13, 8, 12],
+    [13, 14, 9, 12],
+    [14, 15, 10, 13],
+    [15, 15, 11, 14],
 ];
 
-const MASKS: [[[u64; 16]; 16]; 16] = {
-    let mut masks = [[[0u64; 16]; 16]; 16];
+const SHIFTS: [[u8; 4]; 16] = {
+    let mut out = [[0; 4]; 16];
 
-    let mut g = 0;
-    while g < 16 {
-        let mut o = 0;
-        while o < 16 {
-            let mut p = 0;
-            while p < 16 {
-                if g == o {
-                    masks[g][o][p] = 0;
-                } else {
-                    masks[g][o][p] = ((p << (o * 4)) | (p << (g * 4))) as u64;
-                }
-                p += 1;
-            }
-            o += 1;
+    let mut gap = 0;
+    while gap < 16 {
+        let mut dir = 0;
+        while dir < 4 {
+            let other = GAPS[gap][dir];
+            out[gap][dir] = if gap as u8 == other { 0 } else { other * 4 };
+            dir += 1;
         }
-        g += 1;
+        gap += 1;
     }
 
-    masks
+    out
+};
+
+const MASKS: [[[u64; 16]; 4]; 16] = {
+    let mut out = [[[0; 16]; 4]; 16];
+
+    let mut gap = 0;
+    while gap < 16 {
+        let mut dir = 0;
+        while dir < 4 {
+            let other = GAPS[gap][dir];
+            if gap as u8 != other {
+                let mut piece = 0;
+                while piece < 16 {
+                    out[gap][dir][piece] = ((piece << (other * 4)) | (piece << (gap * 4))) as u64;
+                    piece += 1;
+                }
+            }
+            dir += 1;
+        }
+        gap += 1;
+    }
+
+    out
 };
 
 struct Base5Table {
@@ -183,20 +199,19 @@ impl FourBitPuzzle {
 
     #[inline(always)]
     fn do_move(&mut self, dir: Direction) -> bool {
-        let gap = self.gap;
-        let other = GAPS[gap as usize][dir as usize];
+        let gap = self.gap as usize;
+        let dir = dir as usize;
 
-        if other == u8::MAX {
-            return false;
-        }
+        let shift = SHIFTS[gap][dir] as u64;
+        let piece = ((self.pieces >> shift) & 0xF) as usize;
 
-        let piece = (self.pieces >> (other * 4)) & 0xF;
-        let mask = MASKS[gap as usize][other as usize][piece as usize];
-
+        let mask = MASKS[gap][dir][piece];
         self.pieces ^= mask;
-        self.gap = other;
 
-        true
+        let next_gap = GAPS[gap][dir];
+        self.gap = next_gap;
+
+        next_gap != gap as u8
     }
 }
 
