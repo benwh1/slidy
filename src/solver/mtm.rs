@@ -332,12 +332,16 @@ impl IndexingTable {
 
     #[inline(always)]
     fn encode(&self, puzzle: u64, base_5_table: &Base5Table) -> u32 {
-        let high = base_5_table.table[((puzzle >> 16) & 0xFFFF) as usize] as u32
-            + 625 * base_5_table.table[(puzzle & 0xFFFF) as usize] as u32;
-        let low = base_5_table.table[((puzzle >> 48) & 0xFFFF) as usize] as u32
-            + 625 * base_5_table.table[((puzzle >> 32) & 0xFFFF) as usize] as u32;
+        let t = |shift: u8| *unsafe {
+            base_5_table
+                .table
+                .get_unchecked(((puzzle >> shift) & 0xFFFF) as usize)
+        } as usize;
 
-        self.high[high as usize] + self.low[low as usize] as u32
+        let high = t(16) + 625 * t(0);
+        let low = t(48) + 625 * t(32);
+
+        unsafe { *self.high.get_unchecked(high) + *self.low.get_unchecked(low) as u32 }
     }
 
     fn decode(&self, t: u32) -> FourBitPuzzle {
@@ -442,8 +446,8 @@ impl Solver {
     ) -> bool {
         let coord = self
             .indexing_table
-            .encode(puzzle.pieces, &self.base_5_table);
-        let heuristic = self.pdb.pdb[coord as usize];
+            .encode(puzzle.pieces, &self.base_5_table) as usize;
+        let heuristic = *unsafe { self.pdb.pdb.get_unchecked(coord) };
 
         if heuristic > depth {
             return false;
@@ -451,8 +455,8 @@ impl Solver {
 
         let coord = self
             .indexing_table
-            .encode(transposed_puzzle.pieces, &self.base_5_table);
-        let heuristic = self.pdb.pdb[coord as usize];
+            .encode(transposed_puzzle.pieces, &self.base_5_table) as usize;
+        let heuristic = *unsafe { self.pdb.pdb.get_unchecked(coord) };
 
         if heuristic > depth {
             return false;
