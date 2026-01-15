@@ -466,6 +466,9 @@ impl Solver {
             return p.pieces == FourBitPuzzle::SOLVED;
         }
 
+        let original_puzzle = puzzle;
+        let original_transposed = transposed_puzzle;
+
         for (dir, transposed_dir) in [
             (Direction::Up, Direction::Left),
             (Direction::Left, Direction::Up),
@@ -478,6 +481,9 @@ impl Solver {
 
             let mut amount = 0;
 
+            puzzle = original_puzzle;
+            transposed_puzzle = original_transposed;
+
             while puzzle.do_move(dir) {
                 transposed_puzzle.do_move(transposed_dir);
                 amount += 1;
@@ -488,11 +494,6 @@ impl Solver {
                 if self.dfs(depth - 1, Some(dir.into()), puzzle, transposed_puzzle) {
                     return true;
                 }
-            }
-
-            for _ in 0..amount {
-                puzzle.do_move(dir.inverse());
-                transposed_puzzle.do_move(transposed_dir.inverse());
             }
 
             self.solution_ptr
