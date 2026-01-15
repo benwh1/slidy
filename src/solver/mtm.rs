@@ -107,6 +107,32 @@ const GAPS: [[u8; 4]; 16] = [
     [u8::MAX, u8::MAX, 11, 14],
 ];
 
+struct Base5Table {
+    table: Box<[u16]>,
+}
+
+impl Base5Table {
+    fn new() -> Self {
+        let mut table = vec![0; 65536];
+
+        for d0 in 0..5 {
+            for d1 in 0..5 {
+                for d2 in 0..5 {
+                    for d3 in 0..5 {
+                        let b16 = d0 + 16 * (d1 + 16 * (d2 + 16 * d3));
+                        let b5 = d3 + 5 * (d2 + 5 * (d1 + 5 * d0));
+                        table[b16] = b5 as u16;
+                    }
+                }
+            }
+        }
+
+        Self {
+            table: table.into_boxed_slice(),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 struct FourBitPuzzle {
     pieces: u64,
@@ -266,17 +292,11 @@ impl IndexingTable {
         }
     }
 
-    fn encode(&self, puzzle: u64) -> u32 {
-        let shr = |n: u64| (puzzle >> n) & 0xF;
-
-        let high = shr(28)
-            + 5 * (shr(24)
-                + 5 * (shr(20)
-                    + 5 * (shr(16) + 5 * (shr(12) + 5 * (shr(8) + 5 * (shr(4) + 5 * shr(0)))))));
-        let low = shr(60)
-            + 5 * (shr(56)
-                + 5 * (shr(52)
-                    + 5 * (shr(48) + 5 * (shr(44) + 5 * (shr(40) + 5 * (shr(36) + 5 * shr(32)))))));
+    fn encode(&self, puzzle: u64, base_5_table: &Base5Table) -> u32 {
+        let high = base_5_table.table[((puzzle >> 16) & 0xFFFF) as usize] as u32
+            + 625 * base_5_table.table[(puzzle & 0xFFFF) as usize] as u32;
+        let low = base_5_table.table[((puzzle >> 48) & 0xFFFF) as usize] as u32
+            + 625 * base_5_table.table[((puzzle >> 32) & 0xFFFF) as usize] as u32;
 
         self.high[high as usize] + self.low[low as usize] as u32
     }
@@ -293,7 +313,7 @@ pub struct Pdb {
 }
 
 impl Pdb {
-    fn new(indexing_table: &IndexingTable) -> Self {
+    fn new(indexing_table: &IndexingTable, base_5_table: &Base5Table) -> Self {
         const FILENAME: &str = "mtm_pdb.bin";
 
         if let Ok(data) = std::fs::read(FILENAME) {
@@ -305,7 +325,7 @@ impl Pdb {
         let mut pdb = vec![u8::MAX; SIZE];
 
         let puzzle = FourBitPuzzle::new_reduced();
-        let solved_index = indexing_table.encode(puzzle.pieces) as usize;
+        let solved_index = indexing_table.encode(puzzle.pieces, base_5_table) as usize;
         pdb[solved_index] = 0;
 
         let mut new = 1;
@@ -328,7 +348,7 @@ impl Pdb {
                 ] {
                     let mut puzzle = indexing_table.decode(i as u32);
                     while puzzle.do_move(mv) {
-                        let idx = indexing_table.encode(puzzle.pieces) as usize;
+                        let idx = indexing_table.encode(puzzle.pieces, base_5_table) as usize;
                         if pdb[idx] == u8::MAX {
                             pdb[idx] = depth + 1;
                             new += 1;
@@ -353,6 +373,7 @@ impl Pdb {
 
 pub struct Solver {
     indexing_table: IndexingTable,
+    base_5_table: Base5Table,
     pdb: Pdb,
     solution: [Cell<Direction>; 128],
     solution_ptr: Cell<usize>,
@@ -362,10 +383,12 @@ pub struct Solver {
 impl Solver {
     pub fn new() -> Self {
         let indexing_table = IndexingTable::new();
-        let pdb = Pdb::new(&indexing_table);
+        let base_5_table = Base5Table::new();
+        let pdb = Pdb::new(&indexing_table, &base_5_table);
 
         Self {
             indexing_table,
+            base_5_table,
             pdb,
             solution: [const { Cell::new(Direction::Up) }; 128],
             solution_ptr: Cell::new(0),
@@ -380,14 +403,18 @@ impl Solver {
         mut puzzle: FourBitPuzzle,
         mut transposed_puzzle: FourBitPuzzle,
     ) -> bool {
-        let coord = self.indexing_table.encode(puzzle.pieces);
+        let coord = self
+            .indexing_table
+            .encode(puzzle.pieces, &self.base_5_table);
         let heuristic = self.pdb.pdb[coord as usize];
 
         if heuristic > depth {
             return false;
         }
 
-        let coord = self.indexing_table.encode(transposed_puzzle.pieces);
+        let coord = self
+            .indexing_table
+            .encode(transposed_puzzle.pieces, &self.base_5_table);
         let heuristic = self.pdb.pdb[coord as usize];
 
         if heuristic > depth {
@@ -480,7 +507,9 @@ impl Solver {
 
         let transposed_reduced_puzzle = FourBitPuzzle::from(transposed_reduced_pieces);
 
-        let coord = self.indexing_table.encode(reduced_puzzle.pieces);
+        let coord = self
+            .indexing_table
+            .encode(reduced_puzzle.pieces, &self.base_5_table);
         let mut depth = self.pdb.pdb[coord as usize];
 
         let timer = Instant::now();
@@ -544,6 +573,7 @@ mod tests {
         #[test]
         fn test_indexing_table() {
             let table = IndexingTable::new();
+            let base_5_table = Base5Table::new();
 
             let max_counts = [1u8, 4, 4, 4, 3];
             let mut counts = [0u8, 0, 0, 0, 0];
@@ -676,7 +706,10 @@ mod tests {
                                                                                 | (p0 as u64);
 
                                                                             let encoded = table
-                                                                                .encode(puzzle);
+                                                                                .encode(
+                                                                                    puzzle,
+                                                                                    &base_5_table,
+                                                                                );
 
                                                                             assert_eq!(
                                                                                 encoded,
