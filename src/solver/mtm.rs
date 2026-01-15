@@ -7,7 +7,8 @@ use crate::{
     puzzle::{size::Size, sliding_puzzle::SlidingPuzzle},
 };
 
-const SIZE: usize = 252252000;
+const SIZE: usize = 151351200;
+const TALLY: [u8; 5] = [1, 2, 4, 5, 4];
 
 fn binomial(n: u8, k: u8) -> u64 {
     if k > n {
@@ -181,7 +182,7 @@ struct FourBitPuzzle {
 
 impl FourBitPuzzle {
     const SOLVED: u64 = 0x0FEDCBA987654321;
-    const SOLVED_REDUCED: u64 = 0x0444333322221111;
+    const SOLVED_REDUCED: u64 = 0x0443443322332211;
 
     fn new() -> Self {
         Self {
@@ -236,7 +237,7 @@ struct IndexingTable {
 
 impl IndexingTable {
     fn new() -> Self {
-        let max_counts = [1, 4, 4, 4, 3];
+        let max_counts = TALLY;
         let mut counts = [0, 0, 0, 0, 0];
 
         let mut high = vec![0; 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5];
@@ -345,7 +346,7 @@ impl IndexingTable {
     }
 
     fn decode(&self, t: u32) -> FourBitPuzzle {
-        FourBitPuzzle::from(decode_multiset(t as u64, [1, 4, 4, 4, 3]))
+        FourBitPuzzle::from(decode_multiset(t as u64, TALLY))
     }
 }
 
@@ -523,7 +524,7 @@ impl Solver {
         let four_bit_puzzle = FourBitPuzzle::from(pieces);
         self.puzzle.set(four_bit_puzzle);
 
-        const REDUCED: [u8; 16] = [0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4];
+        const REDUCED: [u8; 16] = [0, 1, 1, 2, 2, 3, 3, 2, 2, 3, 3, 4, 4, 3, 4, 4];
         let mut reduced_pieces = [0; 16];
         for (reduced_piece, piece) in reduced_pieces.iter_mut().zip(pieces.iter()) {
             *reduced_piece = REDUCED[*piece as usize];
@@ -617,7 +618,7 @@ mod tests {
             let table = IndexingTable::new();
             let base_5_table = Base5Table::new();
 
-            let max_counts = [1u8, 4, 4, 4, 3];
+            let max_counts = TALLY;
             let mut counts = [0u8, 0, 0, 0, 0];
 
             let mut index = 0;
