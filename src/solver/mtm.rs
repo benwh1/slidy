@@ -107,6 +107,30 @@ const GAPS: [[u8; 4]; 16] = [
     [u8::MAX, u8::MAX, 11, 14],
 ];
 
+const MASKS: [[[u64; 16]; 16]; 16] = {
+    let mut masks = [[[0u64; 16]; 16]; 16];
+
+    let mut g = 0;
+    while g < 16 {
+        let mut o = 0;
+        while o < 16 {
+            let mut p = 0;
+            while p < 16 {
+                if g == o {
+                    masks[g][o][p] = 0;
+                } else {
+                    masks[g][o][p] = ((p << (o * 4)) | (p << (g * 4))) as u64;
+                }
+                p += 1;
+            }
+            o += 1;
+        }
+        g += 1;
+    }
+
+    masks
+};
+
 struct Base5Table {
     table: Box<[u16]>,
 }
@@ -166,11 +190,8 @@ impl FourBitPuzzle {
             return false;
         }
 
-        let shift_gap = gap * 4;
-        let shift_other = other * 4;
-
-        let piece = (self.pieces >> shift_other) & 0xF;
-        let mask = (piece << shift_gap) | (piece << shift_other);
+        let piece = (self.pieces >> (other * 4)) & 0xF;
+        let mask = MASKS[gap as usize][other as usize][piece as usize];
 
         self.pieces ^= mask;
         self.gap = other;
