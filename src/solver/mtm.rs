@@ -10,35 +10,96 @@ use crate::{
 const SIZE: usize = 151351200;
 const TALLY: [u8; 5] = [1, 2, 4, 5, 4];
 
-fn binomial(n: u8, k: u8) -> u64 {
+const fn binomial(n: u64, k: u64) -> u64 {
     if k > n {
         return 0;
     }
 
-    let k = k.min(n - k) as u64;
-    let n = n as u64;
+    let k = if k < n - k { k } else { n - k };
 
     let mut result = 1;
-    for i in 0..k {
+    let mut i = 0;
+    while i < k {
         result = result * (n - i) / (i + 1);
+        i += 1;
     }
 
     result
 }
 
-fn multinomial(counts: &[u8]) -> u64 {
-    let mut rem = counts.iter().copied().sum();
+const BINOMIAL: [[u64; 17]; 17] = {
+    let mut out = [[0u64; 17]; 17];
+
+    let mut n = 0;
+    while n < 17 {
+        let mut k = 0;
+        while k < 17 {
+            out[n as usize][k as usize] = binomial(n, k);
+            k += 1;
+        }
+        n += 1;
+    }
+
+    out
+};
+
+const fn multinomial(counts: &[u8]) -> u64 {
+    let mut rem = {
+        let mut total = 0;
+        let mut i = 0;
+        while i < counts.len() {
+            total += counts[i];
+            i += 1;
+        }
+        total as usize
+    };
     let mut r = 1;
 
-    for &c in counts {
+    let mut i = 0;
+    while i < counts.len() {
+        let c = counts[i] as usize;
         if c != 0 {
-            r *= binomial(rem, c) as u64;
+            r *= BINOMIAL[rem][c];
             rem -= c;
         }
+        i += 1;
     }
 
     r
 }
+
+const MULTINOMIAL: [[[[[u64; 5]; 6]; 5]; 3]; 2] = {
+    let mut out = [[[[[0; 5]; 6]; 5]; 3]; 2];
+
+    let mut a0 = 0;
+    let mut a1;
+    let mut a2;
+    let mut a3;
+    let mut a4;
+    while a0 < 2 {
+        a1 = 0;
+        while a1 < 3 {
+            a2 = 0;
+            while a2 < 5 {
+                a3 = 0;
+                while a3 < 6 {
+                    a4 = 0;
+                    while a4 < 5 {
+                        out[a0 as usize][a1 as usize][a2 as usize][a3 as usize][a4 as usize] =
+                            multinomial(&[a0, a1, a2, a3, a4]);
+                        a4 += 1;
+                    }
+                    a3 += 1;
+                }
+                a2 += 1;
+            }
+            a1 += 1;
+        }
+        a0 += 1;
+    }
+
+    out
+};
 
 fn encode_multiset<const LEN: usize, const DISTINCT: usize>(
     arr: [u8; LEN],
@@ -62,20 +123,26 @@ fn encode_multiset<const LEN: usize, const DISTINCT: usize>(
     t
 }
 
-fn decode_multiset<const LEN: usize, const DISTINCT: usize>(
-    mut t: u64,
-    tally: [u8; DISTINCT],
-) -> [u8; LEN] {
-    let mut remaining = tally;
-    let mut out = [0u8; LEN];
+fn decode_multiset_16(mut t: u64) -> [u8; 16] {
+    let mut remaining = TALLY;
+    let mut out = [0; 16];
 
-    for i in 0..LEN {
-        for s in 0..DISTINCT {
+    for i in 0..16 {
+        for s in 0..5 {
             if remaining[s] == 0 {
                 continue;
             }
             remaining[s] -= 1;
-            let m = multinomial(&remaining);
+
+            let m = *unsafe {
+                MULTINOMIAL
+                    .get_unchecked(remaining[0] as usize)
+                    .get_unchecked(remaining[1] as usize)
+                    .get_unchecked(remaining[2] as usize)
+                    .get_unchecked(remaining[3] as usize)
+                    .get_unchecked(remaining[4] as usize)
+            };
+
             if t < m {
                 out[i] = s as u8;
                 break;
@@ -346,7 +413,7 @@ impl IndexingTable {
     }
 
     fn decode(&self, t: u32) -> FourBitPuzzle {
-        FourBitPuzzle::from(decode_multiset(t as u64, TALLY))
+        FourBitPuzzle::from(decode_multiset_16(t as u64))
     }
 }
 
