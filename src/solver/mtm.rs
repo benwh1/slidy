@@ -202,14 +202,15 @@ impl FourBitPuzzle {
 
 impl From<[u8; 16]> for FourBitPuzzle {
     fn from(value: [u8; 16]) -> Self {
-        let mut puzzle = FourBitPuzzle { pieces: 0, gap: 0 };
+        let mut pieces = 0;
+        let mut gap = 0;
         for (i, &piece) in value.iter().enumerate() {
-            puzzle.pieces |= (piece as u64) << (4 * i);
+            pieces |= (piece as u64) << (4 * i);
             if piece == 0 {
-                puzzle.gap = i as u8;
+                gap = i as u8;
             }
         }
-        puzzle
+        Self { pieces, gap }
     }
 }
 
@@ -325,9 +326,7 @@ impl IndexingTable {
     }
 
     fn decode(&self, t: u32) -> FourBitPuzzle {
-        let pieces: [u8; 16] = decode_multiset(t as u64, [1, 4, 4, 4, 3]);
-
-        FourBitPuzzle::from(pieces)
+        FourBitPuzzle::from(decode_multiset(t as u64, [1, 4, 4, 4, 3]))
     }
 }
 
