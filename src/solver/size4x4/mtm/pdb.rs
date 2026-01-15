@@ -1,8 +1,11 @@
 use crate::{
     algorithm::direction::Direction,
     solver::size4x4::mtm::{
-        base_5_table::Base5Table, consts::SIZE, indexing_table::IndexingTable,
-        puzzle::ReducedFourBitPuzzle,
+        base_5_table::Base5Table,
+        consts::SIZE,
+        indexing,
+        indexing_table::IndexingTable,
+        puzzle::{FourBitPuzzle, ReducedFourBitPuzzle},
     },
 };
 
@@ -44,7 +47,8 @@ impl Pdb {
                     Direction::Down,
                     Direction::Right,
                 ] {
-                    let mut puzzle = indexing_table.decode(i as u32);
+                    let pieces = indexing::decode_multiset_16(i as u64);
+                    let mut puzzle = FourBitPuzzle::from(pieces);
                     while puzzle.do_move(mv) {
                         let idx = indexing_table.encode(puzzle.pieces, base_5_table) as usize;
                         if pdb[idx] == u8::MAX {

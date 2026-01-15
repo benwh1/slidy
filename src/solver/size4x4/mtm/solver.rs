@@ -1,4 +1,4 @@
-use std::{cell::Cell, time::Instant};
+use std::cell::Cell;
 
 use num_traits::ToPrimitive as _;
 
@@ -22,7 +22,14 @@ pub struct Solver {
     puzzle: Cell<FourBitPuzzle>,
 }
 
+impl Default for Solver {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Solver {
+    #[must_use]
     pub fn new() -> Self {
         let indexing_table = IndexingTable::new();
         let base_5_table = Base5Table::new();
@@ -48,6 +55,9 @@ impl Solver {
         let coord = self
             .indexing_table
             .encode(puzzle.pieces, &self.base_5_table) as usize;
+
+        // SAFETY: We have a test which guarantees that every `ReducedFourBitPuzzle` encodes to an
+        // index that is within bounds.
         let heuristic = unsafe { self.pdb.get_unchecked(coord) };
 
         if heuristic > depth {
@@ -57,6 +67,8 @@ impl Solver {
         let coord = self
             .indexing_table
             .encode(transposed_puzzle.pieces, &self.base_5_table) as usize;
+
+        // SAFETY: See above.
         let heuristic = unsafe { self.pdb.get_unchecked(coord) };
 
         if heuristic > depth {
@@ -113,9 +125,6 @@ impl Solver {
             return None;
         }
 
-        // Reset state
-        self.solution_ptr.set(0);
-
         let mut pieces = [0; 16];
         for (i, piece) in pieces.iter_mut().enumerate() {
             *piece = puzzle.piece_at(i as u64).to_u8().unwrap();
@@ -125,6 +134,8 @@ impl Solver {
         let reduced_puzzle = four_bit_puzzle.reduced();
         let transposed_reduced_puzzle = four_bit_puzzle.transposed().reduced();
 
+        // Reset state
+        self.solution_ptr.set(0);
         self.puzzle.set(four_bit_puzzle);
 
         let coord = self
@@ -132,10 +143,7 @@ impl Solver {
             .encode(reduced_puzzle.pieces, &self.base_5_table);
         let mut depth = self.pdb.get(coord as usize);
 
-        let timer = Instant::now();
         loop {
-            println!("depth {depth} elapsed {:?}", timer.elapsed());
-
             if self.dfs(depth, None, reduced_puzzle, transposed_reduced_puzzle) {
                 let mut solution = Algorithm::new();
 
@@ -146,7 +154,6 @@ impl Solver {
                     solution.push_combine(dir.into());
                 }
 
-                println!("found {solution} elapsed {:?}", timer.elapsed());
                 return Some(solution);
             }
 

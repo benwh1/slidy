@@ -172,7 +172,7 @@ impl Solver {
 mod tests {
     use std::str::FromStr as _;
 
-    use crate::{puzzle::puzzle::Puzzle, solver::pdb4443::solver::Solver};
+    use crate::{puzzle::puzzle::Puzzle, solver::size4x4::stm::solver::Solver};
 
     #[test]
     fn test_solver() {

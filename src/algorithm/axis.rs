@@ -31,8 +31,8 @@ impl Axis {
 impl From<Direction> for Axis {
     fn from(value: Direction) -> Self {
         match value {
-            Direction::Up | Direction::Down => Axis::Vertical,
-            Direction::Left | Direction::Right => Axis::Horizontal,
+            Direction::Up | Direction::Down => Self::Vertical,
+            Direction::Left | Direction::Right => Self::Horizontal,
         }
     }
 }

@@ -1,6 +1,4 @@
-use crate::solver::size4x4::mtm::{
-    base_5_table::Base5Table, consts::TALLY, indexing, puzzle::FourBitPuzzle,
-};
+use crate::solver::size4x4::mtm::{base_5_table::Base5Table, consts::TALLY, indexing};
 
 pub(super) struct IndexingTable {
     high: Box<[u32]>,
@@ -82,21 +80,21 @@ impl IndexingTable {
                                         low[index] =
                                             indexing::encode_multiset(pieces, counts) as u16;
 
-                                        counts[p7 as usize] -= 1;
+                                        counts[p7] -= 1;
                                     }
-                                    counts[p6 as usize] -= 1;
+                                    counts[p6] -= 1;
                                 }
-                                counts[p5 as usize] -= 1;
+                                counts[p5] -= 1;
                             }
-                            counts[p4 as usize] -= 1;
+                            counts[p4] -= 1;
                         }
-                        counts[p3 as usize] -= 1;
+                        counts[p3] -= 1;
                     }
-                    counts[p2 as usize] -= 1;
+                    counts[p2] -= 1;
                 }
-                counts[p1 as usize] -= 1;
+                counts[p1] -= 1;
             }
-            counts[p0 as usize] -= 1;
+            counts[p0] -= 1;
         }
 
         Self {
@@ -107,23 +105,24 @@ impl IndexingTable {
 
     #[inline(always)]
     pub(super) fn encode(&self, puzzle: u64, base_5_table: &Base5Table) -> u32 {
-        let t = |shift: u8| unsafe {
-            base_5_table.get_unchecked(((puzzle >> shift) & 0xFFFF) as usize)
-        } as usize;
+        let t = |shift: u8| {
+            // SAFETY: `base_5_table` has length 0xFFFF.
+            unsafe { base_5_table.get_unchecked(((puzzle >> shift) & 0xFFFF) as usize) as usize }
+        };
 
         let high = t(16) + 625 * t(0);
         let low = t(48) + 625 * t(32);
 
+        // SAFETY: `high` and `low` are computed as 8 digit base-5 numbers. `self.high` and
+        // `self.low` have length 5^8, so these are within bounds.
         unsafe { *self.high.get_unchecked(high) + *self.low.get_unchecked(low) as u32 }
-    }
-
-    pub(super) fn decode(&self, t: u32) -> FourBitPuzzle {
-        FourBitPuzzle::from(indexing::decode_multiset_16(t as u64))
     }
 }
 
 #[cfg(test)]
 mod tests {
+
+    use crate::solver::size4x4::mtm::consts::SIZE;
 
     use super::*;
 
@@ -251,10 +250,10 @@ mod tests {
                                                                         );
 
                                                                         assert_eq!(
-                                                                                encoded,
-                                                                                index,
-                                                                                "puzzle {puzzle:x} encoded {encoded} index {index}"
-                                                                            );
+                                                                            encoded,
+                                                                            index,
+                                                                            "puzzle {puzzle:x} encoded {encoded} index {index}"
+                                                                        );
 
                                                                         index += 1;
 
@@ -290,5 +289,7 @@ mod tests {
             }
             counts[p0] -= 1;
         }
+
+        assert_eq!(index as usize, SIZE);
     }
 }

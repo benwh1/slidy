@@ -68,13 +68,16 @@ pub(super) fn decode_multiset_16(mut t: u64) -> [u8; 16] {
     let mut remaining = TALLY;
     let mut out = [0; 16];
 
-    for i in 0..16 {
+    for o in &mut out {
         for s in 0..5 {
             if remaining[s] == 0 {
                 continue;
             }
             remaining[s] -= 1;
 
+            // SAFETY: The indices are computed by starting with `TALLY` and decrementing them
+            // until they reach 0. `MULTINOMIAL` has dimensions chosen so that indexing with the
+            // entries in `TALLY` will be within bounds.
             let m = *unsafe {
                 MULTINOMIAL
                     .get_unchecked(remaining[0] as usize)
@@ -85,12 +88,12 @@ pub(super) fn decode_multiset_16(mut t: u64) -> [u8; 16] {
             };
 
             if t < m {
-                out[i] = s as u8;
+                *o = s as u8;
                 break;
-            } else {
-                t -= m;
-                remaining[s] += 1;
             }
+
+            t -= m;
+            remaining[s] += 1;
         }
     }
 
