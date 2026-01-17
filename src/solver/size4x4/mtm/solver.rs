@@ -1,10 +1,10 @@
 use std::cell::Cell;
 
-use num_traits::ToPrimitive as _;
+use num_traits::AsPrimitive;
 
 use crate::{
     algorithm::{algorithm::Algorithm, axis::Axis, direction::Direction},
-    puzzle::{size::Size, sliding_puzzle::SlidingPuzzle},
+    puzzle::{sliding_puzzle::SlidingPuzzle, small::Puzzle4x4},
     solver::size4x4::mtm::{
         base_5_table::Base5Table,
         indexing_table::IndexingTable,
@@ -80,7 +80,7 @@ impl Solver {
             for mv in &self.solution[..self.solution_ptr.get()] {
                 p.do_move(mv.get());
             }
-            return p.pieces == FourBitPuzzle::SOLVED;
+            return p.pieces() == Puzzle4x4::SOLVED;
         }
 
         let original_puzzle = puzzle;
@@ -120,17 +120,15 @@ impl Solver {
         false
     }
 
-    pub fn solve<P: SlidingPuzzle>(&self, puzzle: &P) -> Option<Algorithm> {
-        if puzzle.size() != Size::new(4, 4).unwrap() {
+    pub fn solve<P: SlidingPuzzle>(&self, puzzle: &P) -> Option<Algorithm>
+    where
+        P::Piece: AsPrimitive<u8>,
+    {
+        let mut four_bit_puzzle = FourBitPuzzle::new();
+        if !four_bit_puzzle.puzzle.try_set_state(puzzle) {
             return None;
         }
 
-        let mut pieces = [0; 16];
-        for (i, piece) in pieces.iter_mut().enumerate() {
-            *piece = puzzle.piece_at(i as u64).to_u8().unwrap();
-        }
-
-        let four_bit_puzzle = FourBitPuzzle::from(pieces);
         let reduced_puzzle = four_bit_puzzle.reduced();
         let transposed_reduced_puzzle = four_bit_puzzle.transposed().reduced();
 

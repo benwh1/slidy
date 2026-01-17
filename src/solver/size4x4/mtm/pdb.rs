@@ -47,10 +47,11 @@ impl Pdb {
                     Direction::Down,
                     Direction::Right,
                 ] {
-                    let pieces = indexing::decode_multiset_16(i as u64);
-                    let mut puzzle = FourBitPuzzle::from(pieces);
+                    let piece_array = indexing::decode_multiset_16(i as u64);
+                    let mut puzzle =
+                        unsafe { FourBitPuzzle::from_piece_array_unchecked(piece_array) };
                     while puzzle.do_move(mv) {
-                        let idx = indexing_table.encode(puzzle.pieces, base_5_table) as usize;
+                        let idx = indexing_table.encode(puzzle.pieces(), base_5_table) as usize;
                         if pdb[idx] == u8::MAX {
                             pdb[idx] = depth + 1;
                             new += 1;

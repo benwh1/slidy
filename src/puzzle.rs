@@ -13,5 +13,6 @@ pub mod render;
 pub mod scrambler;
 pub mod size;
 pub mod sliding_puzzle;
+pub mod small;
 pub mod solvable;
 pub mod solved_state;
