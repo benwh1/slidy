@@ -3,7 +3,7 @@ use crate::{
     puzzle::{puzzle::PuzzleError, size::Size, sliding_puzzle::SlidingPuzzle},
 };
 
-const GAPS: [[u8; 4]; 16] = [
+pub(crate) const GAPS: [[u8; 4]; 16] = [
     [4, 1, 0, 0],
     [5, 2, 1, 0],
     [6, 3, 2, 1],
@@ -22,7 +22,7 @@ const GAPS: [[u8; 4]; 16] = [
     [15, 15, 11, 14],
 ];
 
-const SHIFTS: [[u8; 4]; 16] = {
+pub(crate) const SHIFTS: [[u8; 4]; 16] = {
     let mut out = [[0; 4]; 16];
 
     let mut gap = 0;
@@ -39,7 +39,7 @@ const SHIFTS: [[u8; 4]; 16] = {
     out
 };
 
-const MOVE_MASKS: [[[u64; 16]; 4]; 16] = {
+pub(crate) const MOVE_MASKS: [[[u64; 16]; 4]; 16] = {
     let mut out = [[[0; 16]; 4]; 16];
 
     let mut gap = 0;
