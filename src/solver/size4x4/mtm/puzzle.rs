@@ -1,9 +1,6 @@
 use crate::{
     algorithm::direction::Direction,
-    puzzle::{
-        sliding_puzzle::SlidingPuzzle,
-        small::{Puzzle4x4, GAPS, MOVE_MASKS, SHIFTS},
-    },
+    puzzle::{sliding_puzzle::SlidingPuzzle, small::Puzzle4x4},
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -115,13 +112,13 @@ impl ReducedFourBitPuzzle {
         let gap = self.gap as usize;
         let dir = dir as usize;
 
-        let shift = SHIFTS[gap][dir] as u64;
+        let shift = Puzzle4x4::SHIFTS[gap][dir] as u64;
         let piece = ((self.pieces >> shift) & 0xF) as usize;
 
-        let mask = MOVE_MASKS[gap][dir][piece];
+        let mask = Puzzle4x4::MOVE_MASKS[gap][dir][piece];
         self.pieces ^= mask;
 
-        let next_gap = GAPS[gap][dir];
+        let next_gap = Puzzle4x4::GAPS[gap][dir];
         self.gap = next_gap;
 
         next_gap != gap as u8
