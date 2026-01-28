@@ -19,10 +19,40 @@ pub type Puzzle4x2 = Puzzle<4, 2>;
 pub type Puzzle4x3 = Puzzle<4, 3>;
 pub type Puzzle4x4 = Puzzle<4, 4>;
 
+pub(crate) mod sealed {
+    pub trait SmallPuzzle {
+        type Gaps;
+        type Shifts;
+        type SwapMasks;
+        type MoveMasks;
+        type PieceArray;
+
+        const SOLVED: u64;
+        const GAPS: Self::Gaps;
+        const SHIFTS: Self::Shifts;
+        const SWAP_MASKS: Self::SwapMasks;
+        const MOVE_MASKS: Self::MoveMasks;
+
+        fn new() -> Self;
+        unsafe fn with_pieces_and_gap_unchecked(pieces: u64, gap: u8) -> Self;
+        unsafe fn from_piece_array_unchecked(piece_array: Self::PieceArray) -> Self;
+        fn pieces(&self) -> u64;
+        fn gap(&self) -> u8;
+    }
+}
+
+use sealed::SmallPuzzle;
+
 macro_rules! impl_puzzle {
     ($w:literal, $h:literal) => {
-        impl Puzzle<$w, $h> {
-            pub const SOLVED: u64 = {
+        impl SmallPuzzle for Puzzle<$w, $h> {
+            type Gaps = [[u8; 4]; $w * $h];
+            type Shifts = [[u8; 4]; $w * $h];
+            type SwapMasks = [[[u64; $w * $h]; $w * $h]; $w * $h];
+            type MoveMasks = [[[u64; $w * $h]; 4]; $w * $h];
+            type PieceArray = [u8; $w * $h];
+
+            const SOLVED: u64 = {
                 let mut out = 0;
 
                 let mut i = 0;
@@ -34,7 +64,7 @@ macro_rules! impl_puzzle {
                 out
             };
 
-            pub(crate) const GAPS: [[u8; 4]; $w * $h] = {
+            const GAPS: Self::Gaps = {
                 let mut out = [[0; 4]; $w * $h];
 
                 let mut i = 0;
@@ -52,7 +82,7 @@ macro_rules! impl_puzzle {
                 out
             };
 
-            pub(crate) const SHIFTS: [[u8; 4]; $w * $h] = {
+            const SHIFTS: Self::Shifts = {
                 let mut out = [[0; 4]; $w * $h];
 
                 let mut gap = 0;
@@ -69,7 +99,7 @@ macro_rules! impl_puzzle {
                 out
             };
 
-            pub(crate) const SWAP_MASKS: [[[u64; $w * $h]; $w * $h]; $w * $h] = {
+            const SWAP_MASKS: Self::SwapMasks = {
                 let mut out = [[[0; $w * $h]; $w * $h]; $w * $h];
 
                 let mut gap = 0;
@@ -92,7 +122,7 @@ macro_rules! impl_puzzle {
                 out
             };
 
-            pub(crate) const MOVE_MASKS: [[[u64; $w * $h]; 4]; $w * $h] = {
+            const MOVE_MASKS: Self::MoveMasks = {
                 let mut out = [[[0; $w * $h]; 4]; $w * $h];
 
                 let mut gap = 0;
@@ -113,7 +143,7 @@ macro_rules! impl_puzzle {
                 out
             };
 
-            pub fn new() -> Self {
+            fn new() -> Self {
                 Self {
                     pieces: Self::SOLVED,
                     gap: $w * $h - 1,
@@ -131,11 +161,11 @@ macro_rules! impl_puzzle {
             /// This function is unsafe because, although it doesn't cause immediate UB if used
             /// incorrectly, can break the type's invariant, which could lead to UB in otherwise-correct
             /// unsafe code elsewhere.
-            pub unsafe fn with_pieces_and_gap_unchecked(pieces: u64, gap: u8) -> Self {
+            unsafe fn with_pieces_and_gap_unchecked(pieces: u64, gap: u8) -> Self {
                 Self { pieces, gap }
             }
 
-            pub unsafe fn from_piece_array_unchecked(piece_array: [u8; $w * $h]) -> Self {
+            unsafe fn from_piece_array_unchecked(piece_array: Self::PieceArray) -> Self {
                 let mut pieces = 0;
                 let mut gap = 0;
 
@@ -149,11 +179,11 @@ macro_rules! impl_puzzle {
                 unsafe { Self::with_pieces_and_gap_unchecked(pieces, gap) }
             }
 
-            pub fn pieces(&self) -> u64 {
+            fn pieces(&self) -> u64 {
                 self.pieces
             }
 
-            pub fn gap(&self) -> u8 {
+            fn gap(&self) -> u8 {
                 self.gap
             }
         }
