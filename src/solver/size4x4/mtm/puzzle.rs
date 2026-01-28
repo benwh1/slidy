@@ -1,6 +1,9 @@
 use crate::{
     algorithm::direction::Direction,
-    puzzle::{sliding_puzzle::SlidingPuzzle, small::Puzzle4x4},
+    puzzle::{
+        sliding_puzzle::SlidingPuzzle,
+        small::{sealed::SmallPuzzle as _, Puzzle4x4},
+    },
 };
 
 #[derive(Clone, Copy, Debug)]
