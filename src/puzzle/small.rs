@@ -30,7 +30,9 @@ pub type Puzzle7x2 = Puzzle<7, 2>;
 pub type Puzzle8x2 = Puzzle<8, 2>;
 
 pub(crate) mod sealed {
-    pub trait SmallPuzzle {
+    use crate::puzzle::sliding_puzzle::SlidingPuzzle;
+
+    pub trait SmallPuzzle: SlidingPuzzle<Piece = u8> {
         type Gaps;
         type Shifts;
         type SwapMasks;
