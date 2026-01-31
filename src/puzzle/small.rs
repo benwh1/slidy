@@ -12,12 +12,22 @@ pub struct Puzzle<const W: u8, const H: u8> {
 pub type Puzzle2x2 = Puzzle<2, 2>;
 pub type Puzzle2x3 = Puzzle<2, 3>;
 pub type Puzzle2x4 = Puzzle<2, 4>;
+pub type Puzzle2x5 = Puzzle<2, 5>;
+pub type Puzzle2x6 = Puzzle<2, 6>;
+pub type Puzzle2x7 = Puzzle<2, 7>;
+pub type Puzzle2x8 = Puzzle<2, 8>;
 pub type Puzzle3x2 = Puzzle<3, 2>;
 pub type Puzzle3x3 = Puzzle<3, 3>;
 pub type Puzzle3x4 = Puzzle<3, 4>;
+pub type Puzzle3x5 = Puzzle<3, 5>;
 pub type Puzzle4x2 = Puzzle<4, 2>;
 pub type Puzzle4x3 = Puzzle<4, 3>;
 pub type Puzzle4x4 = Puzzle<4, 4>;
+pub type Puzzle5x2 = Puzzle<5, 2>;
+pub type Puzzle5x3 = Puzzle<5, 3>;
+pub type Puzzle6x2 = Puzzle<6, 2>;
+pub type Puzzle7x2 = Puzzle<7, 2>;
+pub type Puzzle8x2 = Puzzle<8, 2>;
 
 pub(crate) mod sealed {
     pub trait SmallPuzzle {
