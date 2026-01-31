@@ -39,6 +39,10 @@ pub(crate) mod sealed {
         type MoveMasks;
         type PieceArray;
 
+        const W: u8;
+        const H: u8;
+        const N: u8 = Self::W * Self::H;
+
         const SOLVED: u64;
         const GAPS: Self::Gaps;
         const SHIFTS: Self::Shifts;
@@ -63,6 +67,10 @@ macro_rules! impl_puzzle {
             type SwapMasks = [[[u64; $w * $h]; $w * $h]; $w * $h];
             type MoveMasks = [[[u64; $w * $h]; 4]; $w * $h];
             type PieceArray = [u8; $w * $h];
+
+            const W: u8 = $w;
+            const H: u8 = $h;
+            const N: u8 = $w * $h;
 
             const SOLVED: u64 = {
                 let mut out = 0;
