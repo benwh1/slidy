@@ -52,8 +52,11 @@ pub(crate) mod sealed {
         fn new() -> Self;
         unsafe fn with_pieces_and_gap_unchecked(pieces: u64, gap: u8) -> Self;
         unsafe fn from_piece_array_unchecked(piece_array: Self::PieceArray) -> Self;
+
         fn pieces(&self) -> u64;
         fn gap(&self) -> u8;
+
+        fn piece_array(&self) -> Self::PieceArray;
     }
 }
 
@@ -205,6 +208,16 @@ macro_rules! impl_puzzle {
 
             fn gap(&self) -> u8 {
                 self.gap
+            }
+
+            fn piece_array(&self) -> Self::PieceArray {
+                let mut pieces = [0; $w * $h];
+
+                for (i, piece) in pieces.iter_mut().enumerate() {
+                    *piece = ((self.pieces >> (4 * i)) & 0xF) as u8;
+                }
+
+                pieces
             }
         }
 
