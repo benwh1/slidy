@@ -1,7 +1,7 @@
-pub mod base_5_table;
-pub mod consts;
-pub mod indexing;
-pub mod indexing_table;
-pub mod pdb;
-pub mod puzzle;
+mod base_5_table;
+mod consts;
+mod indexing;
+mod indexing_table;
+mod pdb;
+mod puzzle;
 pub mod solver;
