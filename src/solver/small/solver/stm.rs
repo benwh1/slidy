@@ -123,3 +123,20 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr as _;
+
+    use crate::puzzle::puzzle::Puzzle;
+
+    use super::*;
+
+    #[test]
+    fn test_solver_3x3() {
+        let solver = Solver3x3::new();
+        let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
+        let solution = solver.solve(&puzzle).unwrap();
+        assert_eq!(solution.len_stm::<u64>(), 25);
+    }
+}

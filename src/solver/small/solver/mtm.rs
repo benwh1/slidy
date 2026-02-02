@@ -135,8 +135,8 @@ mod tests {
     #[test]
     fn test_solver_3x3() {
         let solver = Solver3x3::new();
-        let puzzle = Puzzle::from_str("7 0 5/8 3 1/2 6 4").unwrap();
+        let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
-        println!("{solution}");
+        assert_eq!(solution.len_mtm::<u64>(), 18);
     }
 }
