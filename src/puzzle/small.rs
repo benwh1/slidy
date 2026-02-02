@@ -4,7 +4,7 @@ use crate::{
 };
 
 #[derive(Clone, Copy, Debug)]
-pub struct Puzzle<const W: u8, const H: u8> {
+pub struct Puzzle<const W: usize, const H: usize> {
     pieces: u64,
     gap: u8,
 }
@@ -33,21 +33,11 @@ pub(crate) mod sealed {
     use crate::puzzle::sliding_puzzle::SlidingPuzzle;
 
     pub trait SmallPuzzle: SlidingPuzzle<Piece = u8> {
-        type Gaps;
-        type Shifts;
-        type SwapMasks;
-        type MoveMasks;
+        const W: usize = Self::W as usize;
+        const H: usize = Self::H as usize;
+        const N: usize = Self::N as usize;
+
         type PieceArray;
-
-        const W: u8;
-        const H: u8;
-        const N: u8 = Self::W * Self::H;
-
-        const SOLVED: u64;
-        const GAPS: Self::Gaps;
-        const SHIFTS: Self::Shifts;
-        const SWAP_MASKS: Self::SwapMasks;
-        const MOVE_MASKS: Self::MoveMasks;
 
         fn new() -> Self;
         unsafe fn with_pieces_and_gap_unchecked(pieces: u64, gap: u8) -> Self;
@@ -64,22 +54,12 @@ use sealed::SmallPuzzle;
 
 macro_rules! impl_puzzle {
     ($w:literal, $h:literal) => {
-        impl SmallPuzzle for Puzzle<$w, $h> {
-            type Gaps = [[u8; 4]; $w * $h];
-            type Shifts = [[u8; 4]; $w * $h];
-            type SwapMasks = [[[u64; $w * $h]; $w * $h]; $w * $h];
-            type MoveMasks = [[[u64; $w * $h]; 4]; $w * $h];
-            type PieceArray = [u8; $w * $h];
-
-            const W: u8 = $w;
-            const H: u8 = $h;
-            const N: u8 = $w * $h;
-
-            const SOLVED: u64 = {
+        impl Puzzle<$w, $h> {
+            pub(crate) const SOLVED: u64 = {
                 let mut out = 0;
 
                 let mut i = 0;
-                while i < $w * $h - 1 {
+                while i < Self::N - 1 {
                     out |= (i as u64 + 1) << (4 * i);
                     i += 1;
                 }
@@ -87,11 +67,11 @@ macro_rules! impl_puzzle {
                 out
             };
 
-            const GAPS: Self::Gaps = {
-                let mut out = [[0; 4]; $w * $h];
+            pub(crate) const GAPS: [[u8; 4]; Self::N] = {
+                let mut out = [[0; 4]; Self::N];
 
                 let mut i = 0;
-                while i < $w * $h {
+                while i < Self::N as u8 {
                     let (gx, gy) = (i % $w, i / $w);
                     out[i as usize] = [
                         if gy + 1 < $h { i + $w } else { i },
@@ -105,11 +85,11 @@ macro_rules! impl_puzzle {
                 out
             };
 
-            const SHIFTS: Self::Shifts = {
-                let mut out = [[0; 4]; $w * $h];
+            pub(crate) const SHIFTS: [[u8; 4]; Self::N] = {
+                let mut out = [[0; 4]; Self::N];
 
                 let mut gap = 0;
-                while gap < $w * $h {
+                while gap < Self::N {
                     let mut dir = 0;
                     while dir < 4 {
                         let other = Self::GAPS[gap][dir];
@@ -122,16 +102,16 @@ macro_rules! impl_puzzle {
                 out
             };
 
-            const SWAP_MASKS: Self::SwapMasks = {
-                let mut out = [[[0; $w * $h]; $w * $h]; $w * $h];
+            pub(crate) const SWAP_MASKS: [[[u64; Self::N]; Self::N]; Self::N] = {
+                let mut out = [[[0; Self::N]; Self::N]; Self::N];
 
                 let mut gap = 0;
-                while gap < $w * $h {
+                while gap < Self::N {
                     let mut other = 0;
-                    while other < $w * $h {
+                    while other < Self::N {
                         if gap != other {
                             let mut piece = 0;
-                            while piece < $w * $h {
+                            while piece < Self::N {
                                 out[gap][other][piece] =
                                     ((piece << (gap * 4)) | (piece << (other * 4))) as u64;
                                 piece += 1;
@@ -145,15 +125,15 @@ macro_rules! impl_puzzle {
                 out
             };
 
-            const MOVE_MASKS: Self::MoveMasks = {
-                let mut out = [[[0; $w * $h]; 4]; $w * $h];
+            pub(crate) const MOVE_MASKS: [[[u64; Self::N]; 4]; Self::N] = {
+                let mut out = [[[0; Self::N]; 4]; Self::N];
 
                 let mut gap = 0;
-                while gap < $w * $h {
+                while gap < Self::N {
                     let mut dir = 0;
                     while dir < 4 {
                         let mut piece = 0;
-                        while piece < $w * $h {
+                        while piece < Self::N {
                             let other = Self::GAPS[gap][dir] as usize;
                             out[gap][dir][piece] = Self::SWAP_MASKS[gap][other][piece];
                             piece += 1;
@@ -165,11 +145,19 @@ macro_rules! impl_puzzle {
 
                 out
             };
+        }
+
+        impl SmallPuzzle for Puzzle<$w, $h> {
+            const W: usize = $w;
+            const H: usize = $h;
+            const N: usize = $w * $h;
+
+            type PieceArray = [u8; Self::N];
 
             fn new() -> Self {
                 Self {
                     pieces: Self::SOLVED,
-                    gap: $w * $h - 1,
+                    gap: Self::N as u8 - 1,
                 }
             }
 
@@ -211,7 +199,7 @@ macro_rules! impl_puzzle {
             }
 
             fn piece_array(&self) -> Self::PieceArray {
-                let mut pieces = [0; $w * $h];
+                let mut pieces = [0; Self::N];
 
                 for (i, piece) in pieces.iter_mut().enumerate() {
                     *piece = ((self.pieces >> (4 * i)) & 0xF) as u8;
@@ -273,8 +261,7 @@ macro_rules! impl_puzzle {
             }
 
             fn reset(&mut self) {
-                self.pieces = Self::SOLVED;
-                self.gap = $w * $h - 1;
+                *self = Self::new();
             }
 
             fn swap_piece_with_gap(&mut self, idx: u64) {

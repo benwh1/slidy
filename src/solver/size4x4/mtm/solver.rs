@@ -4,10 +4,7 @@ use num_traits::AsPrimitive;
 
 use crate::{
     algorithm::{algorithm::Algorithm, axis::Axis, direction::Direction},
-    puzzle::{
-        sliding_puzzle::SlidingPuzzle,
-        small::{sealed::SmallPuzzle as _, Puzzle4x4},
-    },
+    puzzle::{sliding_puzzle::SlidingPuzzle, small::Puzzle4x4},
     solver::size4x4::mtm::{
         base_5_table::Base5Table,
         indexing_table::IndexingTable,
