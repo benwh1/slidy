@@ -12,7 +12,61 @@ pub(super) struct Pdb {
 }
 
 impl Pdb {
-    pub(super) fn new<const W: usize, const H: usize, const N: usize>() -> Self
+    pub(super) fn new_stm<const W: usize, const H: usize, const N: usize>() -> Self
+    where
+        Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
+    {
+        let puzzle = Puzzle::<W, H>::new();
+        let num_states = puzzle.size().num_states().try_into().unwrap();
+
+        let mut pdb = vec![u8::MAX; num_states];
+        let solved_encoded = indexing::encode(puzzle.piece_array());
+        pdb[solved_encoded as usize] = 0;
+
+        let mut total = 1;
+        let mut new = 1;
+        let mut depth = 0;
+
+        while new != 0 {
+            new = 0;
+
+            for i in 0..num_states {
+                if pdb[i] != depth {
+                    continue;
+                }
+
+                for dir in [
+                    Direction::Up,
+                    Direction::Left,
+                    Direction::Down,
+                    Direction::Right,
+                ] {
+                    let piece_array = indexing::decode::<W, N>(i as u64);
+                    let mut puzzle =
+                        unsafe { Puzzle::<W, H>::from_piece_array_unchecked(piece_array) };
+
+                    if puzzle.try_move_dir(dir) {
+                        let idx = indexing::encode(puzzle.piece_array()) as usize;
+                        if pdb[idx] == u8::MAX {
+                            pdb[idx] = depth + 1;
+                            new += 1;
+                        }
+                    }
+                }
+            }
+
+            total += new;
+            depth += 1;
+
+            println!("depth {depth} new {new} total {total}");
+        }
+
+        let pdb = pdb.into_boxed_slice();
+
+        Self { pdb }
+    }
+
+    pub(super) fn new_mtm<const W: usize, const H: usize, const N: usize>() -> Self
     where
         Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
     {
