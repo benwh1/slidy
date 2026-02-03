@@ -7,7 +7,10 @@ use thiserror::Error;
 
 use crate::{
     algorithm::{algorithm::Algorithm, direction::Direction, r#move::r#move::Move},
-    puzzle::{label::label::RowGrids, sliding_puzzle::SlidingPuzzle, solved_state::SolvedState},
+    puzzle::{
+        label::label::RowGrids, sliding_puzzle::SlidingPuzzle, solvable::Solvable,
+        solved_state::SolvedState,
+    },
     solver::heuristic::{manhattan::ManhattanDistance, Heuristic},
 };
 
@@ -71,6 +74,10 @@ pub enum SolverError {
     /// Returned when the solver was given a puzzle of a size that it is not compatible with.
     #[error("IncompatiblePuzzleSize: the puzzle size is incompatible with the solver")]
     IncompatiblePuzzleSize,
+
+    /// Returned when the solver is given an unsolvable puzzle.
+    #[error("Unsolvable: the puzzle is unsolvable")]
+    Unsolvable,
 }
 
 /// An optimal puzzle solver using a [`Heuristic`] `H` to speed up the search.
@@ -78,14 +85,7 @@ pub enum SolverError {
 /// The type parameter `T` should be chosen such that the maximum length of a potential solution is
 /// less than the maximum value of a `T`. In almost all cases, `T = u8` should be used.
 #[derive(Clone, Debug)]
-pub struct Solver<'a, Puzzle, T, S, H>
-where
-    Puzzle: SlidingPuzzle + Clone,
-    T: PrimInt + Unsigned + 'static,
-    S: SolvedState,
-    H: Heuristic<Puzzle, T>,
-    u8: AsPrimitive<T>,
-{
+pub struct Solver<'a, Puzzle, T, S, H> {
     stack: Stack,
     phantom_puzzle: PhantomData<Puzzle>,
     heuristic: &'a H,
@@ -93,22 +93,16 @@ where
     phantom_t: PhantomData<T>,
 }
 
-impl<Puzzle> Default for Solver<'static, Puzzle, u8, RowGrids, ManhattanDistance<'static, RowGrids>>
-where
-    Puzzle: SlidingPuzzle + Clone,
+impl<Puzzle: SlidingPuzzle + Clone> Default
+    for Solver<'static, Puzzle, u8, RowGrids, ManhattanDistance<'static, RowGrids>>
 {
     fn default() -> Self {
         Self::new_with_t(&ManhattanDistance(&RowGrids), &RowGrids)
     }
 }
 
-impl<'a, Puzzle, S, H> Solver<'a, Puzzle, u8, S, H>
-where
-    Puzzle: SlidingPuzzle + Clone,
-    S: SolvedState,
-    H: Heuristic<Puzzle, u8>,
-{
-    /// Creates a new [`Solver`] using the given heuristic.
+impl<'a, Puzzle, S, H> Solver<'a, Puzzle, u8, S, H> {
+    /// Creates a new [`Solver`] using the given heuristic and solved state.
     pub fn new(heuristic: &'a H, solved_state: &'a S) -> Self {
         Self {
             stack: Stack::default(),
@@ -124,11 +118,11 @@ impl<'a, Puzzle, T, S, H> Solver<'a, Puzzle, T, S, H>
 where
     Puzzle: SlidingPuzzle + Clone,
     T: PrimInt + Unsigned + 'static,
-    S: SolvedState,
+    S: SolvedState + Solvable,
     H: Heuristic<Puzzle, T>,
     u8: AsPrimitive<T>,
 {
-    /// Constructs a new [`Solver`] for solving `puzzle`.
+    /// Creates a new [`Solver`] using the given heuristic and solved state.
     pub fn new_with_t(heuristic: &'a H, solved_state: &'a S) -> Self {
         Self {
             stack: Stack::default(),
@@ -179,6 +173,10 @@ where
 
     /// Solves `puzzle`.
     pub fn solve(&mut self, puzzle: &Puzzle) -> Result<Algorithm, SolverError> {
+        if !self.solved_state.is_solvable(puzzle) {
+            return Err(SolverError::Unsolvable);
+        }
+
         self.stack.clear();
         let mut puzzle = puzzle.clone();
         let mut depth = self.heuristic.bound(&puzzle);

@@ -7,11 +7,14 @@ use num_traits::AsPrimitive;
 use crate::{
     algorithm::{algorithm::Algorithm, axis::Axis, direction::Direction},
     puzzle::{sliding_puzzle::SlidingPuzzle, small::Puzzle4x4},
-    solver::size4x4::mtm::{
-        base_5_table::Base5Table,
-        indexing_table::IndexingTable,
-        pdb::Pdb,
-        puzzle::{FourBitPuzzle, ReducedFourBitPuzzle},
+    solver::{
+        size4x4::mtm::{
+            base_5_table::Base5Table,
+            indexing_table::IndexingTable,
+            pdb::Pdb,
+            puzzle::{FourBitPuzzle, ReducedFourBitPuzzle},
+        },
+        solver::SolverError,
     },
 };
 
@@ -133,13 +136,17 @@ impl Solver {
     /// Returns `None` if `puzzle` is not 4x4.
     ///
     /// [`Mtm`]: crate::algorithm::metric::Mtm
-    pub fn solve<P: SlidingPuzzle>(&self, puzzle: &P) -> Option<Algorithm>
+    pub fn solve<P: SlidingPuzzle>(&self, puzzle: &P) -> Result<Algorithm, SolverError>
     where
         P::Piece: AsPrimitive<u8>,
     {
         let mut four_bit_puzzle = FourBitPuzzle::new();
         if !four_bit_puzzle.puzzle.try_set_state(puzzle) {
-            return None;
+            return Err(SolverError::IncompatiblePuzzleSize);
+        }
+
+        if !puzzle.is_solvable() {
+            return Err(SolverError::Unsolvable);
         }
 
         let reduced_puzzle = four_bit_puzzle.reduced();
@@ -165,7 +172,7 @@ impl Solver {
                     solution.push_combine(dir.into());
                 }
 
-                return Some(solution);
+                return Ok(solution);
             }
 
             depth += 1;

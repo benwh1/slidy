@@ -122,6 +122,10 @@ impl Solver {
             return Err(SolverError::IncompatiblePuzzleSize);
         }
 
+        if !puzzle.is_solvable() {
+            return Err(SolverError::Unsolvable);
+        }
+
         let mut pieces = [0u8; 16];
         for (i, piece) in pieces.iter_mut().enumerate() {
             *piece = puzzle.piece_at(i as u64).to_u8().unwrap();

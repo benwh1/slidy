@@ -11,9 +11,9 @@ use crate::{
     algorithm::{algorithm::Algorithm, axis::Axis, direction::Direction},
     puzzle::{
         sliding_puzzle::SlidingPuzzle,
-        small::{sealed::SmallPuzzle, Puzzle},
+        small::{Puzzle, sealed::SmallPuzzle},
     },
-    solver::small::{indexing, pdb::Pdb},
+    solver::{small::{indexing, pdb::Pdb}, solver::SolverError},
 };
 
 /// An optimal solver for `WxH` puzzles in [`Mtm`].
@@ -131,13 +131,17 @@ where
     /// Returns `None` if `puzzle` is not `WxH`.
     ///
     /// [`Mtm`]: crate::algorithm::metric::Mtm
-    pub fn solve<P: SlidingPuzzle>(&self, puzzle: &P) -> Option<Algorithm>
+    pub fn solve<P: SlidingPuzzle>(&self, puzzle: &P) -> Result<Algorithm, SolverError>
     where
         P::Piece: AsPrimitive<u8>,
     {
         let mut p = Puzzle::<W, H>::new();
         if !p.try_set_state(puzzle) {
-            return None;
+            return Err(SolverError::IncompatiblePuzzleSize);
+        }
+
+        if !puzzle.is_solvable() {
+            return Err(SolverError::Unsolvable);
         }
 
         // Reset state
@@ -157,7 +161,7 @@ where
                     solution.push_combine(dir.into());
                 }
 
-                return Some(solution);
+                return Ok(solution);
             }
 
             depth += 1;
