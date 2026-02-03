@@ -258,7 +258,7 @@ mod tests {
 
                 for _ in 0..100 {
                     RandomState.scramble_with_rng(&mut p, &mut rng);
-                    assert!(RowGrids::is_solvable(&p));
+                    assert!(RowGrids.is_solvable(&p));
                 }
             }
         }

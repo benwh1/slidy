@@ -227,7 +227,7 @@ where
     /// Check if the puzzle is solvable.
     #[must_use]
     fn is_solvable(&self) -> bool {
-        RowGrids::is_solvable(self)
+        RowGrids.is_solvable(self)
     }
 
     /// The position of `piece` when the puzzle is solved.

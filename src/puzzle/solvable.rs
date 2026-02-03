@@ -20,7 +20,7 @@ use crate::puzzle::{
 pub trait Solvable {
     /// Checks if the puzzle is solvable.
     #[must_use]
-    fn is_solvable<P: SlidingPuzzle>(puzzle: &P) -> bool;
+    fn is_solvable<P: SlidingPuzzle>(&self, puzzle: &P) -> bool;
 }
 
 fn trivial_size_solvable<P: SlidingPuzzle, L: Label>(puzzle: &P, label: &L) -> bool {
@@ -51,7 +51,7 @@ fn trivial_size_solvable<P: SlidingPuzzle, L: Label>(puzzle: &P, label: &L) -> b
 }
 
 impl Solvable for RowGrids {
-    fn is_solvable<P: SlidingPuzzle>(puzzle: &P) -> bool {
+    fn is_solvable<P: SlidingPuzzle>(&self, puzzle: &P) -> bool {
         if puzzle.size().width() == 1 || puzzle.size().height() == 1 {
             return trivial_size_solvable(puzzle, &Self);
         }
@@ -102,11 +102,11 @@ impl Solvable for RowGrids {
 }
 
 impl Solvable for Spiral {
-    fn is_solvable<P: SlidingPuzzle>(puzzle: &P) -> bool {
+    fn is_solvable<P: SlidingPuzzle>(&self, puzzle: &P) -> bool {
         // Always solvable unless puzzle is 2x2, then equivalent to RowGrids.
         let (w, h) = puzzle.size().into();
         if (w, h) == (2, 2) {
-            RowGrids::is_solvable(puzzle)
+            RowGrids.is_solvable(puzzle)
         } else {
             true
         }
@@ -117,7 +117,7 @@ macro_rules! always_solvable {
     ($($t:ty),* $(,)?) => {
         $(
             impl Solvable for $t {
-                fn is_solvable<P: SlidingPuzzle>(_puzzle: &P) -> bool {
+                fn is_solvable<P: SlidingPuzzle>(&self, _puzzle: &P) -> bool {
                     true
                 }
             }
@@ -129,9 +129,9 @@ macro_rules! always_solvable_except_trivial_size {
     ($($t:ty),* $(,)?) => {
         $(
             impl Solvable for $t {
-                fn is_solvable<P: SlidingPuzzle>(puzzle: &P) -> bool {
+                fn is_solvable<P: SlidingPuzzle>(&self, puzzle: &P) -> bool {
                     if puzzle.size().width() == 1 || puzzle.size().height() == 1 {
-                        trivial_size_solvable(puzzle, &Self)
+                        trivial_size_solvable(puzzle, self)
                     } else {
                         true
                     }
@@ -161,14 +161,14 @@ mod tests {
 
     use super::*;
 
-    fn test<S: Solvable>(solvable: &[&str], unsolvable: &[&str]) {
+    fn test<S: Solvable + Default>(solvable: &[&str], unsolvable: &[&str]) {
         for s in solvable {
             let p = Puzzle::from_str(s).unwrap();
-            assert!(S::is_solvable(&p));
+            assert!(S::default().is_solvable(&p));
         }
         for s in unsolvable {
             let p = Puzzle::from_str(s).unwrap();
-            assert!(!S::is_solvable(&p));
+            assert!(!S::default().is_solvable(&p));
         }
     }
 
