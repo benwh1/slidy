@@ -1,11 +1,11 @@
 use crate::{
     algorithm::direction::Direction,
     solver::{
-        statistics::PdbIterationStats,
         size4x4::stm::{
             pattern::Pattern,
             puzzle::{MoveResult, Puzzle},
         },
+        statistics::PdbIterationStats,
     },
 };
 
