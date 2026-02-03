@@ -14,6 +14,7 @@ use crate::{
         small::{sealed::SmallPuzzle, Puzzle},
     },
     solver::{
+        pdb_iteration::PdbIterationStats,
         small::{indexing, pdb::Pdb},
         solver::SolverError,
     },
@@ -66,18 +67,30 @@ impl<const W: usize, const H: usize, const N: usize> Solver<W, H, N>
 where
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
-    /// Creates a new [`Solver`] and builds the pattern database.
-    ///
-    /// Depending on the size of the puzzle, building the pattern database may take several minutes.
-    #[must_use]
-    pub fn new() -> Self {
-        let pdb = Pdb::new_stm::<W, H, N>();
+    fn new_impl(pdb_iteration_callback: Option<&dyn Fn(PdbIterationStats)>) -> Self {
+        let pdb = Pdb::new_stm::<W, H, N>(pdb_iteration_callback);
 
         Self {
             pdb,
             solution: [const { Cell::new(Direction::Up) }; 128],
             solution_ptr: Cell::new(0),
         }
+    }
+
+    /// Creates a new [`Solver`] and builds the pattern database.
+    ///
+    /// Depending on the size of the puzzle, building the pattern database may take several minutes.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::new_impl(None)
+    }
+
+    /// See [`Self::new`].
+    ///
+    /// Runs `pdb_iteration_callback` after each iteration of the breadth-first search used to build
+    /// the pattern database.
+    pub fn with_pdb_iteration_callback(pdb_iteration_callback: &dyn Fn(PdbIterationStats)) -> Self {
+        Self::new_impl(Some(pdb_iteration_callback))
     }
 
     fn dfs(

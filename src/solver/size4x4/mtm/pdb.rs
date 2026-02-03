@@ -1,8 +1,11 @@
 use crate::{
     algorithm::direction::Direction,
-    solver::size4x4::mtm::{
-        base_5_table::Base5Table, consts::SIZE, indexing, indexing_table::IndexingTable,
-        puzzle::ReducedFourBitPuzzle,
+    solver::{
+        pdb_iteration::PdbIterationStats,
+        size4x4::mtm::{
+            base_5_table::Base5Table, consts::SIZE, indexing, indexing_table::IndexingTable,
+            puzzle::ReducedFourBitPuzzle,
+        },
     },
 };
 
@@ -11,24 +14,24 @@ pub(super) struct Pdb {
 }
 
 impl Pdb {
-    pub(super) fn new(indexing_table: &IndexingTable, base_5_table: &Base5Table) -> Self {
-        const FILENAME: &str = "mtm_pdb.bin";
-
-        if let Ok(data) = std::fs::read(FILENAME) {
-            let pdb = data.into_boxed_slice();
-
-            return Self { pdb };
-        }
-
+    pub(super) fn new(
+        indexing_table: &IndexingTable,
+        base_5_table: &Base5Table,
+        end_of_iteration: Option<&dyn Fn(PdbIterationStats)>,
+    ) -> Self {
         let mut pdb = vec![u8::MAX; SIZE];
 
         let puzzle = ReducedFourBitPuzzle::new();
         let solved_index = indexing_table.encode(puzzle.pieces, base_5_table) as usize;
         pdb[solved_index] = 0;
 
+        let mut depth = 0;
         let mut new = 1;
         let mut total = 1;
-        let mut depth = 0;
+
+        if let Some(f) = end_of_iteration {
+            f(PdbIterationStats { depth, new, total });
+        }
 
         while new != 0 {
             new = 0;
@@ -64,12 +67,12 @@ impl Pdb {
             total += new;
             depth += 1;
 
-            println!("depth {depth} new {new} total {total}");
+            if let Some(f) = end_of_iteration {
+                f(PdbIterationStats { depth, new, total });
+            }
         }
 
         let pdb = pdb.into_boxed_slice();
-
-        std::fs::write(FILENAME, &*pdb).unwrap();
 
         Self { pdb }
     }

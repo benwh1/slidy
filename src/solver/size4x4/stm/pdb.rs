@@ -1,8 +1,11 @@
 use crate::{
     algorithm::direction::Direction,
-    solver::size4x4::stm::{
-        pattern::Pattern,
-        puzzle::{MoveResult, Puzzle},
+    solver::{
+        pdb_iteration::PdbIterationStats,
+        size4x4::stm::{
+            pattern::Pattern,
+            puzzle::{MoveResult, Puzzle},
+        },
     },
 };
 
@@ -13,7 +16,10 @@ pub(super) struct Pdb {
 }
 
 impl Pdb {
-    pub(super) fn new(pattern: Pattern) -> Self {
+    pub(super) fn new(
+        pattern: Pattern,
+        pdb_iteration_callback: Option<&dyn Fn(PdbIterationStats)>,
+    ) -> Self {
         let mut this = Self {
             pattern,
             transposition_table: Vec::new(),
@@ -21,7 +27,7 @@ impl Pdb {
         };
 
         this.make_transposition_table();
-        this.make_pdb();
+        this.make_pdb(pdb_iteration_callback);
 
         this
     }
@@ -64,10 +70,10 @@ impl Pdb {
         }
     }
 
-    fn pdb_bfs_pass(&mut self, depth: u8, base_depth: u8, total: &mut usize) -> bool {
+    fn pdb_bfs_pass(&mut self, depth: u8, base_depth: u8) -> u64 {
         let size = self.pattern.pdb_size();
 
-        let mut changed = false;
+        let mut new = 0;
 
         for i in 0..size {
             if self.pdb[i] == u8::MAX || self.pdb[i] < base_depth {
@@ -91,37 +97,45 @@ impl Pdb {
                     && self.pdb[i] + moved_piece == depth
                 {
                     self.pdb[new_index as usize] = depth;
-                    *total += 1;
-                    changed = true;
-                    if *total == size {
-                        return true;
-                    }
+                    new += 1;
                 }
             }
         }
 
-        changed
+        new
     }
 
-    fn make_pdb(&mut self) {
+    fn make_pdb(&mut self, pdb_iteration_callback: Option<&dyn Fn(PdbIterationStats)>) {
         let size = self.pattern.pdb_size();
         self.pdb = vec![u8::MAX; size];
 
         self.pdb[Puzzle::new().encode(&self.pattern)] = 0;
 
         let mut depth = 0;
+        let mut new;
         let mut total = 1;
 
-        while total < size {
-            while self.pdb_bfs_pass(depth, depth, &mut total) {
-                if total == size {
-                    return;
+        while total < size as u64 {
+            new = 0;
+
+            if depth != 0 {
+                new = self.pdb_bfs_pass(depth, depth - 1);
+            }
+
+            loop {
+                let n = self.pdb_bfs_pass(depth, depth);
+                if n == 0 {
+                    break;
                 }
+                new += n;
             }
 
             depth += 1;
+            total += new;
 
-            self.pdb_bfs_pass(depth, depth - 1, &mut total);
+            if let Some(callback) = &pdb_iteration_callback {
+                callback(PdbIterationStats { depth, new, total });
+            }
         }
 
         // Clean up transposition table
@@ -154,7 +168,7 @@ mod tests {
     #[test]
     fn test_pdb4_size() {
         let pattern = Pattern::new(&[1, 2, 5, 6, 0]);
-        let pdb = Pdb::new(pattern);
+        let pdb = Pdb::new(pattern, None);
 
         assert_eq!(pdb.transposition_table.len(), 524160);
         assert_eq!(pdb.pdb.len(), 524160);
@@ -163,7 +177,7 @@ mod tests {
     #[test]
     fn test_pdb3_size() {
         let pattern = Pattern::new(&[11, 12, 15, 0]);
-        let pdb = Pdb::new(pattern);
+        let pdb = Pdb::new(pattern, None);
 
         assert_eq!(pdb.transposition_table.len(), 43680);
         assert_eq!(pdb.pdb.len(), 43680);
@@ -172,7 +186,7 @@ mod tests {
     #[test]
     fn test_transposition_table_pdb4() {
         let pattern = Pattern::new(&[1, 2, 5, 6, 0]);
-        let pdb = Pdb::new(pattern);
+        let pdb = Pdb::new(pattern, None);
 
         for arr in pdb.transposition_table {
             for entry in arr {
@@ -184,7 +198,7 @@ mod tests {
     #[test]
     fn test_transposition_table_pdb3() {
         let pattern = Pattern::new(&[11, 12, 15, 0]);
-        let pdb = Pdb::new(pattern);
+        let pdb = Pdb::new(pattern, None);
 
         for arr in pdb.transposition_table {
             for entry in arr {

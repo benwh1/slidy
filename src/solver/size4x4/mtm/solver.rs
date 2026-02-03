@@ -8,6 +8,7 @@ use crate::{
     algorithm::{algorithm::Algorithm, axis::Axis, direction::Direction},
     puzzle::{sliding_puzzle::SlidingPuzzle, small::Puzzle4x4},
     solver::{
+        pdb_iteration::PdbIterationStats,
         size4x4::mtm::{
             base_5_table::Base5Table,
             indexing_table::IndexingTable,
@@ -37,14 +38,10 @@ impl Default for Solver {
 }
 
 impl Solver {
-    /// Creates a new [`Solver`] and builds the pattern database.
-    ///
-    /// Building the pattern database takes several minutes.
-    #[must_use]
-    pub fn new() -> Self {
+    fn new_impl(pdb_iteration_callback: Option<&dyn Fn(PdbIterationStats)>) -> Self {
         let indexing_table = IndexingTable::new();
         let base_5_table = Base5Table::new();
-        let pdb = Pdb::new(&indexing_table, &base_5_table);
+        let pdb = Pdb::new(&indexing_table, &base_5_table, pdb_iteration_callback);
 
         Self {
             indexing_table,
@@ -54,6 +51,22 @@ impl Solver {
             solution_ptr: Cell::new(0),
             puzzle: Cell::new(FourBitPuzzle::new()),
         }
+    }
+
+    /// Creates a new [`Solver`] and builds the pattern database.
+    ///
+    /// Building the pattern database takes several minutes.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::new_impl(None)
+    }
+
+    /// See [`Self::new`].
+    ///
+    /// Runs `pdb_iteration_callback` after each iteration of the breadth-first search used to build
+    /// the pattern database.
+    pub fn with_pdb_iteration_callback(pdb_iteration_callback: &dyn Fn(PdbIterationStats)) -> Self {
+        Self::new_impl(Some(pdb_iteration_callback))
     }
 
     fn dfs(

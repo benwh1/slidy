@@ -4,7 +4,7 @@ use crate::{
         sliding_puzzle::SlidingPuzzle as _,
         small::{sealed::SmallPuzzle, Puzzle},
     },
-    solver::small::indexing,
+    solver::{pdb_iteration::PdbIterationStats, small::indexing},
 };
 
 pub(super) struct Pdb {
@@ -12,7 +12,9 @@ pub(super) struct Pdb {
 }
 
 impl Pdb {
-    pub(super) fn new_stm<const W: usize, const H: usize, const N: usize>() -> Self
+    pub(super) fn new_stm<const W: usize, const H: usize, const N: usize>(
+        iteration_callback: Option<&dyn Fn(PdbIterationStats)>,
+    ) -> Self
     where
         Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
     {
@@ -23,9 +25,13 @@ impl Pdb {
         let solved_encoded = indexing::encode(puzzle.piece_array());
         pdb[solved_encoded as usize] = 0;
 
-        let mut total = 1;
-        let mut new = 1;
         let mut depth = 0;
+        let mut new = 1;
+        let mut total = 1;
+
+        if let Some(f) = iteration_callback {
+            f(PdbIterationStats { depth, new, total });
+        }
 
         while new != 0 {
             new = 0;
@@ -60,7 +66,9 @@ impl Pdb {
             total += new;
             depth += 1;
 
-            println!("depth {depth} new {new} total {total}");
+            if let Some(f) = iteration_callback {
+                f(PdbIterationStats { depth, new, total });
+            }
         }
 
         let pdb = pdb.into_boxed_slice();
@@ -68,7 +76,9 @@ impl Pdb {
         Self { pdb }
     }
 
-    pub(super) fn new_mtm<const W: usize, const H: usize, const N: usize>() -> Self
+    pub(super) fn new_mtm<const W: usize, const H: usize, const N: usize>(
+        iteration_callback: Option<&dyn Fn(PdbIterationStats)>,
+    ) -> Self
     where
         Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
     {
@@ -79,9 +89,13 @@ impl Pdb {
         let solved_encoded = indexing::encode(puzzle.piece_array());
         pdb[solved_encoded as usize] = 0;
 
-        let mut total = 1;
-        let mut new = 1;
         let mut depth = 0;
+        let mut new = 1;
+        let mut total = 1;
+
+        if let Some(f) = iteration_callback {
+            f(PdbIterationStats { depth, new, total });
+        }
 
         while new != 0 {
             new = 0;
@@ -116,7 +130,9 @@ impl Pdb {
             total += new;
             depth += 1;
 
-            println!("depth {depth} new {new} total {total}");
+            if let Some(f) = iteration_callback {
+                f(PdbIterationStats { depth, new, total });
+            }
         }
 
         let pdb = pdb.into_boxed_slice();
