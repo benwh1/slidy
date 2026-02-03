@@ -2,12 +2,12 @@ pub(super) fn encode<const N: usize>(perm: [u8; N]) -> u64 {
     let mut perm2 = [0; N];
     let mut i = 0;
     let mut gap = 0;
-    for j in 0..N {
-        if perm[j] == 0 {
+    for (j, &p) in perm.iter().enumerate() {
+        if p == 0 {
             gap = j;
             continue;
         }
-        perm2[i] = perm[j] - 1;
+        perm2[i] = p - 1;
         i += 1;
     }
 

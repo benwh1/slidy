@@ -1,11 +1,8 @@
 use crate::{
     algorithm::direction::Direction,
     solver::size4x4::mtm::{
-        base_5_table::Base5Table,
-        consts::SIZE,
-        indexing,
-        indexing_table::IndexingTable,
-        puzzle::{FourBitPuzzle, ReducedFourBitPuzzle},
+        base_5_table::Base5Table, consts::SIZE, indexing, indexing_table::IndexingTable,
+        puzzle::ReducedFourBitPuzzle,
     },
 };
 
@@ -48,8 +45,12 @@ impl Pdb {
                     Direction::Right,
                 ] {
                     let piece_array = indexing::decode_multiset_16(i as u64);
+
+                    // SAFETY: `decode_multiset_16` returns a valid permutation of the required
+                    // nibbles.
                     let mut puzzle =
-                        unsafe { FourBitPuzzle::from_piece_array_unchecked(piece_array) };
+                        unsafe { ReducedFourBitPuzzle::from_piece_array_unchecked(piece_array) };
+
                     while puzzle.do_move(mv) {
                         let idx = indexing_table.encode(puzzle.pieces(), base_5_table) as usize;
                         if pdb[idx] == u8::MAX {

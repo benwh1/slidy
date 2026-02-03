@@ -16,7 +16,7 @@ use crate::{
     solver::small::{indexing, pdb::Pdb},
 };
 
-/// An optimal solver for WxH puzzles in [`Mtm`].
+/// An optimal solver for `WxH` puzzles in [`Mtm`].
 ///
 /// [`Mtm`]: crate::algorithm::metric::Mtm
 pub struct Solver<const W: usize, const H: usize, const N: usize> {
@@ -50,6 +50,15 @@ pub type Solver5x2 = Solver<5, 2, 10>;
 /// [`Solver`] specialized to the 6x2 size.
 pub type Solver6x2 = Solver<6, 2, 12>;
 
+impl<const W: usize, const H: usize, const N: usize> Default for Solver<W, H, N>
+where
+    Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<const W: usize, const H: usize, const N: usize> Solver<W, H, N>
 where
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
@@ -57,6 +66,7 @@ where
     /// Creates a new [`Solver`] and builds the pattern database.
     ///
     /// Depending on the size of the puzzle, building the pattern database may take several minutes.
+    #[must_use]
     pub fn new() -> Self {
         let pdb = Pdb::new_mtm::<W, H, N>();
 
@@ -69,6 +79,9 @@ where
 
     fn dfs(&self, depth: u8, last_axis: Option<Axis>, mut puzzle: Puzzle<W, H>) -> bool {
         let coord = indexing::encode(puzzle.piece_array());
+
+        // SAFETY: `encode` produces integers from 0 to k-1 where k is the size of the PDB, so the
+        // index is always in bounds.
         let heuristic = unsafe { self.pdb.get_unchecked(coord as usize) };
 
         if heuristic > depth {
@@ -115,7 +128,7 @@ where
 
     /// Solves `puzzle`, returning an optimal [`Mtm`] solution.
     ///
-    /// Returns `None` if `puzzle` is not WxH.
+    /// Returns `None` if `puzzle` is not `WxH`.
     ///
     /// [`Mtm`]: crate::algorithm::metric::Mtm
     pub fn solve<P: SlidingPuzzle>(&self, puzzle: &P) -> Option<Algorithm>

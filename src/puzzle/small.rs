@@ -6,7 +6,7 @@ use crate::{
     puzzle::{puzzle::PuzzleError, size::Size, sliding_puzzle::SlidingPuzzle},
 };
 
-/// A WxH puzzle.
+/// A `WxH` puzzle.
 #[derive(Clone, Copy, Debug)]
 pub struct Puzzle<const W: usize, const H: usize> {
     pieces: u64,
@@ -56,9 +56,9 @@ pub(crate) mod sealed {
     use crate::puzzle::sliding_puzzle::SlidingPuzzle;
 
     pub trait SmallPuzzle: SlidingPuzzle<Piece = u8> {
-        const W: usize = Self::W as usize;
-        const H: usize = Self::H as usize;
-        const N: usize = Self::N as usize;
+        const W: usize;
+        const H: usize;
+        const N: usize;
 
         type PieceArray;
 
@@ -126,6 +126,7 @@ macro_rules! impl_puzzle {
             };
 
             pub(crate) const SWAP_MASKS: [[[u64; Self::N]; Self::N]; Self::N] = {
+                #[allow(clippy::large_stack_arrays)]
                 let mut out = [[[0; Self::N]; Self::N]; Self::N];
 
                 let mut gap = 0;
@@ -190,15 +191,22 @@ macro_rules! impl_puzzle {
             /// # Safety
             ///
             /// The lower `W * H` nibbles of `pieces` must contain the values 0 to `W * H - 1`, exactly
-            /// once each, and `(pieces >> (gap * 4)) & 0xF` must be 0.
+            /// once each.
+            /// `gap` must be less than `W * H`, and `(pieces >> (gap * 4)) & 0xF` must be 0.
             ///
             /// This function is unsafe because, although it doesn't cause immediate UB if used
             /// incorrectly, can break the type's invariant, which could lead to UB in otherwise-correct
             /// unsafe code elsewhere.
             unsafe fn with_pieces_and_gap_unchecked(pieces: u64, gap: u8) -> Self {
+                debug_assert!(gap < Self::N as u8);
+                debug_assert_eq!((pieces >> (gap * 4)) & 0xF, 0);
+
                 Self { pieces, gap }
             }
 
+            /// # Safety
+            ///
+            /// `piece_array` must contain the values 0 to `W * H - 1`, exactly once each.
             unsafe fn from_piece_array_unchecked(piece_array: Self::PieceArray) -> Self {
                 let mut pieces = 0;
                 let mut gap = 0;
@@ -210,6 +218,9 @@ macro_rules! impl_puzzle {
                     }
                 }
 
+                // SAFETY: `piece_array` contains the values 0 to `W * H - 1` once each, and
+                // `pieces` contains the same values packed into a u64. `gap` is also set as
+                // required.
                 unsafe { Self::with_pieces_and_gap_unchecked(pieces, gap) }
             }
 
@@ -362,6 +373,8 @@ macro_rules! impl_puzzle {
                     }
                 }
 
+                // SAFETY: We checked that all the pieces are distinct and within range, and set the
+                // gap piece correctly.
                 unsafe { Ok(Self::with_pieces_and_gap_unchecked(pieces, gap)) }
             }
         }

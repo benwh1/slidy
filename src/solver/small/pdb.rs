@@ -42,6 +42,8 @@ impl Pdb {
                     Direction::Right,
                 ] {
                     let piece_array = indexing::decode::<W, N>(i as u64);
+
+                    // SAFETY: `decode` produces valid permutations.
                     let mut puzzle =
                         unsafe { Puzzle::<W, H>::from_piece_array_unchecked(piece_array) };
 
@@ -96,6 +98,8 @@ impl Pdb {
                     Direction::Right,
                 ] {
                     let piece_array = indexing::decode::<W, N>(i as u64);
+
+                    // SAFETY: `decode` produces valid permutations.
                     let mut puzzle =
                         unsafe { Puzzle::<W, H>::from_piece_array_unchecked(piece_array) };
 
