@@ -1,7 +1,7 @@
 //! A fast 4x4 [`Mtm`] solver using a ~144MiB pattern database.
 //!
 //! The heuristic used is the distance from solved when the solved state is relabelled as:
-//! ```
+//! ```ignore
 //! 1 1 2 2
 //! 3 3 2 2
 //! 3 3 4 4
