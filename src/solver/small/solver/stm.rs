@@ -1,3 +1,8 @@
+//! Defines the [`Solver`] struct for optimally solving small puzzles in [`Stm`] using a complete
+//! pattern database.
+//!
+//! [`Stm`]: crate::algorithm::metric::Stm
+
 use std::cell::Cell;
 
 use num_traits::AsPrimitive;
@@ -11,29 +16,47 @@ use crate::{
     solver::small::{indexing, pdb::Pdb},
 };
 
+/// An optimal solver for WxH puzzles in [`Stm`].
+///
+/// [`Stm`]: crate::algorithm::metric::Stm
 pub struct Solver<const W: usize, const H: usize, const N: usize> {
     pdb: Pdb,
     solution: [Cell<Direction>; 128],
     solution_ptr: Cell<usize>,
 }
 
+/// [`Solver`] specialized to the 2x2 size.
 pub type Solver2x2 = Solver<2, 2, 4>;
+/// [`Solver`] specialized to the 2x3 size.
 pub type Solver2x3 = Solver<2, 3, 6>;
+/// [`Solver`] specialized to the 2x4 size.
 pub type Solver2x4 = Solver<2, 4, 8>;
+/// [`Solver`] specialized to the 2x5 size.
 pub type Solver2x5 = Solver<2, 5, 10>;
+/// [`Solver`] specialized to the 2x6 size.
 pub type Solver2x6 = Solver<2, 6, 12>;
+/// [`Solver`] specialized to the 3x2 size.
 pub type Solver3x2 = Solver<3, 2, 6>;
+/// [`Solver`] specialized to the 3x3 size.
 pub type Solver3x3 = Solver<3, 3, 9>;
+/// [`Solver`] specialized to the 3x4 size.
 pub type Solver3x4 = Solver<3, 4, 12>;
+/// [`Solver`] specialized to the 4x2 size.
 pub type Solver4x2 = Solver<4, 2, 8>;
+/// [`Solver`] specialized to the 4x3 size.
 pub type Solver4x3 = Solver<4, 3, 12>;
+/// [`Solver`] specialized to the 5x2 size.
 pub type Solver5x2 = Solver<5, 2, 10>;
+/// [`Solver`] specialized to the 6x2 size.
 pub type Solver6x2 = Solver<6, 2, 12>;
 
 impl<const W: usize, const H: usize, const N: usize> Solver<W, H, N>
 where
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
+    /// Creates a new [`Solver`] and builds the pattern database.
+    ///
+    /// Depending on the size of the puzzle, building the pattern database may take several minutes.
     pub fn new() -> Self {
         let pdb = Pdb::new_stm::<W, H, N>();
 
@@ -90,6 +113,11 @@ where
         false
     }
 
+    /// Solves `puzzle`, returning an optimal [`Stm`] solution.
+    ///
+    /// Returns `None` if `puzzle` is not WxH.
+    ///
+    /// [`Stm`]: crate::algorithm::metric::Stm
     pub fn solve<P: SlidingPuzzle>(&self, puzzle: &P) -> Option<Algorithm>
     where
         P::Piece: AsPrimitive<u8>,

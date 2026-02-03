@@ -1,32 +1,55 @@
+//! Defines a fixed-size puzzle with at most 15 pieces. The puzzle grid is represented using a
+//! single `u64` with 4 bits per piece. Moves are applied efficiently using bit operations.
+
 use crate::{
     algorithm::direction::Direction,
     puzzle::{puzzle::PuzzleError, size::Size, sliding_puzzle::SlidingPuzzle},
 };
 
+/// A WxH puzzle.
 #[derive(Clone, Copy, Debug)]
 pub struct Puzzle<const W: usize, const H: usize> {
     pieces: u64,
     gap: u8,
 }
 
+/// [`Puzzle`] specialized to the 2x2 size.
 pub type Puzzle2x2 = Puzzle<2, 2>;
+/// [`Puzzle`] specialized to the 2x3 size.
 pub type Puzzle2x3 = Puzzle<2, 3>;
+/// [`Puzzle`] specialized to the 2x4 size.
 pub type Puzzle2x4 = Puzzle<2, 4>;
+/// [`Puzzle`] specialized to the 2x5 size.
 pub type Puzzle2x5 = Puzzle<2, 5>;
+/// [`Puzzle`] specialized to the 2x6 size.
 pub type Puzzle2x6 = Puzzle<2, 6>;
+/// [`Puzzle`] specialized to the 2x7 size.
 pub type Puzzle2x7 = Puzzle<2, 7>;
+/// [`Puzzle`] specialized to the 2x8 size.
 pub type Puzzle2x8 = Puzzle<2, 8>;
+/// [`Puzzle`] specialized to the 3x2 size.
 pub type Puzzle3x2 = Puzzle<3, 2>;
+/// [`Puzzle`] specialized to the 3x3 size.
 pub type Puzzle3x3 = Puzzle<3, 3>;
+/// [`Puzzle`] specialized to the 3x4 size.
 pub type Puzzle3x4 = Puzzle<3, 4>;
+/// [`Puzzle`] specialized to the 3x5 size.
 pub type Puzzle3x5 = Puzzle<3, 5>;
+/// [`Puzzle`] specialized to the 4x2 size.
 pub type Puzzle4x2 = Puzzle<4, 2>;
+/// [`Puzzle`] specialized to the 4x3 size.
 pub type Puzzle4x3 = Puzzle<4, 3>;
+/// [`Puzzle`] specialized to the 4x4 size.
 pub type Puzzle4x4 = Puzzle<4, 4>;
+/// [`Puzzle`] specialized to the 5x2 size.
 pub type Puzzle5x2 = Puzzle<5, 2>;
+/// [`Puzzle`] specialized to the 5x3 size.
 pub type Puzzle5x3 = Puzzle<5, 3>;
+/// [`Puzzle`] specialized to the 6x2 size.
 pub type Puzzle6x2 = Puzzle<6, 2>;
+/// [`Puzzle`] specialized to the 7x2 size.
 pub type Puzzle7x2 = Puzzle<7, 2>;
+/// [`Puzzle`] specialized to the 8x2 size.
 pub type Puzzle8x2 = Puzzle<8, 2>;
 
 pub(crate) mod sealed {

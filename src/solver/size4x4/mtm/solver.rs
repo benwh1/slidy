@@ -1,3 +1,5 @@
+//! Defines the [`Solver`] struct for optimally solving 4x4 puzzles using pattern databases.
+
 use std::cell::Cell;
 
 use num_traits::AsPrimitive;
@@ -13,6 +15,9 @@ use crate::{
     },
 };
 
+/// An optimal solver for 4x4 puzzles in [`Mtm`].
+///
+/// [`Mtm`]: crate::algorithm::metric::Mtm
 pub struct Solver {
     indexing_table: IndexingTable,
     base_5_table: Base5Table,
@@ -29,6 +34,9 @@ impl Default for Solver {
 }
 
 impl Solver {
+    /// Creates a new [`Solver`] and builds the pattern database.
+    ///
+    /// Building the pattern database takes several minutes.
     #[must_use]
     pub fn new() -> Self {
         let indexing_table = IndexingTable::new();
@@ -120,6 +128,11 @@ impl Solver {
         false
     }
 
+    /// Solves `puzzle`, returning an optimal [`Mtm`] solution.
+    ///
+    /// Returns `None` if `puzzle` is not 4x4.
+    ///
+    /// [`Mtm`]: crate::algorithm::metric::Mtm
     pub fn solve<P: SlidingPuzzle>(&self, puzzle: &P) -> Option<Algorithm>
     where
         P::Piece: AsPrimitive<u8>,
