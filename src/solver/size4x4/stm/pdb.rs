@@ -1,7 +1,7 @@
 use crate::{
     algorithm::direction::Direction,
     solver::{
-        pdb_iteration::PdbIterationStats,
+        statistics::PdbIterationStats,
         size4x4::stm::{
             pattern::Pattern,
             puzzle::{MoveResult, Puzzle},

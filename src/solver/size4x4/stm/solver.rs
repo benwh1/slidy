@@ -8,9 +8,9 @@ use crate::{
     algorithm::{algorithm::Algorithm, direction::Direction},
     puzzle::{size::Size, sliding_puzzle::SlidingPuzzle},
     solver::{
-        pdb_iteration::PdbIterationStats,
         size4x4::stm::{pattern::Pattern, pdb::Pdb, puzzle::Puzzle},
         solver::SolverError,
+        statistics::{PdbIterationStats, SolverIterationStats},
     },
 };
 
@@ -129,8 +129,11 @@ impl Solver {
         false
     }
 
-    /// Computes an optimal solution of `puzzle`.
-    pub fn solve<P: SlidingPuzzle>(&self, puzzle: &P) -> Result<Algorithm, SolverError> {
+    fn solve_impl<P: SlidingPuzzle>(
+        &self,
+        puzzle: &P,
+        callback: Option<&dyn Fn(SolverIterationStats)>,
+    ) -> Result<Algorithm, SolverError> {
         if puzzle.size() != Size::new(4, 4).unwrap() {
             return Err(SolverError::IncompatiblePuzzleSize);
         }
@@ -180,8 +183,28 @@ impl Solver {
                 return Ok(solution);
             }
 
+            if let Some(f) = callback {
+                f(SolverIterationStats { depth });
+            }
+
             depth += 2;
         }
+    }
+
+    /// Computes an optimal solution of `puzzle`.
+    pub fn solve<P: SlidingPuzzle>(&self, puzzle: &P) -> Result<Algorithm, SolverError> {
+        self.solve_impl(puzzle, None)
+    }
+
+    /// See [`Solver::solve`].
+    ///
+    /// Runs `callback` after each iteration of the depth-first search.
+    pub fn solve_with_callback<P: SlidingPuzzle>(
+        &self,
+        puzzle: &P,
+        callback: &dyn Fn(SolverIterationStats),
+    ) -> Result<Algorithm, SolverError> {
+        self.solve_impl(puzzle, Some(callback))
     }
 }
 

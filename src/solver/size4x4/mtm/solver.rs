@@ -8,7 +8,6 @@ use crate::{
     algorithm::{algorithm::Algorithm, axis::Axis, direction::Direction},
     puzzle::{sliding_puzzle::SlidingPuzzle, small::Puzzle4x4},
     solver::{
-        pdb_iteration::PdbIterationStats,
         size4x4::mtm::{
             base_5_table::Base5Table,
             indexing_table::IndexingTable,
@@ -16,6 +15,7 @@ use crate::{
             puzzle::{FourBitPuzzle, ReducedFourBitPuzzle},
         },
         solver::SolverError,
+        statistics::{PdbIterationStats, SolverIterationStats},
     },
 };
 
@@ -144,12 +144,11 @@ impl Solver {
         false
     }
 
-    /// Solves `puzzle`, returning an optimal [`Mtm`] solution.
-    ///
-    /// Returns `None` if `puzzle` is not 4x4.
-    ///
-    /// [`Mtm`]: crate::algorithm::metric::Mtm
-    pub fn solve<P: SlidingPuzzle>(&self, puzzle: &P) -> Result<Algorithm, SolverError>
+    fn solve_impl<P: SlidingPuzzle>(
+        &self,
+        puzzle: &P,
+        callback: Option<&dyn Fn(SolverIterationStats)>,
+    ) -> Result<Algorithm, SolverError>
     where
         P::Piece: AsPrimitive<u8>,
     {
@@ -188,7 +187,35 @@ impl Solver {
                 return Ok(solution);
             }
 
+            if let Some(f) = callback {
+                f(SolverIterationStats { depth });
+            }
+
             depth += 1;
         }
+    }
+
+    /// Solves `puzzle`, returning an optimal [`Mtm`] solution.
+    ///
+    /// [`Mtm`]: crate::algorithm::metric::Mtm
+    pub fn solve<P: SlidingPuzzle>(&self, puzzle: &P) -> Result<Algorithm, SolverError>
+    where
+        P::Piece: AsPrimitive<u8>,
+    {
+        self.solve_impl(puzzle, None)
+    }
+
+    /// See [`Solver::solve`].
+    ///
+    /// Runs `callback` after each iteration of the depth-first search.
+    pub fn solve_with_callback<P: SlidingPuzzle>(
+        &self,
+        puzzle: &P,
+        callback: &dyn Fn(SolverIterationStats),
+    ) -> Result<Algorithm, SolverError>
+    where
+        P::Piece: AsPrimitive<u8>,
+    {
+        self.solve_impl(puzzle, Some(callback))
     }
 }

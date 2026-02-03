@@ -11,7 +11,10 @@ use crate::{
         label::label::RowGrids, sliding_puzzle::SlidingPuzzle, solvable::Solvable,
         solved_state::SolvedState,
     },
-    solver::heuristic::{manhattan::ManhattanDistance, Heuristic},
+    solver::{
+        heuristic::{manhattan::ManhattanDistance, Heuristic},
+        statistics::SolverIterationStats,
+    },
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -171,8 +174,11 @@ where
         false
     }
 
-    /// Solves `puzzle`.
-    pub fn solve(&mut self, puzzle: &Puzzle) -> Result<Algorithm, SolverError> {
+    fn solve_impl(
+        &mut self,
+        puzzle: &Puzzle,
+        iteration_callback: Option<&dyn Fn(SolverIterationStats)>,
+    ) -> Result<Algorithm, SolverError> {
         if !self.solved_state.is_solvable(puzzle) {
             return Err(SolverError::Unsolvable);
         }
@@ -187,12 +193,34 @@ where
                 return Ok(solution);
             }
 
+            if let Some(f) = iteration_callback {
+                f(SolverIterationStats {
+                    depth: depth.to_u8().unwrap(),
+                });
+            }
+
             if let Some(d) = depth.checked_add(&2u8.as_()) {
                 depth = d;
             } else {
                 return Err(SolverError::NoSolutionFound);
             }
         }
+    }
+
+    /// Solves `puzzle`.
+    pub fn solve(&mut self, puzzle: &Puzzle) -> Result<Algorithm, SolverError> {
+        self.solve_impl(puzzle, None)
+    }
+
+    /// See [`Solver::solve`].
+    ///
+    /// Runs `callback` after each iteration of the depth-first search.
+    pub fn solve_with_callback(
+        &mut self,
+        puzzle: &Puzzle,
+        callback: &dyn Fn(SolverIterationStats),
+    ) -> Result<Algorithm, SolverError> {
+        self.solve_impl(puzzle, Some(callback))
     }
 }
 

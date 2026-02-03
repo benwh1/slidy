@@ -14,9 +14,9 @@ use crate::{
         small::{sealed::SmallPuzzle, Puzzle},
     },
     solver::{
-        pdb_iteration::PdbIterationStats,
         small::{indexing, pdb::Pdb},
         solver::SolverError,
+        statistics::{PdbIterationStats, SolverIterationStats},
     },
 };
 
@@ -142,12 +142,11 @@ where
         false
     }
 
-    /// Solves `puzzle`, returning an optimal [`Mtm`] solution.
-    ///
-    /// Returns `None` if `puzzle` is not `WxH`.
-    ///
-    /// [`Mtm`]: crate::algorithm::metric::Mtm
-    pub fn solve<P: SlidingPuzzle>(&self, puzzle: &P) -> Result<Algorithm, SolverError>
+    fn solve_impl<P: SlidingPuzzle>(
+        &self,
+        puzzle: &P,
+        callback: Option<&dyn Fn(SolverIterationStats)>,
+    ) -> Result<Algorithm, SolverError>
     where
         P::Piece: AsPrimitive<u8>,
     {
@@ -180,8 +179,38 @@ where
                 return Ok(solution);
             }
 
+            if let Some(f) = callback {
+                f(SolverIterationStats { depth });
+            }
+
             depth += 1;
         }
+    }
+
+    /// Solves `puzzle`, returning an optimal [`Mtm`] solution.
+    ///
+    /// Returns `None` if `puzzle` is not `WxH`.
+    ///
+    /// [`Mtm`]: crate::algorithm::metric::Mtm
+    pub fn solve<P: SlidingPuzzle>(&self, puzzle: &P) -> Result<Algorithm, SolverError>
+    where
+        P::Piece: AsPrimitive<u8>,
+    {
+        self.solve_impl(puzzle, None)
+    }
+
+    /// See [`Solver::solve`].
+    ///
+    /// Runs `callback` after each iteration of the depth-first search.
+    pub fn solve_with_callback<P: SlidingPuzzle>(
+        &self,
+        puzzle: &P,
+        callback: &dyn Fn(SolverIterationStats),
+    ) -> Result<Algorithm, SolverError>
+    where
+        P::Piece: AsPrimitive<u8>,
+    {
+        self.solve_impl(puzzle, Some(callback))
     }
 }
 

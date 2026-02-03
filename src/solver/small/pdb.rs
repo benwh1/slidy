@@ -4,7 +4,7 @@ use crate::{
         sliding_puzzle::SlidingPuzzle as _,
         small::{sealed::SmallPuzzle, Puzzle},
     },
-    solver::{pdb_iteration::PdbIterationStats, small::indexing},
+    solver::{statistics::PdbIterationStats, small::indexing},
 };
 
 pub(super) struct Pdb {
