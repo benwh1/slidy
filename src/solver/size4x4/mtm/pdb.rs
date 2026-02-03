@@ -17,7 +17,7 @@ impl Pdb {
     pub(super) fn new(
         indexing_table: &IndexingTable,
         base_5_table: &Base5Table,
-        end_of_iteration: Option<&dyn Fn(PdbIterationStats)>,
+        iteration_callback: Option<&dyn Fn(PdbIterationStats)>,
     ) -> Self {
         let mut pdb = vec![u8::MAX; SIZE];
 
@@ -29,7 +29,7 @@ impl Pdb {
         let mut new = 1;
         let mut total = 1;
 
-        if let Some(f) = end_of_iteration {
+        if let Some(f) = iteration_callback {
             f(PdbIterationStats { depth, new, total });
         }
 
@@ -67,7 +67,7 @@ impl Pdb {
             total += new;
             depth += 1;
 
-            if let Some(f) = end_of_iteration {
+            if let Some(f) = iteration_callback {
                 f(PdbIterationStats { depth, new, total });
             }
         }

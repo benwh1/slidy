@@ -18,7 +18,7 @@ pub(super) struct Pdb {
 impl Pdb {
     pub(super) fn new(
         pattern: Pattern,
-        pdb_iteration_callback: Option<&dyn Fn(PdbIterationStats)>,
+        iteration_callback: Option<&dyn Fn(PdbIterationStats)>,
     ) -> Self {
         let mut this = Self {
             pattern,
@@ -27,7 +27,7 @@ impl Pdb {
         };
 
         this.make_transposition_table();
-        this.make_pdb(pdb_iteration_callback);
+        this.make_pdb(iteration_callback);
 
         this
     }
@@ -105,7 +105,7 @@ impl Pdb {
         new
     }
 
-    fn make_pdb(&mut self, pdb_iteration_callback: Option<&dyn Fn(PdbIterationStats)>) {
+    fn make_pdb(&mut self, iteration_callback: Option<&dyn Fn(PdbIterationStats)>) {
         let size = self.pattern.pdb_size();
         self.pdb = vec![u8::MAX; size];
 
@@ -133,7 +133,7 @@ impl Pdb {
             depth += 1;
             total += new;
 
-            if let Some(callback) = &pdb_iteration_callback {
+            if let Some(callback) = &iteration_callback {
                 callback(PdbIterationStats { depth, new, total });
             }
         }
