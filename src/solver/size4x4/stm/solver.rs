@@ -191,7 +191,9 @@ impl Solver {
         }
     }
 
-    /// Computes an optimal solution of `puzzle`.
+    /// Solves `puzzle`, returning an optimal [`Stm`] solution.
+    ///
+    /// [`Stm`]: crate::algorithm::metric::Stm
     pub fn solve<P: SlidingPuzzle>(&self, puzzle: &P) -> Result<Algorithm, SolverError> {
         self.solve_impl(puzzle, None)
     }

@@ -189,8 +189,6 @@ where
 
     /// Solves `puzzle`, returning an optimal [`Mtm`] solution.
     ///
-    /// Returns `None` if `puzzle` is not `WxH`.
-    ///
     /// [`Mtm`]: crate::algorithm::metric::Mtm
     pub fn solve<P: SlidingPuzzle>(&self, puzzle: &P) -> Result<Algorithm, SolverError>
     where
