@@ -162,7 +162,7 @@ impl Solver {
         }
 
         let reduced_puzzle = four_bit_puzzle.reduced();
-        let transposed_reduced_puzzle = four_bit_puzzle.transposed().reduced();
+        let transposed_reduced_puzzle = four_bit_puzzle.conjugate_with_transpose().reduced();
 
         // Reset state
         self.solution_ptr.set(0);

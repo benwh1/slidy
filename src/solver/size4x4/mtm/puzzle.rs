@@ -51,25 +51,25 @@ impl FourBitPuzzle {
         pieces
     }
 
-    pub(super) fn transposed(&self) -> Self {
+    pub(super) fn conjugate_with_transpose(&self) -> Self {
         let pieces = self.piece_array();
         let pos = |i| pieces.iter().position(|&x| x == i).unwrap() as u64;
 
-        let mut transposed = self.puzzle;
-        transposed.swap_pieces(pos(2), pos(5));
-        transposed.swap_pieces(pos(3), pos(9));
-        transposed.swap_pieces(pos(4), pos(13));
-        transposed.swap_pieces(pos(7), pos(10));
-        transposed.swap_pieces(pos(8), pos(14));
-        transposed.swap_pieces(pos(12), pos(15));
-        transposed.swap_pieces(1, 4);
-        transposed.swap_pieces(2, 8);
-        transposed.swap_pieces(3, 12);
-        transposed.swap_pieces(6, 9);
-        transposed.swap_pieces(7, 13);
-        transposed.swap_pieces(11, 14);
+        let mut new = self.puzzle;
+        new.swap_pieces(pos(2), pos(5));
+        new.swap_pieces(pos(3), pos(9));
+        new.swap_pieces(pos(4), pos(13));
+        new.swap_pieces(pos(7), pos(10));
+        new.swap_pieces(pos(8), pos(14));
+        new.swap_pieces(pos(12), pos(15));
+        new.swap_pieces(1, 4);
+        new.swap_pieces(2, 8);
+        new.swap_pieces(3, 12);
+        new.swap_pieces(6, 9);
+        new.swap_pieces(7, 13);
+        new.swap_pieces(11, 14);
 
-        Self { puzzle: transposed }
+        Self { puzzle: new }
     }
 
     pub(super) fn reduced(&self) -> ReducedFourBitPuzzle {
