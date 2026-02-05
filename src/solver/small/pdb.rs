@@ -187,10 +187,22 @@ where
         Self::new_impl(Some(iteration_callback))
     }
 
-    /// Initializes a [`Pdb`] from a byte slice containing the pre-computed data.
+    /// Initializes a [`Pdb`] from a boxed byte slice containing the pre-computed data.
     ///
-    /// The data is checked against a known [`xxh3`] hash to verify integrity.
-    pub fn from_bytes(bytes: Box<[u8]>) -> Option<Self> {
+    /// The length of the data is checked, and the [`xxh3`] hash is computed and checked against a
+    /// known value to verify integrity.
+    ///
+    /// # Safety
+    ///
+    /// Despite the correctness checks described above, this function is unsafe because it is
+    /// still technically possible for `bytes` to contain incorrect data in the event of a hash
+    /// collision.
+    ///
+    /// If the data is incorrect, then using the resulting [`Pdb`] in [`Solver`] can cause undefined
+    /// behavior.
+    ///
+    /// [`Solver`]: crate::solver::small::solver::Solver
+    pub unsafe fn try_from_bytes(bytes: Box<[u8]>) -> Option<Self> {
         if bytes.len() as u128 != Puzzle::<W, H>::new().size().num_states() {
             return None;
         }
@@ -202,10 +214,20 @@ where
             return None;
         }
 
-        Some(Self {
+        Some(unsafe { Self::from_bytes_unchecked(bytes) })
+    }
+
+    /// See [`Self::from_bytes`].
+    ///
+    /// # Safety
+    ///
+    /// The caller is responsible for the correctness of the data contained in `bytes`. No
+    /// correctness checks are performed.
+    pub unsafe fn from_bytes_unchecked(bytes: Box<[u8]>) -> Self {
+        Self {
             pdb: bytes,
             phantom_metric_tag: PhantomData,
-        })
+        }
     }
 }
 
@@ -290,10 +312,22 @@ where
         Self::new_impl(Some(iteration_callback))
     }
 
-    /// Initializes a [`Pdb`] from a byte slice containing the pre-computed data.
+    /// Initializes a [`Pdb`] from a boxed byte slice containing the pre-computed data.
     ///
-    /// The data is checked against a known [`xxh3`] hash to verify integrity.
-    pub fn from_bytes(bytes: Box<[u8]>) -> Option<Self> {
+    /// The length of the data is checked, and the [`xxh3`] hash is computed and checked against a
+    /// known value to verify integrity.
+    ///
+    /// # Safety
+    ///
+    /// Despite the correctness checks described above, this function is unsafe because it is
+    /// still technically possible for `bytes` to contain incorrect data in the event of a hash
+    /// collision.
+    ///
+    /// If the data is incorrect, then using the resulting [`Pdb`] in [`Solver`] can cause undefined
+    /// behavior.
+    ///
+    /// [`Solver`]: crate::solver::small::solver::Solver
+    pub unsafe fn try_from_bytes(bytes: Box<[u8]>) -> Option<Self> {
         if bytes.len() as u128 != Puzzle::<W, H>::new().size().num_states() {
             return None;
         }
@@ -305,10 +339,20 @@ where
             return None;
         }
 
-        Some(Self {
+        Some(unsafe { Self::from_bytes_unchecked(bytes) })
+    }
+
+    /// See [`Self::from_bytes`].
+    ///
+    /// # Safety
+    ///
+    /// The caller is responsible for the correctness of the data contained in `bytes`. No
+    /// correctness checks are performed.
+    pub unsafe fn from_bytes_unchecked(bytes: Box<[u8]>) -> Self {
+        Self {
             pdb: bytes,
             phantom_metric_tag: PhantomData,
-        })
+        }
     }
 }
 
