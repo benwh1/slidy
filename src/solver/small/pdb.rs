@@ -1,5 +1,10 @@
+use std::marker::PhantomData;
+
 use crate::{
-    algorithm::direction::Direction,
+    algorithm::{
+        direction::Direction,
+        metric::{Mtm, Stm},
+    },
     puzzle::{
         sliding_puzzle::SlidingPuzzle as _,
         small::{sealed::SmallPuzzle, Puzzle},
@@ -7,17 +12,16 @@ use crate::{
     solver::{small::indexing, statistics::PdbIterationStats},
 };
 
-pub(super) struct Pdb {
+pub struct Pdb<const W: usize, const H: usize, const N: usize, MetricTag> {
     pdb: Box<[u8]>,
+    phantom_metric_tag: PhantomData<MetricTag>,
 }
 
-impl Pdb {
-    pub(super) fn new_stm<const W: usize, const H: usize, const N: usize>(
-        iteration_callback: Option<&dyn Fn(PdbIterationStats)>,
-    ) -> Self
-    where
-        Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
-    {
+impl<const W: usize, const H: usize, const N: usize> Pdb<W, H, N, Stm>
+where
+    Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
+{
+    pub(super) fn new_impl(iteration_callback: Option<&dyn Fn(PdbIterationStats)>) -> Self {
         let puzzle = Puzzle::<W, H>::new();
         let num_states = puzzle.size().num_states().try_into().unwrap();
 
@@ -73,15 +77,26 @@ impl Pdb {
 
         let pdb = pdb.into_boxed_slice();
 
-        Self { pdb }
+        Self {
+            pdb,
+            phantom_metric_tag: PhantomData,
+        }
     }
 
-    pub(super) fn new_mtm<const W: usize, const H: usize, const N: usize>(
-        iteration_callback: Option<&dyn Fn(PdbIterationStats)>,
-    ) -> Self
-    where
-        Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
-    {
+    pub fn new() -> Self {
+        Self::new_impl(None)
+    }
+
+    pub fn new_with_iteration_callback(iteration_callback: &dyn Fn(PdbIterationStats)) -> Self {
+        Self::new_impl(Some(iteration_callback))
+    }
+}
+
+impl<const W: usize, const H: usize, const N: usize> Pdb<W, H, N, Mtm>
+where
+    Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
+{
+    pub(super) fn new_impl(iteration_callback: Option<&dyn Fn(PdbIterationStats)>) -> Self {
         let puzzle = Puzzle::<W, H>::new();
         let num_states = puzzle.size().num_states().try_into().unwrap();
 
@@ -137,14 +152,35 @@ impl Pdb {
 
         let pdb = pdb.into_boxed_slice();
 
-        Self { pdb }
+        Self {
+            pdb,
+            phantom_metric_tag: PhantomData,
+        }
     }
 
+    pub fn new() -> Self {
+        Self::new_impl(None)
+    }
+
+    pub fn new_with_iteration_callback(iteration_callback: &dyn Fn(PdbIterationStats)) -> Self {
+        Self::new_impl(Some(iteration_callback))
+    }
+}
+
+impl<const W: usize, const H: usize, const N: usize, MetricTag> Pdb<W, H, N, MetricTag> {
     pub(super) fn get(&self, index: usize) -> u8 {
         self.pdb[index]
     }
 
     pub(super) unsafe fn get_unchecked(&self, index: usize) -> u8 {
         *self.pdb.get_unchecked(index)
+    }
+}
+
+impl<const W: usize, const H: usize, const N: usize, MetricTag> AsRef<[u8]>
+    for Pdb<W, H, N, MetricTag>
+{
+    fn as_ref(&self) -> &[u8] {
+        &self.pdb
     }
 }

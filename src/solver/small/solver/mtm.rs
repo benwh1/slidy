@@ -1,14 +1,12 @@
 //! Defines the [`Solver`] struct for optimally solving small puzzles in [`Mtm`] using a complete
 //! pattern database.
-//!
-//! [`Mtm`]: crate::algorithm::metric::Mtm
 
 use std::cell::Cell;
 
 use num_traits::AsPrimitive;
 
 use crate::{
-    algorithm::{algorithm::Algorithm, axis::Axis, direction::Direction},
+    algorithm::{algorithm::Algorithm, axis::Axis, direction::Direction, metric::Mtm},
     puzzle::{
         sliding_puzzle::SlidingPuzzle,
         small::{sealed::SmallPuzzle, Puzzle},
@@ -21,10 +19,8 @@ use crate::{
 };
 
 /// An optimal solver for `WxH` puzzles in [`Mtm`].
-///
-/// [`Mtm`]: crate::algorithm::metric::Mtm
 pub struct Solver<const W: usize, const H: usize, const N: usize> {
-    pdb: Pdb,
+    pdb: Pdb<W, H, N, Mtm>,
     solution: [Cell<Direction>; 128],
     solution_ptr: Cell<usize>,
 }
@@ -68,7 +64,7 @@ where
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
     fn new_impl(pdb_iteration_callback: Option<&dyn Fn(PdbIterationStats)>) -> Self {
-        let pdb = Pdb::new_mtm::<W, H, N>(pdb_iteration_callback);
+        let pdb = Pdb::<W, H, N, Mtm>::new_impl(pdb_iteration_callback);
 
         Self {
             pdb,
@@ -188,8 +184,6 @@ where
     }
 
     /// Solves `puzzle`, returning an optimal [`Mtm`] solution.
-    ///
-    /// [`Mtm`]: crate::algorithm::metric::Mtm
     pub fn solve<P: SlidingPuzzle>(&self, puzzle: &P) -> Result<Algorithm, SolverError>
     where
         P::Piece: AsPrimitive<u8>,
@@ -209,6 +203,11 @@ where
         P::Piece: AsPrimitive<u8>,
     {
         self.solve_impl(puzzle, Some(callback))
+    }
+
+    /// Returns a reference to the pattern database used by the solver.
+    pub fn pdb(&self) -> &Pdb<W, H, N, Mtm> {
+        &self.pdb
     }
 }
 
