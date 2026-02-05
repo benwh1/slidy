@@ -61,6 +61,7 @@ pub(crate) mod sealed {
         const N: usize;
 
         type PieceArray;
+        type TransposedPuzzle;
 
         fn new() -> Self;
         unsafe fn with_pieces_and_gap_unchecked(pieces: u64, gap: u8) -> Self;
@@ -70,6 +71,7 @@ pub(crate) mod sealed {
         fn gap(&self) -> u8;
 
         fn piece_array(&self) -> Self::PieceArray;
+        fn transpose(&self) -> Self::TransposedPuzzle;
     }
 }
 
@@ -177,6 +179,7 @@ macro_rules! impl_puzzle {
             const N: usize = $w * $h;
 
             type PieceArray = [u8; Self::N];
+            type TransposedPuzzle = Puzzle<$h, $w>;
 
             fn new() -> Self {
                 Self {
@@ -240,6 +243,18 @@ macro_rules! impl_puzzle {
                 }
 
                 pieces
+            }
+
+            fn transpose(&self) -> Self::TransposedPuzzle {
+                let mut transposed_pieces = [0; Self::TransposedPuzzle::N];
+
+                for y in 0..Self::H {
+                    for x in 0..Self::W {
+                        transposed_pieces[y + Self::H * x] = self.piece_at_xy((x as u64, y as u64));
+                    }
+                }
+
+                unsafe { Self::TransposedPuzzle::from_piece_array_unchecked(transposed_pieces) }
             }
         }
 
