@@ -71,7 +71,7 @@ pub(crate) mod sealed {
         fn gap(&self) -> u8;
 
         fn piece_array(&self) -> Self::PieceArray;
-        fn transpose(&self) -> Self::TransposedPuzzle;
+        fn conjugate_with_transpose(&self) -> Self::TransposedPuzzle;
     }
 }
 
@@ -245,12 +245,22 @@ macro_rules! impl_puzzle {
                 pieces
             }
 
-            fn transpose(&self) -> Self::TransposedPuzzle {
+            fn conjugate_with_transpose(&self) -> Self::TransposedPuzzle {
                 let mut transposed_pieces = [0; Self::TransposedPuzzle::N];
 
                 for y in 0..Self::H {
                     for x in 0..Self::W {
-                        transposed_pieces[y + Self::H * x] = self.piece_at_xy((x as u64, y as u64));
+                        let piece = self.piece_at_xy((x as u64, y as u64));
+                        let (sx, sy) = self.solved_pos_xy(piece);
+                        let transposed_piece = {
+                            let p = 1 + sy + Self::H as u64 * sx;
+                            if p == Self::N as u64 {
+                                0
+                            } else {
+                                p as u8
+                            }
+                        };
+                        transposed_pieces[y + Self::H * x] = transposed_piece;
                     }
                 }
 
@@ -415,3 +425,23 @@ impl_puzzle!(5, 3);
 impl_puzzle!(6, 2);
 impl_puzzle!(7, 2);
 impl_puzzle!(8, 2);
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr as _;
+
+    use crate::puzzle::puzzle::Puzzle;
+
+    use super::*;
+
+    #[test]
+    fn test_conjugate_with_transpose() {
+        let p = Puzzle::from_str("4 8 0 6 5 9/10 11 1 7 3 2").unwrap();
+        let pt = Puzzle::from_str("7 8/4 10/0 1/11 2/9 5/6 3").unwrap();
+
+        let mut p2 = Puzzle6x2::new();
+        assert!(p2.try_set_state(&p));
+        let p3 = p2.conjugate_with_transpose();
+        assert!(pt.equals(&p3));
+    }
+}

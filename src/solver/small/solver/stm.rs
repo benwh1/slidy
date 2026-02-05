@@ -191,7 +191,8 @@ where
             return Err(SolverError::IncompatiblePuzzleSize);
         }
 
-        self.0.solve_small_puzzle_impl(p.transpose(), callback)
+        self.0
+            .solve_small_puzzle_impl(p.conjugate_with_transpose(), callback)
     }
 
     /// Solves `puzzle`, returning an optimal [`Stm`] solution.
