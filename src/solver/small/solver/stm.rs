@@ -1,7 +1,7 @@
 //! Defines the [`Solver`] struct for optimally solving small puzzles in [`Stm`] using a complete
 //! pattern database.
 
-use std::cell::Cell;
+use std::{cell::Cell, ops::Deref};
 
 use num_traits::AsPrimitive;
 
@@ -25,22 +25,27 @@ pub struct Solver<const W: usize, const H: usize, const N: usize> {
     solution_ptr: Cell<usize>,
 }
 
+/// An instance of [`Solver`] that transposes the puzzle, solves it, and transposes the solution.
+/// This is so that for non-square `WxH` puzzles, we can re-use the pattern database for solving
+/// `HxW` puzzles, instead of generating an essentially equivalent one.
+pub struct TransposeSolver<const W: usize, const H: usize, const N: usize>(Solver<H, W, N>);
+
 /// [`Solver`] specialized to the 2x2 size.
 pub type Solver2x2 = Solver<2, 2, 4>;
-/// [`Solver`] specialized to the 2x3 size.
-pub type Solver2x3 = Solver<2, 3, 6>;
-/// [`Solver`] specialized to the 2x4 size.
-pub type Solver2x4 = Solver<2, 4, 8>;
-/// [`Solver`] specialized to the 2x5 size.
-pub type Solver2x5 = Solver<2, 5, 10>;
-/// [`Solver`] specialized to the 2x6 size.
-pub type Solver2x6 = Solver<2, 6, 12>;
+/// [`TransposeSolver`] specialized to the 2x3 size.
+pub type Solver2x3 = TransposeSolver<2, 3, 6>;
+/// [`TransposeSolver`] specialized to the 2x4 size.
+pub type Solver2x4 = TransposeSolver<2, 4, 8>;
+/// [`TransposeSolver`] specialized to the 2x5 size.
+pub type Solver2x5 = TransposeSolver<2, 5, 10>;
+/// [`TransposeSolver`] specialized to the 2x6 size.
+pub type Solver2x6 = TransposeSolver<2, 6, 12>;
 /// [`Solver`] specialized to the 3x2 size.
 pub type Solver3x2 = Solver<3, 2, 6>;
 /// [`Solver`] specialized to the 3x3 size.
 pub type Solver3x3 = Solver<3, 3, 9>;
-/// [`Solver`] specialized to the 3x4 size.
-pub type Solver3x4 = Solver<3, 4, 12>;
+/// [`TransposeSolver`] specialized to the 3x4 size.
+pub type Solver3x4 = TransposeSolver<3, 4, 12>;
 /// [`Solver`] specialized to the 4x2 size.
 pub type Solver4x2 = Solver<4, 2, 8>;
 /// [`Solver`] specialized to the 4x3 size.
@@ -151,6 +156,14 @@ where
             return Err(SolverError::IncompatiblePuzzleSize);
         }
 
+        self.solve_small_puzzle_impl(p, callback)
+    }
+
+    fn solve_small_puzzle_impl(
+        &self,
+        puzzle: Puzzle<W, H>,
+        callback: Option<&dyn Fn(SolverIterationStats)>,
+    ) -> Result<Algorithm, SolverError> {
         if !puzzle.is_solvable() {
             return Err(SolverError::Unsolvable);
         }
@@ -158,11 +171,11 @@ where
         // Reset state
         self.solution_ptr.set(0);
 
-        let coord = indexing::encode(p.piece_array());
+        let coord = indexing::encode(puzzle.piece_array());
         let mut depth = self.pdb.get(coord as usize);
 
         loop {
-            if self.dfs(depth, None, p) {
+            if self.dfs(depth, None, puzzle) {
                 let mut solution = Algorithm::new();
 
                 for dir in self.solution[..self.solution_ptr.get()]
@@ -208,6 +221,78 @@ where
     /// Returns a reference to the pattern database used by the solver.
     pub fn pdb(&self) -> &Pdb<W, H, N, Stm> {
         &self.pdb
+    }
+}
+
+impl<const W: usize, const H: usize, const N: usize> TransposeSolver<W, H, N>
+where
+    Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N], TransposedPuzzle = Puzzle<H, W>>,
+    Puzzle<H, W>: SmallPuzzle<PieceArray = [u8; N]>,
+{
+    fn new_impl(pdb_iteration_callback: Option<&dyn Fn(PdbIterationStats)>) -> Self {
+        Self(Solver::new_impl(pdb_iteration_callback))
+    }
+
+    /// Creates a new [`TransposeSolver`] and builds the pattern database.
+    ///
+    /// Depending on the size of the puzzle, building the pattern database may take several minutes.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::new_impl(None)
+    }
+
+    /// See [`Self::new`].
+    ///
+    /// Runs `pdb_iteration_callback` after each iteration of the breadth-first search used to build
+    /// the pattern database.
+    pub fn with_pdb_iteration_callback(pdb_iteration_callback: &dyn Fn(PdbIterationStats)) -> Self {
+        Self::new_impl(Some(pdb_iteration_callback))
+    }
+
+    fn solve_impl<P: SlidingPuzzle>(
+        &self,
+        puzzle: &P,
+        callback: Option<&dyn Fn(SolverIterationStats)>,
+    ) -> Result<Algorithm, SolverError>
+    where
+        P::Piece: AsPrimitive<u8>,
+    {
+        let mut p = Puzzle::<W, H>::new();
+        if !p.try_set_state(puzzle) {
+            return Err(SolverError::IncompatiblePuzzleSize);
+        }
+
+        self.0.solve_small_puzzle_impl(p.transpose(), callback)
+    }
+
+    /// Solves `puzzle`, returning an optimal [`Stm`] solution.
+    pub fn solve<P: SlidingPuzzle>(&self, puzzle: &P) -> Result<Algorithm, SolverError>
+    where
+        P::Piece: AsPrimitive<u8>,
+    {
+        self.solve_impl(puzzle, None)
+    }
+
+    /// See [`Solver::solve`].
+    ///
+    /// Runs `callback` after each iteration of the depth-first search.
+    pub fn solve_with_callback<P: SlidingPuzzle>(
+        &self,
+        puzzle: &P,
+        callback: &dyn Fn(SolverIterationStats),
+    ) -> Result<Algorithm, SolverError>
+    where
+        P::Piece: AsPrimitive<u8>,
+    {
+        self.solve_impl(puzzle, Some(callback))
+    }
+}
+
+impl<const W: usize, const H: usize, const N: usize> Deref for TransposeSolver<W, H, N> {
+    type Target = Solver<H, W, N>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
