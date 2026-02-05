@@ -79,3 +79,19 @@ pub type Solver5x2Mtm = Solver<5, 2, 10, Mtm>;
 pub type Solver6x2Stm = Solver<6, 2, 12, Stm>;
 /// [`Solver`] specialized to the 6x2 size and [`Mtm`] metric.
 pub type Solver6x2Mtm = Solver<6, 2, 12, Mtm>;
+
+impl<const W: usize, const H: usize, const N: usize, MetricTag> Solver<W, H, N, MetricTag> {
+    /// Consumes `self`, returning the inner [`Pdb`].
+    pub fn into_inner_pdb(self) -> Pdb<W, H, N, MetricTag> {
+        self.pdb
+    }
+}
+
+impl<const W: usize, const H: usize, const N: usize, MetricTag>
+    TransposeSolver<W, H, N, MetricTag>
+{
+    /// Consumes `self`, returning the inner [`Solver`].
+    pub fn into_inner(self) -> Solver<H, W, N, MetricTag> {
+        self.0
+    }
+}
