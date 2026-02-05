@@ -1,5 +1,7 @@
 use std::marker::PhantomData;
 
+use xxhash_rust::xxh3;
+
 use crate::{
     algorithm::{
         direction::Direction,
@@ -11,6 +13,36 @@ use crate::{
     },
     solver::{small::indexing, statistics::PdbIterationStats},
 };
+
+const HASHES_STM: [(usize, usize, u64); 12] = [
+    (2, 2, 0x66b33be63e234245),
+    (2, 3, 0x0f868220a4a06baf),
+    (2, 4, 0x9b7a57ad2c6df83f),
+    (2, 5, 0x4feabd468458775d),
+    (2, 6, 0x84b6f795340a1b8a),
+    (3, 2, 0x8275b13928b93c86),
+    (3, 3, 0x8812534cd3f7d59f),
+    (3, 4, 0x8bcdde83e8fb98b1),
+    (4, 2, 0x0a649d41d893eae3),
+    (4, 3, 0x835afc1a5551ae94),
+    (5, 2, 0x44333aa439ea04fe),
+    (6, 2, 0x05084fa633e32abf),
+];
+
+const HASHES_MTM: [(usize, usize, u64); 12] = [
+    (2, 2, 0x66b33be63e234245),
+    (2, 3, 0xa001670b2c0432ab),
+    (2, 4, 0x64e76678662d6c49),
+    (2, 5, 0xf7e3bbdb27bc8066),
+    (2, 6, 0x1221756582872833),
+    (3, 2, 0xfb4f384ea556c974),
+    (3, 3, 0x2bc75b60a3361302),
+    (3, 4, 0x61152679ea24a66a),
+    (4, 2, 0x4e6df36030daed02),
+    (4, 3, 0x4e91c8da54abdff8),
+    (5, 2, 0xe6f36e4ac7284ada),
+    (6, 2, 0xa824375d41fb2487),
+];
 
 pub struct Pdb<const W: usize, const H: usize, const N: usize, MetricTag> {
     pdb: Box<[u8]>,
@@ -115,6 +147,24 @@ where
     pub fn new_with_iteration_callback(iteration_callback: &dyn Fn(PdbIterationStats)) -> Self {
         Self::new_impl(Some(iteration_callback))
     }
+
+    pub fn from_bytes(bytes: Box<[u8]>) -> Option<Self> {
+        if bytes.len() as u128 != Puzzle::<W, H>::new().size().num_states() {
+            return None;
+        }
+
+        let expected_hash = HASHES_STM.iter().find(|(w, h, _)| *w == W && *h == H)?.2;
+        let actual_hash = xxh3::xxh3_64(&*bytes);
+
+        if actual_hash != expected_hash {
+            return None;
+        }
+
+        Some(Self {
+            pdb: bytes,
+            phantom_metric_tag: PhantomData,
+        })
+    }
 }
 
 impl<const W: usize, const H: usize, const N: usize> Pdb<W, H, N, Mtm>
@@ -189,6 +239,24 @@ where
 
     pub fn new_with_iteration_callback(iteration_callback: &dyn Fn(PdbIterationStats)) -> Self {
         Self::new_impl(Some(iteration_callback))
+    }
+
+    pub fn from_bytes(bytes: Box<[u8]>) -> Option<Self> {
+        if bytes.len() as u128 != Puzzle::<W, H>::new().size().num_states() {
+            return None;
+        }
+
+        let expected_hash = HASHES_MTM.iter().find(|(w, h, _)| *w == W && *h == H)?.2;
+        let actual_hash = xxh3::xxh3_64(&*bytes);
+
+        if actual_hash != expected_hash {
+            return None;
+        }
+
+        Some(Self {
+            pdb: bytes,
+            phantom_metric_tag: PhantomData,
+        })
     }
 }
 

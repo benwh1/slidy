@@ -20,6 +20,7 @@ serde = { version = "^1.0", optional = true }
 serde_derive = { version = "^1.0", optional = true }
 svg = "^0.18"
 thiserror = "^2.0"
+xxhash-rust = { version = "^0.8", features = ["xxh3"] }
 
 [dev-dependencies]
 paste = "^1.0"
