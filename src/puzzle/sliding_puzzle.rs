@@ -39,7 +39,7 @@ where
     Self: Sized,
 {
     /// The type representing a piece of the puzzle (likely the elements in an array or vector).
-    type Piece: PrimInt;
+    type Piece: PrimInt + 'static;
 
     /// Size of the puzzle.
     #[must_use]
@@ -841,5 +841,23 @@ where
     /// See [`SlidingPuzzle::invert`].
     unsafe fn invert_unchecked(&mut self) {
         self.invert();
+    }
+
+    /// Checks if `self` and `other` have the same state.
+    fn equals<P: SlidingPuzzle>(&self, other: &P) -> bool
+    where
+        P::Piece: AsPrimitive<Self::Piece>,
+    {
+        if self.size() != other.size() {
+            return false;
+        }
+
+        for i in 0..self.area() {
+            if self.piece_at(i) != other.piece_at(i).as_() {
+                return false;
+            }
+        }
+
+        true
     }
 }
