@@ -193,6 +193,7 @@ where
 
         self.0
             .solve_small_puzzle_impl(p.conjugate_with_transpose(), callback)
+            .map(|a| a.transpose())
     }
 
     /// Solves `puzzle`, returning an optimal [`Stm`] solution.
@@ -222,7 +223,10 @@ where
 mod tests {
     use std::str::FromStr as _;
 
-    use crate::{puzzle::puzzle::Puzzle, solver::small::solver::Solver3x3Stm};
+    use crate::{
+        puzzle::{puzzle::Puzzle, sliding_puzzle::SlidingPuzzle},
+        solver::small::solver::{Solver2x4Stm, Solver3x3Stm},
+    };
 
     #[test]
     fn test_solver_3x3() {
@@ -230,5 +234,14 @@ mod tests {
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_stm::<u64>(), 25);
+    }
+
+    #[test]
+    fn test_transpose_solver() {
+        let solver = Solver2x4Stm::new();
+        let mut puzzle = Puzzle::from_str("4 6/2 5/0 1/7 3").unwrap();
+        let solution = solver.solve(&puzzle).unwrap();
+        puzzle.apply_alg(&solution);
+        assert!(puzzle.is_solved());
     }
 }

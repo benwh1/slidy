@@ -193,6 +193,7 @@ where
 
         self.0
             .solve_small_puzzle_impl(p.conjugate_with_transpose(), callback)
+            .map(|a| a.transpose())
     }
 
     /// Solves `puzzle`, returning an optimal [`Mtm`] solution.
