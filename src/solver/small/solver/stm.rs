@@ -15,17 +15,29 @@ use crate::{
     },
 };
 
+impl<const W: usize, const H: usize, const N: usize> Default for Solver<W, H, N, Stm>
+where
+    Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N], TransposedPuzzle = Puzzle<H, W>>,
+    Puzzle<H, W>: SmallPuzzle<PieceArray = [u8; N], TransposedPuzzle = Puzzle<W, H>>,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<const W: usize, const H: usize, const N: usize> Solver<W, H, N, Stm>
 where
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N], TransposedPuzzle = Puzzle<H, W>>,
     Puzzle<H, W>: SmallPuzzle<PieceArray = [u8; N], TransposedPuzzle = Puzzle<W, H>>,
 {
     /// Creates a [`Solver`], building a new pattern database.
+    #[must_use]
     pub fn new() -> Self {
         Self::with_pdb(Pdb::<W, H, N, Stm>::new())
     }
 
     /// Creates a [`Solver`] using an existing pattern database.
+    #[must_use]
     pub fn with_pdb(pdb: Pdb<W, H, N, Stm>) -> Self {
         Self {
             pdb,

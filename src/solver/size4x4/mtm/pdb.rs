@@ -81,21 +81,24 @@ impl Pdb {
         Self { pdb }
     }
 
+    /// See [`crate::solver::small::pdb::Pdb::try_from_bytes`].
     pub(super) unsafe fn try_from_bytes(bytes: Box<[u8]>) -> Option<Self> {
         if bytes.len() != SIZE {
             return None;
         }
 
         let expected_hash = HASH;
-        let actual_hash = xxh3::xxh3_64(&*bytes);
+        let actual_hash = xxh3::xxh3_64(&bytes);
 
         if actual_hash != expected_hash {
             return None;
         }
 
+        // SAFETY: We checked above that the data is (almost certainly) correct.
         Some(unsafe { Self::from_bytes_unchecked(bytes) })
     }
 
+    /// See [`crate::solver::small::pdb::Pdb::from_bytes_unchecked`].
     pub(super) unsafe fn from_bytes_unchecked(bytes: Box<[u8]>) -> Self {
         Self { pdb: bytes }
     }

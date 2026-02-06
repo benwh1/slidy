@@ -264,6 +264,8 @@ macro_rules! impl_puzzle {
                     }
                 }
 
+                // SAFETY: The entries of `transposed_pieces` are a permutation of the pieces of
+                // `self`, so contain the values 0 to `W * H - 1` once each.
                 unsafe { Self::TransposedPuzzle::from_piece_array_unchecked(transposed_pieces) }
             }
         }

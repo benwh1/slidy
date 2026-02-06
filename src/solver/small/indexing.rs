@@ -78,7 +78,7 @@ pub(super) fn decode<const W: usize, const N: usize>(k: u64) -> [u8; N] {
 #[cfg(test)]
 mod tests {
     use crate::{
-        puzzle::{size::Size, sliding_puzzle::SlidingPuzzle},
+        puzzle::{size::Size, sliding_puzzle::SlidingPuzzle as _},
         solver::small::indexing,
     };
 

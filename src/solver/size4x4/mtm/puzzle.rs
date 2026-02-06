@@ -190,6 +190,7 @@ mod tests {
 
     #[test]
     fn test_reduced_2() {
+        #[allow(clippy::undocumented_unsafe_blocks)]
         let puzzle = unsafe { FourBitPuzzle::with_pieces_and_gap_unchecked(0xd46f9b8ac0e51732, 6) };
         let reduced = puzzle.reduced();
         assert_eq!(reduced.pieces, 0x3234342340431221);

@@ -94,9 +94,13 @@ impl Solver {
     /// If the data is incorrect, then running the solver can cause undefined behavior.
     ///
     /// [`xxh3`]: xxhash_rust::xxh3
+    #[must_use]
     pub unsafe fn try_with_pdb_bytes(bytes: Box<[u8]>) -> Option<Self> {
         let indexing_table = IndexingTable::new();
         let base_5_table = Base5Table::new();
+
+        // SAFETY: Checks are performed in `Pdb::try_from_bytes` which almost certainly detects
+        // invalid data, but ultimately the caller is responsible.
         let pdb = unsafe { Pdb::try_from_bytes(bytes) }?;
 
         Some(Self::with_tables_and_pdb(indexing_table, base_5_table, pdb))
@@ -108,9 +112,12 @@ impl Solver {
     ///
     /// The caller is responsible for the correctness of the data contained in `bytes`. No
     /// correctness checks are performed.
+    #[must_use]
     pub unsafe fn with_pdb_bytes_unchecked(bytes: Box<[u8]>) -> Self {
         let indexing_table = IndexingTable::new();
         let base_5_table = Base5Table::new();
+
+        // SAFETY: Responsibility of the caller.
         let pdb = unsafe { Pdb::from_bytes_unchecked(bytes) };
 
         Self::with_tables_and_pdb(indexing_table, base_5_table, pdb)

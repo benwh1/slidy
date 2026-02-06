@@ -106,6 +106,24 @@ pub type Pdb6x2Stm = Pdb<6, 2, 12, Stm>;
 /// [`Pdb`] specialized to the 6x2 size and [`Mtm`] metric.
 pub type Pdb6x2Mtm = Pdb<6, 2, 12, Mtm>;
 
+impl<const W: usize, const H: usize, const N: usize> Default for Pdb<W, H, N, Stm>
+where
+    Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<const W: usize, const H: usize, const N: usize> Default for Pdb<W, H, N, Mtm>
+where
+    Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<const W: usize, const H: usize, const N: usize> Pdb<W, H, N, Stm>
 where
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
@@ -175,6 +193,7 @@ where
     /// Creates and builds a new pattern database for a `WxH` puzzle in the [`Stm`] metric.
     ///
     /// Depending on the size of the puzzle, this may take several minutes to run.
+    #[must_use]
     pub fn new() -> Self {
         Self::new_impl(None)
     }
@@ -202,18 +221,20 @@ where
     /// behavior.
     ///
     /// [`Solver`]: crate::solver::small::solver::Solver
+    #[must_use]
     pub unsafe fn try_from_bytes(bytes: Box<[u8]>) -> Option<Self> {
         if bytes.len() as u128 != Puzzle::<W, H>::new().size().num_states() {
             return None;
         }
 
         let expected_hash = HASHES_STM.iter().find(|(w, h, _)| *w == W && *h == H)?.2;
-        let actual_hash = xxh3::xxh3_64(&*bytes);
+        let actual_hash = xxh3::xxh3_64(&bytes);
 
         if actual_hash != expected_hash {
             return None;
         }
 
+        // SAFETY: We checked above that the data is (almost certainly) correct.
         Some(unsafe { Self::from_bytes_unchecked(bytes) })
     }
 
@@ -223,6 +244,7 @@ where
     ///
     /// The caller is responsible for the correctness of the data contained in `bytes`. No
     /// correctness checks are performed.
+    #[must_use]
     pub unsafe fn from_bytes_unchecked(bytes: Box<[u8]>) -> Self {
         Self {
             pdb: bytes,
@@ -300,6 +322,7 @@ where
     /// Creates and builds a new pattern database for a `WxH` puzzle in the [`Mtm`] metric.
     ///
     /// Depending on the size of the puzzle, this may take several minutes to run.
+    #[must_use]
     pub fn new() -> Self {
         Self::new_impl(None)
     }
@@ -327,18 +350,20 @@ where
     /// behavior.
     ///
     /// [`Solver`]: crate::solver::small::solver::Solver
+    #[must_use]
     pub unsafe fn try_from_bytes(bytes: Box<[u8]>) -> Option<Self> {
         if bytes.len() as u128 != Puzzle::<W, H>::new().size().num_states() {
             return None;
         }
 
         let expected_hash = HASHES_MTM.iter().find(|(w, h, _)| *w == W && *h == H)?.2;
-        let actual_hash = xxh3::xxh3_64(&*bytes);
+        let actual_hash = xxh3::xxh3_64(&bytes);
 
         if actual_hash != expected_hash {
             return None;
         }
 
+        // SAFETY: We checked above that the data is (almost certainly) correct.
         Some(unsafe { Self::from_bytes_unchecked(bytes) })
     }
 
@@ -348,6 +373,7 @@ where
     ///
     /// The caller is responsible for the correctness of the data contained in `bytes`. No
     /// correctness checks are performed.
+    #[must_use]
     pub unsafe fn from_bytes_unchecked(bytes: Box<[u8]>) -> Self {
         Self {
             pdb: bytes,
