@@ -238,7 +238,7 @@ where
         Some(unsafe { Self::from_bytes_unchecked(bytes) })
     }
 
-    /// See [`Self::from_bytes`].
+    /// See [`Self::try_from_bytes`].
     ///
     /// # Safety
     ///
@@ -367,7 +367,7 @@ where
         Some(unsafe { Self::from_bytes_unchecked(bytes) })
     }
 
-    /// See [`Self::from_bytes`].
+    /// See [`Self::try_from_bytes`].
     ///
     /// # Safety
     ///
