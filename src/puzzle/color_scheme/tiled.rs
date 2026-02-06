@@ -7,7 +7,7 @@ use crate::puzzle::{
 };
 
 #[cfg(feature = "serde")]
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// A [`ColorScheme`] applied to a fixed-size rectangle, and then tiled across the puzzle.
 #[derive(Clone, Debug, PartialEq, Eq)]

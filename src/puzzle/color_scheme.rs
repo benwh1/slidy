@@ -17,7 +17,7 @@ use crate::puzzle::{
 };
 
 #[cfg(feature = "serde")]
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// Error type for [`ColorScheme`].
 #[derive(Clone, Debug, Error, PartialEq, Eq)]

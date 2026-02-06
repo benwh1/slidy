@@ -5,7 +5,7 @@ use num_traits::{AsPrimitive, PrimInt};
 use crate::algorithm::r#move::r#move::Move;
 
 #[cfg(feature = "serde")]
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// Defines a length function on [`Move`]s.
 pub trait Metric {

@@ -12,7 +12,7 @@ use num_traits::AsPrimitive as _;
 use thiserror::Error;
 
 #[cfg(feature = "serde")]
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// The size of a [`SlidingPuzzle`].
 ///

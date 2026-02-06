@@ -3,7 +3,7 @@
 use rand::distr::{Distribution, StandardUniform};
 
 #[cfg(feature = "serde")]
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use crate::algorithm::direction::Direction;
 

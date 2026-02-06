@@ -6,7 +6,7 @@ use crate::puzzle::{
 };
 
 #[cfg(feature = "serde")]
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 macro_rules! define_sym {
     ($($(#[$annot:meta])* $name:ident),* $(,)?) => {

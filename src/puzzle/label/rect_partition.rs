@@ -7,7 +7,7 @@ use thiserror::Error;
 use crate::puzzle::{label::label::Label, size::Size};
 
 #[cfg(feature = "serde")]
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// Error type for [`Rect`].
 #[derive(Clone, Debug, Error, PartialEq, Eq)]

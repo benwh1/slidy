@@ -15,7 +15,7 @@ use crate::puzzle::{
 };
 
 #[cfg(feature = "serde")]
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// Ways of splitting the puzzle.
 #[derive(Clone, Copy, Debug, PartialEq)]

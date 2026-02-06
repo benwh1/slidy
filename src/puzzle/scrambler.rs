@@ -8,7 +8,7 @@ use crate::{
 };
 
 #[cfg(feature = "serde")]
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// Trait defining a scrambling algorithm.
 pub trait Scrambler {

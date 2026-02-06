@@ -12,7 +12,7 @@ use crate::puzzle::{
 };
 
 #[cfg(feature = "serde")]
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// A list of [`ColorScheme`]s, which can be used as a [`MultiLayerColorScheme`].
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

@@ -12,7 +12,7 @@ use crate::algorithm::{
 };
 
 #[cfg(feature = "serde")]
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// A (possibly multi-tile) move of a puzzle. Contains a direction and an amount.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]

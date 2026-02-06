@@ -28,7 +28,7 @@ use crate::{
 };
 
 #[cfg(feature = "serde")]
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// Error type for [`Algorithm::try_slice`].
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
@@ -423,7 +423,7 @@ impl<'de> serde::Deserialize<'de> for Algorithm {
         D: serde::Deserializer<'de>,
     {
         let alg_str = String::deserialize(deserializer)?;
-        Algorithm::from_str(&alg_str).map_err(serde::de::Error::custom)
+        Self::from_str(&alg_str).map_err(serde::de::Error::custom)
     }
 }
 

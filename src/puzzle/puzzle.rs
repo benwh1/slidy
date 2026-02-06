@@ -12,7 +12,7 @@ use crate::puzzle::{
 };
 
 #[cfg(feature = "serde")]
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// A sliding puzzle, with an implementation of the [`SlidingPuzzle`] trait.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -361,7 +361,7 @@ impl<'de> serde::Deserialize<'de> for Puzzle {
         D: serde::Deserializer<'de>,
     {
         let puzzle_str = String::deserialize(deserializer)?;
-        Puzzle::from_str(&puzzle_str).map_err(serde::de::Error::custom)
+        Self::from_str(&puzzle_str).map_err(serde::de::Error::custom)
     }
 }
 

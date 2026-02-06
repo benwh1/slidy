@@ -10,7 +10,7 @@ use palette::{rgb::Rgba, FromColor, Hsl, Hsla, IntoColor as _, LinSrgba};
 use thiserror::Error;
 
 #[cfg(feature = "serde")]
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// Provides a function mapping labels to colors.
 ///

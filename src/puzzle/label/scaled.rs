@@ -9,7 +9,7 @@ use crate::puzzle::{
 };
 
 #[cfg(feature = "serde")]
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// Scales a [`Label`] up by a horizontal factor and a vertical factor.
 ///

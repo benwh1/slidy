@@ -238,7 +238,6 @@ dependencies = [
  "rand",
  "rand_xoshiro",
  "serde",
- "serde_derive",
  "svg",
  "thiserror",
  "xxhash-rust",

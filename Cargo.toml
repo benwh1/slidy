@@ -16,8 +16,7 @@ itertools = "^0.14"
 num-traits = "^0.2"
 palette = { version = "^0.7", default-features = false, features = ["std"] }
 rand = { version = "^0.9", default-features = false, features = ["alloc"] }
-serde = { version = "^1", optional = true }
-serde_derive = { version = "^1", optional = true }
+serde = { version = "^1", optional = true, features = ["derive"] }
 svg = "^0.18"
 thiserror = "^2"
 xxhash-rust = { version = "^0.8", features = ["xxh3"] }
@@ -29,12 +28,7 @@ rand_xoshiro = "^0.7"
 [features]
 default = ["thread_rng"]
 nightly = []
-serde = [
-    "enterpolation/serde",
-    "palette/serializing",
-    "dep:serde",
-    "dep:serde_derive",
-]
+serde = ["enterpolation/serde", "palette/serializing", "dep:serde"]
 thread_rng = ["rand/thread_rng"]
 
 [lints.clippy]
