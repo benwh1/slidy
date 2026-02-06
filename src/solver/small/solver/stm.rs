@@ -172,12 +172,12 @@ mod tests {
     use std::str::FromStr as _;
 
     use crate::{
-        puzzle::{puzzle::Puzzle, sliding_puzzle::SlidingPuzzle},
-        solver::{Solver2x4Stm, Solver3x3Stm},
+        puzzle::{puzzle::Puzzle, sliding_puzzle::SlidingPuzzle as _},
+        solver::{Solver3x3Stm, Solver4x2Stm},
     };
 
     #[test]
-    fn test_solver_3x3() {
+    fn test_solver() {
         let solver = Solver3x3Stm::new();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
@@ -185,8 +185,8 @@ mod tests {
     }
 
     #[test]
-    fn test_transpose_solver() {
-        let solver = Solver2x4Stm::new();
+    fn test_solver_2() {
+        let solver = Solver4x2Stm::new();
         let mut puzzle = Puzzle::from_str("4 6/2 5/0 1/7 3").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         puzzle.apply_alg(&solution);
