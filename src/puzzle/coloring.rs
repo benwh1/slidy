@@ -263,7 +263,7 @@ impl<C: Curve<f32, Output = LinSrgba>> Coloring for Gradient<C> {
             label as f32 / (num_labels - 1) as f32
         };
 
-        self.gradient.gen(point).into_color()
+        self.gradient.eval(point).into_color()
     }
 }
 
