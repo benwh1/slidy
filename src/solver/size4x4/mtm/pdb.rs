@@ -1,3 +1,5 @@
+use xxhash_rust::xxh3;
+
 use crate::{
     algorithm::direction::Direction,
     solver::{
@@ -8,6 +10,8 @@ use crate::{
         statistics::PdbIterationStats,
     },
 };
+
+const HASH: u64 = 0x73b712151249d829;
 
 pub(super) struct Pdb {
     pdb: Box<[u8]>,
@@ -77,11 +81,36 @@ impl Pdb {
         Self { pdb }
     }
 
-    pub(crate) fn get(&self, index: usize) -> u8 {
+    pub(super) unsafe fn try_from_bytes(bytes: Box<[u8]>) -> Option<Self> {
+        if bytes.len() != SIZE {
+            return None;
+        }
+
+        let expected_hash = HASH;
+        let actual_hash = xxh3::xxh3_64(&*bytes);
+
+        if actual_hash != expected_hash {
+            return None;
+        }
+
+        Some(unsafe { Self::from_bytes_unchecked(bytes) })
+    }
+
+    pub(super) unsafe fn from_bytes_unchecked(bytes: Box<[u8]>) -> Self {
+        Self { pdb: bytes }
+    }
+
+    pub(super) fn get(&self, index: usize) -> u8 {
         self.pdb[index]
     }
 
     pub(super) unsafe fn get_unchecked(&self, index: usize) -> u8 {
         *self.pdb.get_unchecked(index)
+    }
+}
+
+impl AsRef<[u8]> for Pdb {
+    fn as_ref(&self) -> &[u8] {
+        &self.pdb
     }
 }

@@ -38,11 +38,11 @@ impl Default for Solver {
 }
 
 impl Solver {
-    fn new_impl(pdb_iteration_callback: Option<&dyn Fn(PdbIterationStats)>) -> Self {
-        let indexing_table = IndexingTable::new();
-        let base_5_table = Base5Table::new();
-        let pdb = Pdb::new(&indexing_table, &base_5_table, pdb_iteration_callback);
-
+    fn with_tables_and_pdb(
+        indexing_table: IndexingTable,
+        base_5_table: Base5Table,
+        pdb: Pdb,
+    ) -> Self {
         Self {
             indexing_table,
             base_5_table,
@@ -51,6 +51,14 @@ impl Solver {
             solution_ptr: Cell::new(0),
             puzzle: Cell::new(FourBitPuzzle::new()),
         }
+    }
+
+    fn new_impl(pdb_iteration_callback: Option<&dyn Fn(PdbIterationStats)>) -> Self {
+        let indexing_table = IndexingTable::new();
+        let base_5_table = Base5Table::new();
+        let pdb = Pdb::new(&indexing_table, &base_5_table, pdb_iteration_callback);
+
+        Self::with_tables_and_pdb(indexing_table, base_5_table, pdb)
     }
 
     /// Creates a new [`Solver`] and builds the pattern database.
@@ -67,6 +75,45 @@ impl Solver {
     /// the pattern database.
     pub fn with_pdb_iteration_callback(pdb_iteration_callback: &dyn Fn(PdbIterationStats)) -> Self {
         Self::new_impl(Some(pdb_iteration_callback))
+    }
+
+    /// See [`Self::new`].
+    ///
+    /// Initializes a [`Solver`] using a boxed byte slice containing the pre-computed pattern
+    /// database data.
+    ///
+    /// The length of the data is checked, and the [`xxh3`] hash is computed and checked against a
+    /// known value to verify integrity.
+    ///
+    /// # Safety
+    ///
+    /// Despite the correctness checks described above, this function is unsafe because it is
+    /// still technically possible for `bytes` to contain incorrect data in the event of a hash
+    /// collision.
+    ///
+    /// If the data is incorrect, then running the solver can cause undefined behavior.
+    ///
+    /// [`xxh3`]: xxhash_rust::xxh3
+    pub unsafe fn try_with_pdb_bytes(bytes: Box<[u8]>) -> Option<Self> {
+        let indexing_table = IndexingTable::new();
+        let base_5_table = Base5Table::new();
+        let pdb = unsafe { Pdb::try_from_bytes(bytes) }?;
+
+        Some(Self::with_tables_and_pdb(indexing_table, base_5_table, pdb))
+    }
+
+    /// See [`Self::try_with_pdb_bytes`].
+    ///
+    /// # Safety
+    ///
+    /// The caller is responsible for the correctness of the data contained in `bytes`. No
+    /// correctness checks are performed.
+    pub unsafe fn with_pdb_bytes_unchecked(bytes: Box<[u8]>) -> Self {
+        let indexing_table = IndexingTable::new();
+        let base_5_table = Base5Table::new();
+        let pdb = unsafe { Pdb::from_bytes_unchecked(bytes) };
+
+        Self::with_tables_and_pdb(indexing_table, base_5_table, pdb)
     }
 
     fn dfs(
@@ -217,5 +264,11 @@ impl Solver {
         P::Piece: AsPrimitive<u8>,
     {
         self.solve_impl(puzzle, Some(callback))
+    }
+
+    /// Returns a reference to the data contained in the pattern database, in order to allow it to
+    /// be written to disk.
+    pub fn pdb_bytes(&self) -> &[u8] {
+        self.pdb.as_ref()
     }
 }
