@@ -9,11 +9,7 @@ use crate::{
         small::{sealed::SmallPuzzle, Puzzle},
     },
     solver::{
-        small::{
-            indexing,
-            pdb::Pdb,
-            solver::{Solver, TransposeSolver},
-        },
+        small::{indexing, pdb::Pdb, solver::Solver},
         solver::SolverError,
         statistics::SolverIterationStats,
     },
@@ -21,7 +17,8 @@ use crate::{
 
 impl<const W: usize, const H: usize, const N: usize> Solver<W, H, N, Stm>
 where
-    Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
+    Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N], TransposedPuzzle = Puzzle<H, W>>,
+    Puzzle<H, W>: SmallPuzzle<PieceArray = [u8; N], TransposedPuzzle = Puzzle<W, H>>,
 {
     /// Creates a [`Solver`], building a new pattern database.
     pub fn new() -> Self {
@@ -96,11 +93,18 @@ where
         P::Piece: AsPrimitive<u8>,
     {
         let mut p = Puzzle::<W, H>::new();
-        if !p.try_set_state(puzzle) {
-            return Err(SolverError::IncompatiblePuzzleSize);
+        if p.try_set_state(puzzle) {
+            return self.solve_small_puzzle_impl(p, callback);
         }
 
-        self.solve_small_puzzle_impl(p, callback)
+        let mut p = Puzzle::<H, W>::new();
+        if p.try_set_state(puzzle) {
+            return self
+                .solve_small_puzzle_impl(p.conjugate_with_transpose(), callback)
+                .map(|a| a.transpose());
+        }
+
+        Err(SolverError::IncompatiblePuzzleSize)
     }
 
     fn solve_small_puzzle_impl(
@@ -138,62 +142,6 @@ where
 
             depth += 2;
         }
-    }
-
-    /// Solves `puzzle`, returning an optimal [`Stm`] solution.
-    pub fn solve<P: SlidingPuzzle>(&self, puzzle: &P) -> Result<Algorithm, SolverError>
-    where
-        P::Piece: AsPrimitive<u8>,
-    {
-        self.solve_impl(puzzle, None)
-    }
-
-    /// See [`Solver::solve`].
-    ///
-    /// Runs `callback` after each iteration of the depth-first search.
-    pub fn solve_with_callback<P: SlidingPuzzle>(
-        &self,
-        puzzle: &P,
-        callback: &dyn Fn(SolverIterationStats),
-    ) -> Result<Algorithm, SolverError>
-    where
-        P::Piece: AsPrimitive<u8>,
-    {
-        self.solve_impl(puzzle, Some(callback))
-    }
-}
-
-impl<const W: usize, const H: usize, const N: usize> TransposeSolver<W, H, N, Stm>
-where
-    Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N], TransposedPuzzle = Puzzle<H, W>>,
-    Puzzle<H, W>: SmallPuzzle<PieceArray = [u8; N]>,
-{
-    /// Creates a [`TransposeSolver`], building a new pattern database.
-    pub fn new() -> Self {
-        Self::with_pdb(Pdb::<H, W, N, Stm>::new())
-    }
-
-    /// Creates a [`TransposeSolver`] using an existing pattern database.
-    pub fn with_pdb(pdb: Pdb<H, W, N, Stm>) -> Self {
-        Self(Solver::<H, W, N, Stm>::with_pdb(pdb))
-    }
-
-    fn solve_impl<P: SlidingPuzzle>(
-        &self,
-        puzzle: &P,
-        callback: Option<&dyn Fn(SolverIterationStats)>,
-    ) -> Result<Algorithm, SolverError>
-    where
-        P::Piece: AsPrimitive<u8>,
-    {
-        let mut p = Puzzle::<W, H>::new();
-        if !p.try_set_state(puzzle) {
-            return Err(SolverError::IncompatiblePuzzleSize);
-        }
-
-        self.0
-            .solve_small_puzzle_impl(p.conjugate_with_transpose(), callback)
-            .map(|a| a.transpose())
     }
 
     /// Solves `puzzle`, returning an optimal [`Stm`] solution.
