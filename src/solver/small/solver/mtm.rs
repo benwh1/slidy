@@ -223,7 +223,7 @@ where
 mod tests {
     use std::str::FromStr as _;
 
-    use crate::{puzzle::puzzle::Puzzle, solver::small::solver::Solver3x3Mtm};
+    use crate::{puzzle::puzzle::Puzzle, solver::Solver3x3Mtm};
 
     #[test]
     fn test_solver_3x3() {

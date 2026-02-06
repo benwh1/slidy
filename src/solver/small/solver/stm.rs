@@ -225,7 +225,7 @@ mod tests {
 
     use crate::{
         puzzle::{puzzle::Puzzle, sliding_puzzle::SlidingPuzzle},
-        solver::small::solver::{Solver2x4Stm, Solver3x3Stm},
+        solver::{Solver2x4Stm, Solver3x3Stm},
     };
 
     #[test]
