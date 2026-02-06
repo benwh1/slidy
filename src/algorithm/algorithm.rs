@@ -263,6 +263,24 @@ impl Algorithm {
         }
     }
 
+    /// Returns an [`AlgorithmSlice`] containing the (multi-tile) moves in the range `range`.
+    pub fn try_slice_mtm(&self, range: Range<u64>) -> Result<AlgorithmSlice<'_>, SliceError> {
+        if range.start > range.end {
+            return Err(SliceError::UnorderedRange(range));
+        }
+
+        let len = self.len_mtm();
+        if range.start > len || range.end > len {
+            return Err(SliceError::OutOfRange { range, len });
+        }
+
+        Ok(AlgorithmSlice {
+            first: None,
+            middle: &self.moves[range.start as usize..range.end as usize],
+            last: None,
+        })
+    }
+
     /// Checks if `self` is a solution of `puzzle`.
     #[must_use]
     pub fn is_solution_of<Puzzle: SlidingPuzzle + Clone>(&self, mut puzzle: Puzzle) -> bool {
@@ -735,6 +753,21 @@ mod tests {
                     len: 36
                 })
             );
+        }
+
+        #[test]
+        fn test_slice_mtm() {
+            let alg = Algorithm::from_str("R2DLU10RUR2D2D3D5L5U2L").unwrap();
+
+            assert_eq!(alg.try_slice_mtm(0..0), slice!("", "", ""));
+            assert_eq!(alg.try_slice_mtm(1..1), slice!("", "", ""));
+            assert_eq!(alg.try_slice_mtm(13..13), slice!("", "", ""));
+
+            assert_eq!(
+                alg.try_slice_mtm(0..13),
+                slice!("", "R2DLU10RUR2D2D3D5L5U2L", "")
+            );
+            assert_eq!(alg.try_slice_mtm(2..9), slice!("", "LU10RUR2D2D3", ""));
         }
     }
 
