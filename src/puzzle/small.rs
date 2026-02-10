@@ -84,8 +84,8 @@ macro_rules! impl_puzzle {
                 let mut out = 0;
 
                 let mut i = 0;
-                while i < Self::N - 1 {
-                    out |= (i as u64 + 1) << (4 * i);
+                while i < Self::N as u64 - 1 {
+                    out |= (i + 1) << (4 * i);
                     i += 1;
                 }
 
@@ -114,11 +114,12 @@ macro_rules! impl_puzzle {
                 let mut out = [[0; 4]; Self::N];
 
                 let mut gap = 0;
-                while gap < Self::N {
+                while gap < Self::N as u8 {
                     let mut dir = 0;
                     while dir < 4 {
-                        let other = Self::GAPS[gap][dir];
-                        out[gap][dir] = if gap as u8 == other { 0 } else { other * 4 };
+                        let g = gap as usize;
+                        let other = Self::GAPS[g][dir];
+                        out[g][dir] = if gap == other { 0 } else { other * 4 };
                         dir += 1;
                     }
                     gap += 1;
@@ -131,15 +132,19 @@ macro_rules! impl_puzzle {
                 #[allow(clippy::large_stack_arrays)]
                 let mut out = [[[0; Self::N]; Self::N]; Self::N];
 
+                let n = Self::N as u64;
+
                 let mut gap = 0;
-                while gap < Self::N {
+                while gap < n {
                     let mut other = 0;
-                    while other < Self::N {
+                    while other < n {
                         if gap != other {
                             let mut piece = 0;
-                            while piece < Self::N {
-                                out[gap][other][piece] =
-                                    ((piece << (gap * 4)) | (piece << (other * 4))) as u64;
+                            while piece < n {
+                                let g = gap as usize;
+                                let o = other as usize;
+                                let p = piece as usize;
+                                out[g][o][p] = (piece << (gap * 4)) | (piece << (other * 4));
                                 piece += 1;
                             }
                         }
