@@ -68,6 +68,12 @@ impl Algorithm {
         Self { moves }
     }
 
+    /// The list of [`Move`]s as a slice.
+    #[must_use]
+    pub fn moves(&self) -> &[Move] {
+        &self.moves
+    }
+
     /// The length of the algorithm in the [`Metric`] `M`.
     #[must_use]
     pub fn len<M: Metric, T: PrimInt + Sum + 'static>(&self) -> T
