@@ -159,6 +159,12 @@ impl Algorithm {
         }
     }
 
+    /// Removes the last move from the algorithm and returns it, or `None` if the algorithm was
+    /// empty.
+    pub fn pop(&mut self) -> Option<Move> {
+        self.moves.pop()
+    }
+
     /// Combines all consecutive moves along the same axis into a single move, and removes any moves
     /// that cancel completely.
     #[must_use]
