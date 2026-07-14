@@ -68,17 +68,24 @@ impl Direction {
             Self::Right => Self::Right,
         }
     }
+
+    /// The standard name of the direction as a character.
+    ///
+    /// Returns 'U', 'L', 'D', 'R' for `Up`, `Left`, `Down`, `Right` respectively.
+    pub fn as_char(&self) -> char {
+        match self {
+            Direction::Up => 'U',
+            Direction::Left => 'L',
+            Direction::Down => 'D',
+            Direction::Right => 'R',
+        }
+    }
 }
 
 impl Display for Direction {
     /// Formats the direction as an upper case character: U, L, D, R
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_char(match self {
-            Self::Up => 'U',
-            Self::Left => 'L',
-            Self::Down => 'D',
-            Self::Right => 'R',
-        })
+        f.write_char(self.as_char())
     }
 }
 
