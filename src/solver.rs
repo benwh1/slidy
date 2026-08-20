@@ -3,6 +3,7 @@
 //! For convenience, we provide type aliases for the fastest solvers for each small puzzle size and
 //! metric.
 
+pub mod generic_solver;
 pub mod heuristic;
 pub mod size4x4;
 pub mod small;

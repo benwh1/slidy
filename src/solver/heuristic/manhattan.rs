@@ -192,8 +192,7 @@ impl Distance for ManhattanDistance<'_, Checkerboard> {
     }
 }
 
-impl<P, T, S, M, L: Label> Heuristic<P, T, S, M>
-    for ManhattanDistance<'_, L>
+impl<P, T, S, M, L: Label> Heuristic<P, T, S, M> for ManhattanDistance<'_, L>
 where
     P: SlidingPuzzle,
     T: PrimInt + Unsigned + 'static,
