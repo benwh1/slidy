@@ -6,7 +6,12 @@ use num_traits::{AsPrimitive, PrimInt, Unsigned};
 use thiserror::Error;
 
 use crate::{
-    algorithm::{algorithm::Algorithm, direction::Direction, r#move::r#move::Move},
+    algorithm::{
+        algorithm::Algorithm,
+        direction::Direction,
+        metric::{Mtm, Stm},
+        r#move::r#move::Move,
+    },
     puzzle::{
         label::label::RowGrids, sliding_puzzle::SlidingPuzzle, solvable::Solvable,
         solved_state::SolvedState,
@@ -19,25 +24,17 @@ use crate::{
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Stack {
-    stack: [Direction; 256],
+    stack: [Move; 256],
     idx: usize,
 }
 
 impl Stack {
-    fn push(&mut self, direction: Direction) {
-        self.stack[self.idx] = direction;
+    fn push(&mut self, mv: Move) {
+        self.stack[self.idx] = mv;
         self.idx += 1;
     }
 
-    fn top(&self) -> Option<Direction> {
-        if self.idx == 0 {
-            None
-        } else {
-            Some(self.stack[self.idx - 1])
-        }
-    }
-
-    fn pop(&mut self) -> Direction {
+    fn pop(&mut self) -> Move {
         self.idx -= 1;
         self.stack[self.idx]
     }
@@ -50,7 +47,7 @@ impl Stack {
 impl Default for Stack {
     fn default() -> Self {
         Self {
-            stack: [Direction::Up; 256],
+            stack: [Move::new(Direction::Up, 1); 256],
             idx: 0,
         }
     }
@@ -58,12 +55,7 @@ impl Default for Stack {
 
 impl From<&Stack> for Algorithm {
     fn from(stack: &Stack) -> Self {
-        Self::with_moves(
-            stack.stack[..stack.idx]
-                .iter()
-                .map(|d| Move::from(*d))
-                .collect(),
-        )
+        Self::with_moves(stack.stack[..stack.idx].to_vec())
     }
 }
 
@@ -88,95 +80,90 @@ pub enum SolverError {
 /// The type parameter `T` should be chosen such that the maximum length of a potential solution is
 /// less than the maximum value of a `T`. In almost all cases, `T = u8` should be used.
 #[derive(Clone, Debug)]
-pub struct Solver<'a, Puzzle, T, S, H> {
+#[allow(clippy::type_complexity)]
+pub struct Solver<'a, P, T, S, H, M> {
     stack: Stack,
-    phantom_puzzle: PhantomData<Puzzle>,
     heuristic: &'a H,
     solved_state: &'a S,
-    phantom_t: PhantomData<T>,
+    _phantom: PhantomData<fn(P) -> fn(T) -> fn(M)>,
 }
 
-impl<Puzzle: SlidingPuzzle + Clone> Default
-    for Solver<'static, Puzzle, u8, RowGrids, ManhattanDistance<'static, RowGrids>>
+impl<'a, P: SlidingPuzzle + Clone> Default
+    for Solver<'a, P, u8, RowGrids, ManhattanDistance<'a, RowGrids>, Stm>
 {
     fn default() -> Self {
-        Self::new_with_t(&ManhattanDistance(&RowGrids), &RowGrids)
+        Self::new(&ManhattanDistance(&RowGrids), &RowGrids)
     }
 }
 
-impl<'a, Puzzle, S, H> Solver<'a, Puzzle, u8, S, H> {
+impl<'a, P, T, S, H, M> Solver<'a, P, T, S, H, M> {
     /// Creates a new [`Solver`] using the given heuristic and solved state.
     pub fn new(heuristic: &'a H, solved_state: &'a S) -> Self {
         Self {
             stack: Stack::default(),
-            phantom_puzzle: PhantomData,
             heuristic,
             solved_state,
-            phantom_t: PhantomData,
+            _phantom: PhantomData,
         }
     }
 }
 
-impl<'a, Puzzle, T, S, H> Solver<'a, Puzzle, T, S, H>
+impl<'a, P, T, S, H> Solver<'a, P, T, S, H, Stm>
 where
-    Puzzle: SlidingPuzzle + Clone,
+    P: SlidingPuzzle + Clone,
     T: PrimInt + Unsigned + 'static,
     S: SolvedState + Solvable,
-    H: Heuristic<Puzzle, T>,
+    H: Heuristic<P, T, S, Stm>,
     u8: AsPrimitive<T>,
 {
     /// Creates a new [`Solver`] using the given heuristic and solved state.
     pub fn new_with_t(heuristic: &'a H, solved_state: &'a S) -> Self {
         Self {
             stack: Stack::default(),
-            phantom_puzzle: PhantomData,
             heuristic,
             solved_state,
-            phantom_t: PhantomData::<T>,
+            _phantom: PhantomData,
         }
     }
 
-    fn dfs(&mut self, puzzle: &mut Puzzle, depth: T) -> bool {
+    fn dfs(&mut self, puzzle: &mut P, depth: T, last_dir: Option<Direction>) -> bool {
         if depth == T::zero() {
             return self.solved_state.is_solved(puzzle);
         }
 
-        let bound = self.heuristic.bound(puzzle);
-
-        if bound > depth {
+        if self.heuristic.bound(puzzle) > depth {
             return false;
         }
 
-        for d in [
+        for dir in [
             Direction::Up,
-            Direction::Down,
             Direction::Left,
+            Direction::Down,
             Direction::Right,
         ] {
-            if self.stack.top() == Some(d.inverse()) {
+            if last_dir == Some(dir.inverse()) {
                 continue;
             }
 
-            if !puzzle.try_move_dir(d) {
+            if !puzzle.try_move_dir(dir) {
                 continue;
             }
 
-            self.stack.push(d);
-
-            if self.dfs(puzzle, depth - T::one()) {
+            self.stack.push(Move::new(dir, 1));
+            if self.dfs(puzzle, depth - T::one(), Some(dir)) {
                 return true;
             }
-
             self.stack.pop();
-            puzzle.try_move_dir(d.inverse());
+            puzzle.try_move_dir(dir.inverse());
         }
-
         false
     }
 
     fn solve_impl(
         &mut self,
-        puzzle: &Puzzle,
+        puzzle: &P,
+        min: T,
+        max: T,
         iteration_callback: Option<&dyn Fn(SolverIterationStats)>,
     ) -> Result<Algorithm, SolverError> {
         if !self.solved_state.is_solvable(puzzle) {
@@ -185,9 +172,9 @@ where
 
         self.stack.clear();
         let mut puzzle = puzzle.clone();
-        let mut depth = self.heuristic.bound(&puzzle);
+        let mut depth = min;
         loop {
-            if self.dfs(&mut puzzle, depth) {
+            if self.dfs(&mut puzzle, depth, None) {
                 let mut solution: Algorithm = (&self.stack).into();
                 solution.simplify();
                 return Ok(solution);
@@ -199,17 +186,27 @@ where
                 });
             }
 
-            if let Some(d) = depth.checked_add(&2u8.as_()) {
-                depth = d;
-            } else {
-                return Err(SolverError::NoSolutionFound);
-            }
+            depth = depth
+                .checked_add(&2u8.as_())
+                .filter(|&d| d <= max)
+                .ok_or(SolverError::NoSolutionFound)?;
         }
     }
 
     /// Solves `puzzle`.
-    pub fn solve(&mut self, puzzle: &Puzzle) -> Result<Algorithm, SolverError> {
-        self.solve_impl(puzzle, None)
+    pub fn solve(&mut self, puzzle: &P) -> Result<Algorithm, SolverError> {
+        let min = self.heuristic.bound(puzzle);
+        self.solve_impl(puzzle, min, T::max_value(), None)
+    }
+
+    /// Solves `puzzle` with explicit depth bounds.
+    pub fn solve_with_bounds(
+        &mut self,
+        puzzle: &P,
+        min: T,
+        max: T,
+    ) -> Result<Algorithm, SolverError> {
+        self.solve_impl(puzzle, min, max, None)
     }
 
     /// See [`Solver::solve`].
@@ -217,10 +214,128 @@ where
     /// Runs `callback` after each iteration of the depth-first search.
     pub fn solve_with_callback(
         &mut self,
-        puzzle: &Puzzle,
+        puzzle: &P,
         callback: &dyn Fn(SolverIterationStats),
     ) -> Result<Algorithm, SolverError> {
-        self.solve_impl(puzzle, Some(callback))
+        let min = self.heuristic.bound(puzzle);
+        self.solve_impl(puzzle, min, T::max_value(), Some(callback))
+    }
+}
+
+impl<'a, P, T, S, H> Solver<'a, P, T, S, H, Mtm>
+where
+    P: SlidingPuzzle + Clone,
+    T: PrimInt + Unsigned + 'static,
+    S: SolvedState + Solvable,
+    H: Heuristic<P, T, S, Mtm>,
+    u8: AsPrimitive<T>,
+{
+    /// Creates a new [`Solver`] using the given heuristic and solved state.
+    pub fn new_with_t(heuristic: &'a H, solved_state: &'a S) -> Self {
+        Self {
+            stack: Stack::default(),
+            heuristic,
+            solved_state,
+            _phantom: PhantomData,
+        }
+    }
+
+    fn dfs(&mut self, puzzle: &mut P, depth: T, last_dir: Option<Direction>) -> bool {
+        if depth == T::zero() {
+            return self.solved_state.is_solved(puzzle);
+        }
+
+        if self.heuristic.bound(puzzle) > depth {
+            return false;
+        }
+
+        for dir in [
+            Direction::Up,
+            Direction::Left,
+            Direction::Down,
+            Direction::Right,
+        ] {
+            if last_dir.is_some_and(|ld| dir.axis() == ld.axis()) {
+                continue;
+            }
+
+            let mut count = 0u64;
+            while puzzle.can_move_dir(dir) {
+                puzzle.move_dir(dir);
+                count += 1;
+                self.stack.push(Move::new(dir, count));
+                if self.dfs(puzzle, depth - T::one(), Some(dir)) {
+                    return true;
+                }
+                self.stack.pop();
+            }
+            if count > 0 {
+                puzzle.apply_move(Move::new(dir.inverse(), count));
+            }
+        }
+        false
+    }
+
+    fn solve_impl(
+        &mut self,
+        puzzle: &P,
+        min: T,
+        max: T,
+        iteration_callback: Option<&dyn Fn(SolverIterationStats)>,
+    ) -> Result<Algorithm, SolverError> {
+        if !self.solved_state.is_solvable(puzzle) {
+            return Err(SolverError::Unsolvable);
+        }
+
+        self.stack.clear();
+        let mut puzzle = puzzle.clone();
+        let mut depth = min;
+        loop {
+            if self.dfs(&mut puzzle, depth, None) {
+                let mut solution: Algorithm = (&self.stack).into();
+                solution.simplify();
+                return Ok(solution);
+            }
+
+            if let Some(f) = iteration_callback {
+                f(SolverIterationStats {
+                    depth: depth.to_u8().unwrap(),
+                });
+            }
+
+            depth = depth
+                .checked_add(&T::one())
+                .filter(|&d| d <= max)
+                .ok_or(SolverError::NoSolutionFound)?;
+        }
+    }
+
+    /// Solves `puzzle`.
+    pub fn solve(&mut self, puzzle: &P) -> Result<Algorithm, SolverError> {
+        let min = self.heuristic.bound(puzzle);
+        self.solve_impl(puzzle, min, T::max_value(), None)
+    }
+
+    /// Solves `puzzle` with explicit depth bounds.
+    pub fn solve_with_bounds(
+        &mut self,
+        puzzle: &P,
+        min: T,
+        max: T,
+    ) -> Result<Algorithm, SolverError> {
+        self.solve_impl(puzzle, min, max, None)
+    }
+
+    /// See [`Solver::solve`].
+    ///
+    /// Runs `callback` after each iteration of the depth-first search.
+    pub fn solve_with_callback(
+        &mut self,
+        puzzle: &P,
+        callback: &dyn Fn(SolverIterationStats),
+    ) -> Result<Algorithm, SolverError> {
+        let min = self.heuristic.bound(puzzle);
+        self.solve_impl(puzzle, min, T::max_value(), Some(callback))
     }
 }
 
@@ -228,23 +343,55 @@ where
 mod tests {
     use std::str::FromStr as _;
 
-    use crate::puzzle::{label::label::Rows, puzzle::Puzzle};
+    use crate::{
+        algorithm::metric::{Mtm, Stm},
+        puzzle::{label::label::Rows, puzzle::Puzzle},
+    };
 
     use super::*;
 
     #[test]
-    fn test_row_grids_manhattan() {
-        let mut solver = Solver::new(&ManhattanDistance(&RowGrids), &RowGrids);
+    fn test_row_grids_manhattan_stm() {
+        let mut solver: Solver<'_, Puzzle, u8, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
+            Solver::new(&ManhattanDistance(&RowGrids), &RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_stm::<u64>(), 31);
     }
 
     #[test]
-    fn test_rows_manhattan() {
-        let mut solver = Solver::new(&ManhattanDistance(&Rows), &Rows);
+    fn test_rows_manhattan_stm() {
+        let mut solver: Solver<'_, Puzzle, u8, Rows, ManhattanDistance<'_, Rows>, Stm> =
+            Solver::new(&ManhattanDistance(&Rows), &Rows);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_stm::<u64>(), 23);
+    }
+
+    #[test]
+    fn test_row_grids_manhattan_mtm() {
+        let mut solver: Solver<'_, Puzzle, u8, RowGrids, ManhattanDistance<'_, RowGrids>, Mtm> =
+            Solver::new(&ManhattanDistance(&RowGrids), &RowGrids);
+        let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
+        let solution = solver.solve(&puzzle).unwrap();
+        assert_eq!(solution.len_mtm::<u64>(), 24);
+    }
+
+    #[test]
+    fn test_solve_with_bounds_too_low() {
+        let mut solver: Solver<'_, Puzzle, u8, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
+            Solver::new(&ManhattanDistance(&RowGrids), &RowGrids);
+        let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
+        let result = solver.solve_with_bounds(&puzzle, 0, 5);
+        assert_eq!(result, Err(SolverError::NoSolutionFound));
+    }
+
+    #[test]
+    fn test_solve_with_bounds_exact() {
+        let mut solver: Solver<'_, Puzzle, u8, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
+            Solver::new(&ManhattanDistance(&RowGrids), &RowGrids);
+        let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
+        let solution = solver.solve_with_bounds(&puzzle, 31, 31).unwrap();
+        assert_eq!(solution.len_stm::<u64>(), 31);
     }
 }
