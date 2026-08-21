@@ -118,6 +118,7 @@
 //!
 //!     let svg = renderer.render(&puzzle)?;
 //!     svg::save("out.svg", &svg)?;
+//! #   std::fs::remove_file("out.svg").unwrap();
 //!
 //!     Ok(())
 //! }
