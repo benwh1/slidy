@@ -437,4 +437,18 @@ mod tests {
         let solution = Solver::solve_with_config(&mut solver, &puzzle, config).unwrap();
         assert_eq!(solution.len_stm::<u64>(), 33);
     }
+
+    #[test]
+    fn test_solve_with_solved_state_mtm() {
+        let mut solver: GenericSolver<'_, Puzzle, Rows, ManhattanDistance<'_, Rows>, Mtm> =
+            GenericSolver::new(&ManhattanDistance(&Rows), &Rows);
+        let puzzle = Puzzle::from_str("2 7 11 1/5 9 3 14/15 10 6 12/4 0 8 13").unwrap();
+        let config = SolverConfig {
+            min: 0,
+            max: u8::MAX,
+            callback: None,
+        };
+        let solution = Solver::solve_with_config(&mut solver, &puzzle, config).unwrap();
+        assert_eq!(solution.len_mtm::<u64>(), 21);
+    }
 }
