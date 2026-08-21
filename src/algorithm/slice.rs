@@ -35,8 +35,10 @@ pub struct AlgorithmSlice<'a> {
 impl AlgorithmSlice<'_> {
     /// The length of the slice in the [`Metric`] `M`.
     #[must_use]
-    pub fn len<M: Metric, T: PrimInt + Sum + 'static>(&self) -> T
+    pub fn len<M, T>(&self) -> T
     where
+        M: Metric,
+        T: PrimInt + Sum + 'static,
         u64: AsPrimitive<T>,
     {
         self.moves().map(|m| M::len::<T>(m)).sum()
@@ -44,8 +46,9 @@ impl AlgorithmSlice<'_> {
 
     /// The length of the slice in the [`Stm`] [`Metric`].
     #[must_use]
-    pub fn len_stm<T: PrimInt + Sum + 'static>(&self) -> T
+    pub fn len_stm<T>(&self) -> T
     where
+        T: PrimInt + Sum + 'static,
         u64: AsPrimitive<T>,
     {
         self.len::<Stm, T>()
@@ -53,8 +56,9 @@ impl AlgorithmSlice<'_> {
 
     /// The length of the slice in the [`Mtm`] [`Metric`].
     #[must_use]
-    pub fn len_mtm<T: PrimInt + Sum + 'static>(&self) -> T
+    pub fn len_mtm<T>(&self) -> T
     where
+        T: PrimInt + Sum + 'static,
         u64: AsPrimitive<T>,
     {
         self.len::<Mtm, T>()

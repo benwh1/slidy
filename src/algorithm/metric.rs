@@ -12,8 +12,9 @@ pub trait Metric {
     const HAS_MOVECOUNT_PARITY: bool;
 
     /// The length of a [`Move`].
-    fn len<T: PrimInt + 'static>(mv: Move) -> T
+    fn len<T>(mv: Move) -> T
     where
+        T: PrimInt + 'static,
         u64: AsPrimitive<T>;
 }
 
@@ -30,8 +31,9 @@ pub struct Mtm;
 impl Metric for Stm {
     const HAS_MOVECOUNT_PARITY: bool = true;
 
-    fn len<T: PrimInt + 'static>(mv: Move) -> T
+    fn len<T>(mv: Move) -> T
     where
+        T: PrimInt + 'static,
         u64: AsPrimitive<T>,
     {
         mv.amount().as_()
@@ -41,8 +43,9 @@ impl Metric for Stm {
 impl Metric for Mtm {
     const HAS_MOVECOUNT_PARITY: bool = false;
 
-    fn len<T: PrimInt + 'static>(_mv: Move) -> T
+    fn len<T>(_mv: Move) -> T
     where
+        T: PrimInt + 'static,
         u64: AsPrimitive<T>,
     {
         T::one()

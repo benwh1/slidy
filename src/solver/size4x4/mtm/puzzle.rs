@@ -78,7 +78,7 @@ impl FourBitPuzzle {
 
         for i in 0..16 {
             let piece = ((raw_pieces >> (4 * i)) & 0xF) as usize;
-            let reduced_piece = ReducedFourBitPuzzle::SOLVED >> (4 * ((piece + 15) % 16)) & 0xF;
+            let reduced_piece = (ReducedFourBitPuzzle::SOLVED >> (4 * ((piece + 15) % 16))) & 0xF;
             pieces |= reduced_piece << (4 * i);
         }
 

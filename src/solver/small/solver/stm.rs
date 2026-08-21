@@ -5,12 +5,13 @@ use num_traits::AsPrimitive;
 use crate::{
     algorithm::{algorithm::Algorithm, direction::Direction, metric::Stm},
     puzzle::{
+        label::label::RowGrids,
         sliding_puzzle::SlidingPuzzle,
         small::{sealed::SmallPuzzle, Puzzle},
     },
     solver::{
         small::{indexing, pdb::Pdb, solver::Solver},
-        solver::SolverError,
+        solver::{Solver as SolverT, SolverConfig, SolverError},
         statistics::SolverIterationStats,
     },
 };
@@ -96,23 +97,20 @@ where
         false
     }
 
-    fn solve_impl<P: SlidingPuzzle>(
-        &self,
-        puzzle: &P,
-        callback: Option<&dyn Fn(SolverIterationStats)>,
-    ) -> Result<Algorithm, SolverError>
+    fn solve_impl<P>(&self, puzzle: &P, config: &SolverConfig) -> Result<Algorithm, SolverError>
     where
+        P: SlidingPuzzle,
         P::Piece: AsPrimitive<u8>,
     {
         let mut p = Puzzle::<W, H>::new();
         if p.try_set_state(puzzle) {
-            return self.solve_small_puzzle_impl(p, callback);
+            return self.solve_small_puzzle_impl(p, config);
         }
 
         let mut p = Puzzle::<H, W>::new();
         if p.try_set_state(puzzle) {
             return self
-                .solve_small_puzzle_impl(p.conjugate_with_transpose(), callback)
+                .solve_small_puzzle_impl(p.conjugate_with_transpose(), config)
                 .map(|a| a.transpose());
         }
 
@@ -122,7 +120,7 @@ where
     fn solve_small_puzzle_impl(
         &self,
         puzzle: Puzzle<W, H>,
-        callback: Option<&dyn Fn(SolverIterationStats)>,
+        config: &SolverConfig,
     ) -> Result<Algorithm, SolverError> {
         if !puzzle.is_solvable() {
             return Err(SolverError::Unsolvable);
@@ -133,6 +131,8 @@ where
 
         let coord = indexing::encode(puzzle.piece_array());
         let mut depth = self.pdb.get(coord as usize);
+
+        // TODO: use config.min/max
 
         loop {
             if self.dfs(depth, None, puzzle) {
@@ -148,34 +148,35 @@ where
                 return Ok(solution);
             }
 
-            if let Some(f) = callback {
+            if let Some(f) = config.callback {
                 f(SolverIterationStats { depth });
             }
 
             depth += 2;
         }
     }
+}
 
-    /// Solves `puzzle`, returning an optimal [`Stm`] solution.
-    pub fn solve<P: SlidingPuzzle>(&self, puzzle: &P) -> Result<Algorithm, SolverError>
-    where
-        P::Piece: AsPrimitive<u8>,
-    {
-        self.solve_impl(puzzle, None)
+impl<P, const W: usize, const H: usize, const N: usize> SolverT<P, u8, RowGrids, (), Stm>
+    for Solver<W, H, N, Stm>
+where
+    P: SlidingPuzzle,
+    P::Piece: AsPrimitive<u8>,
+    Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N], TransposedPuzzle = Puzzle<H, W>>,
+    Puzzle<H, W>: SmallPuzzle<PieceArray = [u8; N], TransposedPuzzle = Puzzle<W, H>>,
+{
+    fn is_initialised(&self) -> bool {
+        true
     }
 
-    /// See [`Solver::solve`].
-    ///
-    /// Runs `callback` after each iteration of the depth-first search.
-    pub fn solve_with_callback<P: SlidingPuzzle>(
-        &self,
+    fn init(&mut self) {}
+
+    fn solve_with_config(
+        &mut self,
         puzzle: &P,
-        callback: &dyn Fn(SolverIterationStats),
-    ) -> Result<Algorithm, SolverError>
-    where
-        P::Piece: AsPrimitive<u8>,
-    {
-        self.solve_impl(puzzle, Some(callback))
+        config: &SolverConfig,
+    ) -> Result<Algorithm, SolverError> {
+        self.solve_impl(puzzle, config)
     }
 }
 
@@ -185,12 +186,12 @@ mod tests {
 
     use crate::{
         puzzle::{puzzle::Puzzle, sliding_puzzle::SlidingPuzzle as _},
-        solver::{Solver3x3Stm, Solver4x2Stm},
+        solver::{solver::Solver as _, Solver3x3Stm, Solver4x2Stm},
     };
 
     #[test]
     fn test_solver() {
-        let solver = Solver3x3Stm::new();
+        let mut solver = Solver3x3Stm::new();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_stm::<u64>(), 25);
@@ -198,7 +199,7 @@ mod tests {
 
     #[test]
     fn test_solver_2() {
-        let solver = Solver4x2Stm::new();
+        let mut solver = Solver4x2Stm::new();
         let mut puzzle = Puzzle::from_str("4 6/2 5/0 1/7 3").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         puzzle.apply_alg(&solution);

@@ -67,7 +67,7 @@ where
         if !self.is_initialised() {
             self.init();
         }
-        self.solve_with_config(puzzle, SolverConfig::default())
+        self.solve_with_config(puzzle, &SolverConfig::default())
     }
 
     /// Solves `puzzle` using the given [`SolverConfig`].
@@ -76,6 +76,6 @@ where
     fn solve_with_config(
         &mut self,
         puzzle: &P,
-        config: SolverConfig,
+        config: &SolverConfig,
     ) -> Result<Algorithm, SolverError>;
 }

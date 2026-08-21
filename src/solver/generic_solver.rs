@@ -109,13 +109,13 @@ where
             min,
             ..Default::default()
         };
-        self.solve_with_config(puzzle, config)
+        self.solve_with_config(puzzle, &config)
     }
 
     fn solve_with_config(
         &mut self,
         puzzle: &P,
-        config: SolverConfig,
+        config: &SolverConfig,
     ) -> Result<Algorithm, SolverError> {
         self.solve_impl(puzzle, config)
     }
@@ -141,18 +141,18 @@ where
             min,
             ..Default::default()
         };
-        self.solve_with_config(puzzle, config)
+        self.solve_with_config(puzzle, &config)
     }
 
     fn solve_with_config(
         &mut self,
         puzzle: &P,
-        config: SolverConfig,
+        config: &SolverConfig,
     ) -> Result<Algorithm, SolverError> {
         if !self.initialized {
             self.init();
         }
-        self.solve_impl(puzzle, config.min, config.max, config.callback)
+        self.solve_impl(puzzle, config)
     }
 }
 
@@ -195,7 +195,7 @@ where
         false
     }
 
-    fn solve_impl(&mut self, puzzle: &P, config: SolverConfig) -> Result<Algorithm, SolverError> {
+    fn solve_impl(&mut self, puzzle: &P, config: &SolverConfig) -> Result<Algorithm, SolverError> {
         if !self.solved_state.is_solvable(puzzle) {
             return Err(SolverError::Unsolvable);
         }
@@ -223,7 +223,10 @@ where
                 f(SolverIterationStats { depth });
             }
 
-            depth += 2;
+            depth = match depth.checked_add(2) {
+                Some(d) => d,
+                None => break,
+            };
         }
 
         Err(SolverError::NoSolutionFound)
@@ -272,37 +275,33 @@ where
         false
     }
 
-    fn solve_impl(
-        &mut self,
-        puzzle: &P,
-        min: u8,
-        max: u8,
-        iteration_callback: Option<&dyn Fn(SolverIterationStats)>,
-    ) -> Result<Algorithm, SolverError> {
+    fn solve_impl(&mut self, puzzle: &P, config: &SolverConfig) -> Result<Algorithm, SolverError> {
         if !self.solved_state.is_solvable(puzzle) {
             return Err(SolverError::Unsolvable);
         }
 
         self.stack.clear();
         let mut puzzle = puzzle.clone();
-        let mut depth = min;
+        let mut depth = config.min;
 
-        loop {
+        while depth <= config.max {
             if self.dfs(&mut puzzle, depth, None) {
                 let mut solution: Algorithm = (&self.stack).into();
                 solution.simplify();
                 return Ok(solution);
             }
 
-            if let Some(f) = iteration_callback {
+            if let Some(f) = config.callback {
                 f(SolverIterationStats { depth });
             }
 
-            depth = depth
-                .checked_add(1)
-                .filter(|&d| d <= max)
-                .ok_or(SolverError::NoSolutionFound)?;
+            depth = match depth.checked_add(1) {
+                Some(d) => d,
+                None => break,
+            };
         }
+
+        Err(SolverError::NoSolutionFound)
     }
 }
 
@@ -353,7 +352,7 @@ mod tests {
             max: 5,
             callback: None,
         };
-        let result = solver.solve_with_config(&puzzle, config);
+        let result = solver.solve_with_config(&puzzle, &config);
         assert_eq!(result, Err(SolverError::NoSolutionFound));
     }
 
@@ -367,7 +366,7 @@ mod tests {
             max: 31,
             callback: None,
         };
-        let result = solver.solve_with_config(&puzzle, config);
+        let result = solver.solve_with_config(&puzzle, &config);
         let solution = result.unwrap();
         assert_eq!(solution.len_stm::<u64>(), 31);
     }
@@ -391,7 +390,7 @@ mod tests {
             max: 31,
             callback: None,
         };
-        let solution = Solver::solve_with_config(&mut solver, &puzzle, config).unwrap();
+        let solution = Solver::solve_with_config(&mut solver, &puzzle, &config).unwrap();
         assert_eq!(solution.len_stm::<u64>(), 31);
     }
 
@@ -405,7 +404,7 @@ mod tests {
             max: 5,
             callback: None,
         };
-        let result = Solver::solve_with_config(&mut solver, &puzzle, config);
+        let result = Solver::solve_with_config(&mut solver, &puzzle, &config);
         assert_eq!(result, Err(SolverError::NoSolutionFound));
     }
 
@@ -419,7 +418,7 @@ mod tests {
             max: 40,
             callback: None,
         };
-        let solution = Solver::solve_with_config(&mut solver, &puzzle, config).unwrap();
+        let solution = Solver::solve_with_config(&mut solver, &puzzle, &config).unwrap();
         assert_eq!(solution.len_stm::<u64>(), 31);
     }
 
@@ -433,7 +432,7 @@ mod tests {
             max: 33,
             callback: None,
         };
-        let solution = Solver::solve_with_config(&mut solver, &puzzle, config).unwrap();
+        let solution = Solver::solve_with_config(&mut solver, &puzzle, &config).unwrap();
         assert_eq!(solution.len_stm::<u64>(), 33);
     }
 
@@ -447,7 +446,7 @@ mod tests {
             max: u8::MAX,
             callback: None,
         };
-        let solution = Solver::solve_with_config(&mut solver, &puzzle, config).unwrap();
+        let solution = Solver::solve_with_config(&mut solver, &puzzle, &config).unwrap();
         assert_eq!(solution.len_mtm::<u64>(), 21);
     }
 }

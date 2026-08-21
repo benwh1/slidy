@@ -48,7 +48,7 @@ impl<C: Coloring + ?Sized> Coloring for Box<C> {
     }
 }
 
-/// Error type for [`ColorList`]
+/// Error type for [`ColorList`].
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ColorListError {

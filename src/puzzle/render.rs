@@ -37,7 +37,7 @@ pub enum Font<'a> {
     Family(&'a str),
     /// A font defined by a URL (including a local file path) and a font format.
     Url {
-        /// Path to the font
+        /// Path to the font.
         path: &'a str,
         /// Format of the font file.
         format: &'a str,

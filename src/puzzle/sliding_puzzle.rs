@@ -148,8 +148,11 @@ where
         self.reset_to_label(&RowGrids);
     }
 
-    /// Reset the puzzle to the solved state as defined by a [`BijectiveLabel`]
-    fn reset_to_label<L: BijectiveLabel>(&mut self, label: &L) {
+    /// Reset the puzzle to the solved state as defined by a [`BijectiveLabel`].
+    fn reset_to_label<L>(&mut self, label: &L)
+    where
+        L: BijectiveLabel,
+    {
         let (w, h) = self.size().into();
         let area = <Self::Piece as NumCast>::from(self.size().area()).unwrap();
         for y in 0..h {
@@ -173,8 +176,9 @@ where
     /// # Panics
     ///
     /// Panics if `self` and `other` are not the same size.
-    fn set_state<P: SlidingPuzzle>(&mut self, other: &P)
+    fn set_state<P>(&mut self, other: &P)
     where
+        P: SlidingPuzzle,
         P::Piece: AsPrimitive<Self::Piece>,
         Self::Piece: 'static,
     {
@@ -189,8 +193,9 @@ where
     /// See [`SlidingPuzzle::set_state`].
     ///
     /// Returns `true` if the state was set successfully, `false` otherwise.
-    fn try_set_state<P: SlidingPuzzle>(&mut self, other: &P) -> bool
+    fn try_set_state<P>(&mut self, other: &P) -> bool
     where
+        P: SlidingPuzzle,
         P::Piece: AsPrimitive<Self::Piece>,
         Self::Piece: 'static,
     {
@@ -205,8 +210,9 @@ where
     }
 
     /// See [`SlidingPuzzle::set_state`].
-    unsafe fn set_state_unchecked<P: SlidingPuzzle>(&mut self, other: &P)
+    unsafe fn set_state_unchecked<P>(&mut self, other: &P)
     where
+        P: SlidingPuzzle,
         P::Piece: AsPrimitive<Self::Piece>,
         Self::Piece: 'static,
     {
@@ -423,13 +429,13 @@ where
         self.swap_non_gap_pieces(x1 + w * y1, x2 + w * y2);
     }
 
-    /// See [`SlidingPuzzle::swap_non_gap_pieces_xy`]
+    /// See [`SlidingPuzzle::swap_non_gap_pieces_xy`].
     fn try_swap_non_gap_pieces_xy(&mut self, pos1: (u64, u64), pos2: (u64, u64)) -> bool {
         let w = self.size().width();
         self.try_swap_non_gap_pieces(pos1.0 + w * pos1.1, pos2.0 + w * pos2.1)
     }
 
-    /// See [`SlidingPuzzle::swap_non_gap_pieces_xy`]
+    /// See [`SlidingPuzzle::swap_non_gap_pieces_xy`].
     unsafe fn swap_non_gap_pieces_xy_unchecked(
         &mut self,
         (x1, y1): (u64, u64),
@@ -666,7 +672,10 @@ where
     ///
     /// [`Algorithm`]: ../../algorithm/algorithm.html
     #[must_use]
-    fn can_apply_alg<'a, Alg: AsAlgorithmSlice<'a>>(&self, alg: &'a Alg) -> bool {
+    fn can_apply_alg<'a, Alg>(&self, alg: &'a Alg) -> bool
+    where
+        Alg: AsAlgorithmSlice<'a>,
+    {
         let (mut gx, mut gy) = self.gap_position_xy();
 
         for m in alg.as_slice().moves() {
@@ -696,7 +705,10 @@ where
     /// transformed in an invalid way.
     ///
     /// [`Algorithm`]: ../../algorithm/algorithm.html
-    fn apply_alg<'a, Alg: AsAlgorithmSlice<'a>>(&mut self, alg: &'a Alg) {
+    fn apply_alg<'a, Alg>(&mut self, alg: &'a Alg)
+    where
+        Alg: AsAlgorithmSlice<'a>,
+    {
         for m in alg.as_slice().moves() {
             self.apply_move(m);
         }
@@ -705,7 +717,10 @@ where
     /// See [`SlidingPuzzle::apply_alg`].
     ///
     /// Returns `true` if the algorithm was applied successfully, `false` otherwise.
-    fn try_apply_alg<'a, Alg: AsAlgorithmSlice<'a>>(&mut self, alg: &'a Alg) -> bool {
+    fn try_apply_alg<'a, Alg>(&mut self, alg: &'a Alg) -> bool
+    where
+        Alg: AsAlgorithmSlice<'a>,
+    {
         if self.can_apply_alg(alg) {
             self.apply_alg(alg);
             true
@@ -715,7 +730,10 @@ where
     }
 
     /// See [`SlidingPuzzle::apply_alg`].
-    unsafe fn apply_alg_unchecked<'a, Alg: AsAlgorithmSlice<'a>>(&mut self, alg: &'a Alg) {
+    unsafe fn apply_alg_unchecked<'a, Alg>(&mut self, alg: &'a Alg)
+    where
+        Alg: AsAlgorithmSlice<'a>,
+    {
         for m in alg.as_slice().moves() {
             self.apply_move_unchecked(m);
         }
@@ -844,8 +862,9 @@ where
     }
 
     /// Checks if `self` and `other` have the same state.
-    fn equals<P: SlidingPuzzle>(&self, other: &P) -> bool
+    fn equals<P>(&self, other: &P) -> bool
     where
+        P: SlidingPuzzle,
         P::Piece: AsPrimitive<Self::Piece>,
     {
         if self.size() != other.size() {

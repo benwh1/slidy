@@ -4,7 +4,7 @@ use std::fmt::Display;
 
 use crate::algorithm::r#move::r#move::Move;
 
-/// Marker trait for structs that are used to display moves
+/// Marker trait for structs that are used to display moves.
 pub trait MoveDisplay {
     /// Create a new [`MoveDisplay`] for displaying `mv`.
     #[must_use]

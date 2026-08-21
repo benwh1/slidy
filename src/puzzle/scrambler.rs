@@ -17,19 +17,29 @@ pub trait Scrambler {
 
     /// Equivalent to [`Scrambler::try_scramble_with_rng`] using [`rand::rng`].
     #[cfg(feature = "thread_rng")]
-    fn try_scramble<P: SlidingPuzzle>(&self, puzzle: &mut P) -> bool {
+    fn try_scramble<P>(&self, puzzle: &mut P) -> bool
+    where
+        P: SlidingPuzzle,
+    {
         self.try_scramble_with_rng(puzzle, &mut rand::rng())
     }
 
     /// Equivalent to [`Scrambler::scramble_with_rng`] using [`rand::rng`].
     #[cfg(feature = "thread_rng")]
-    fn scramble<P: SlidingPuzzle>(&self, puzzle: &mut P) {
+    fn scramble<P>(&self, puzzle: &mut P)
+    where
+        P: SlidingPuzzle,
+    {
         self.scramble_with_rng(puzzle, &mut rand::rng());
     }
 
     /// Scrambles the puzzle using a given [`Rng`]. If the puzzle is not of a valid size for the
     /// scrambler, the function returns false and the puzzle is not modified.
-    fn try_scramble_with_rng<P: SlidingPuzzle, R: Rng>(&self, puzzle: &mut P, rng: &mut R) -> bool {
+    fn try_scramble_with_rng<P, R>(&self, puzzle: &mut P, rng: &mut R) -> bool
+    where
+        P: SlidingPuzzle,
+        R: Rng,
+    {
         if self.is_valid_size(puzzle.size()) {
             self.scramble_with_rng(puzzle, rng);
             true
@@ -43,7 +53,10 @@ pub trait Scrambler {
     /// This function may not check whether the puzzle is of a valid size for the scrambler. If it
     /// is not, then the function may panic or scramble the puzzle into an unsolvable or invalid
     /// state.
-    fn scramble_with_rng<P: SlidingPuzzle, R: Rng>(&self, puzzle: &mut P, rng: &mut R);
+    fn scramble_with_rng<P, R>(&self, puzzle: &mut P, rng: &mut R)
+    where
+        P: SlidingPuzzle,
+        R: Rng;
 }
 
 /// Random state scrambler, but leaving the gap in the bottom right corner so that the resulting
@@ -59,7 +72,11 @@ impl Scrambler for RandomInvertibleState {
         size.width() > 1 && size.height() > 1
     }
 
-    fn scramble_with_rng<P: SlidingPuzzle, R: Rng>(&self, puzzle: &mut P, rng: &mut R) {
+    fn scramble_with_rng<P, R>(&self, puzzle: &mut P, rng: &mut R)
+    where
+        P: SlidingPuzzle,
+        R: Rng,
+    {
         puzzle.reset();
 
         let n = puzzle.num_pieces();
@@ -93,7 +110,11 @@ impl Scrambler for RandomState {
         true
     }
 
-    fn scramble_with_rng<P: SlidingPuzzle, R: Rng>(&self, puzzle: &mut P, rng: &mut R) {
+    fn scramble_with_rng<P, R>(&self, puzzle: &mut P, rng: &mut R)
+    where
+        P: SlidingPuzzle,
+        R: Rng,
+    {
         let (w, h) = puzzle.size().into();
 
         if w == 1 {
@@ -151,7 +172,11 @@ impl Scrambler for RandomMoves {
         }
     }
 
-    fn scramble_with_rng<P: SlidingPuzzle, R: Rng>(&self, puzzle: &mut P, rng: &mut R) {
+    fn scramble_with_rng<P, R>(&self, puzzle: &mut P, rng: &mut R)
+    where
+        P: SlidingPuzzle,
+        R: Rng,
+    {
         puzzle.reset();
 
         let mut last_dir = None::<Direction>;
@@ -187,7 +212,11 @@ impl Scrambler for Cycle {
         size.width() > 1 && size.height() > 1
     }
 
-    fn scramble_with_rng<P: SlidingPuzzle, R: Rng>(&self, puzzle: &mut P, rng: &mut R) {
+    fn scramble_with_rng<P, R>(&self, puzzle: &mut P, rng: &mut R)
+    where
+        P: SlidingPuzzle,
+        R: Rng,
+    {
         puzzle.reset();
 
         let n = puzzle.num_pieces();

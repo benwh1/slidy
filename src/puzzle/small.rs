@@ -52,6 +52,7 @@ pub type Puzzle7x2 = Puzzle<7, 2>;
 /// [`Puzzle`] specialized to the 8x2 size.
 pub type Puzzle8x2 = Puzzle<8, 2>;
 
+#[expect(clippy::inline_modules)]
 pub(crate) mod sealed {
     use crate::puzzle::sliding_puzzle::SlidingPuzzle;
 

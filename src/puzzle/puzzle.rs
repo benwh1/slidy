@@ -175,7 +175,10 @@ impl SlidingPuzzle for Puzzle {
         self.pieces[self.gap as usize] = 0;
     }
 
-    fn reset_to_label<L: BijectiveLabel>(&mut self, label: &L) {
+    fn reset_to_label<L>(&mut self, label: &L)
+    where
+        L: BijectiveLabel,
+    {
         let (w, h) = self.size().into();
         let area = self.area();
         for y in 0..h {
@@ -192,10 +195,11 @@ impl SlidingPuzzle for Puzzle {
         }
     }
 
-    unsafe fn set_state_unchecked<P: SlidingPuzzle>(&mut self, other: &P)
+    unsafe fn set_state_unchecked<P>(&mut self, other: &P)
     where
         P::Piece: AsPrimitive<Self::Piece>,
         Self::Piece: 'static,
+        P: SlidingPuzzle,
     {
         for i in 0..other.area() {
             self.pieces[i as usize] = other.piece_at_unchecked(i).as_();

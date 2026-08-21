@@ -5,7 +5,10 @@ use std::{
     str::FromStr,
 };
 
-use rand::distr::{Distribution, StandardUniform};
+use rand::{
+    distr::{Distribution, StandardUniform},
+    Rng,
+};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -83,18 +86,19 @@ impl Direction {
     /// The standard name of the direction as a character.
     ///
     /// Returns 'U', 'L', 'D', 'R' for `Up`, `Left`, `Down`, `Right` respectively.
+    #[must_use]
     pub fn as_char(&self) -> char {
         match self {
-            Direction::Up => 'U',
-            Direction::Left => 'L',
-            Direction::Down => 'D',
-            Direction::Right => 'R',
+            Self::Up => 'U',
+            Self::Left => 'L',
+            Self::Down => 'D',
+            Self::Right => 'R',
         }
     }
 }
 
 impl Display for Direction {
-    /// Formats the direction as an upper case character: U, L, D, R
+    /// Formats the direction as an upper case character: U, L, D, R.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_char(self.as_char())
     }
@@ -147,7 +151,10 @@ impl FromStr for Direction {
 }
 
 impl Distribution<Direction> for StandardUniform {
-    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Direction {
+    fn sample<R>(&self, rng: &mut R) -> Direction
+    where
+        R: Rng + ?Sized,
+    {
         match rng.random_range(0..4) {
             0 => Direction::Up,
             1 => Direction::Left,

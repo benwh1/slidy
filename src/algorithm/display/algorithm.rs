@@ -11,11 +11,13 @@ use crate::algorithm::{
     as_slice::AsAlgorithmSlice, display::r#move::MoveDisplay, slice::AlgorithmSlice,
 };
 
-/// Marker trait for structs that are used to display algorithms
+/// Marker trait for structs that are used to display algorithms.
 pub trait AlgorithmDisplay<'a> {
     /// Create a new [`AlgorithmDisplay`] for displaying `algorithm`.
     #[must_use]
-    fn new<Alg: AsAlgorithmSlice<'a>>(algorithm: &'a Alg) -> Self;
+    fn new<Alg>(algorithm: &'a Alg) -> Self
+    where
+        Alg: AsAlgorithmSlice<'a>;
 }
 
 macro_rules! define_display {
@@ -28,8 +30,14 @@ macro_rules! define_display {
                 phantom_t: PhantomData<T>,
             }
 
-            impl<'a, T: MoveDisplay + Display> AlgorithmDisplay<'a> for $name<'a, T> {
-                fn new<Alg: AsAlgorithmSlice<'a>>(algorithm: &'a Alg) -> Self {
+            impl<'a, T> AlgorithmDisplay<'a> for $name<'a, T>
+            where
+                T: MoveDisplay + Display,
+            {
+                fn new<Alg>(algorithm: &'a Alg) -> Self
+                where
+                    Alg: AsAlgorithmSlice<'a>,
+                {
                     Self {
                         algorithm: algorithm.as_slice(),
                         phantom_t: PhantomData,

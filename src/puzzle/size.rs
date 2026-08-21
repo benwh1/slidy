@@ -88,7 +88,7 @@ impl Size {
         Self(s, s)
     }
 
-    /// The square of size equal to the maximum of the width and height of `self`.self) -> Self {
+    /// The square of size equal to the maximum of the width and height of `self`.
     #[must_use]
     pub fn expand_to_square(&self) -> Self {
         let s = self.0.max(self.1);

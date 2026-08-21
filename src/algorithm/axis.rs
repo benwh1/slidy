@@ -1,6 +1,9 @@
 //! Defines the [`Axis`] type.
 
-use rand::distr::{Distribution, StandardUniform};
+use rand::{
+    distr::{Distribution, StandardUniform},
+    Rng,
+};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -10,9 +13,9 @@ use crate::algorithm::direction::Direction;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Axis {
-    /// The up/down axis
+    /// The up/down axis.
     Vertical,
-    /// The left/right axis
+    /// The left/right axis.
     Horizontal,
 }
 
@@ -34,7 +37,10 @@ impl From<Direction> for Axis {
 }
 
 impl Distribution<Axis> for StandardUniform {
-    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Axis {
+    fn sample<R>(&self, rng: &mut R) -> Axis
+    where
+        R: Rng + ?Sized,
+    {
         match rng.random_range(0..2) {
             0 => Axis::Vertical,
             1 => Axis::Horizontal,

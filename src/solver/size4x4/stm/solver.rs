@@ -129,11 +129,10 @@ impl Solver {
         false
     }
 
-    fn solve_impl<P: SlidingPuzzle>(
-        &self,
-        puzzle: &P,
-        config: SolverConfig,
-    ) -> Result<Algorithm, SolverError> {
+    fn solve_impl<P>(&self, puzzle: &P, config: &SolverConfig) -> Result<Algorithm, SolverError>
+    where
+        P: SlidingPuzzle,
+    {
         if puzzle.size() != Size::new(4, 4).unwrap() {
             return Err(SolverError::IncompatiblePuzzleSize);
         }
@@ -194,7 +193,10 @@ impl Solver {
                 f(SolverIterationStats { depth });
             }
 
-            depth += 2;
+            depth = match depth.checked_add(2) {
+                Some(d) => d,
+                None => break,
+            };
         }
 
         Err(SolverError::NoSolutionFound)
@@ -214,7 +216,7 @@ where
     fn solve_with_config(
         &mut self,
         puzzle: &P,
-        config: SolverConfig,
+        config: &SolverConfig,
     ) -> Result<Algorithm, SolverError> {
         self.solve_impl(puzzle, config)
     }

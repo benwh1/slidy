@@ -39,7 +39,7 @@ where
 /// Defines a function computing the shortest distance of a piece from a solved position.
 pub trait Distance {
     /// True if the sum of `self.dist(pos, solved_pos, size)` over all non-gap tiles of a puzzle is
-    /// guaranteed to be equal to the length of a solution of the puzzle mod 2
+    /// guaranteed to be equal to the length of a solution of the puzzle mod 2.
     const HAS_PARITY_CONSTRAINT: bool;
 
     /// Suppose the solved position of the piece in position `pos` is `solved_pos`, then this

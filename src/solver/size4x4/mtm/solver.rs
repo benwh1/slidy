@@ -200,12 +200,9 @@ impl Solver {
         false
     }
 
-    fn solve_impl<P: SlidingPuzzle>(
-        &self,
-        puzzle: &P,
-        config: SolverConfig,
-    ) -> Result<Algorithm, SolverError>
+    fn solve_impl<P>(&self, puzzle: &P, config: &SolverConfig) -> Result<Algorithm, SolverError>
     where
+        P: SlidingPuzzle,
         P::Piece: AsPrimitive<u8>,
     {
         let mut four_bit_puzzle = FourBitPuzzle::new();
@@ -247,7 +244,10 @@ impl Solver {
                 f(SolverIterationStats { depth });
             }
 
-            depth += 1;
+            depth = match depth.checked_add(1) {
+                Some(d) => d,
+                None => break,
+            };
         }
 
         Err(SolverError::NoSolutionFound)
@@ -270,7 +270,7 @@ impl SolverT<Puzzle, u8, RowGrids, (), Mtm> for Solver {
     fn solve_with_config(
         &mut self,
         puzzle: &Puzzle,
-        config: SolverConfig,
+        config: &SolverConfig,
     ) -> Result<Algorithm, SolverError> {
         self.solve_impl(puzzle, config)
     }

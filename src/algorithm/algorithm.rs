@@ -75,8 +75,10 @@ impl Algorithm {
 
     /// The length of the algorithm in the [`Metric`] `M`.
     #[must_use]
-    pub fn len<M: Metric, T: PrimInt + Sum + 'static>(&self) -> T
+    pub fn len<M, T>(&self) -> T
     where
+        M: Metric,
+        T: PrimInt + Sum + 'static,
         u64: AsPrimitive<T>,
     {
         self.as_slice().len::<M, T>()
@@ -86,8 +88,9 @@ impl Algorithm {
     ///
     /// [`Stm`]: ../metric.html
     #[must_use]
-    pub fn len_stm<T: PrimInt + Sum + 'static>(&self) -> T
+    pub fn len_stm<T>(&self) -> T
     where
+        T: PrimInt + Sum + 'static,
         u64: AsPrimitive<T>,
     {
         self.as_slice().len_stm()
@@ -97,8 +100,9 @@ impl Algorithm {
     ///
     /// [`Mtm`]: ../metric.html
     #[must_use]
-    pub fn len_mtm<T: PrimInt + Sum + 'static>(&self) -> T
+    pub fn len_mtm<T>(&self) -> T
     where
+        T: PrimInt + Sum + 'static,
         u64: AsPrimitive<T>,
     {
         self.as_slice().len_mtm()
@@ -294,7 +298,10 @@ impl Algorithm {
 
     /// Checks if `self` is a solution of `puzzle`.
     #[must_use]
-    pub fn is_solution_of<Puzzle: SlidingPuzzle + Clone>(&self, mut puzzle: Puzzle) -> bool {
+    pub fn is_solution_of<Puzzle>(&self, mut puzzle: Puzzle) -> bool
+    where
+        Puzzle: SlidingPuzzle + Clone,
+    {
         let b = puzzle.try_apply_alg(self);
         b && puzzle.is_solved()
     }
@@ -335,15 +342,15 @@ impl Display for Algorithm {
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ParseAlgorithmError {
-    /// Found a character that can not appear in an algorithm, e.g. "U2 R3 a D"
+    /// Found a character that can not appear in an algorithm, e.g. "U2 R3 a D".
     #[error("InvalidCharacter: character {0} is invalid")]
     InvalidCharacter(char),
 
-    /// Read a number with no direction, e.g. "U2 R3 5 D"
+    /// Read a number with no direction, e.g. "U2 R3 5 D".
     #[error("MissingDirection: a number must be preceded by a direction")]
     MissingDirection,
 
-    /// Overflow when reading the number after a direction
+    /// Overflow when reading the number after a direction.
     #[error("Overflow: integer overflow occurred when reading the number after a direction")]
     Overflow,
 }
@@ -476,13 +483,19 @@ impl From<AlgorithmSlice<'_>> for Algorithm {
 }
 
 impl FromIterator<Direction> for Algorithm {
-    fn from_iter<T: IntoIterator<Item = Direction>>(iter: T) -> Self {
+    fn from_iter<T>(iter: T) -> Self
+    where
+        T: IntoIterator<Item = Direction>,
+    {
         Self::with_moves(iter.into_iter().map(Move::from).collect())
     }
 }
 
 impl FromIterator<Move> for Algorithm {
-    fn from_iter<T: IntoIterator<Item = Move>>(iter: T) -> Self {
+    fn from_iter<T>(iter: T) -> Self
+    where
+        T: IntoIterator<Item = Move>,
+    {
         Self::with_moves(iter.into_iter().collect())
     }
 }

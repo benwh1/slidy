@@ -11,7 +11,7 @@ enum State {
     Finished,
 }
 
-/// Iterator over the moves of an [`AlgorithmSlice`]
+/// Iterator over the moves of an [`AlgorithmSlice`].
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Moves<'a> {
     slice: AlgorithmSlice<'a>,

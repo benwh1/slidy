@@ -20,10 +20,16 @@ use crate::puzzle::{
 pub trait Solvable {
     /// Checks if the puzzle is solvable.
     #[must_use]
-    fn is_solvable<P: SlidingPuzzle>(&self, puzzle: &P) -> bool;
+    fn is_solvable<P>(&self, puzzle: &P) -> bool
+    where
+        P: SlidingPuzzle;
 }
 
-fn trivial_size_solvable<P: SlidingPuzzle, L: Label>(puzzle: &P, label: &L) -> bool {
+fn trivial_size_solvable<P, L>(puzzle: &P, label: &L) -> bool
+where
+    P: SlidingPuzzle,
+    L: Label,
+{
     // To check if a 1xn or nx1 puzzle is solvable, we do the following:
     // 1. Ignore the gap piece
     // 2. Enumerate the pieces
@@ -51,7 +57,10 @@ fn trivial_size_solvable<P: SlidingPuzzle, L: Label>(puzzle: &P, label: &L) -> b
 }
 
 impl Solvable for RowGrids {
-    fn is_solvable<P: SlidingPuzzle>(&self, puzzle: &P) -> bool {
+    fn is_solvable<P>(&self, puzzle: &P) -> bool
+    where
+        P: SlidingPuzzle,
+    {
         if puzzle.size().width() == 1 || puzzle.size().height() == 1 {
             return trivial_size_solvable(puzzle, &Self);
         }
@@ -102,7 +111,10 @@ impl Solvable for RowGrids {
 }
 
 impl Solvable for Spiral {
-    fn is_solvable<P: SlidingPuzzle>(&self, puzzle: &P) -> bool {
+    fn is_solvable<P>(&self, puzzle: &P) -> bool
+    where
+        P: SlidingPuzzle,
+    {
         // Always solvable unless puzzle is 2x2, then equivalent to RowGrids.
         let (w, h) = puzzle.size().into();
         if (w, h) == (2, 2) {
@@ -117,7 +129,10 @@ macro_rules! always_solvable {
     ($($t:ty),* $(,)?) => {
         $(
             impl Solvable for $t {
-                fn is_solvable<P: SlidingPuzzle>(&self, _puzzle: &P) -> bool {
+                fn is_solvable<P>(&self, _puzzle: &P) -> bool
+                where
+                    P: SlidingPuzzle,
+                {
                     true
                 }
             }
@@ -129,7 +144,10 @@ macro_rules! always_solvable_except_trivial_size {
     ($($t:ty),* $(,)?) => {
         $(
             impl Solvable for $t {
-                fn is_solvable<P: SlidingPuzzle>(&self, puzzle: &P) -> bool {
+                fn is_solvable<P>(&self, puzzle: &P) -> bool
+                where
+                    P: SlidingPuzzle,
+                {
                     if puzzle.size().width() == 1 || puzzle.size().height() == 1 {
                         trivial_size_solvable(puzzle, self)
                     } else {
