@@ -23,9 +23,10 @@ use crate::{
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ManhattanDistance<'a, S: SolvedState>(pub &'a S);
 
-impl<P: SlidingPuzzle, T: PrimInt + Unsigned + 'static> Heuristic<P, T>
-    for ManhattanDistance<'_, Trivial>
+impl<P, T, S, M> Heuristic<P, T, S, M> for ManhattanDistance<'_, Trivial>
 where
+    P: SlidingPuzzle,
+    T: PrimInt + Unsigned + 'static,
     u64: AsPrimitive<T>,
 {
     fn bound(&self, puzzle: &P) -> T {
@@ -191,9 +192,10 @@ impl Distance for ManhattanDistance<'_, Checkerboard> {
     }
 }
 
-impl<P: SlidingPuzzle, T: PrimInt + Unsigned + 'static, L: Label> Heuristic<P, T>
-    for ManhattanDistance<'_, L>
+impl<P, T, S, M, L: Label> Heuristic<P, T, S, M> for ManhattanDistance<'_, L>
 where
+    P: SlidingPuzzle,
+    T: PrimInt + Unsigned + 'static,
     u64: AsPrimitive<T>,
     Self: Distance,
 {

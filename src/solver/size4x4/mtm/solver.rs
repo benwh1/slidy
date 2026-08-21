@@ -5,8 +5,10 @@ use std::cell::Cell;
 use num_traits::AsPrimitive;
 
 use crate::{
-    algorithm::{algorithm::Algorithm, axis::Axis, direction::Direction},
-    puzzle::{sliding_puzzle::SlidingPuzzle, small::Puzzle4x4},
+    algorithm::{algorithm::Algorithm, axis::Axis, direction::Direction, metric::Mtm},
+    puzzle::{
+        label::label::RowGrids, puzzle::Puzzle, sliding_puzzle::SlidingPuzzle, small::Puzzle4x4,
+    },
     solver::{
         size4x4::mtm::{
             base_5_table::Base5Table,
@@ -14,7 +16,7 @@ use crate::{
             pdb::Pdb,
             puzzle::{FourBitPuzzle, ReducedFourBitPuzzle},
         },
-        solver::SolverError,
+        solver::{Solver as SolverT, SolverConfig, SolverError},
         statistics::{PdbIterationStats, SolverIterationStats},
     },
 };
@@ -201,7 +203,7 @@ impl Solver {
     fn solve_impl<P: SlidingPuzzle>(
         &self,
         puzzle: &P,
-        callback: Option<&dyn Fn(SolverIterationStats)>,
+        config: SolverConfig,
     ) -> Result<Algorithm, SolverError>
     where
         P::Piece: AsPrimitive<u8>,
@@ -225,9 +227,9 @@ impl Solver {
         let coord = self
             .indexing_table
             .encode(reduced_puzzle.pieces, &self.base_5_table);
-        let mut depth = self.pdb.get(coord as usize);
+        let mut depth = self.pdb.get(coord as usize).max(config.min);
 
-        loop {
+        while depth <= config.max {
             if self.dfs(depth, None, reduced_puzzle, transposed_reduced_puzzle) {
                 let mut solution = Algorithm::new();
 
@@ -241,41 +243,35 @@ impl Solver {
                 return Ok(solution);
             }
 
-            if let Some(f) = callback {
+            if let Some(f) = config.callback {
                 f(SolverIterationStats { depth });
             }
 
             depth += 1;
         }
-    }
 
-    /// Solves `puzzle`, returning an optimal [`Mtm`] solution.
-    ///
-    /// [`Mtm`]: crate::algorithm::metric::Mtm
-    pub fn solve<P: SlidingPuzzle>(&self, puzzle: &P) -> Result<Algorithm, SolverError>
-    where
-        P::Piece: AsPrimitive<u8>,
-    {
-        self.solve_impl(puzzle, None)
-    }
-
-    /// See [`Solver::solve`].
-    ///
-    /// Runs `callback` after each iteration of the depth-first search.
-    pub fn solve_with_callback<P: SlidingPuzzle>(
-        &self,
-        puzzle: &P,
-        callback: &dyn Fn(SolverIterationStats),
-    ) -> Result<Algorithm, SolverError>
-    where
-        P::Piece: AsPrimitive<u8>,
-    {
-        self.solve_impl(puzzle, Some(callback))
+        Err(SolverError::NoSolutionFound)
     }
 
     /// Returns a reference to the data contained in the pattern database, in order to allow it to
     /// be written to disk.
     pub fn pdb_bytes(&self) -> &[u8] {
         self.pdb.as_ref()
+    }
+}
+
+impl SolverT<Puzzle, u8, RowGrids, (), Mtm> for Solver {
+    fn is_initialised(&self) -> bool {
+        true
+    }
+
+    fn init(&mut self) {}
+
+    fn solve_with_config(
+        &mut self,
+        puzzle: &Puzzle,
+        config: SolverConfig,
+    ) -> Result<Algorithm, SolverError> {
+        self.solve_impl(puzzle, config)
     }
 }

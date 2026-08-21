@@ -5,11 +5,11 @@ use std::cell::Cell;
 use num_traits::ToPrimitive as _;
 
 use crate::{
-    algorithm::{algorithm::Algorithm, direction::Direction},
-    puzzle::{size::Size, sliding_puzzle::SlidingPuzzle},
+    algorithm::{algorithm::Algorithm, direction::Direction, metric::Stm},
+    puzzle::{label::label::RowGrids, size::Size, sliding_puzzle::SlidingPuzzle},
     solver::{
-        size4x4::stm::{pattern::Pattern, pdb::Pdb, puzzle::Puzzle},
-        solver::SolverError,
+        size4x4::stm::{pattern::Pattern, pdb::Pdb, puzzle::Puzzle as Puzzle4},
+        solver::{Solver as SolverT, SolverConfig, SolverError},
         statistics::{PdbIterationStats, SolverIterationStats},
     },
 };
@@ -132,7 +132,7 @@ impl Solver {
     fn solve_impl<P: SlidingPuzzle>(
         &self,
         puzzle: &P,
-        callback: Option<&dyn Fn(SolverIterationStats)>,
+        config: SolverConfig,
     ) -> Result<Algorithm, SolverError> {
         if puzzle.size() != Size::new(4, 4).unwrap() {
             return Err(SolverError::IncompatiblePuzzleSize);
@@ -147,7 +147,7 @@ impl Solver {
             *piece = puzzle.piece_at(i as u64).to_u8().unwrap();
         }
 
-        let mut puzzle = Puzzle::from(pieces);
+        let mut puzzle = Puzzle4::from(pieces);
         let mut coords = [0; 4];
 
         coords[0] = puzzle.encode(self.pdb4.pattern()) as u32;
@@ -166,9 +166,16 @@ impl Solver {
             self.pdb3.pdb()[coords[3] as usize],
         ];
 
-        let mut depth = entries.iter().copied().sum::<u8>();
+        let start_heuristic = entries.iter().copied().sum::<u8>();
+        let min = if start_heuristic % 2 == config.min % 2 {
+            config.min
+        } else {
+            config.min + 1
+        };
 
-        loop {
+        let mut depth = start_heuristic.max(min);
+
+        while depth <= config.max {
             if self.dfs(depth, None, coords) {
                 let mut solution = Algorithm::new();
 
@@ -183,30 +190,33 @@ impl Solver {
                 return Ok(solution);
             }
 
-            if let Some(f) = callback {
+            if let Some(f) = config.callback {
                 f(SolverIterationStats { depth });
             }
 
             depth += 2;
         }
+
+        Err(SolverError::NoSolutionFound)
+    }
+}
+
+impl<P> SolverT<P, u8, RowGrids, (), Stm> for Solver
+where
+    P: SlidingPuzzle,
+{
+    fn is_initialised(&self) -> bool {
+        true
     }
 
-    /// Solves `puzzle`, returning an optimal [`Stm`] solution.
-    ///
-    /// [`Stm`]: crate::algorithm::metric::Stm
-    pub fn solve<P: SlidingPuzzle>(&self, puzzle: &P) -> Result<Algorithm, SolverError> {
-        self.solve_impl(puzzle, None)
-    }
+    fn init(&mut self) {}
 
-    /// See [`Solver::solve`].
-    ///
-    /// Runs `callback` after each iteration of the depth-first search.
-    pub fn solve_with_callback<P: SlidingPuzzle>(
-        &self,
+    fn solve_with_config(
+        &mut self,
         puzzle: &P,
-        callback: &dyn Fn(SolverIterationStats),
+        config: SolverConfig,
     ) -> Result<Algorithm, SolverError> {
-        self.solve_impl(puzzle, Some(callback))
+        self.solve_impl(puzzle, config)
     }
 }
 
@@ -214,12 +224,15 @@ impl Solver {
 mod tests {
     use std::str::FromStr as _;
 
-    use crate::{puzzle::puzzle::Puzzle, solver::size4x4::stm::solver::Solver};
+    use crate::{
+        puzzle::puzzle::Puzzle,
+        solver::{size4x4::stm::solver::Solver, solver::Solver as _},
+    };
 
     #[test]
     fn test_solver() {
         let puzzle = Puzzle::from_str("12 15 5 1/11 9 2 13/0 10 8 6/14 7 4 3").unwrap();
-        let solver = Solver::new();
+        let mut solver = Solver::new();
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_stm::<u64>(), 58);
     }

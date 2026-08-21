@@ -10,6 +10,8 @@ use thiserror::Error;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+use crate::algorithm::axis::Axis;
+
 /// The directions in which a piece can be moved.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -66,6 +68,15 @@ impl Direction {
             Self::Left => Self::Left,
             Self::Down => Self::Up,
             Self::Right => Self::Right,
+        }
+    }
+
+    /// Returns the [`Axis`] along which this [`Direction`] moves.
+    #[must_use]
+    pub fn axis(&self) -> Axis {
+        match self {
+            Self::Up | Self::Down => Axis::Vertical,
+            Self::Left | Self::Right => Axis::Horizontal,
         }
     }
 

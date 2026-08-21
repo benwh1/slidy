@@ -9,6 +9,9 @@ use serde::{Deserialize, Serialize};
 
 /// Defines a length function on [`Move`]s.
 pub trait Metric {
+    /// Whether the metric preserves move-count parity. `true` for [`Stm`], `false` for [`Mtm`].
+    const HAS_MOVECOUNT_PARITY: bool;
+
     /// The length of a [`Move`].
     fn len<T: PrimInt + 'static>(mv: Move) -> T
     where
@@ -26,6 +29,8 @@ pub struct Stm;
 pub struct Mtm;
 
 impl Metric for Stm {
+    const HAS_MOVECOUNT_PARITY: bool = true;
+
     fn len<T: PrimInt + 'static>(mv: Move) -> T
     where
         u64: AsPrimitive<T>,
@@ -35,6 +40,8 @@ impl Metric for Stm {
 }
 
 impl Metric for Mtm {
+    const HAS_MOVECOUNT_PARITY: bool = false;
+
     fn len<T: PrimInt + 'static>(_mv: Move) -> T
     where
         u64: AsPrimitive<T>,
