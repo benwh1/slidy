@@ -3,8 +3,9 @@
 use thiserror::Error;
 
 use crate::{
-    algorithm::algorithm::Algorithm, puzzle::sliding_puzzle::SlidingPuzzle,
-    solver::statistics::SolverIterationStats,
+    algorithm::algorithm::Algorithm,
+    puzzle::{sliding_puzzle::SlidingPuzzle, solved_state::SolvedState},
+    solver::{heuristic::Heuristic, statistics::SolverIterationStats},
 };
 
 /// Error type for solvers.
@@ -46,16 +47,12 @@ impl Default for SolverConfig {
 /// A unified interface for optimal puzzle solvers.
 ///
 /// Implementors solve a puzzle and return an optimal solution as an [`Algorithm`].
-pub trait Solver<M> {
-    /// The puzzle type this solver accepts.
-    type Puzzle: SlidingPuzzle;
-
-    /// The heuristic used by this solver to compute lower bounds.
-    type Heuristic;
-
-    /// The solved state definition used by this solver.
-    type SolvedState;
-
+pub trait Solver<P, T, S, H, M>
+where
+    P: SlidingPuzzle,
+    S: SolvedState,
+    H: Heuristic<P, T, S, M>,
+{
     /// Returns whether the solver has been initialised.
     fn is_initialised(&self) -> bool;
 
@@ -66,7 +63,7 @@ pub trait Solver<M> {
     /// Solves `puzzle` using default bounds.
     ///
     /// Automatically calls [`Solver::init`] if the solver has not been initialised yet.
-    fn solve(&mut self, puzzle: &Self::Puzzle) -> Result<Algorithm, SolverError> {
+    fn solve(&mut self, puzzle: &P) -> Result<Algorithm, SolverError> {
         if !self.is_initialised() {
             self.init();
         }
@@ -78,7 +75,7 @@ pub trait Solver<M> {
     /// Automatically calls [`Solver::init`] if the solver has not been initialised yet.
     fn solve_with_config(
         &mut self,
-        puzzle: &Self::Puzzle,
+        puzzle: &P,
         config: SolverConfig,
     ) -> Result<Algorithm, SolverError>;
 }

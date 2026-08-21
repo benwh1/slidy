@@ -91,23 +91,17 @@ impl<'a, P, S, H, M> GenericSolver<'a, P, S, H, M> {
     }
 }
 
-impl<'a, P, S, H> Solver<Stm> for GenericSolver<'a, P, S, H, Stm>
+impl<P, S, H> Solver<P, u8, S, H, Stm> for GenericSolver<'_, P, S, H, Stm>
 where
     P: SlidingPuzzle + Clone,
     S: SolvedState + Solvable,
     H: Heuristic<P, u8, S, Stm>,
 {
-    type Puzzle = P;
-    type Heuristic = H;
-    type SolvedState = S;
-
     fn is_initialised(&self) -> bool {
-        self.initialized
+        true
     }
 
-    fn init(&mut self) {
-        self.initialized = true;
-    }
+    fn init(&mut self) {}
 
     fn solve(&mut self, puzzle: &P) -> Result<Algorithm, SolverError> {
         let min = self.heuristic.bound(puzzle);
@@ -123,23 +117,16 @@ where
         puzzle: &P,
         config: SolverConfig,
     ) -> Result<Algorithm, SolverError> {
-        if !self.initialized {
-            self.init();
-        }
-        self.solve_impl(puzzle, config.min, config.max, config.callback)
+        self.solve_impl(puzzle, config)
     }
 }
 
-impl<'a, P, S, H> Solver<Mtm> for GenericSolver<'a, P, S, H, Mtm>
+impl<P, S, H> Solver<P, u8, S, H, Mtm> for GenericSolver<'_, P, S, H, Mtm>
 where
     P: SlidingPuzzle + Clone,
     S: SolvedState + Solvable,
     H: Heuristic<P, u8, S, Mtm>,
 {
-    type Puzzle = P;
-    type Heuristic = H;
-    type SolvedState = S;
-
     fn is_initialised(&self) -> bool {
         self.initialized
     }
@@ -169,7 +156,7 @@ where
     }
 }
 
-impl<'a, P, S, H> GenericSolver<'a, P, S, H, Stm>
+impl<P, S, H> GenericSolver<'_, P, S, H, Stm>
 where
     P: SlidingPuzzle + Clone,
     S: SolvedState + Solvable,
@@ -208,40 +195,34 @@ where
         false
     }
 
-    fn solve_impl(
-        &mut self,
-        puzzle: &P,
-        min: u8,
-        max: u8,
-        iteration_callback: Option<&dyn Fn(SolverIterationStats)>,
-    ) -> Result<Algorithm, SolverError> {
+    fn solve_impl(&mut self, puzzle: &P, config: SolverConfig) -> Result<Algorithm, SolverError> {
         if !self.solved_state.is_solvable(puzzle) {
             return Err(SolverError::Unsolvable);
         }
 
         self.stack.clear();
         let mut puzzle = puzzle.clone();
-        let mut depth = min;
-        loop {
+        let mut depth = config.min;
+
+        while depth <= config.max {
             if self.dfs(&mut puzzle, depth, None) {
                 let mut solution: Algorithm = (&self.stack).into();
                 solution.simplify();
                 return Ok(solution);
             }
 
-            if let Some(f) = iteration_callback {
+            if let Some(f) = config.callback {
                 f(SolverIterationStats { depth });
             }
 
-            depth = depth
-                .checked_add(2)
-                .filter(|&d| d <= max)
-                .ok_or(SolverError::NoSolutionFound)?;
+            depth += 2;
         }
+
+        Err(SolverError::NoSolutionFound)
     }
 }
 
-impl<'a, P, S, H> GenericSolver<'a, P, S, H, Mtm>
+impl<P, S, H> GenericSolver<'_, P, S, H, Mtm>
 where
     P: SlidingPuzzle + Clone,
     S: SolvedState + Solvable,
@@ -387,10 +368,8 @@ mod tests {
     fn test_solve_trait_auto_init() {
         let mut solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
             GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
-        assert!(!solver.is_initialised());
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let solution = Solver::solve(&mut solver, &puzzle).unwrap();
-        assert!(solver.is_initialised());
         assert_eq!(solution.len_stm::<u64>(), 31);
     }
 
