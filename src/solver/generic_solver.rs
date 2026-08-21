@@ -202,7 +202,15 @@ where
 
         self.stack.clear();
         let mut puzzle = puzzle.clone();
-        let mut depth = config.min;
+
+        let start_heuristic = self.heuristic.bound(&puzzle);
+        let min = if start_heuristic % 2 == config.min % 2 {
+            config.min
+        } else {
+            config.min + 1
+        };
+
+        let mut depth = start_heuristic.max(min);
 
         while depth <= config.max {
             if self.dfs(&mut puzzle, depth, None) {
@@ -278,6 +286,7 @@ where
         self.stack.clear();
         let mut puzzle = puzzle.clone();
         let mut depth = min;
+
         loop {
             if self.dfs(&mut puzzle, depth, None) {
                 let mut solution: Algorithm = (&self.stack).into();
@@ -365,7 +374,7 @@ mod tests {
     }
 
     #[test]
-    fn test_solve_trait_auto_init() {
+    fn test_solve() {
         let mut solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
             GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
@@ -374,7 +383,7 @@ mod tests {
     }
 
     #[test]
-    fn test_solve_trait_with_config() {
+    fn test_solve_with_config() {
         let mut solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
             GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
@@ -388,7 +397,7 @@ mod tests {
     }
 
     #[test]
-    fn test_solve_trait_bounds_too_low() {
+    fn test_solve_with_config_2() {
         let mut solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
             GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
@@ -399,5 +408,33 @@ mod tests {
         };
         let result = Solver::solve_with_config(&mut solver, &puzzle, config);
         assert_eq!(result, Err(SolverError::NoSolutionFound));
+    }
+
+    #[test]
+    fn test_solve_with_config_3() {
+        let mut solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
+            GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
+        let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
+        let config = SolverConfig {
+            min: 20,
+            max: 40,
+            callback: None,
+        };
+        let solution = Solver::solve_with_config(&mut solver, &puzzle, config).unwrap();
+        assert_eq!(solution.len_stm::<u64>(), 31);
+    }
+
+    #[test]
+    fn test_solve_with_config_4() {
+        let mut solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
+            GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
+        let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
+        let config = SolverConfig {
+            min: 33,
+            max: 33,
+            callback: None,
+        };
+        let solution = Solver::solve_with_config(&mut solver, &puzzle, config).unwrap();
+        assert_eq!(solution.len_stm::<u64>(), 33);
     }
 }
