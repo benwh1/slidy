@@ -4,6 +4,8 @@ use std::{fmt::Display, ops::Deref};
 
 use num_traits::Zero as _;
 use palette::rgb::Rgba;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use svg::{
     node::{
         element::{Group, Rectangle, Style, Text as TextElement},
@@ -18,9 +20,6 @@ use crate::puzzle::{
     size::Size,
     sliding_puzzle::SlidingPuzzle,
 };
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 /// Error type for [`Renderer`].
 #[derive(Clone, Debug, Error, PartialEq, Eq)]

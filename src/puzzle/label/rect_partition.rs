@@ -2,12 +2,11 @@
 
 use std::{collections::BTreeMap, ops::Range};
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::puzzle::{label::label::Label, size::Size};
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 /// Error type for [`Rect`].
 #[derive(Clone, Debug, Error, PartialEq, Eq)]

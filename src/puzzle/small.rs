@@ -193,18 +193,18 @@ macro_rules! impl_puzzle {
                 }
             }
 
-            /// Creates a new [`Puzzle`] with the given `pieces` and `gap`, without checking that the
-            /// puzzle state is valid or that `gap` matches the given state.
+            /// Creates a new [`Puzzle`] with the given `pieces` and `gap`, without checking that
+            /// the puzzle state is valid or that `gap` matches the given state.
             ///
             /// # Safety
             ///
-            /// The lower `W * H` nibbles of `pieces` must contain the values 0 to `W * H - 1`, exactly
-            /// once each.
+            /// The lower `W * H` nibbles of `pieces` must contain the values 0 to `W * H - 1`,
+            /// exactly once each.
             /// `gap` must be less than `W * H`, and `(pieces >> (gap * 4)) & 0xF` must be 0.
             ///
             /// This function is unsafe because, although it doesn't cause immediate UB if used
-            /// incorrectly, can break the type's invariant, which could lead to UB in otherwise-correct
-            /// unsafe code elsewhere.
+            /// incorrectly, can break the type's invariant, which could lead to UB in
+            /// otherwise-correct unsafe code elsewhere.
             unsafe fn with_pieces_and_gap_unchecked(pieces: u64, gap: u8) -> Self {
                 debug_assert!(gap < Self::N as u8);
                 debug_assert_eq!((pieces >> (gap * 4)) & 0xF, 0);
@@ -437,9 +437,8 @@ impl_puzzle!(8, 2);
 mod tests {
     use std::str::FromStr as _;
 
-    use crate::puzzle::puzzle::Puzzle;
-
     use super::*;
+    use crate::puzzle::puzzle::Puzzle;
 
     #[test]
     fn test_conjugate_with_transpose() {

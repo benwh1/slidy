@@ -157,9 +157,8 @@ always_solvable_except_trivial_size!(
 mod tests {
     use std::str::FromStr as _;
 
-    use crate::puzzle::puzzle::Puzzle;
-
     use super::*;
+    use crate::puzzle::puzzle::Puzzle;
 
     fn test<S: Solvable + Default>(solvable: &[&str], unsolvable: &[&str]) {
         for s in solvable {

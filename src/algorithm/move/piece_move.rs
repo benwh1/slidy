@@ -1,6 +1,8 @@
 //! Defines the [`PieceMove`] type.
 
 use num_traits::PrimInt;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
@@ -11,9 +13,6 @@ use crate::{
     },
     puzzle::sliding_puzzle::SlidingPuzzle,
 };
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 /// Represents a move of the piece with the given number.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

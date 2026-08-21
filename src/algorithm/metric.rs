@@ -1,11 +1,10 @@
 //! Defines the [`Metric`] trait and the [`Stm`] and [`Mtm`] metrics.
 
 use num_traits::{AsPrimitive, PrimInt};
-
-use crate::algorithm::r#move::r#move::Move;
-
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+
+use crate::algorithm::r#move::r#move::Move;
 
 /// Defines a length function on [`Move`]s.
 pub trait Metric {

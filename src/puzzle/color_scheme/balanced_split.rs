@@ -2,6 +2,8 @@
 //! until reaching a minimum size.
 
 use palette::rgb::Rgba;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 use crate::puzzle::{
     color_scheme::{
@@ -13,9 +15,6 @@ use crate::puzzle::{
     label::rect_partition::Rect,
     size::Size,
 };
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 /// Ways of splitting the puzzle.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -291,9 +290,8 @@ impl<S: ColorScheme, C: Coloring> Grids for Layer<&BalancedSplitScheme<S, C>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::puzzle::{color_scheme::Scheme, coloring::ColorList, label::label::Rows};
-
     use super::*;
+    use crate::puzzle::{color_scheme::Scheme, coloring::ColorList, label::label::Rows};
 
     fn scheme(splitting: Splitting) -> BalancedSplitScheme<Scheme<Rows, ColorList>, ColorList> {
         let small_colors = (0..16)

@@ -1,6 +1,8 @@
 //! Defines the [`GridTiled`] color scheme.
 
 use palette::rgb::Rgba;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 use crate::puzzle::{
     color_scheme::ColorScheme,
@@ -8,9 +10,6 @@ use crate::puzzle::{
     label::{grid::Grid, rect_partition::Rect},
     size::Size,
 };
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 /// A [`ColorScheme`] tiled across the puzzle in the pattern specified by a [`Grid`].
 #[derive(Clone, Debug, PartialEq, Eq)]

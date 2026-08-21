@@ -7,10 +7,9 @@ use enterpolation::{
     Curve, Identity, Sorted,
 };
 use palette::{rgb::Rgba, FromColor, Hsl, Hsla, IntoColor as _, LinSrgba};
-use thiserror::Error;
-
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 /// Provides a function mapping labels to colors.
 ///

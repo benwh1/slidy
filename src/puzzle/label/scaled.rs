@@ -1,5 +1,7 @@
 //! Defines the [`Scaled`] label modifier.
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::puzzle::{
@@ -7,9 +9,6 @@ use crate::puzzle::{
     label::{label::Label, rect_partition::Rect},
     size::Size,
 };
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 /// Scales a [`Label`] up by a horizontal factor and a vertical factor.
 ///
@@ -122,9 +121,8 @@ impl<L: Label + Grids> Grids for Scaled<L> {
 
 #[cfg(test)]
 mod tests {
-    use crate::puzzle::label::label::RowGrids;
-
     use super::*;
+    use crate::puzzle::label::label::RowGrids;
 
     #[test]
     fn test_new() {

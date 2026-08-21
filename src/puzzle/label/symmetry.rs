@@ -1,12 +1,12 @@
 //! Defines the 8 symmetries of a square as label modifiers.
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 use crate::puzzle::{
     label::label::{BijectiveLabel, Label},
     size::Size,
 };
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 macro_rules! define_sym {
     ($($(#[$annot:meta])* $name:ident),* $(,)?) => {

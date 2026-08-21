@@ -10,6 +10,8 @@ use std::{
 
 use itertools::Itertools as _;
 use num_traits::{AsPrimitive, PrimInt};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
@@ -26,9 +28,6 @@ use crate::{
     },
     puzzle::sliding_puzzle::SlidingPuzzle,
 };
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 /// Error type for [`Algorithm::try_slice`].
 #[derive(Clone, Debug, Error, PartialEq, Eq)]

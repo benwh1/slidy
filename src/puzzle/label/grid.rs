@@ -1,13 +1,13 @@
 //! Defines the [`Grid`] label.
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 use crate::puzzle::{
     grids::Grids,
     label::{label::Label, rect_partition::Rect},
     size::Size,
 };
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 /// A [`Label`] that divides the puzzle into a grid of rectangles at the given `x` and `y`
 /// coordinates.

@@ -1,14 +1,13 @@
 //! Defines the [`Scrambler`] trait and several implementations.
 
 use rand::Rng;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 use crate::{
     algorithm::{direction::Direction, r#move::r#move::Move},
     puzzle::{size::Size, sliding_puzzle::SlidingPuzzle},
 };
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 /// Trait defining a scrambling algorithm.
 pub trait Scrambler {
@@ -208,9 +207,8 @@ impl Scrambler for Cycle {
 
 #[cfg(test)]
 mod tests {
-    use crate::puzzle::puzzle::Puzzle;
-
     use super::*;
+    use crate::puzzle::puzzle::Puzzle;
 
     mod random_invertible_state {
         use rand::SeedableRng as _;
@@ -241,9 +239,8 @@ mod tests {
         use rand::SeedableRng as _;
         use rand_xoshiro::Xoroshiro128StarStar;
 
-        use crate::puzzle::{label::label::RowGrids, solvable::Solvable as _};
-
         use super::*;
+        use crate::puzzle::{label::label::RowGrids, solvable::Solvable as _};
 
         const SEED: [u8; 16] = [
             160, 108, 126, 255, 147, 210, 122, 252, 71, 77, 144, 13, 167, 11, 225, 93,
@@ -273,9 +270,8 @@ mod benchmarks {
     use rand_xoshiro::Xoroshiro128StarStar;
     use test::Bencher;
 
-    use crate::puzzle::puzzle::Puzzle;
-
     use super::*;
+    use crate::puzzle::puzzle::Puzzle;
 
     #[bench]
     fn bench_random_state(b: &mut Bencher) {

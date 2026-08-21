@@ -2,12 +2,11 @@
 
 use std::cmp::Ordering;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::puzzle::{grids::Grids, label::rect_partition::Rect, size::Size};
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 /// Error type for [`Label`].
 #[derive(Clone, Debug, Error, PartialEq, Eq)]

@@ -1,14 +1,14 @@
 //! Defines the [`Direction`] type.
 
-use rand::distr::{Distribution, StandardUniform};
 use std::{
     fmt::{Display, Write as _},
     str::FromStr,
 };
-use thiserror::Error;
 
+use rand::distr::{Distribution, StandardUniform};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use crate::algorithm::axis::Axis;
 

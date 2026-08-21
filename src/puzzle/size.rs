@@ -9,10 +9,9 @@ use std::{
 };
 
 use num_traits::AsPrimitive as _;
-use thiserror::Error;
-
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 /// The size of a [`SlidingPuzzle`].
 ///

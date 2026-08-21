@@ -2,15 +2,14 @@
 //! "layers" of color schemes.
 
 use palette::rgb::Rgba;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::puzzle::{
     color_scheme::{ColorScheme, ColorSchemeError, FixedSizeColorScheme},
     size::Size,
 };
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 /// Error type for [`MultiLayerColorScheme`].
 #[derive(Clone, Debug, Error, PartialEq, Eq)]

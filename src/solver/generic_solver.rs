@@ -310,12 +310,11 @@ where
 mod tests {
     use std::str::FromStr as _;
 
+    use super::*;
     use crate::{
         algorithm::metric::{Mtm, Stm},
         puzzle::{label::label::Rows, puzzle::Puzzle},
     };
-
-    use super::*;
 
     #[test]
     fn test_row_grids_manhattan_stm() {

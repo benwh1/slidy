@@ -4,15 +4,14 @@
 use std::marker::PhantomData;
 
 use palette::rgb::Rgba;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::puzzle::{
     color_scheme::{multi_layer::MultiLayerColorScheme, ColorScheme},
     size::Size,
 };
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 /// A list of [`ColorScheme`]s, which can be used as a [`MultiLayerColorScheme`].
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

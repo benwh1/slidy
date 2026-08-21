@@ -253,9 +253,8 @@ impl Display for AlgorithmSlice<'_> {
 mod tests {
     use std::str::FromStr as _;
 
-    use crate::algorithm::as_slice::AsAlgorithmSlice as _;
-
     use super::*;
+    use crate::algorithm::as_slice::AsAlgorithmSlice as _;
 
     #[test]
     fn test_len() -> Result<(), Box<dyn std::error::Error>> {

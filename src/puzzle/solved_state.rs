@@ -3,8 +3,9 @@
 //!
 //! [`slidy::label::label`]: ../label/label/index.html
 
-use crate::puzzle::{label::label::Label, sliding_puzzle::SlidingPuzzle};
 use itertools::Itertools as _;
+
+use crate::puzzle::{label::label::Label, sliding_puzzle::SlidingPuzzle};
 
 /// Defines a solved state.
 pub trait SolvedState {
@@ -45,8 +46,9 @@ impl<L: Label> SolvedState for L {
 
 #[cfg(test)]
 mod tests {
-    use crate::puzzle::puzzle::Puzzle;
     use std::str::FromStr as _;
+
+    use crate::puzzle::puzzle::Puzzle;
 
     macro_rules! test_solved_state {
         (fn $name:ident, $i:literal, $label:expr, $ok:literal : $pos:literal) => {

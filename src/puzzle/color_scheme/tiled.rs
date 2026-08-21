@@ -1,13 +1,12 @@
 //! Defines the [`Tiled`] color scheme.
 
 use palette::rgb::Rgba;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 use crate::puzzle::{
     color_scheme::ColorScheme, grids::Grids, label::rect_partition::Rect, size::Size,
 };
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 /// A [`ColorScheme`] applied to a fixed-size rectangle, and then tiled across the puzzle.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -187,9 +186,8 @@ impl<S: ColorScheme> Grids for RecursiveTiled<S> {
 
 #[cfg(test)]
 mod tests {
-    use crate::puzzle::{color_scheme::Scheme, coloring::Rainbow, label::label::RowGrids};
-
     use super::*;
+    use crate::puzzle::{color_scheme::Scheme, coloring::Rainbow, label::label::RowGrids};
 
     #[test]
     fn test_grid_size() {

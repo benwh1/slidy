@@ -116,9 +116,8 @@ mod benchmarks {
 
     use test::Bencher;
 
-    use crate::algorithm::{algorithm::Algorithm, display::r#move::DisplayShort};
-
     use super::*;
+    use crate::algorithm::{algorithm::Algorithm, display::r#move::DisplayShort};
 
     #[bench]
     fn bench_display_spaced_display_short(b: &mut Bencher) {

@@ -7,6 +7,8 @@ pub mod scheme_list;
 pub mod tiled;
 
 use palette::rgb::Rgba;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::puzzle::{
@@ -15,9 +17,6 @@ use crate::puzzle::{
     label::{label::Label, rect_partition::Rect},
     size::Size,
 };
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 /// Error type for [`ColorScheme`].
 #[derive(Clone, Debug, Error, PartialEq, Eq)]

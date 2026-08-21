@@ -1,7 +1,10 @@
 //! Defines an implementation of the [`SlidingPuzzle`] trait.
 
-use num_traits::AsPrimitive;
 use std::{fmt::Display, str::FromStr};
+
+use num_traits::AsPrimitive;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::puzzle::{
@@ -10,9 +13,6 @@ use crate::puzzle::{
     size::{Size, SizeError},
     sliding_puzzle::SlidingPuzzle,
 };
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 /// A sliding puzzle, with an implementation of the [`SlidingPuzzle`] trait.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -441,6 +441,7 @@ mod tests {
     }
 
     mod sliding_puzzle {
+        use super::*;
         use crate::{
             algorithm::{algorithm::Algorithm, direction::Direction, r#move::r#move::Move},
             puzzle::{
@@ -448,8 +449,6 @@ mod tests {
                 scrambler::{RandomInvertibleState, Scrambler as _},
             },
         };
-
-        use super::*;
 
         #[test]
         fn test_piece_position() {
@@ -905,12 +904,11 @@ mod benchmarks {
     use rand_xoshiro::Xoroshiro128StarStar;
     use test::{black_box, Bencher};
 
+    use super::*;
     use crate::{
         algorithm::algorithm::Algorithm,
         puzzle::scrambler::{RandomState, Scrambler},
     };
-
-    use super::*;
 
     #[bench]
     fn bench_reset(b: &mut Bencher) {

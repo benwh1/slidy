@@ -2,6 +2,8 @@
 
 use std::cmp::Ordering;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
@@ -11,9 +13,6 @@ use crate::{
     },
     puzzle::sliding_puzzle::SlidingPuzzle,
 };
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 /// Represents a move of the piece in the given position.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

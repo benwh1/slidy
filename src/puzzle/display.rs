@@ -1,7 +1,8 @@
 //! Defines ways in which implementations of [`SlidingPuzzle`] can be displayed.
 
-use crate::puzzle::sliding_puzzle::SlidingPuzzle;
 use std::fmt::{Display, Write as _};
+
+use crate::puzzle::sliding_puzzle::SlidingPuzzle;
 
 macro_rules! define_display {
     ($($(#[$annot:meta])* $name:ident),* $(,)?) => {
@@ -121,9 +122,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::puzzle::{puzzle::Puzzle, size::Size};
-
     use super::*;
+    use crate::puzzle::{puzzle::Puzzle, size::Size};
 
     #[test]
     fn test_display_grid() {
@@ -152,9 +152,8 @@ mod benchmarks {
 
     use test::Bencher;
 
-    use crate::puzzle::puzzle::Puzzle;
-
     use super::*;
+    use crate::puzzle::puzzle::Puzzle;
 
     #[bench]
     fn bench_display_inline(b: &mut Bencher) {

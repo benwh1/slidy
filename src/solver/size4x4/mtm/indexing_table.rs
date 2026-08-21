@@ -122,9 +122,8 @@ impl IndexingTable {
 #[cfg(test)]
 mod tests {
 
-    use crate::solver::size4x4::mtm::consts::SIZE;
-
     use super::*;
+    use crate::solver::size4x4::mtm::consts::SIZE;
 
     #[test]
     fn test_indexing_table() {

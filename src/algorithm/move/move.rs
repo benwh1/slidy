@@ -2,6 +2,8 @@
 
 use std::{cmp::Ordering, fmt::Display, num::ParseIntError, ops::Add, str::FromStr};
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::algorithm::{
@@ -10,9 +12,6 @@ use crate::algorithm::{
     display::r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort, MoveDisplay as _},
     slice::AlgorithmSlice,
 };
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 /// A (possibly multi-tile) move of a puzzle. Contains a direction and an amount.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]

@@ -219,8 +219,8 @@ where
         if Self::HAS_PARITY_CONSTRAINT {
             md.as_()
         } else {
-            // Make sure the parity is correct (some positions will give an even bound for a position
-            // that takes an odd number of moves, etc.)
+            // Make sure the parity is correct (some positions will give an even bound for a
+            // position that takes an odd number of moves, etc.)
             let (x, y) = puzzle.gap_position_xy();
             let (sx, sy) = puzzle.solved_pos_xy(P::Piece::zero());
 
