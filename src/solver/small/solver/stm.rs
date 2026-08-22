@@ -130,11 +130,16 @@ where
         self.solution_ptr.set(0);
 
         let coord = indexing::encode(puzzle.piece_array());
-        let mut depth = self.pdb.get(coord as usize);
+        let start_heuristic = self.pdb.get(coord as usize);
+        let min = if start_heuristic % 2 == config.min % 2 {
+            config.min
+        } else {
+            config.min + 1
+        };
 
-        // TODO: use config.min/max
+        let mut depth = start_heuristic.max(min);
 
-        loop {
+        while depth <= config.max {
             if self.dfs(depth, None, puzzle) {
                 let mut solution = Algorithm::new();
 
@@ -152,8 +157,13 @@ where
                 f(SolverIterationStats { depth });
             }
 
-            depth += 2;
+            depth = match depth.checked_add(2) {
+                Some(d) => d,
+                None => break,
+            };
         }
+
+        Err(SolverError::NoSolutionFound)
     }
 }
 

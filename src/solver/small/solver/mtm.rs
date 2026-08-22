@@ -130,11 +130,9 @@ where
         self.solution_ptr.set(0);
 
         let coord = indexing::encode(puzzle.piece_array());
-        let mut depth = self.pdb.get(coord as usize);
+        let mut depth = self.pdb.get(coord as usize).max(config.min);
 
-        // TODO: use config.min/max
-
-        loop {
+        while depth <= config.max {
             if self.dfs(depth, None, puzzle) {
                 let mut solution = Algorithm::new();
 
@@ -152,8 +150,13 @@ where
                 f(SolverIterationStats { depth });
             }
 
-            depth += 1;
+            depth = match depth.checked_add(1) {
+                Some(d) => d,
+                None => break,
+            };
         }
+
+        Err(SolverError::NoSolutionFound)
     }
 }
 
