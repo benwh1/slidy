@@ -60,19 +60,12 @@ where
     /// expensive operations.
     fn init(&mut self);
 
-    /// Solves `puzzle` using default bounds.
-    ///
-    /// Automatically calls [`Solver::init`] if the solver has not been initialised yet.
+    /// Solves `puzzle` using default config.
     fn solve(&mut self, puzzle: &P) -> Result<Algorithm, SolverError> {
-        if !self.is_initialised() {
-            self.init();
-        }
         self.solve_with_config(puzzle, &SolverConfig::default())
     }
 
     /// Solves `puzzle` using the given [`SolverConfig`].
-    ///
-    /// Automatically calls [`Solver::init`] if the solver has not been initialised yet.
     fn solve_with_config(
         &mut self,
         puzzle: &P,
