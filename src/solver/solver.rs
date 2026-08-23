@@ -30,8 +30,8 @@ pub struct SolverConfig {
     pub min: u8,
     /// The maximum depth to search to (inclusive).
     pub max: u8,
-    /// An optional callback to be called after each iteration of the depth-first search.
-    pub callback: Option<&'static dyn Fn(SolverIterationStats)>,
+    /// A callback that runs after each iteration of the depth-first search.
+    pub end_of_iter_callback: Option<&'static dyn Fn(SolverIterationStats)>,
 }
 
 impl Default for SolverConfig {
@@ -39,7 +39,7 @@ impl Default for SolverConfig {
         Self {
             min: 0,
             max: u8::MAX,
-            callback: None,
+            end_of_iter_callback: None,
         }
     }
 }

@@ -219,7 +219,7 @@ where
                 return Ok(solution);
             }
 
-            if let Some(f) = config.callback {
+            if let Some(f) = config.end_of_iter_callback {
                 f(SolverIterationStats { depth });
             }
 
@@ -291,7 +291,7 @@ where
                 return Ok(solution);
             }
 
-            if let Some(f) = config.callback {
+            if let Some(f) = config.end_of_iter_callback {
                 f(SolverIterationStats { depth });
             }
 
@@ -350,7 +350,7 @@ mod tests {
         let config = SolverConfig {
             min: 0,
             max: 5,
-            callback: None,
+            end_of_iter_callback: None,
         };
         let result = solver.solve_with_config(&puzzle, &config);
         assert_eq!(result, Err(SolverError::NoSolutionFound));
@@ -364,7 +364,7 @@ mod tests {
         let config = SolverConfig {
             min: 31,
             max: 31,
-            callback: None,
+            end_of_iter_callback: None,
         };
         let result = solver.solve_with_config(&puzzle, &config);
         let solution = result.unwrap();
@@ -388,7 +388,7 @@ mod tests {
         let config = SolverConfig {
             min: 31,
             max: 31,
-            callback: None,
+            end_of_iter_callback: None,
         };
         let solution = Solver::solve_with_config(&mut solver, &puzzle, &config).unwrap();
         assert_eq!(solution.len_stm::<u64>(), 31);
@@ -402,7 +402,7 @@ mod tests {
         let config = SolverConfig {
             min: 0,
             max: 5,
-            callback: None,
+            end_of_iter_callback: None,
         };
         let result = Solver::solve_with_config(&mut solver, &puzzle, &config);
         assert_eq!(result, Err(SolverError::NoSolutionFound));
@@ -416,7 +416,7 @@ mod tests {
         let config = SolverConfig {
             min: 20,
             max: 40,
-            callback: None,
+            end_of_iter_callback: None,
         };
         let solution = Solver::solve_with_config(&mut solver, &puzzle, &config).unwrap();
         assert_eq!(solution.len_stm::<u64>(), 31);
@@ -430,7 +430,7 @@ mod tests {
         let config = SolverConfig {
             min: 33,
             max: 33,
-            callback: None,
+            end_of_iter_callback: None,
         };
         let solution = Solver::solve_with_config(&mut solver, &puzzle, &config).unwrap();
         assert_eq!(solution.len_stm::<u64>(), 33);
@@ -444,7 +444,7 @@ mod tests {
         let config = SolverConfig {
             min: 0,
             max: u8::MAX,
-            callback: None,
+            end_of_iter_callback: None,
         };
         let solution = Solver::solve_with_config(&mut solver, &puzzle, &config).unwrap();
         assert_eq!(solution.len_mtm::<u64>(), 21);

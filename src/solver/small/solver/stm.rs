@@ -153,7 +153,7 @@ where
                 return Ok(solution);
             }
 
-            if let Some(f) = config.callback {
+            if let Some(f) = config.end_of_iter_callback {
                 f(SolverIterationStats { depth });
             }
 
