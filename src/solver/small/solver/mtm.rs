@@ -1,4 +1,7 @@
-use std::{cell::Cell, marker::PhantomData};
+use std::{
+    cell::{Cell, RefCell},
+    marker::PhantomData,
+};
 
 use num_traits::AsPrimitive;
 
@@ -45,7 +48,7 @@ where
             pdb,
             stack: Stack::default(),
             solutions_found: Cell::new(0),
-            config: None,
+            config: RefCell::new(None),
             phantom_metric_tag: PhantomData,
         }
     }
@@ -62,16 +65,12 @@ where
         }
 
         if depth == 0 {
-            if let Some(f) = self
-                .config
-                .as_ref()
-                .and_then(|c| c.solution_callback.as_ref())
-            {
+            if let Some(f) = &self.cfg().solution_callback {
                 self.solutions_found.update(|n| n + 1);
                 f(self.stack.to_alg())
             }
 
-            return self.config.as_ref().unwrap().num_solutions == self.solutions_found.get();
+            return self.cfg().num_solutions == self.solutions_found.get();
         }
 
         let original_puzzle = puzzle;
@@ -106,7 +105,7 @@ where
         false
     }
 
-    fn solve_impl<P>(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>
+    fn solve_impl<P>(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>
     where
         P: SlidingPuzzle,
         P::Piece: AsPrimitive<u8>,
@@ -145,7 +144,7 @@ where
     }
 
     fn solve_small_puzzle_impl(
-        &mut self,
+        &self,
         puzzle: Puzzle<W, H>,
         config: SolverConfig,
     ) -> Result<(), SolverError> {
@@ -153,21 +152,22 @@ where
             return Err(SolverError::Unsolvable);
         }
 
+        let min = config.min;
+        let max = config.max;
+
         // Reset state
         self.stack.clear();
-        self.config = Some(config);
-
-        let config = self.config.as_ref().unwrap();
+        *self.config.borrow_mut() = Some(config);
 
         let coord = indexing::encode(puzzle.piece_array());
-        let mut depth = self.pdb.get(coord as usize).max(config.min);
+        let mut depth = self.pdb.get(coord as usize).max(min);
 
-        while depth <= config.max {
+        while depth <= max {
             if self.dfs(depth, None, puzzle) {
                 return Ok(());
             }
 
-            if let Some(f) = &config.end_of_iter_callback {
+            if let Some(f) = &self.cfg().end_of_iter_callback {
                 f(SolverIterationStats { depth });
             }
 
@@ -195,7 +195,7 @@ where
 
     fn init(&mut self) {}
 
-    fn solve_with_config(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
+    fn solve_with_config(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
         self.solve_impl(puzzle, config)
     }
 }

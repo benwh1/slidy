@@ -69,16 +69,12 @@ where
     fn init(&mut self);
 
     /// Solves `puzzle` using default config.
-    fn solve(&mut self, puzzle: &P) -> Result<Algorithm, SolverError> {
+    fn solve(&self, puzzle: &P) -> Result<Algorithm, SolverError> {
         self.solve_many(puzzle, 1).map(|mut v| v.pop().unwrap())
     }
 
     /// Solves `puzzle` using default config, returning `n` solutions.
-    fn solve_many(
-        &mut self,
-        puzzle: &P,
-        num_solutions: u64,
-    ) -> Result<Vec<Algorithm>, SolverError> {
+    fn solve_many(&self, puzzle: &P, num_solutions: u64) -> Result<Vec<Algorithm>, SolverError> {
         if num_solutions == 0 {
             return Ok(Vec::new());
         }
@@ -99,5 +95,5 @@ where
     }
 
     /// Solves `puzzle` using the given [`SolverConfig`].
-    fn solve_with_config(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>;
+    fn solve_with_config(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>;
 }

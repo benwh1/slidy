@@ -1,4 +1,7 @@
-use std::{cell::Cell, marker::PhantomData};
+use std::{
+    cell::{Cell, RefCell},
+    marker::PhantomData,
+};
 
 use num_traits::AsPrimitive;
 
@@ -45,7 +48,7 @@ where
             pdb,
             stack: Stack::default(),
             solutions_found: Cell::new(0),
-            config: None,
+            config: RefCell::new(None),
             phantom_metric_tag: PhantomData,
         }
     }
@@ -67,16 +70,12 @@ where
         }
 
         if depth == 0 {
-            if let Some(f) = self
-                .config
-                .as_ref()
-                .and_then(|c| c.solution_callback.as_ref())
-            {
+            if let Some(f) = &self.cfg().solution_callback {
                 self.solutions_found.update(|n| n + 1);
                 f(self.stack.to_alg())
             }
 
-            return self.config.as_ref().unwrap().num_solutions == self.solutions_found.get();
+            return self.cfg().num_solutions == self.solutions_found.get();
         }
 
         let original_puzzle = puzzle;
@@ -107,7 +106,7 @@ where
         false
     }
 
-    fn solve_impl<P>(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>
+    fn solve_impl<P>(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>
     where
         P: SlidingPuzzle,
         P::Piece: AsPrimitive<u8>,
@@ -146,7 +145,7 @@ where
     }
 
     fn solve_small_puzzle_impl(
-        &mut self,
+        &self,
         puzzle: Puzzle<W, H>,
         config: SolverConfig,
     ) -> Result<(), SolverError> {
@@ -154,28 +153,29 @@ where
             return Err(SolverError::Unsolvable);
         }
 
+        let min = config.min;
+        let max = config.max;
+
         // Reset state
         self.stack.clear();
-        self.config = Some(config);
-
-        let config = self.config.as_ref().unwrap();
+        *self.config.borrow_mut() = Some(config);
 
         let coord = indexing::encode(puzzle.piece_array());
         let start_heuristic = self.pdb.get(coord as usize);
-        let min = if start_heuristic % 2 == config.min % 2 {
-            config.min
+        let min = if start_heuristic % 2 == min % 2 {
+            min
         } else {
-            config.min + 1
+            min + 1
         };
 
         let mut depth = start_heuristic.max(min);
 
-        while depth <= config.max {
+        while depth <= max {
             if self.dfs(depth, None, puzzle) {
                 return Ok(());
             }
 
-            if let Some(f) = &config.end_of_iter_callback {
+            if let Some(f) = &self.cfg().end_of_iter_callback {
                 f(SolverIterationStats { depth });
             }
 
@@ -203,7 +203,7 @@ where
 
     fn init(&mut self) {}
 
-    fn solve_with_config(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
+    fn solve_with_config(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
         self.solve_impl(puzzle, config)
     }
 }
@@ -219,7 +219,7 @@ mod tests {
 
     #[test]
     fn test_solver() {
-        let mut solver = Solver3x3Stm::new();
+        let solver = Solver3x3Stm::new();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_stm::<u64>(), 25);
@@ -227,7 +227,7 @@ mod tests {
 
     #[test]
     fn test_solver_2() {
-        let mut solver = Solver4x2Stm::new();
+        let solver = Solver4x2Stm::new();
         let mut puzzle = Puzzle::from_str("4 6/2 5/0 1/7 3").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         puzzle.apply_alg(&solution);

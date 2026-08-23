@@ -1,6 +1,6 @@
 //! Defines the [`Solver`] struct for optimally solving 4x4 puzzles using pattern databases.
 
-use std::cell::Cell;
+use std::cell::{Cell, Ref, RefCell};
 
 use num_traits::AsPrimitive;
 
@@ -32,7 +32,7 @@ pub struct Solver {
     stack: Stack<128>,
     puzzle: Cell<FourBitPuzzle>,
     solutions_found: Cell<u64>,
-    config: Option<SolverConfig>,
+    config: RefCell<Option<SolverConfig>>,
 }
 
 impl Default for Solver {
@@ -54,7 +54,7 @@ impl Solver {
             stack: Stack::default(),
             puzzle: Cell::new(FourBitPuzzle::new()),
             solutions_found: Cell::new(0),
-            config: None,
+            config: RefCell::new(None),
         }
     }
 
@@ -128,6 +128,11 @@ impl Solver {
         Self::with_tables_and_pdb(indexing_table, base_5_table, pdb)
     }
 
+    fn cfg(&self) -> Ref<'_, SolverConfig> {
+        let borrow = self.config.borrow();
+        Ref::map(borrow, |b| b.as_ref().unwrap())
+    }
+
     fn dfs(
         &self,
         depth: u8,
@@ -167,6 +172,7 @@ impl Solver {
             if p.pieces() == Puzzle4x4::SOLVED {
                 if let Some(f) = self
                     .config
+                    .borrow()
                     .as_ref()
                     .and_then(|c| c.solution_callback.as_ref())
                 {
@@ -174,7 +180,8 @@ impl Solver {
                     f(self.stack.to_alg());
                 }
 
-                return self.config.as_ref().unwrap().num_solutions == self.solutions_found.get();
+                return self.config.borrow().as_ref().unwrap().num_solutions
+                    == self.solutions_found.get();
             } else {
                 return false;
             }
@@ -215,7 +222,7 @@ impl Solver {
         false
     }
 
-    fn solve_impl<P>(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>
+    fn solve_impl<P>(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>
     where
         P: SlidingPuzzle,
         P::Piece: AsPrimitive<u8>,
@@ -232,25 +239,26 @@ impl Solver {
         let reduced_puzzle = four_bit_puzzle.reduced();
         let transposed_reduced_puzzle = four_bit_puzzle.conjugate_with_transpose().reduced();
 
+        let min = config.min;
+        let max = config.max;
+
         // Reset state
         self.stack.clear();
         self.puzzle.set(four_bit_puzzle);
         self.solutions_found.set(0);
-        self.config = Some(config);
-
-        let config = self.config.as_ref().unwrap();
+        *self.config.borrow_mut() = Some(config);
 
         let coord = self
             .indexing_table
             .encode(reduced_puzzle.pieces, &self.base_5_table);
-        let mut depth = self.pdb.get(coord as usize).max(config.min);
+        let mut depth = self.pdb.get(coord as usize).max(min);
 
-        while depth <= config.max {
+        while depth <= max {
             if self.dfs(depth, None, reduced_puzzle, transposed_reduced_puzzle) {
                 return Ok(());
             }
 
-            if let Some(f) = &config.end_of_iter_callback {
+            if let Some(f) = &self.cfg().end_of_iter_callback {
                 f(SolverIterationStats { depth });
             }
 
@@ -277,11 +285,7 @@ impl SolverT<Puzzle, u8, RowGrids, (), Mtm> for Solver {
 
     fn init(&mut self) {}
 
-    fn solve_with_config(
-        &mut self,
-        puzzle: &Puzzle,
-        config: SolverConfig,
-    ) -> Result<(), SolverError> {
+    fn solve_with_config(&self, puzzle: &Puzzle, config: SolverConfig) -> Result<(), SolverError> {
         self.solve_impl(puzzle, config)
     }
 }

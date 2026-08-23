@@ -1,7 +1,10 @@
 //! Defines the [`GenericSolver`] struct which can optimally solve puzzles with an arbitrary
 //! [`SolvedState`] in either the [`Stm`] or [`Mtm`] metric, using an arbitrary [`Heuristic`].
 
-use std::{cell::Cell, marker::PhantomData};
+use std::{
+    cell::{Cell, Ref, RefCell},
+    marker::PhantomData,
+};
 
 use crate::{
     algorithm::{
@@ -27,7 +30,7 @@ pub struct GenericSolver<'a, P, S, H, M> {
     heuristic: &'a H,
     solved_state: &'a S,
     solutions_found: Cell<u64>,
-    config: Option<SolverConfig>,
+    config: RefCell<Option<SolverConfig>>,
     phantom_p: PhantomData<P>,
     phantom_m: PhantomData<M>,
 }
@@ -48,10 +51,15 @@ impl<'a, P, S, H, M> GenericSolver<'a, P, S, H, M> {
             heuristic,
             solved_state,
             solutions_found: Cell::new(0),
-            config: None,
+            config: RefCell::new(None),
             phantom_p: PhantomData,
             phantom_m: PhantomData,
         }
+    }
+
+    fn cfg(&self) -> Ref<'_, SolverConfig> {
+        let borrow = self.config.borrow();
+        Ref::map(borrow, |b| b.as_ref().unwrap())
     }
 }
 
@@ -67,7 +75,7 @@ where
 
     fn init(&mut self) {}
 
-    fn solve_with_config(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
+    fn solve_with_config(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
         self.solve_impl(puzzle, config)
     }
 }
@@ -84,7 +92,7 @@ where
 
     fn init(&mut self) {}
 
-    fn solve_with_config(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
+    fn solve_with_config(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
         self.solve_impl(puzzle, config)
     }
 }
@@ -98,16 +106,12 @@ where
     fn dfs(&self, puzzle: &mut P, depth: u8, last_dir: Option<Direction>) -> bool {
         if depth == 0 {
             if self.solved_state.is_solved(puzzle) {
-                if let Some(f) = self
-                    .config
-                    .as_ref()
-                    .and_then(|c| c.solution_callback.as_ref())
-                {
+                if let Some(f) = &self.cfg().solution_callback {
                     self.solutions_found.update(|n| n + 1);
                     f(self.stack.to_alg())
                 }
 
-                return self.config.as_ref().unwrap().num_solutions == self.solutions_found.get();
+                return self.cfg().num_solutions == self.solutions_found.get();
             } else {
                 return false;
             }
@@ -143,35 +147,36 @@ where
         false
     }
 
-    fn solve_impl(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
+    fn solve_impl(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
         if !self.solved_state.is_solvable(puzzle) {
             return Err(SolverError::Unsolvable);
         }
 
+        let min = config.min;
+        let max = config.max;
+
         // Reset state
         self.stack.clear();
         self.solutions_found.set(0);
-        self.config = Some(config);
-
-        let config = self.config.as_ref().unwrap();
+        *self.config.borrow_mut() = Some(config);
 
         let mut puzzle = puzzle.clone();
 
         let start_heuristic = self.heuristic.bound(&puzzle);
-        let min = if start_heuristic % 2 == config.min % 2 {
-            config.min
+        let min = if start_heuristic % 2 == min % 2 {
+            min
         } else {
-            config.min + 1
+            min + 1
         };
 
         let mut depth = start_heuristic.max(min);
 
-        while depth <= config.max {
+        while depth <= max {
             if self.dfs(&mut puzzle, depth, None) {
                 return Ok(());
             }
 
-            if let Some(f) = &config.end_of_iter_callback {
+            if let Some(f) = &self.cfg().end_of_iter_callback {
                 f(SolverIterationStats { depth });
             }
 
@@ -194,16 +199,12 @@ where
     fn dfs(&self, puzzle: &mut P, depth: u8, last_dir: Option<Direction>) -> bool {
         if depth == 0 {
             if self.solved_state.is_solved(puzzle) {
-                if let Some(f) = self
-                    .config
-                    .as_ref()
-                    .and_then(|c| c.solution_callback.as_ref())
-                {
+                if let Some(f) = &self.cfg().solution_callback {
                     self.solutions_found.update(|n| n + 1);
                     f(self.stack.to_alg())
                 }
 
-                return self.config.as_ref().unwrap().num_solutions == self.solutions_found.get();
+                return self.cfg().num_solutions == self.solutions_found.get();
             } else {
                 return false;
             }
@@ -245,27 +246,28 @@ where
         false
     }
 
-    fn solve_impl(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
+    fn solve_impl(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
         if !self.solved_state.is_solvable(puzzle) {
             return Err(SolverError::Unsolvable);
         }
 
+        let min = config.min;
+        let max = config.max;
+
         // Reset state
         self.stack.clear();
         self.solutions_found.set(0);
-        self.config = Some(config);
-
-        let config = self.config.as_ref().unwrap();
+        *self.config.borrow_mut() = Some(config);
 
         let mut puzzle = puzzle.clone();
-        let mut depth = config.min;
+        let mut depth = min;
 
-        while depth <= config.max {
+        while depth <= max {
             if self.dfs(&mut puzzle, depth, None) {
                 return Ok(());
             }
 
-            if let Some(f) = &config.end_of_iter_callback {
+            if let Some(f) = &self.cfg().end_of_iter_callback {
                 f(SolverIterationStats { depth });
             }
 
@@ -291,7 +293,7 @@ mod tests {
 
     #[test]
     fn test_row_grids_manhattan_stm() {
-        let mut solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
+        let solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
             GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
@@ -300,7 +302,7 @@ mod tests {
 
     #[test]
     fn test_rows_manhattan_stm() {
-        let mut solver: GenericSolver<'_, Puzzle, Rows, ManhattanDistance<'_, Rows>, Stm> =
+        let solver: GenericSolver<'_, Puzzle, Rows, ManhattanDistance<'_, Rows>, Stm> =
             GenericSolver::new(&ManhattanDistance(&Rows), &Rows);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
@@ -309,7 +311,7 @@ mod tests {
 
     #[test]
     fn test_row_grids_manhattan_mtm() {
-        let mut solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Mtm> =
+        let solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Mtm> =
             GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
@@ -318,7 +320,7 @@ mod tests {
 
     #[test]
     fn test_solve_with_bounds_too_low() {
-        let mut solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
+        let solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
             GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let config = SolverConfig {
@@ -332,16 +334,16 @@ mod tests {
 
     #[test]
     fn test_solve() {
-        let mut solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
+        let solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
             GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
-        let solution = Solver::solve(&mut solver, &puzzle).unwrap();
+        let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_stm::<u64>(), 31);
     }
 
     #[test]
     fn test_solve_with_config() {
-        let mut solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
+        let solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
             GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let config = SolverConfig {
@@ -356,7 +358,7 @@ mod tests {
 
     #[test]
     fn test_solve_with_config_2() {
-        let mut solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
+        let solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
             GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let config = SolverConfig {
@@ -364,13 +366,13 @@ mod tests {
             max: 5,
             ..Default::default()
         };
-        let result = Solver::solve_with_config(&mut solver, &puzzle, config);
+        let result = solver.solve_with_config(&puzzle, config);
         assert_eq!(result, Err(SolverError::NoSolutionFound));
     }
 
     #[test]
     fn test_solve_with_config_3() {
-        let mut solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
+        let solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
             GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let config = SolverConfig {
@@ -385,7 +387,7 @@ mod tests {
 
     #[test]
     fn test_solve_with_config_4() {
-        let mut solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
+        let solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
             GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let config = SolverConfig {
@@ -400,7 +402,7 @@ mod tests {
 
     #[test]
     fn test_solve_with_solved_state_mtm() {
-        let mut solver: GenericSolver<'_, Puzzle, Rows, ManhattanDistance<'_, Rows>, Mtm> =
+        let solver: GenericSolver<'_, Puzzle, Rows, ManhattanDistance<'_, Rows>, Mtm> =
             GenericSolver::new(&ManhattanDistance(&Rows), &Rows);
         let puzzle = Puzzle::from_str("2 7 11 1/5 9 3 14/15 10 6 12/4 0 8 13").unwrap();
         let config = SolverConfig {

@@ -1,6 +1,6 @@
 //! Defines the [`Solver`] struct for solving 4x4 puzzles using pattern databases.
 
-use std::cell::Cell;
+use std::cell::{Cell, Ref, RefCell};
 
 use num_traits::ToPrimitive as _;
 
@@ -21,7 +21,7 @@ pub struct Solver {
     pdb3: Pdb,
     stack: Stack<80>,
     solutions_found: Cell<u64>,
-    config: Option<SolverConfig>,
+    config: RefCell<Option<SolverConfig>>,
 }
 
 impl Default for Solver {
@@ -43,7 +43,7 @@ impl Solver {
             pdb3,
             stack: Stack::default(),
             solutions_found: Cell::new(0),
-            config: None,
+            config: RefCell::new(None),
         }
     }
 
@@ -59,6 +59,11 @@ impl Solver {
     /// the pattern databases.
     pub fn with_pdb_iteration_callback(pdb_iteration_callback: &dyn Fn(PdbIterationStats)) -> Self {
         Self::new_impl(Some(pdb_iteration_callback))
+    }
+
+    fn cfg(&self) -> Ref<'_, SolverConfig> {
+        let borrow = self.config.borrow();
+        Ref::map(borrow, |b| b.as_ref().unwrap())
     }
 
     fn dfs(&self, depth: u8, last_inverse: Option<Direction>, coords: [u32; 4]) -> bool {
@@ -79,16 +84,12 @@ impl Solver {
         }
 
         if depth == 0 {
-            if let Some(f) = self
-                .config
-                .as_ref()
-                .and_then(|c| c.solution_callback.as_ref())
-            {
+            if let Some(f) = &self.cfg().solution_callback {
                 self.solutions_found.update(|n| n + 1);
                 f(self.stack.to_alg())
             }
 
-            return self.config.as_ref().unwrap().num_solutions == self.solutions_found.get();
+            return self.cfg().num_solutions == self.solutions_found.get();
         }
 
         // SAFETY: See above.
@@ -146,7 +147,7 @@ impl Solver {
         false
     }
 
-    fn solve_impl<P>(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>
+    fn solve_impl<P>(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>
     where
         P: SlidingPuzzle,
     {
@@ -158,11 +159,12 @@ impl Solver {
             return Err(SolverError::Unsolvable);
         }
 
+        let min = config.min;
+        let max = config.max;
+
         // Reset state
         self.stack.clear();
-        self.config = Some(config);
-
-        let config = self.config.as_ref().unwrap();
+        *self.config.borrow_mut() = Some(config);
 
         let mut pieces = [0u8; 16];
         for (i, piece) in pieces.iter_mut().enumerate() {
@@ -189,20 +191,20 @@ impl Solver {
         ];
 
         let start_heuristic = entries.iter().copied().sum::<u8>();
-        let min = if start_heuristic % 2 == config.min % 2 {
-            config.min
+        let min = if start_heuristic % 2 == min % 2 {
+            min
         } else {
-            config.min + 1
+            min + 1
         };
 
         let mut depth = start_heuristic.max(min);
 
-        while depth <= config.max {
+        while depth <= max {
             if self.dfs(depth, None, coords) {
                 return Ok(());
             }
 
-            if let Some(f) = &config.end_of_iter_callback {
+            if let Some(f) = &self.cfg().end_of_iter_callback {
                 f(SolverIterationStats { depth });
             }
 
@@ -226,7 +228,7 @@ where
 
     fn init(&mut self) {}
 
-    fn solve_with_config(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
+    fn solve_with_config(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
         self.solve_impl(puzzle, config)
     }
 }
@@ -243,7 +245,7 @@ mod tests {
     #[test]
     fn test_solver() {
         let puzzle = Puzzle::from_str("12 15 5 1/11 9 2 13/0 10 8 6/14 7 4 3").unwrap();
-        let mut solver = Solver::new();
+        let solver = Solver::new();
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_stm::<u64>(), 58);
     }
