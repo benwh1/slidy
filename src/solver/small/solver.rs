@@ -8,13 +8,14 @@ mod stm;
 
 use std::{cell::Cell, marker::PhantomData};
 
-use crate::{algorithm::direction::Direction, solver::small::pdb::Pdb};
+use crate::solver::{small::pdb::Pdb, solver::SolverConfig, stack::Stack};
 
 /// An optimal solver for `WxH` and `HxW` puzzles.
 pub struct Solver<const W: usize, const H: usize, const N: usize, MetricTag> {
     pdb: Pdb<W, H, N, MetricTag>,
-    solution: [Cell<Direction>; 128],
-    solution_ptr: Cell<usize>,
+    stack: Stack<128>,
+    solutions_found: Cell<u64>,
+    config: Option<SolverConfig>,
     phantom_metric_tag: PhantomData<MetricTag>,
 }
 

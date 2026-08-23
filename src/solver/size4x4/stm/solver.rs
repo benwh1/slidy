@@ -5,11 +5,12 @@ use std::cell::Cell;
 use num_traits::ToPrimitive as _;
 
 use crate::{
-    algorithm::{algorithm::Algorithm, direction::Direction, metric::Stm},
+    algorithm::{direction::Direction, metric::Stm},
     puzzle::{label::label::RowGrids, size::Size, sliding_puzzle::SlidingPuzzle},
     solver::{
         size4x4::stm::{pattern::Pattern, pdb::Pdb, puzzle::Puzzle as Puzzle4},
         solver::{Solver as SolverT, SolverConfig, SolverError},
+        stack::Stack,
         statistics::{PdbIterationStats, SolverIterationStats},
     },
 };
@@ -18,7 +19,9 @@ use crate::{
 pub struct Solver {
     pdb4: Pdb,
     pdb3: Pdb,
-    solution: [Cell<Direction>; 80],
+    stack: Stack<80>,
+    solutions_found: Cell<u64>,
+    config: Option<SolverConfig>,
 }
 
 impl Default for Solver {
@@ -38,7 +41,9 @@ impl Solver {
         Self {
             pdb4,
             pdb3,
-            solution: [const { Cell::new(Direction::Up) }; 80],
+            stack: Stack::default(),
+            solutions_found: Cell::new(0),
+            config: None,
         }
     }
 
@@ -74,7 +79,16 @@ impl Solver {
         }
 
         if depth == 0 {
-            return true;
+            if let Some(f) = self
+                .config
+                .as_ref()
+                .and_then(|c| c.solution_callback.as_ref())
+            {
+                self.solutions_found.update(|n| n + 1);
+                f(self.stack.to_alg())
+            }
+
+            return self.config.as_ref().unwrap().num_solutions == self.solutions_found.get();
         }
 
         // SAFETY: See above.
@@ -120,16 +134,19 @@ impl Solver {
                 mt4[dir as usize],
             ];
 
+            self.stack.push(dir);
+
             if self.dfs(depth - 1, Some(dir.inverse()), new_coords) {
-                self.solution[depth as usize - 1].set(dir);
                 return true;
             }
+
+            self.stack.pop();
         }
 
         false
     }
 
-    fn solve_impl<P>(&self, puzzle: &P, config: &SolverConfig) -> Result<Algorithm, SolverError>
+    fn solve_impl<P>(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>
     where
         P: SlidingPuzzle,
     {
@@ -140,6 +157,12 @@ impl Solver {
         if !puzzle.is_solvable() {
             return Err(SolverError::Unsolvable);
         }
+
+        // Reset state
+        self.stack.clear();
+        self.config = Some(config);
+
+        let config = self.config.as_ref().unwrap();
 
         let mut pieces = [0u8; 16];
         for (i, piece) in pieces.iter_mut().enumerate() {
@@ -176,20 +199,10 @@ impl Solver {
 
         while depth <= config.max {
             if self.dfs(depth, None, coords) {
-                let mut solution = Algorithm::new();
-
-                for dir in self.solution[..depth as usize]
-                    .iter()
-                    .rev()
-                    .map(|c| c.get())
-                {
-                    solution.push_combine(dir.into());
-                }
-
-                return Ok(solution);
+                return Ok(());
             }
 
-            if let Some(f) = config.end_of_iter_callback {
+            if let Some(f) = &config.end_of_iter_callback {
                 f(SolverIterationStats { depth });
             }
 
@@ -213,11 +226,7 @@ where
 
     fn init(&mut self) {}
 
-    fn solve_with_config(
-        &mut self,
-        puzzle: &P,
-        config: &SolverConfig,
-    ) -> Result<Algorithm, SolverError> {
+    fn solve_with_config(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
         self.solve_impl(puzzle, config)
     }
 }

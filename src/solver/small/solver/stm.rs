@@ -3,7 +3,7 @@ use std::{cell::Cell, marker::PhantomData};
 use num_traits::AsPrimitive;
 
 use crate::{
-    algorithm::{algorithm::Algorithm, direction::Direction, metric::Stm},
+    algorithm::{direction::Direction, metric::Stm},
     puzzle::{
         label::label::RowGrids,
         sliding_puzzle::SlidingPuzzle,
@@ -12,6 +12,7 @@ use crate::{
     solver::{
         small::{indexing, pdb::Pdb, solver::Solver},
         solver::{Solver as SolverT, SolverConfig, SolverError},
+        stack::Stack,
         statistics::SolverIterationStats,
     },
 };
@@ -42,8 +43,9 @@ where
     pub fn with_pdb(pdb: Pdb<W, H, N, Stm>) -> Self {
         Self {
             pdb,
-            solution: [const { Cell::new(Direction::Up) }; 128],
-            solution_ptr: Cell::new(0),
+            stack: Stack::default(),
+            solutions_found: Cell::new(0),
+            config: None,
             phantom_metric_tag: PhantomData,
         }
     }
@@ -65,7 +67,16 @@ where
         }
 
         if depth == 0 {
-            return true;
+            if let Some(f) = self
+                .config
+                .as_ref()
+                .and_then(|c| c.solution_callback.as_ref())
+            {
+                self.solutions_found.update(|n| n + 1);
+                f(self.stack.to_alg())
+            }
+
+            return self.config.as_ref().unwrap().num_solutions == self.solutions_found.get();
         }
 
         let original_puzzle = puzzle;
@@ -83,21 +94,20 @@ where
             puzzle = original_puzzle;
 
             if puzzle.try_move_dir(dir) {
-                self.solution[self.solution_ptr.get()].set(dir);
-                self.solution_ptr.set(self.solution_ptr.get() + 1);
+                self.stack.push(dir);
 
                 if self.dfs(depth - 1, Some(dir.inverse()), puzzle) {
                     return true;
                 }
 
-                self.solution_ptr.set(self.solution_ptr.get() - 1);
+                self.stack.pop();
             }
         }
 
         false
     }
 
-    fn solve_impl<P>(&self, puzzle: &P, config: &SolverConfig) -> Result<Algorithm, SolverError>
+    fn solve_impl<P>(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>
     where
         P: SlidingPuzzle,
         P::Piece: AsPrimitive<u8>,
@@ -109,25 +119,46 @@ where
 
         let mut p = Puzzle::<H, W>::new();
         if p.try_set_state(puzzle) {
-            return self
-                .solve_small_puzzle_impl(p.conjugate_with_transpose(), config)
-                .map(|a| a.transpose());
+            let SolverConfig {
+                min,
+                max,
+                num_solutions,
+                end_of_iter_callback,
+                solution_callback,
+            } = config;
+
+            let transpose_config = SolverConfig {
+                min,
+                max,
+                num_solutions,
+                end_of_iter_callback,
+                solution_callback: Some(Box::new(move |s| {
+                    if let Some(f) = &solution_callback {
+                        f(s.transpose());
+                    }
+                })),
+            };
+
+            return self.solve_small_puzzle_impl(p.conjugate_with_transpose(), transpose_config);
         }
 
         Err(SolverError::IncompatiblePuzzleSize)
     }
 
     fn solve_small_puzzle_impl(
-        &self,
+        &mut self,
         puzzle: Puzzle<W, H>,
-        config: &SolverConfig,
-    ) -> Result<Algorithm, SolverError> {
+        config: SolverConfig,
+    ) -> Result<(), SolverError> {
         if !puzzle.is_solvable() {
             return Err(SolverError::Unsolvable);
         }
 
         // Reset state
-        self.solution_ptr.set(0);
+        self.stack.clear();
+        self.config = Some(config);
+
+        let config = self.config.as_ref().unwrap();
 
         let coord = indexing::encode(puzzle.piece_array());
         let start_heuristic = self.pdb.get(coord as usize);
@@ -141,19 +172,10 @@ where
 
         while depth <= config.max {
             if self.dfs(depth, None, puzzle) {
-                let mut solution = Algorithm::new();
-
-                for dir in self.solution[..self.solution_ptr.get()]
-                    .iter()
-                    .map(|c| c.get())
-                {
-                    solution.push_combine(dir.into());
-                }
-
-                return Ok(solution);
+                return Ok(());
             }
 
-            if let Some(f) = config.end_of_iter_callback {
+            if let Some(f) = &config.end_of_iter_callback {
                 f(SolverIterationStats { depth });
             }
 
@@ -181,11 +203,7 @@ where
 
     fn init(&mut self) {}
 
-    fn solve_with_config(
-        &mut self,
-        puzzle: &P,
-        config: &SolverConfig,
-    ) -> Result<Algorithm, SolverError> {
+    fn solve_with_config(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
         self.solve_impl(puzzle, config)
     }
 }

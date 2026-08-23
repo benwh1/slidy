@@ -1,5 +1,7 @@
 //! Defines the [`Solver`] trait for a unified solver interface.
 
+use std::{cell::RefCell, rc::Rc};
+
 use thiserror::Error;
 
 use crate::{
@@ -30,8 +32,12 @@ pub struct SolverConfig {
     pub min: u8,
     /// The maximum depth to search to (inclusive).
     pub max: u8,
+    /// The number of solutions to find.
+    pub num_solutions: u64,
     /// A callback that runs after each iteration of the depth-first search.
-    pub end_of_iter_callback: Option<&'static dyn Fn(SolverIterationStats)>,
+    pub end_of_iter_callback: Option<Box<dyn Fn(SolverIterationStats)>>,
+    /// A callback that runs when a solution is found.
+    pub solution_callback: Option<Box<dyn Fn(Algorithm)>>,
 }
 
 impl Default for SolverConfig {
@@ -39,7 +45,9 @@ impl Default for SolverConfig {
         Self {
             min: 0,
             max: u8::MAX,
+            num_solutions: 1,
             end_of_iter_callback: None,
+            solution_callback: None,
         }
     }
 }
@@ -62,13 +70,34 @@ where
 
     /// Solves `puzzle` using default config.
     fn solve(&mut self, puzzle: &P) -> Result<Algorithm, SolverError> {
-        self.solve_with_config(puzzle, &SolverConfig::default())
+        self.solve_many(puzzle, 1).map(|mut v| v.pop().unwrap())
+    }
+
+    /// Solves `puzzle` using default config, returning `n` solutions.
+    fn solve_many(
+        &mut self,
+        puzzle: &P,
+        num_solutions: u64,
+    ) -> Result<Vec<Algorithm>, SolverError> {
+        if num_solutions == 0 {
+            return Ok(Vec::new());
+        }
+
+        let solutions = Rc::new(RefCell::new(Vec::new()));
+        let c = solutions.clone();
+
+        let config = SolverConfig {
+            num_solutions,
+            solution_callback: Some(Box::new(move |s| c.borrow_mut().push(s))),
+            ..Default::default()
+        };
+
+        self.solve_with_config(puzzle, config)?;
+
+        let solutions = solutions.borrow().clone();
+        Ok(solutions)
     }
 
     /// Solves `puzzle` using the given [`SolverConfig`].
-    fn solve_with_config(
-        &mut self,
-        puzzle: &P,
-        config: &SolverConfig,
-    ) -> Result<Algorithm, SolverError>;
+    fn solve_with_config(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>;
 }

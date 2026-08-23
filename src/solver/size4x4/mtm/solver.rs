@@ -5,7 +5,7 @@ use std::cell::Cell;
 use num_traits::AsPrimitive;
 
 use crate::{
-    algorithm::{algorithm::Algorithm, axis::Axis, direction::Direction, metric::Mtm},
+    algorithm::{axis::Axis, direction::Direction, metric::Mtm},
     puzzle::{
         label::label::RowGrids, puzzle::Puzzle, sliding_puzzle::SlidingPuzzle, small::Puzzle4x4,
     },
@@ -17,6 +17,7 @@ use crate::{
             puzzle::{FourBitPuzzle, ReducedFourBitPuzzle},
         },
         solver::{Solver as SolverT, SolverConfig, SolverError},
+        stack::Stack,
         statistics::{PdbIterationStats, SolverIterationStats},
     },
 };
@@ -28,9 +29,10 @@ pub struct Solver {
     indexing_table: IndexingTable,
     base_5_table: Base5Table,
     pdb: Pdb,
-    solution: [Cell<Direction>; 128],
-    solution_ptr: Cell<usize>,
+    stack: Stack<128>,
     puzzle: Cell<FourBitPuzzle>,
+    solutions_found: Cell<u64>,
+    config: Option<SolverConfig>,
 }
 
 impl Default for Solver {
@@ -49,9 +51,10 @@ impl Solver {
             indexing_table,
             base_5_table,
             pdb,
-            solution: [const { Cell::new(Direction::Up) }; 128],
-            solution_ptr: Cell::new(0),
+            stack: Stack::default(),
             puzzle: Cell::new(FourBitPuzzle::new()),
+            solutions_found: Cell::new(0),
+            config: None,
         }
     }
 
@@ -157,10 +160,24 @@ impl Solver {
 
         if depth == 0 {
             let mut p = self.puzzle.get();
-            for mv in &self.solution[..self.solution_ptr.get()] {
-                p.do_move(mv.get());
+            for dir in self.stack.iter() {
+                p.do_move(dir);
             }
-            return p.pieces() == Puzzle4x4::SOLVED;
+
+            if p.pieces() == Puzzle4x4::SOLVED {
+                if let Some(f) = self
+                    .config
+                    .as_ref()
+                    .and_then(|c| c.solution_callback.as_ref())
+                {
+                    self.solutions_found.update(|n| n + 1);
+                    f(self.stack.to_alg());
+                }
+
+                return self.config.as_ref().unwrap().num_solutions == self.solutions_found.get();
+            } else {
+                return false;
+            }
         }
 
         let original_puzzle = puzzle;
@@ -176,31 +193,29 @@ impl Solver {
                 continue;
             }
 
-            let mut amount = 0;
+            let mut count = 0;
 
             puzzle = original_puzzle;
             transposed_puzzle = original_transposed;
 
             while puzzle.do_move(dir) {
                 transposed_puzzle.do_move(transposed_dir);
-                amount += 1;
+                count += 1;
 
-                self.solution[self.solution_ptr.get()].set(dir);
-                self.solution_ptr.set(self.solution_ptr.get() + 1);
+                self.stack.push(dir);
 
                 if self.dfs(depth - 1, Some(dir.into()), puzzle, transposed_puzzle) {
                     return true;
                 }
             }
 
-            self.solution_ptr
-                .set(self.solution_ptr.get() - amount as usize);
+            self.stack.remove_n(count);
         }
 
         false
     }
 
-    fn solve_impl<P>(&self, puzzle: &P, config: &SolverConfig) -> Result<Algorithm, SolverError>
+    fn solve_impl<P>(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>
     where
         P: SlidingPuzzle,
         P::Piece: AsPrimitive<u8>,
@@ -218,8 +233,12 @@ impl Solver {
         let transposed_reduced_puzzle = four_bit_puzzle.conjugate_with_transpose().reduced();
 
         // Reset state
-        self.solution_ptr.set(0);
+        self.stack.clear();
         self.puzzle.set(four_bit_puzzle);
+        self.solutions_found.set(0);
+        self.config = Some(config);
+
+        let config = self.config.as_ref().unwrap();
 
         let coord = self
             .indexing_table
@@ -228,19 +247,10 @@ impl Solver {
 
         while depth <= config.max {
             if self.dfs(depth, None, reduced_puzzle, transposed_reduced_puzzle) {
-                let mut solution = Algorithm::new();
-
-                for dir in self.solution[..self.solution_ptr.get()]
-                    .iter()
-                    .map(|c| c.get())
-                {
-                    solution.push_combine(dir.into());
-                }
-
-                return Ok(solution);
+                return Ok(());
             }
 
-            if let Some(f) = config.end_of_iter_callback {
+            if let Some(f) = &config.end_of_iter_callback {
                 f(SolverIterationStats { depth });
             }
 
@@ -270,8 +280,8 @@ impl SolverT<Puzzle, u8, RowGrids, (), Mtm> for Solver {
     fn solve_with_config(
         &mut self,
         puzzle: &Puzzle,
-        config: &SolverConfig,
-    ) -> Result<Algorithm, SolverError> {
+        config: SolverConfig,
+    ) -> Result<(), SolverError> {
         self.solve_impl(puzzle, config)
     }
 }
