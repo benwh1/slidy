@@ -200,29 +200,29 @@ where
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use std::str::FromStr as _;
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr as _;
 
-//     use crate::{
-//         puzzle::{puzzle::Puzzle, sliding_puzzle::SlidingPuzzle as _},
-//         solver::{solver::Solver as _, Solver3x3Mtm, Solver4x2Mtm},
-//     };
+    use crate::{
+        puzzle::{puzzle::Puzzle, sliding_puzzle::SlidingPuzzle as _},
+        solver::{solver::Solver as _, Solver3x3Mtm, Solver4x2Mtm},
+    };
 
-//     #[test]
-//     fn test_solver() {
-//         let mut solver = Solver3x3Mtm::new();
-//         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
-//         let solution = solver.solve(&puzzle).unwrap();
-//         assert_eq!(solution.len_mtm::<u64>(), 18);
-//     }
+    #[test]
+    fn test_solver() {
+        let solver = Solver3x3Mtm::new();
+        let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
+        let solution = solver.solve(&puzzle).unwrap();
+        assert_eq!(solution.len_mtm::<u64>(), 18);
+    }
 
-//     #[test]
-//     fn test_solver_2() {
-//         let mut solver = Solver4x2Mtm::new();
-//         let mut puzzle = Puzzle::from_str("4 6/2 5/0 1/7 3").unwrap();
-//         let solution = solver.solve(&puzzle).unwrap();
-//         puzzle.apply_alg(&solution);
-//         assert!(puzzle.is_solved());
-//     }
-// }
+    #[test]
+    fn test_solver_2() {
+        let solver = Solver4x2Mtm::new();
+        let mut puzzle = Puzzle::from_str("4 6/2 5/0 1/7 3").unwrap();
+        let solution = solver.solve(&puzzle).unwrap();
+        puzzle.apply_alg(&solution);
+        assert!(puzzle.is_solved());
+    }
+}
