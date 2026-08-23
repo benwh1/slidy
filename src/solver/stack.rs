@@ -23,7 +23,7 @@ impl<const N: usize> Stack<N> {
     }
 
     pub(super) fn clear(&self) {
-        self.idx.set(0)
+        self.idx.set(0);
     }
 
     pub(super) fn to_alg(&self) -> Algorithm {

@@ -108,13 +108,13 @@ where
             if self.solved_state.is_solved(puzzle) {
                 if let Some(f) = &self.cfg().solution_callback {
                     self.solutions_found.update(|n| n + 1);
-                    f(self.stack.to_alg())
+                    f(self.stack.to_alg());
                 }
 
                 return self.cfg().num_solutions == self.solutions_found.get();
-            } else {
-                return false;
             }
+
+            return false;
         }
 
         if self.heuristic.bound(puzzle) > depth {
@@ -201,13 +201,13 @@ where
             if self.solved_state.is_solved(puzzle) {
                 if let Some(f) = &self.cfg().solution_callback {
                     self.solutions_found.update(|n| n + 1);
-                    f(self.stack.to_alg())
+                    f(self.stack.to_alg());
                 }
 
                 return self.cfg().num_solutions == self.solutions_found.get();
-            } else {
-                return false;
             }
+
+            return false;
         }
 
         if self.heuristic.bound(puzzle) > depth {

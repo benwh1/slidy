@@ -182,9 +182,9 @@ impl Solver {
 
                 return self.config.borrow().as_ref().unwrap().num_solutions
                     == self.solutions_found.get();
-            } else {
-                return false;
             }
+
+            return false;
         }
 
         let original_puzzle = puzzle;
