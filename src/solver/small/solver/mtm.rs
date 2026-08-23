@@ -157,6 +157,7 @@ where
 
         // Reset state
         self.stack.clear();
+        self.solutions_found.set(0);
         *self.config.borrow_mut() = Some(config);
 
         let coord = indexing::encode(puzzle.piece_array());

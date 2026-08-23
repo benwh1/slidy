@@ -164,6 +164,7 @@ impl Solver {
 
         // Reset state
         self.stack.clear();
+        self.solutions_found.set(0);
         *self.config.borrow_mut() = Some(config);
 
         let mut pieces = [0u8; 16];
