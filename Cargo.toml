@@ -12,10 +12,10 @@ keywords = ["puzzle", "15-puzzle"]
 [dependencies]
 bytemuck = "^1"
 enterpolation = "^0.3"
-itertools = "^0.14"
+itertools = "^0.15.0"
 num-traits = "^0.2"
 palette = { version = "^0.7", default-features = false, features = ["std"] }
-rand = { version = "^0.9", default-features = false, features = ["alloc"] }
+rand = { version = "^0.10", default-features = false, features = ["alloc"] }
 serde = { version = "^1", optional = true, features = ["derive"] }
 svg = "^0.18"
 thiserror = "^2"
@@ -23,7 +23,7 @@ xxhash-rust = { version = "^0.8", features = ["xxh3"] }
 
 [dev-dependencies]
 paste = "^1"
-rand_xoshiro = "^0.7"
+rand_xoshiro = "^0.8"
 
 [features]
 default = ["thread_rng"]

@@ -2,7 +2,7 @@
 
 use rand::{
     distr::{Distribution, StandardUniform},
-    Rng,
+    Rng, RngExt as _,
 };
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};

@@ -1,6 +1,6 @@
 //! Defines the [`Scrambler`] trait and several implementations.
 
-use rand::Rng;
+use rand::{Rng, RngExt as _};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
