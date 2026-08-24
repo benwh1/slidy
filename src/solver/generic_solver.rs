@@ -296,6 +296,11 @@ mod tests {
         let solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
             GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
+
+        let solution = solver.solve(&puzzle).unwrap();
+        assert_eq!(solution.len_stm::<u64>(), 31);
+
+        // Test it twice to make sure the internal state gets reset properly
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_stm::<u64>(), 31);
     }

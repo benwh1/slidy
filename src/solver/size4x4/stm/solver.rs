@@ -247,6 +247,11 @@ mod tests {
     fn test_solver() {
         let puzzle = Puzzle::from_str("12 15 5 1/11 9 2 13/0 10 8 6/14 7 4 3").unwrap();
         let solver = Solver::new();
+
+        let solution = solver.solve(&puzzle).unwrap();
+        assert_eq!(solution.len_stm::<u64>(), 58);
+
+        // Test it twice to make sure the internal state gets reset properly
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_stm::<u64>(), 58);
     }
