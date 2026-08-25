@@ -23,8 +23,6 @@ use crate::{
 };
 
 /// An optimal solver for 4x4 puzzles in [`Mtm`].
-///
-/// [`Mtm`]: crate::algorithm::metric::Mtm
 pub struct Solver {
     indexing_table: IndexingTable,
     base_5_table: Base5Table,
