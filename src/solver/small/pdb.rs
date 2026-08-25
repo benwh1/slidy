@@ -136,6 +136,8 @@ where
         let solved_encoded = indexing::encode(puzzle.piece_array());
         pdb[solved_encoded as usize] = 0;
 
+        let mut current = vec![puzzle];
+
         let mut depth = 0;
         let mut new = 1;
         let mut total = 1;
@@ -144,38 +146,33 @@ where
             f(PdbIterationStats { depth, new, total });
         }
 
-        while new != 0 {
-            new = 0;
+        while !current.is_empty() {
+            let mut next = Vec::with_capacity(current.len() * 2);
 
-            for i in 0..num_states {
-                if pdb[i] != depth {
-                    continue;
-                }
-
+            for state in current {
                 for dir in [
                     Direction::Up,
                     Direction::Left,
                     Direction::Down,
                     Direction::Right,
                 ] {
-                    let piece_array = indexing::decode::<W, N>(i as u64);
-
-                    // SAFETY: `decode` produces valid permutations.
-                    let mut puzzle =
-                        unsafe { Puzzle::<W, H>::from_piece_array_unchecked(piece_array) };
+                    let mut puzzle = state;
 
                     if puzzle.try_move_dir(dir) {
                         let idx = indexing::encode(puzzle.piece_array()) as usize;
                         if pdb[idx] == u8::MAX {
                             pdb[idx] = depth + 1;
-                            new += 1;
+                            next.push(puzzle);
                         }
                     }
                 }
             }
 
+            new = next.len() as u64;
             total += new;
             depth += 1;
+
+            current = next;
 
             if let Some(f) = iteration_callback {
                 f(PdbIterationStats { depth, new, total });
@@ -251,6 +248,8 @@ where
         let solved_encoded = indexing::encode(puzzle.piece_array());
         pdb[solved_encoded as usize] = 0;
 
+        let mut current = vec![puzzle];
+
         let mut depth = 0;
         let mut new = 1;
         let mut total = 1;
@@ -259,38 +258,33 @@ where
             f(PdbIterationStats { depth, new, total });
         }
 
-        while new != 0 {
-            new = 0;
+        while !current.is_empty() {
+            let mut next = Vec::with_capacity(current.len() * 2);
 
-            for i in 0..num_states {
-                if pdb[i] != depth {
-                    continue;
-                }
-
+            for state in current {
                 for dir in [
                     Direction::Up,
                     Direction::Left,
                     Direction::Down,
                     Direction::Right,
                 ] {
-                    let piece_array = indexing::decode::<W, N>(i as u64);
-
-                    // SAFETY: `decode` produces valid permutations.
-                    let mut puzzle =
-                        unsafe { Puzzle::<W, H>::from_piece_array_unchecked(piece_array) };
+                    let mut puzzle = state;
 
                     while puzzle.try_move_dir(dir) {
                         let idx = indexing::encode(puzzle.piece_array()) as usize;
                         if pdb[idx] == u8::MAX {
                             pdb[idx] = depth + 1;
-                            new += 1;
+                            next.push(puzzle);
                         }
                     }
                 }
             }
 
+            new = next.len() as u64;
             total += new;
             depth += 1;
+
+            current = next;
 
             if let Some(f) = iteration_callback {
                 f(PdbIterationStats { depth, new, total });
