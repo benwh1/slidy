@@ -30,7 +30,8 @@ pub(super) fn encode<const N: usize>(perm: [u8; N]) -> u64 {
     (encoded / 2) * N as u64 + gap as u64
 }
 
-pub(super) fn decode<const W: usize, const N: usize>(k: u64) -> [u8; N] {
+#[allow(dead_code)]
+fn decode<const W: usize, const N: usize>(k: u64) -> [u8; N] {
     let gap = k % N as u64;
     let gap_parity = !((N as u64 - 1 - gap) / W as u64).is_multiple_of(2);
     let width_parity = W.is_multiple_of(2);
