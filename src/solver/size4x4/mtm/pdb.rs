@@ -117,3 +117,17 @@ impl AsRef<[u8]> for Pdb {
         &self.pdb
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pdb() {
+        let indexing_table = IndexingTable::new();
+        let base_5_table = Base5Table::new();
+        let pdb = Pdb::new(&indexing_table, &base_5_table, None);
+        let hash = xxh3::xxh3_64(pdb.as_ref());
+        assert_eq!(hash, HASH);
+    }
+}
