@@ -1,4 +1,4 @@
-use crate::solver::size4x4::mtm::consts::{BINOMIAL, MULTINOMIAL, TALLY};
+use crate::solver::size4x4::mtm::consts::BINOMIAL;
 
 pub(super) const fn binomial(n: u64, k: u64) -> u64 {
     if k > n {
@@ -62,40 +62,4 @@ pub(super) fn encode_multiset<const LEN: usize, const DISTINCT: usize>(
     }
 
     t
-}
-
-pub(super) fn decode_multiset_16(mut t: u64) -> [u8; 16] {
-    let mut remaining = TALLY;
-    let mut out = [0; 16];
-
-    for o in &mut out {
-        for s in 0..5 {
-            if remaining[s] == 0 {
-                continue;
-            }
-            remaining[s] -= 1;
-
-            // SAFETY: The indices are computed by starting with `TALLY` and decrementing them
-            // until they reach 0. `MULTINOMIAL` has dimensions chosen so that indexing with the
-            // entries in `TALLY` will be within bounds.
-            let m = *unsafe {
-                MULTINOMIAL
-                    .get_unchecked(remaining[0] as usize)
-                    .get_unchecked(remaining[1] as usize)
-                    .get_unchecked(remaining[2] as usize)
-                    .get_unchecked(remaining[3] as usize)
-                    .get_unchecked(remaining[4] as usize)
-            };
-
-            if t < m {
-                *o = s as u8;
-                break;
-            }
-
-            t -= m;
-            remaining[s] += 1;
-        }
-    }
-
-    out
 }

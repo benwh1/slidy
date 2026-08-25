@@ -104,33 +104,6 @@ impl ReducedFourBitPuzzle {
         }
     }
 
-    /// # Safety
-    ///
-    /// The nibbles of `pieces` must be a permutation of the nibbles of `Self::SOLVED`.
-    /// `gap` must be less than 16, and `(pieces >> (gap * 4)) & 0xF` must be 0.
-    unsafe fn with_pieces_and_gap_unchecked(pieces: u64, gap: u8) -> Self {
-        Self { pieces, gap }
-    }
-
-    /// # Safety
-    ///
-    /// `piece_array` must contain a permutation of the nibbles in `Self::SOLVED`.
-    pub(super) unsafe fn from_piece_array_unchecked(piece_array: [u8; 16]) -> Self {
-        let mut pieces = 0;
-        let mut gap = 0;
-
-        for (i, &piece) in piece_array.iter().enumerate() {
-            pieces |= (piece as u64) << (4 * i);
-            if piece == 0 {
-                gap = i as u8;
-            }
-        }
-
-        // SAFETY: The nibbles of `pieces` have the same values as the elements of `piece_array`,
-        // and `gap` is set correctly.
-        unsafe { Self::with_pieces_and_gap_unchecked(pieces, gap) }
-    }
-
     pub(super) fn pieces(&self) -> u64 {
         self.pieces
     }
