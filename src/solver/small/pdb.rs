@@ -237,20 +237,6 @@ where
         // SAFETY: We checked above that the data is (almost certainly) correct.
         Some(unsafe { Self::from_bytes_unchecked(bytes) })
     }
-
-    /// See [`Self::try_from_bytes`].
-    ///
-    /// # Safety
-    ///
-    /// The caller is responsible for the correctness of the data contained in `bytes`. No
-    /// correctness checks are performed.
-    #[must_use]
-    pub unsafe fn from_bytes_unchecked(bytes: Box<[u8]>) -> Self {
-        Self {
-            pdb: bytes,
-            phantom_metric_tag: PhantomData,
-        }
-    }
 }
 
 impl<const W: usize, const H: usize, const N: usize> Pdb<W, H, N, Mtm>
@@ -366,6 +352,16 @@ where
         // SAFETY: We checked above that the data is (almost certainly) correct.
         Some(unsafe { Self::from_bytes_unchecked(bytes) })
     }
+}
+
+impl<const W: usize, const H: usize, const N: usize, MetricTag> Pdb<W, H, N, MetricTag> {
+    pub(super) fn get(&self, index: usize) -> u8 {
+        self.pdb[index]
+    }
+
+    pub(super) unsafe fn get_unchecked(&self, index: usize) -> u8 {
+        *self.pdb.get_unchecked(index)
+    }
 
     /// See [`Self::try_from_bytes`].
     ///
@@ -379,16 +375,6 @@ where
             pdb: bytes,
             phantom_metric_tag: PhantomData,
         }
-    }
-}
-
-impl<const W: usize, const H: usize, const N: usize, MetricTag> Pdb<W, H, N, MetricTag> {
-    pub(super) fn get(&self, index: usize) -> u8 {
-        self.pdb[index]
-    }
-
-    pub(super) unsafe fn get_unchecked(&self, index: usize) -> u8 {
-        *self.pdb.get_unchecked(index)
     }
 }
 
