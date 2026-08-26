@@ -1,4 +1,4 @@
-use num_traits::Zero;
+use num_traits::Zero as _;
 
 use crate::{
     algorithm::direction::Direction,
