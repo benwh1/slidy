@@ -10,8 +10,8 @@ fn binomial(n: usize, k: usize) -> u64 {
     result
 }
 
-fn multinomial(counts: &[u8]) -> u64 {
-    let total: usize = counts.iter().map(|&c| c as usize).sum();
+pub(super) fn multinomial(counts: &[u8]) -> u64 {
+    let total = counts.iter().map(|&c| c as usize).sum();
     let mut r = 1u64;
     let mut rem = total;
     for &c in counts {
@@ -24,8 +24,8 @@ fn multinomial(counts: &[u8]) -> u64 {
 }
 
 pub(super) fn encode_multiset(arr: &[u8], tally: &[u8]) -> u64 {
-    let mut remaining: Vec<u8> = tally.to_vec();
-    let mut t = 0u64;
+    let mut remaining = tally.to_vec();
+    let mut t = 0;
     for &v in arr {
         let cur = v as usize;
         for s in 0..cur {
@@ -38,10 +38,6 @@ pub(super) fn encode_multiset(arr: &[u8], tally: &[u8]) -> u64 {
         remaining[cur] -= 1;
     }
     t
-}
-
-pub(super) fn pdb_size_with_gap(tally: &[u8], n: usize) -> u64 {
-    multinomial(tally) * n as u64
 }
 
 #[cfg(test)]
@@ -78,7 +74,7 @@ mod tests {
 
     #[test]
     fn test_pdb_size() {
-        assert_eq!(pdb_size_with_gap(&[2, 2], 4), 24);
-        assert_eq!(pdb_size_with_gap(&[4, 4, 4, 4], 16), 1_009_008_000);
+        assert_eq!(multinomial(&[2, 2, 1]), 30);
+        assert_eq!(multinomial(&[4, 4, 4, 3, 1]), 252_252_000);
     }
 }

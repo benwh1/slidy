@@ -33,13 +33,12 @@ impl Pdb {
     {
         let size = Size::new(W as u64, H as u64).unwrap();
         let solved_state = compute_solved_state::<W, H, N, L>(label, size);
-        let tally = compute_tally::<W, H, N, L>(label, size);
-        let pdb_size = encoding::pdb_size_with_gap(&tally, N) as usize;
+        let tally = compute_tally(&solved_state);
+        let pdb_size = encoding::multinomial(&tally) as usize;
 
         let mut pdb = vec![u8::MAX; pdb_size];
         let solved_gap = (N - 1) as u8;
-        let solved_idx =
-            encoding::encode_multiset(&solved_state, &tally) as usize * N + solved_gap as usize;
+        let solved_idx = encoding::encode_multiset(&solved_state, &tally) as usize;
         pdb[solved_idx] = 0;
 
         let mut visited: HashSet<(Vec<u8>, u8)> = HashSet::new();
@@ -72,9 +71,7 @@ impl Pdb {
                     if puzzle.do_move::<W, H>(dir) {
                         let key = (puzzle.pieces.to_vec(), puzzle.gap);
                         if visited.insert(key) {
-                            let idx = encoding::encode_multiset(&puzzle.pieces, &tally) as usize
-                                * N
-                                + puzzle.gap as usize;
+                            let idx = encoding::encode_multiset(&puzzle.pieces, &tally) as usize;
                             if pdb[idx] == u8::MAX {
                                 pdb[idx] = depth + 1;
                             }
@@ -110,13 +107,12 @@ impl Pdb {
     {
         let size = Size::new(W as u64, H as u64).unwrap();
         let solved_state = compute_solved_state::<W, H, N, L>(label, size);
-        let tally = compute_tally::<W, H, N, L>(label, size);
-        let pdb_size = encoding::pdb_size_with_gap(&tally, N) as usize;
+        let tally = compute_tally(&solved_state);
+        let pdb_size = encoding::multinomial(&tally) as usize;
 
         let mut pdb = vec![u8::MAX; pdb_size];
         let solved_gap = (N - 1) as u8;
-        let solved_idx =
-            encoding::encode_multiset(&solved_state, &tally) as usize * N + solved_gap as usize;
+        let solved_idx = encoding::encode_multiset(&solved_state, &tally) as usize;
         pdb[solved_idx] = 0;
 
         let mut visited: HashSet<(Vec<u8>, u8)> = HashSet::new();
@@ -149,9 +145,7 @@ impl Pdb {
                     while puzzle.do_move::<W, H>(dir) {
                         let key = (puzzle.pieces.to_vec(), puzzle.gap);
                         if visited.insert(key) {
-                            let idx = encoding::encode_multiset(&puzzle.pieces, &tally) as usize
-                                * N
-                                + puzzle.gap as usize;
+                            let idx = encoding::encode_multiset(&puzzle.pieces, &tally) as usize;
                             if pdb[idx] == u8::MAX {
                                 pdb[idx] = depth + 1;
                             }
@@ -179,7 +173,7 @@ impl Pdb {
     }
 
     pub(super) fn encode<const N: usize>(&self, puzzle: &ProjectedPuzzle<N>) -> usize {
-        encoding::encode_multiset(&puzzle.pieces, &self.tally) as usize * N + puzzle.gap as usize
+        encoding::encode_multiset(&puzzle.pieces, &self.tally) as usize
     }
 }
 
@@ -190,26 +184,22 @@ fn compute_solved_state<const W: usize, const H: usize, const N: usize, L>(
 where
     L: Label,
 {
+    let num_labels = label.num_labels(size) as u8;
     let mut state = vec![0u8; N];
     for (i, s) in state.iter_mut().enumerate() {
         let x = (i % W) as u64;
         let y = (i / W) as u64;
         *s = label.position_label(size, (x, y)) as u8;
     }
+    // The gap (last position in solved state) gets a unique label
+    state[N - 1] = num_labels;
     state
 }
 
-fn compute_tally<const W: usize, const H: usize, const N: usize, L>(
-    label: &L,
-    size: Size,
-) -> Vec<u8>
-where
-    L: Label,
-{
-    let num_labels = label.num_labels(size) as usize;
-    let mut tally = vec![0u8; num_labels];
-    let solved_state = compute_solved_state::<W, H, N, L>(label, size);
-    for &l in &solved_state {
+fn compute_tally(solved_state: &[u8]) -> Vec<u8> {
+    let max_label = *solved_state.iter().max().unwrap() as usize;
+    let mut tally = vec![0u8; max_label + 1];
+    for &l in solved_state {
         tally[l as usize] += 1;
     }
     tally
