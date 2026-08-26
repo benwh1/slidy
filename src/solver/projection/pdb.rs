@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::{
     algorithm::direction::Direction,
     puzzle::{label::label::Label, size::Size},
@@ -11,7 +13,6 @@ pub(super) struct Pdb {
     pdb: Box<[u8]>,
     tally: Vec<u8>,
     solved_state: Vec<u8>,
-    n: usize,
 }
 
 impl Pdb {
@@ -34,9 +35,12 @@ impl Pdb {
 
         let mut pdb = vec![u8::MAX; pdb_size];
         let solved_gap = (N - 1) as u8;
-        let solved_idx = encoding::encode_multiset(&solved_state, &tally) as usize * N
-            + solved_gap as usize;
+        let solved_idx =
+            encoding::encode_multiset(&solved_state, &tally) as usize * N + solved_gap as usize;
         pdb[solved_idx] = 0;
+
+        let mut visited: HashSet<(Vec<u8>, u8)> = HashSet::new();
+        visited.insert((solved_state.to_vec(), solved_gap));
 
         let mut solved_arr = [0u8; N];
         solved_arr.copy_from_slice(&solved_state);
@@ -63,10 +67,14 @@ impl Pdb {
                 ] {
                     let mut puzzle = *state;
                     if puzzle.do_move::<W, H>(dir) {
-                        let idx = encoding::encode_multiset(&puzzle.pieces, &tally) as usize * N
-                            + puzzle.gap as usize;
-                        if pdb[idx] == u8::MAX {
-                            pdb[idx] = depth + 1;
+                        let key = (puzzle.pieces.to_vec(), puzzle.gap);
+                        if visited.insert(key) {
+                            let idx =
+                                encoding::encode_multiset(&puzzle.pieces, &tally) as usize * N
+                                    + puzzle.gap as usize;
+                            if pdb[idx] == u8::MAX {
+                                pdb[idx] = depth + 1;
+                            }
                             next.push(puzzle);
                         }
                     }
@@ -87,7 +95,6 @@ impl Pdb {
             pdb: pdb.into_boxed_slice(),
             tally,
             solved_state,
-            n: N,
         }
     }
 
@@ -102,9 +109,12 @@ impl Pdb {
 
         let mut pdb = vec![u8::MAX; pdb_size];
         let solved_gap = (N - 1) as u8;
-        let solved_idx = encoding::encode_multiset(&solved_state, &tally) as usize * N
-            + solved_gap as usize;
+        let solved_idx =
+            encoding::encode_multiset(&solved_state, &tally) as usize * N + solved_gap as usize;
         pdb[solved_idx] = 0;
+
+        let mut visited: HashSet<(Vec<u8>, u8)> = HashSet::new();
+        visited.insert((solved_state.to_vec(), solved_gap));
 
         let mut solved_arr = [0u8; N];
         solved_arr.copy_from_slice(&solved_state);
@@ -131,10 +141,14 @@ impl Pdb {
                 ] {
                     let mut puzzle = *state;
                     while puzzle.do_move::<W, H>(dir) {
-                        let idx = encoding::encode_multiset(&puzzle.pieces, &tally) as usize * N
-                            + puzzle.gap as usize;
-                        if pdb[idx] == u8::MAX {
-                            pdb[idx] = depth + 1;
+                        let key = (puzzle.pieces.to_vec(), puzzle.gap);
+                        if visited.insert(key) {
+                            let idx =
+                                encoding::encode_multiset(&puzzle.pieces, &tally) as usize * N
+                                    + puzzle.gap as usize;
+                            if pdb[idx] == u8::MAX {
+                                pdb[idx] = depth + 1;
+                            }
                             next.push(puzzle);
                         }
                     }
@@ -155,12 +169,11 @@ impl Pdb {
             pdb: pdb.into_boxed_slice(),
             tally,
             solved_state,
-            n: N,
         }
     }
 
     pub(super) fn encode<const N: usize>(&self, puzzle: &ProjectedPuzzle<N>) -> usize {
-        encoding::encode_multiset(&puzzle.pieces, &self.tally) as usize * self.n
+        encoding::encode_multiset(&puzzle.pieces, &self.tally) as usize * N
             + puzzle.gap as usize
     }
 }

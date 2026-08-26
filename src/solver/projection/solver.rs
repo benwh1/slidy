@@ -5,6 +5,7 @@ use std::{
 
 use num_traits::AsPrimitive;
 
+use super::pdb::Pdb;
 use crate::{
     algorithm::{
         axis::Axis,
@@ -21,11 +22,9 @@ use crate::{
         projection::puzzle::{project_puzzle, ProjectedPuzzle},
         solver::{Solver as SolverT, SolverConfig, SolverError},
         stack::Stack,
-        statistics::SolverIterationStats,
+        statistics::{PdbIterationStats, SolverIterationStats},
     },
 };
-
-use super::pdb::Pdb;
 
 pub struct Solver<const W: usize, const H: usize, const N: usize, Target, PruneTarget, MetricTag> {
     pdb: Pdb,
@@ -64,10 +63,7 @@ where
     }
 
     fn initial_projected(&self) -> ProjectedPuzzle<N> {
-        project_puzzle::<W, H, N, Puzzle<W, H>, PruneTarget>(
-            &self.puzzle.get(),
-            &self.prune_target,
-        )
+        project_puzzle::<W, H, N, Puzzle<W, H>, PruneTarget>(&self.puzzle.get(), &self.prune_target)
     }
 
     fn solved_state_arr(&self) -> [u8; N] {
@@ -92,9 +88,7 @@ where
     PruneTarget: Label + SolvedState + Default,
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
-    fn new_impl(
-        pdb_iteration_callback: Option<&dyn Fn(crate::solver::statistics::PdbIterationStats)>,
-    ) -> Self {
+    fn new_impl(pdb_iteration_callback: Option<&dyn Fn(PdbIterationStats)>) -> Self {
         let prune_target = PruneTarget::default();
         let target = Target::default();
         let pdb = Pdb::new_stm::<W, H, N, PruneTarget>(&prune_target, pdb_iteration_callback);
@@ -106,13 +100,20 @@ where
         Self::new_impl(None)
     }
 
-    pub fn with_pdb_iteration_callback(
-        callback: &dyn Fn(crate::solver::statistics::PdbIterationStats),
-    ) -> Self {
+    pub fn with_pdb_iteration_callback(callback: &dyn Fn(PdbIterationStats)) -> Self {
         Self::new_impl(Some(callback))
     }
 
     fn dfs(&self, depth: u8, last_dir: Option<Direction>, projected: ProjectedPuzzle<N>) -> bool {
+        let solved = self.solved_state_arr();
+        if projected.is_solved(&solved) && self.check_solution() {
+            self.solutions_found.update(|n| n + 1);
+            if let Some(f) = &self.cfg().solution_callback {
+                f(self.stack.to_alg());
+            }
+            return self.cfg().num_solutions == self.solutions_found.get();
+        }
+
         let idx = self.pdb.encode(&projected);
         let heuristic = self.pdb.get(idx);
         if heuristic > depth {
@@ -120,14 +121,6 @@ where
         }
 
         if depth == 0 {
-            let solved = self.solved_state_arr();
-            if projected.is_solved(&solved) && self.check_solution() {
-                self.solutions_found.update(|n| n + 1);
-                if let Some(f) = &self.cfg().solution_callback {
-                    f(self.stack.to_alg());
-                }
-                return self.cfg().num_solutions == self.solutions_found.get();
-            }
             return false;
         }
 
@@ -202,8 +195,7 @@ where
 }
 
 impl<P, const W: usize, const H: usize, const N: usize, Target, PruneTarget>
-    SolverT<P, u8, Target, (), Stm>
-    for Solver<W, H, N, Target, PruneTarget, Stm>
+    SolverT<P, u8, Target, (), Stm> for Solver<W, H, N, Target, PruneTarget, Stm>
 where
     P: SlidingPuzzle,
     P::Piece: AsPrimitive<u8>,
@@ -229,9 +221,7 @@ where
     PruneTarget: Label + SolvedState + Default,
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
-    fn new_impl(
-        pdb_iteration_callback: Option<&dyn Fn(crate::solver::statistics::PdbIterationStats)>,
-    ) -> Self {
+    fn new_impl(pdb_iteration_callback: Option<&dyn Fn(PdbIterationStats)>) -> Self {
         let prune_target = PruneTarget::default();
         let target = Target::default();
         let pdb = Pdb::new_mtm::<W, H, N, PruneTarget>(&prune_target, pdb_iteration_callback);
@@ -243,13 +233,20 @@ where
         Self::new_impl(None)
     }
 
-    pub fn with_pdb_iteration_callback(
-        callback: &dyn Fn(crate::solver::statistics::PdbIterationStats),
-    ) -> Self {
+    pub fn with_pdb_iteration_callback(callback: &dyn Fn(PdbIterationStats)) -> Self {
         Self::new_impl(Some(callback))
     }
 
     fn dfs(&self, depth: u8, last_axis: Option<Axis>, projected: ProjectedPuzzle<N>) -> bool {
+        let solved = self.solved_state_arr();
+        if projected.is_solved(&solved) && self.check_solution() {
+            self.solutions_found.update(|n| n + 1);
+            if let Some(f) = &self.cfg().solution_callback {
+                f(self.stack.to_alg());
+            }
+            return self.cfg().num_solutions == self.solutions_found.get();
+        }
+
         let idx = self.pdb.encode(&projected);
         let heuristic = self.pdb.get(idx);
         if heuristic > depth {
@@ -257,14 +254,6 @@ where
         }
 
         if depth == 0 {
-            let solved = self.solved_state_arr();
-            if projected.is_solved(&solved) && self.check_solution() {
-                self.solutions_found.update(|n| n + 1);
-                if let Some(f) = &self.cfg().solution_callback {
-                    f(self.stack.to_alg());
-                }
-                return self.cfg().num_solutions == self.solutions_found.get();
-            }
             return false;
         }
 
@@ -341,8 +330,7 @@ where
 }
 
 impl<P, const W: usize, const H: usize, const N: usize, Target, PruneTarget>
-    SolverT<P, u8, Target, (), Mtm>
-    for Solver<W, H, N, Target, PruneTarget, Mtm>
+    SolverT<P, u8, Target, (), Mtm> for Solver<W, H, N, Target, PruneTarget, Mtm>
 where
     P: SlidingPuzzle,
     P::Piece: AsPrimitive<u8>,
@@ -365,22 +353,20 @@ where
 mod tests {
     use std::str::FromStr as _;
 
+    use super::*;
     use crate::{
+        algorithm::metric::{Mtm, Stm},
         puzzle::{
             label::label::{Rows, Trivial},
             puzzle::Puzzle,
-            sliding_puzzle::SlidingPuzzle as _,
         },
-        solver::solver::Solver as _,
     };
 
-    use super::Solver;
-
-    type Solver3x3StmTrivial = Solver<3, 3, 9, Trivial, Trivial, crate::algorithm::metric::Stm>;
-    type Solver3x3MtmTrivial = Solver<3, 3, 9, Trivial, Trivial, crate::algorithm::metric::Mtm>;
-    type Solver3x3StmRows = Solver<3, 3, 9, Rows, Rows, crate::algorithm::metric::Stm>;
-    type Solver3x3MtmRows = Solver<3, 3, 9, Rows, Rows, crate::algorithm::metric::Mtm>;
-    type Solver3x3StmDiff = Solver<3, 3, 9, Rows, Trivial, crate::algorithm::metric::Stm>;
+    type Solver3x3StmTrivial = Solver<3, 3, 9, Trivial, Trivial, Stm>;
+    type Solver3x3MtmTrivial = Solver<3, 3, 9, Trivial, Trivial, Mtm>;
+    type Solver3x3StmRows = Solver<3, 3, 9, Rows, Rows, Stm>;
+    type Solver3x3MtmRows = Solver<3, 3, 9, Rows, Rows, Mtm>;
+    type Solver3x3StmDiff = Solver<3, 3, 9, Rows, Trivial, Stm>;
 
     #[test]
     fn test_stm_trivial() {
@@ -424,7 +410,6 @@ mod tests {
 
     #[test]
     fn test_solution_validates() {
-        use crate::puzzle::{label::label::Rows, solved_state::SolvedState as _};
         let solver = Solver3x3StmRows::new();
         let mut puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();

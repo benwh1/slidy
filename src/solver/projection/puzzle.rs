@@ -1,4 +1,7 @@
-use crate::algorithm::direction::Direction;
+use crate::{
+    algorithm::direction::Direction,
+    puzzle::{label::label::Label, size::Size, sliding_puzzle::SlidingPuzzle},
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct ProjectedPuzzle<const N: usize> {
@@ -69,13 +72,13 @@ pub(super) fn project_puzzle<
     const W: usize,
     const H: usize,
     const N: usize,
-    P: crate::puzzle::sliding_puzzle::SlidingPuzzle,
-    L: crate::puzzle::label::label::Label,
+    P: SlidingPuzzle,
+    L: Label,
 >(
     puzzle: &P,
     label: &L,
 ) -> ProjectedPuzzle<N> {
-    let size = crate::puzzle::size::Size::new(W as u64, H as u64).unwrap();
+    let size = Size::new(W as u64, H as u64).unwrap();
     let mut pieces = [0u8; N];
     for i in 0..N {
         let piece = puzzle.piece_at(i as u64);
