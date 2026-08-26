@@ -5,6 +5,7 @@
 
 pub mod generic_solver;
 pub mod heuristic;
+pub mod projection;
 pub mod size4x4;
 pub mod small;
 pub mod solver;
