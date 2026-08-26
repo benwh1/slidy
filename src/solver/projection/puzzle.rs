@@ -6,12 +6,12 @@ use crate::{
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) struct ProjectedPuzzle<const N: usize> {
+pub(super) struct ProjectedPuzzle<const W: usize, const H: usize, const N: usize> {
     pub(super) pieces: [u8; N],
     pub(super) gap: u8,
 }
 
-impl<const N: usize> ProjectedPuzzle<N> {
+impl<const W: usize, const H: usize, const N: usize> ProjectedPuzzle<W, H, N> {
     pub(super) fn new(label_pieces: [u8; N], gap: u8) -> Self {
         Self {
             pieces: label_pieces,
@@ -23,9 +23,9 @@ impl<const N: usize> ProjectedPuzzle<N> {
         self.pieces == *solved_state
     }
 
-    pub(super) fn do_move<const W: usize, const H: usize>(&mut self, dir: Direction) -> bool {
+    pub(super) fn do_move(&mut self, dir: Direction) -> bool {
         let gap = self.gap as usize;
-        let new_gap = Self::new_gap_pos(gap, dir, W, H);
+        let new_gap = Self::new_gap_pos(gap, dir);
         if new_gap == gap {
             return false;
         }
@@ -34,19 +34,19 @@ impl<const N: usize> ProjectedPuzzle<N> {
         true
     }
 
-    fn new_gap_pos(gap: usize, dir: Direction, w: usize, h: usize) -> usize {
-        let gx = gap % w;
-        let gy = gap / w;
+    fn new_gap_pos(gap: usize, dir: Direction) -> usize {
+        let gx = gap % W;
+        let gy = gap / W;
         match dir {
             Direction::Up => {
-                if gy + 1 < h {
-                    gap + w
+                if gy + 1 < H {
+                    gap + W
                 } else {
                     gap
                 }
             }
             Direction::Left => {
-                if gx + 1 < w {
+                if gx + 1 < W {
                     gap + 1
                 } else {
                     gap
@@ -54,7 +54,7 @@ impl<const N: usize> ProjectedPuzzle<N> {
             }
             Direction::Down => {
                 if gy > 0 {
-                    gap - w
+                    gap - W
                 } else {
                     gap
                 }
@@ -73,7 +73,7 @@ impl<const N: usize> ProjectedPuzzle<N> {
 pub(super) fn project_puzzle<const W: usize, const H: usize, const N: usize, P, L>(
     puzzle: &P,
     label: &L,
-) -> ProjectedPuzzle<N>
+) -> ProjectedPuzzle<W, H, N>
 where
     P: SlidingPuzzle,
     L: Label,

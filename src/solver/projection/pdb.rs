@@ -46,7 +46,7 @@ impl Pdb {
 
         let mut solved_arr = [0u8; N];
         solved_arr.copy_from_slice(&solved_state);
-        let mut current: Vec<ProjectedPuzzle<N>> =
+        let mut current: Vec<ProjectedPuzzle<W, H, N>> =
             vec![ProjectedPuzzle::new(solved_arr, solved_gap)];
 
         let mut depth = 0u8;
@@ -68,7 +68,7 @@ impl Pdb {
                     Direction::Right,
                 ] {
                     let mut puzzle = *state;
-                    if puzzle.do_move::<W, H>(dir) {
+                    if puzzle.do_move(dir) {
                         let key = (puzzle.pieces.to_vec(), puzzle.gap);
                         if visited.insert(key) {
                             let idx = encoding::encode_multiset(&puzzle.pieces, &tally) as usize;
@@ -120,7 +120,7 @@ impl Pdb {
 
         let mut solved_arr = [0u8; N];
         solved_arr.copy_from_slice(&solved_state);
-        let mut current: Vec<ProjectedPuzzle<N>> =
+        let mut current: Vec<ProjectedPuzzle<W, H, N>> =
             vec![ProjectedPuzzle::new(solved_arr, solved_gap)];
 
         let mut depth = 0u8;
@@ -142,7 +142,7 @@ impl Pdb {
                     Direction::Right,
                 ] {
                     let mut puzzle = *state;
-                    while puzzle.do_move::<W, H>(dir) {
+                    while puzzle.do_move(dir) {
                         let key = (puzzle.pieces.to_vec(), puzzle.gap);
                         if visited.insert(key) {
                             let idx = encoding::encode_multiset(&puzzle.pieces, &tally) as usize;
@@ -172,7 +172,10 @@ impl Pdb {
         }
     }
 
-    pub(super) fn encode<const N: usize>(&self, puzzle: &ProjectedPuzzle<N>) -> usize {
+    pub(super) fn encode<const W: usize, const H: usize, const N: usize>(
+        &self,
+        puzzle: &ProjectedPuzzle<W, H, N>,
+    ) -> usize {
         encoding::encode_multiset(&puzzle.pieces, &self.tally) as usize
     }
 }

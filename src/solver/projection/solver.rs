@@ -74,7 +74,7 @@ where
         }
     }
 
-    fn initial_projected(&self) -> ProjectedPuzzle<N> {
+    fn initial_projected(&self) -> ProjectedPuzzle<W, H, N> {
         project_puzzle::<W, H, N, Puzzle<W, H>, PruneTarget>(&self.puzzle.get(), &self.prune_target)
     }
 
@@ -122,7 +122,7 @@ where
         Self::new_impl(Some(callback))
     }
 
-    fn dfs(&self, depth: u8, last_dir: Option<Direction>, projected: ProjectedPuzzle<N>) -> bool {
+    fn dfs(&self, depth: u8, last_dir: Option<Direction>, projected: ProjectedPuzzle<W, H, N>) -> bool {
         let solved = self.solved_state_arr();
         if projected.is_solved(&solved) && self.check_solution() {
             self.solutions_found.update(|n| n + 1);
@@ -155,7 +155,7 @@ where
             }
 
             let mut proj = original;
-            if proj.do_move::<W, H>(dir) {
+            if proj.do_move(dir) {
                 self.stack.push(dir);
                 if self.dfs(depth - 1, Some(dir), proj) {
                     return true;
@@ -267,7 +267,7 @@ where
         Self::new_impl(Some(callback))
     }
 
-    fn dfs(&self, depth: u8, last_axis: Option<Axis>, projected: ProjectedPuzzle<N>) -> bool {
+    fn dfs(&self, depth: u8, last_axis: Option<Axis>, projected: ProjectedPuzzle<W, H, N>) -> bool {
         let solved = self.solved_state_arr();
         if projected.is_solved(&solved) && self.check_solution() {
             self.solutions_found.update(|n| n + 1);
@@ -301,7 +301,7 @@ where
 
             let mut proj = original;
             let mut count = 0;
-            while proj.do_move::<W, H>(dir) {
+            while proj.do_move(dir) {
                 count += 1;
                 self.stack.push(dir);
                 if self.dfs(depth - 1, Some(dir.into()), proj) {
