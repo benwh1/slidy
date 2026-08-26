@@ -68,22 +68,20 @@ impl<const N: usize> ProjectedPuzzle<N> {
     }
 }
 
-pub(super) fn project_puzzle<
-    const W: usize,
-    const H: usize,
-    const N: usize,
-    P: SlidingPuzzle,
-    L: Label,
->(
+pub(super) fn project_puzzle<const W: usize, const H: usize, const N: usize, P, L>(
     puzzle: &P,
     label: &L,
-) -> ProjectedPuzzle<N> {
+) -> ProjectedPuzzle<N>
+where
+    P: SlidingPuzzle,
+    L: Label,
+{
     let size = Size::new(W as u64, H as u64).unwrap();
     let mut pieces = [0u8; N];
-    for i in 0..N {
+    for (i, p) in pieces.iter_mut().enumerate() {
         let piece = puzzle.piece_at(i as u64);
         let solved_pos = puzzle.solved_pos_xy(piece);
-        pieces[i] = label.position_label(size, solved_pos) as u8;
+        *p = label.position_label(size, solved_pos) as u8;
     }
     ProjectedPuzzle {
         pieces,

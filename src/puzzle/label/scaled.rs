@@ -53,6 +53,12 @@ pub enum ScaledError {
     ZeroScale,
 }
 
+impl<L: Label + Default> Default for Scaled<L> {
+    fn default() -> Self {
+        Self::new(L::default(), (1, 1)).unwrap()
+    }
+}
+
 impl<L: Label> Scaled<L> {
     /// Creates a new [`Scaled`] from a [`Label`] and scaling factors.
     pub fn new(label: L, factor: (u64, u64)) -> Result<Self, ScaledError> {

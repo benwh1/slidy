@@ -37,6 +37,18 @@ pub struct Solver<const W: usize, const H: usize, const N: usize, Target, PruneT
     _metric: PhantomData<MetricTag>,
 }
 
+impl<const W: usize, const H: usize, const N: usize, Target, PruneTarget> Default
+    for Solver<W, H, N, Target, PruneTarget, Stm>
+where
+    Target: Label + SolvedState + Default,
+    PruneTarget: Label + SolvedState + Default,
+    Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<const W: usize, const H: usize, const N: usize, Target, PruneTarget, MetricTag>
     Solver<W, H, N, Target, PruneTarget, MetricTag>
 where
@@ -98,6 +110,12 @@ where
     #[must_use]
     pub fn new() -> Self {
         Self::new_impl(None)
+    }
+
+    pub fn with_prune_target(prune_target: PruneTarget) -> Self {
+        let target = Target::default();
+        let pdb = Pdb::new_stm::<W, H, N, PruneTarget>(&prune_target, None);
+        Self::with_pdb(pdb, target, prune_target)
     }
 
     pub fn with_pdb_iteration_callback(callback: &dyn Fn(PdbIterationStats)) -> Self {
@@ -211,6 +229,18 @@ where
 
     fn solve_with_config(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
         self.solve_impl(puzzle, config)
+    }
+}
+
+impl<const W: usize, const H: usize, const N: usize, Target, PruneTarget> Default
+    for Solver<W, H, N, Target, PruneTarget, Mtm>
+where
+    Target: Label + SolvedState + Default,
+    PruneTarget: Label + SolvedState + Default,
+    Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
+{
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -357,7 +387,10 @@ mod tests {
     use crate::{
         algorithm::metric::{Mtm, Stm},
         puzzle::{
-            label::label::{Rows, Trivial},
+            label::{
+                label::{Rows, Trivial},
+                scaled::Scaled,
+            },
             puzzle::Puzzle,
         },
     };
@@ -424,5 +457,14 @@ mod tests {
         let s1 = solver.solve(&puzzle).unwrap();
         let s2 = solver.solve(&puzzle).unwrap();
         assert_eq!(s1.len_stm::<u64>(), s2.len_stm::<u64>());
+    }
+
+    #[test]
+    fn test_stm_rows_double_rows_4x4() {
+        let prune = Scaled::new(Rows, (2, 2)).unwrap();
+        let solver = Solver::<4, 4, 16, Rows, Scaled<Rows>, Stm>::with_prune_target(prune);
+        let puzzle = Puzzle::from_str("12 7 9 10/5 6 0 14/11 15 2 8/3 1 4 13").unwrap();
+        let solution = solver.solve(&puzzle).unwrap();
+        assert_eq!(solution.len_stm::<u64>(), 45);
     }
 }
