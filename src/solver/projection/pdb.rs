@@ -184,15 +184,13 @@ fn compute_solved_state<const W: usize, const H: usize, const N: usize, L>(
 where
     L: Label,
 {
-    let num_labels = label.num_labels(size) as u8;
     let mut state = vec![0u8; N];
     for (i, s) in state.iter_mut().enumerate() {
         let x = (i % W) as u64;
         let y = (i / W) as u64;
-        *s = label.position_label(size, (x, y)) as u8;
+        *s = label.position_label(size, (x, y)) as u8 + 1;
     }
-    // The gap (last position in solved state) gets a unique label
-    state[N - 1] = num_labels;
+    state[N - 1] = 0;
     state
 }
 

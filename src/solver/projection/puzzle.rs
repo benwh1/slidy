@@ -79,16 +79,14 @@ where
     L: Label,
 {
     let size = Size::new(W as u64, H as u64).unwrap();
-    let num_labels = label.num_labels(size) as u8;
     let mut pieces = [0u8; N];
     for (i, p) in pieces.iter_mut().enumerate() {
         let piece = puzzle.piece_at(i as u64);
         if piece.is_zero() {
-            // Gap gets a unique label
-            *p = num_labels;
+            *p = 0;
         } else {
             let solved_pos = puzzle.solved_pos_xy(piece);
-            *p = label.position_label(size, solved_pos) as u8;
+            *p = label.position_label(size, solved_pos) as u8 + 1;
         }
     }
     ProjectedPuzzle {
