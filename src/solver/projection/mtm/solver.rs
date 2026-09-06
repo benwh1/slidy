@@ -130,8 +130,8 @@ where
     }
 }
 
-impl<P, const W: usize, const H: usize, const N: usize, Target, PruneTarget>
-    SolverT<P, u8, Target, (), Mtm> for Solver<W, H, N, Target, PruneTarget, Mtm>
+impl<P, const W: usize, const H: usize, const N: usize, Target, PruneTarget> SolverT<P>
+    for Solver<W, H, N, Target, PruneTarget, Mtm>
 where
     P: SlidingPuzzle,
     P::Piece: AsPrimitive<u8>,

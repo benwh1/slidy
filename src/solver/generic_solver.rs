@@ -63,7 +63,7 @@ impl<'a, P, S, H, M> GenericSolver<'a, P, S, H, M> {
     }
 }
 
-impl<P, S, H> Solver<P, u8, S, H, Stm> for GenericSolver<'_, P, S, H, Stm>
+impl<P, S, H> Solver<P> for GenericSolver<'_, P, S, H, Stm>
 where
     P: SlidingPuzzle + Clone,
     S: SolvedState + Solvable,
@@ -80,7 +80,7 @@ where
     }
 }
 
-impl<P, S, H> Solver<P, u8, S, H, Mtm> for GenericSolver<'_, P, S, H, Mtm>
+impl<P, S, H> Solver<P> for GenericSolver<'_, P, S, H, Mtm>
 where
     P: SlidingPuzzle + Clone,
     S: SolvedState + Solvable,

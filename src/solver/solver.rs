@@ -5,9 +5,8 @@ use std::{cell::RefCell, rc::Rc};
 use thiserror::Error;
 
 use crate::{
-    algorithm::algorithm::Algorithm,
-    puzzle::{sliding_puzzle::SlidingPuzzle, solved_state::SolvedState},
-    solver::{heuristic::Heuristic, statistics::SolverIterationStats},
+    algorithm::algorithm::Algorithm, puzzle::sliding_puzzle::SlidingPuzzle,
+    solver::statistics::SolverIterationStats,
 };
 
 /// Error type for solvers.
@@ -52,14 +51,10 @@ impl Default for SolverConfig {
     }
 }
 
-/// A unified interface for optimal puzzle solvers.
-///
-/// Implementors solve a puzzle and return an optimal solution as an [`Algorithm`].
-pub trait Solver<P, T, S, H, M>
+/// A generic interface for sliding puzzle solvers.
+pub trait Solver<P>
 where
     P: SlidingPuzzle,
-    S: SolvedState,
-    H: Heuristic<P, T, S, M>,
 {
     /// Returns whether the solver has been initialised.
     fn is_initialised(&self) -> bool;

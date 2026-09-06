@@ -5,10 +5,8 @@ use std::cell::{Cell, Ref, RefCell};
 use num_traits::AsPrimitive;
 
 use crate::{
-    algorithm::{axis::Axis, direction::Direction, metric::Mtm},
-    puzzle::{
-        label::label::RowGrids, puzzle::Puzzle, sliding_puzzle::SlidingPuzzle, small::Puzzle4x4,
-    },
+    algorithm::{axis::Axis, direction::Direction},
+    puzzle::{sliding_puzzle::SlidingPuzzle, small::Puzzle4x4},
     solver::{
         size4x4::mtm::{
             base_5_table::Base5Table,
@@ -276,14 +274,18 @@ impl Solver {
     }
 }
 
-impl SolverT<Puzzle, u8, RowGrids, (), Mtm> for Solver {
+impl<P> SolverT<P> for Solver
+where
+    P: SlidingPuzzle,
+    P::Piece: AsPrimitive<u8>,
+{
     fn is_initialised(&self) -> bool {
         true
     }
 
     fn init(&mut self) {}
 
-    fn solve_with_config(&self, puzzle: &Puzzle, config: SolverConfig) -> Result<(), SolverError> {
+    fn solve_with_config(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
         self.solve_impl(puzzle, config)
     }
 }

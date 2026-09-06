@@ -5,8 +5,8 @@ use std::cell::{Cell, Ref, RefCell};
 use num_traits::ToPrimitive as _;
 
 use crate::{
-    algorithm::{direction::Direction, metric::Stm},
-    puzzle::{label::label::RowGrids, size::Size, sliding_puzzle::SlidingPuzzle},
+    algorithm::direction::Direction,
+    puzzle::{size::Size, sliding_puzzle::SlidingPuzzle},
     solver::{
         size4x4::stm::{pattern::Pattern, pdb::Pdb, puzzle::Puzzle as Puzzle4},
         solver::{Solver as SolverT, SolverConfig, SolverError},
@@ -219,7 +219,7 @@ impl Solver {
     }
 }
 
-impl<P> SolverT<P, u8, RowGrids, (), Stm> for Solver
+impl<P> SolverT<P> for Solver
 where
     P: SlidingPuzzle,
 {

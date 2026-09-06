@@ -8,7 +8,6 @@ use num_traits::AsPrimitive;
 use crate::{
     algorithm::{axis::Axis, direction::Direction, metric::Mtm},
     puzzle::{
-        label::label::RowGrids,
         sliding_puzzle::SlidingPuzzle,
         small::{sealed::SmallPuzzle, Puzzle},
     },
@@ -182,8 +181,7 @@ where
     }
 }
 
-impl<P, const W: usize, const H: usize, const N: usize> SolverT<P, u8, RowGrids, (), Mtm>
-    for Solver<W, H, N, Mtm>
+impl<P, const W: usize, const H: usize, const N: usize> SolverT<P> for Solver<W, H, N, Mtm>
 where
     P: SlidingPuzzle,
     P::Piece: AsPrimitive<u8>,
