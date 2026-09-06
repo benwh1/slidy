@@ -21,8 +21,13 @@ thiserror = "^2"
 xxhash-rust = { version = "^0.8", features = ["xxh3"] }
 
 [dev-dependencies]
+criterion = "^0.6"
 paste = "^1"
 rand_xoshiro = "^0.8"
+
+[[bench]]
+name = "projection"
+harness = false
 
 [features]
 default = ["thread_rng"]
