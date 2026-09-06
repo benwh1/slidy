@@ -48,7 +48,7 @@ where
             stack: Stack::default(),
             solutions_found: Cell::new(0),
             config: RefCell::new(None),
-            phantom_metric_tag: PhantomData,
+            phantom_metric: PhantomData,
         }
     }
 

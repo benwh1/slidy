@@ -37,15 +37,15 @@ pub struct Solver<const W: usize, const H: usize, const N: usize, Target, PruneT
     phantom_metric: PhantomData<Metric>,
 }
 
-impl<const W: usize, const H: usize, const N: usize, Target, PruneTarget, MetricTag>
-    Solver<W, H, N, Target, PruneTarget, MetricTag>
+impl<const W: usize, const H: usize, const N: usize, Target, PruneTarget, Metric>
+    Solver<W, H, N, Target, PruneTarget, Metric>
 where
     Target: Label + SolvedState + Default,
     PruneTarget: Label + SolvedState + Default,
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
     #[must_use]
-    pub fn builder<'a>() -> SolverBuilder<'a, W, H, N, Target, PruneTarget, MetricTag> {
+    pub fn builder<'a>() -> SolverBuilder<'a, W, H, N, Target, PruneTarget, Metric> {
         SolverBuilder::new()
     }
 
@@ -53,7 +53,7 @@ where
         Ref::map(self.config.borrow(), |b| b.as_ref().unwrap())
     }
 
-    pub(super) fn with_pdb(pdb: Pdb<MetricTag>, target: Target, prune_target: PruneTarget) -> Self {
+    pub(super) fn with_pdb(pdb: Pdb<Metric>, target: Target, prune_target: PruneTarget) -> Self {
         Self {
             pdb,
             stack: Stack::default(),

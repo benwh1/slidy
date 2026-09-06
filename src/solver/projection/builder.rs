@@ -20,16 +20,16 @@ pub struct SolverBuilder<
     const N: usize,
     Target,
     PruneTarget,
-    MetricTag,
+    Metric,
 > {
     pub(super) target: Option<Target>,
     pub(super) prune_target: Option<PruneTarget>,
     pub(super) pdb_iteration_callback: Option<&'a dyn Fn(PdbIterationStats)>,
-    _metric: PhantomData<MetricTag>,
+    phantom_metric: PhantomData<Metric>,
 }
 
-impl<'a, const W: usize, const H: usize, const N: usize, Target, PruneTarget, MetricTag>
-    SolverBuilder<'a, W, H, N, Target, PruneTarget, MetricTag>
+impl<'a, const W: usize, const H: usize, const N: usize, Target, PruneTarget, Metric>
+    SolverBuilder<'a, W, H, N, Target, PruneTarget, Metric>
 where
     Target: Label + SolvedState + Default,
     PruneTarget: Label + SolvedState + Default,
@@ -41,24 +41,29 @@ where
             target: None,
             prune_target: None,
             pdb_iteration_callback: None,
-            _metric: PhantomData,
+            phantom_metric: PhantomData,
         }
     }
 
     #[must_use]
-    pub fn with_target(mut self, target: Target) -> Self {
+    pub fn target(mut self, target: Target) -> Self {
         self.target = Some(target);
         self
     }
 
     #[must_use]
-    pub fn with_prune_target(mut self, prune_target: PruneTarget) -> Self {
+    pub fn prune_target(mut self, prune_target: PruneTarget) -> Self {
         self.prune_target = Some(prune_target);
         self
     }
 
     #[must_use]
-    pub fn with_pdb_iteration_callback(mut self, callback: &'a dyn Fn(PdbIterationStats)) -> Self {
+    pub fn metric(self, _: Metric) -> Self {
+        self
+    }
+
+    #[must_use]
+    pub fn pdb_iteration_callback(mut self, callback: &'a dyn Fn(PdbIterationStats)) -> Self {
         self.pdb_iteration_callback = Some(callback);
         self
     }

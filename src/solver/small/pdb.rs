@@ -52,9 +52,9 @@ const HASHES_MTM: [(usize, usize, u64); 12] = [
 ];
 
 /// A pattern database for a small `WxH` puzzle.
-pub struct Pdb<const W: usize, const H: usize, const N: usize, MetricTag> {
+pub struct Pdb<const W: usize, const H: usize, const N: usize, Metric> {
     pdb: Box<[u8]>,
-    phantom_metric_tag: PhantomData<MetricTag>,
+    phantom_metric: PhantomData<Metric>,
 }
 
 /// [`Pdb`] specialized to the 2x2 size and [`Stm`] metric.
@@ -183,7 +183,7 @@ where
 
         Self {
             pdb,
-            phantom_metric_tag: PhantomData,
+            phantom_metric: PhantomData,
         }
     }
 
@@ -295,7 +295,7 @@ where
 
         Self {
             pdb,
-            phantom_metric_tag: PhantomData,
+            phantom_metric: PhantomData,
         }
     }
 
@@ -348,7 +348,7 @@ where
     }
 }
 
-impl<const W: usize, const H: usize, const N: usize, MetricTag> Pdb<W, H, N, MetricTag> {
+impl<const W: usize, const H: usize, const N: usize, Metric> Pdb<W, H, N, Metric> {
     pub(super) fn get(&self, index: usize) -> u8 {
         self.pdb[index]
     }
@@ -367,14 +367,12 @@ impl<const W: usize, const H: usize, const N: usize, MetricTag> Pdb<W, H, N, Met
     pub unsafe fn from_bytes_unchecked(bytes: Box<[u8]>) -> Self {
         Self {
             pdb: bytes,
-            phantom_metric_tag: PhantomData,
+            phantom_metric: PhantomData,
         }
     }
 }
 
-impl<const W: usize, const H: usize, const N: usize, MetricTag> AsRef<[u8]>
-    for Pdb<W, H, N, MetricTag>
-{
+impl<const W: usize, const H: usize, const N: usize, Metric> AsRef<[u8]> for Pdb<W, H, N, Metric> {
     fn as_ref(&self) -> &[u8] {
         &self.pdb
     }

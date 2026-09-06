@@ -216,7 +216,7 @@ mod tests {
     fn test_stm_rows_double_rows_4x4() {
         let prune = Scaled::new(Rows, (2, 2)).unwrap();
         let solver = Solver::<4, 4, 16, Rows, Scaled<Rows>, Stm>::builder()
-            .with_prune_target(prune)
+            .prune_target(prune)
             .build();
         let puzzle = Puzzle::from_str("12 7 9 10/5 6 0 14/11 15 2 8/3 1 4 13").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
@@ -227,7 +227,7 @@ mod tests {
     fn test_stm_rows_with_pdb_iteration_callback() {
         let iterations = Cell::new(0u64);
         let solver = Solver3x3StmRows::builder()
-            .with_pdb_iteration_callback(&|stats| {
+            .pdb_iteration_callback(&|stats| {
                 assert!(stats.total > 0);
                 iterations.set(iterations.get() + 1);
             })
@@ -242,9 +242,9 @@ mod tests {
     fn test_stm_all_builder_options() {
         let prune = Scaled::new(Rows, (2, 2)).unwrap();
         let solver = Solver::<4, 4, 16, Rows, Scaled<Rows>, Stm>::builder()
-            .with_target(Rows)
-            .with_prune_target(prune)
-            .with_pdb_iteration_callback(&|_| {})
+            .target(Rows)
+            .prune_target(prune)
+            .pdb_iteration_callback(&|_| {})
             .build();
         let puzzle = Puzzle::from_str("12 7 9 10/5 6 0 14/11 15 2 8/3 1 4 13").unwrap();
         let solution = solver.solve(&puzzle).unwrap();

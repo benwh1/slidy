@@ -23,7 +23,7 @@ where
     pub fn build(self) -> Solver<W, H, N, Target, PruneTarget, Mtm> {
         let prune_target = self.prune_target.unwrap_or_default();
         let target = self.target.unwrap_or_default();
-        let pdb = Pdb::new::<W, H, N, PruneTarget>(&prune_target, self.pdb_iteration_callback);
+        let pdb = Pdb::new::<W, H, N, _>(&prune_target, self.pdb_iteration_callback);
         Solver::with_pdb(pdb, target, prune_target)
     }
 }
