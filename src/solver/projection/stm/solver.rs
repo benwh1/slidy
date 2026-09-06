@@ -31,9 +31,9 @@ where
         depth: u8,
         last_dir: Option<Direction>,
         projected: ProjectedPuzzle<W, H, N>,
+        solved: &[u8; N],
     ) -> bool {
-        let solved = self.solved_state_arr();
-        if projected.is_solved(&solved) && self.check_solution() {
+        if projected.is_solved(solved) && self.check_solution() {
             self.solutions_found.update(|n| n + 1);
             if let Some(f) = &self.cfg().solution_callback {
                 f(self.stack.to_alg());
@@ -41,13 +41,13 @@ where
             return self.cfg().num_solutions == self.solutions_found.get();
         }
 
-        let idx = self.pdb.encode(&projected);
-        let heuristic = self.pdb.get(idx);
-        if heuristic > depth {
+        if depth == 0 {
             return false;
         }
 
-        if depth == 0 {
+        let idx = self.pdb.encode(&projected);
+        let heuristic = self.pdb.get(idx);
+        if heuristic > depth {
             return false;
         }
 
@@ -66,7 +66,7 @@ where
             let mut proj = original;
             if proj.do_move(dir) {
                 self.stack.push(dir);
-                if self.dfs(depth - 1, Some(dir), proj) {
+                if self.dfs(depth - 1, Some(dir), proj, solved) {
                     return true;
                 }
                 self.stack.pop();
@@ -99,11 +99,12 @@ where
         *self.config.borrow_mut() = Some(config);
 
         let projected = self.initial_projected();
+        let solved = self.solved_state_arr();
         let start_idx = self.pdb.encode(&projected);
         let mut depth = self.pdb.get(start_idx).max(min);
 
         while depth <= max {
-            if self.dfs(depth, None, projected) {
+            if self.dfs(depth, None, projected, &solved) {
                 return Ok(());
             }
 

@@ -26,9 +26,14 @@ where
     PruneTarget: Label + SolvedState + Default,
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
-    fn dfs(&self, depth: u8, last_axis: Option<Axis>, projected: ProjectedPuzzle<W, H, N>) -> bool {
-        let solved = self.solved_state_arr();
-        if projected.is_solved(&solved) && self.check_solution() {
+    fn dfs(
+        &self,
+        depth: u8,
+        last_axis: Option<Axis>,
+        projected: ProjectedPuzzle<W, H, N>,
+        solved: &[u8; N],
+    ) -> bool {
+        if projected.is_solved(solved) && self.check_solution() {
             self.solutions_found.update(|n| n + 1);
             if let Some(f) = &self.cfg().solution_callback {
                 f(self.stack.to_alg());
@@ -36,13 +41,13 @@ where
             return self.cfg().num_solutions == self.solutions_found.get();
         }
 
-        let idx = self.pdb.encode(&projected);
-        let heuristic = self.pdb.get(idx);
-        if heuristic > depth {
+        if depth == 0 {
             return false;
         }
 
-        if depth == 0 {
+        let idx = self.pdb.encode(&projected);
+        let heuristic = self.pdb.get(idx);
+        if heuristic > depth {
             return false;
         }
 
@@ -63,7 +68,7 @@ where
             while proj.do_move(dir) {
                 count += 1;
                 self.stack.push(dir);
-                if self.dfs(depth - 1, Some(dir.into()), proj) {
+                if self.dfs(depth - 1, Some(dir.into()), proj, solved) {
                     return true;
                 }
             }
@@ -96,11 +101,12 @@ where
         *self.config.borrow_mut() = Some(config);
 
         let projected = self.initial_projected();
+        let solved = self.solved_state_arr();
         let start_idx = self.pdb.encode(&projected);
         let mut depth = self.pdb.get(start_idx).max(min);
 
         while depth <= max {
-            if self.dfs(depth, None, projected) {
+            if self.dfs(depth, None, projected, &solved) {
                 return Ok(());
             }
 
