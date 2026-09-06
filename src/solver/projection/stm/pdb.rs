@@ -9,7 +9,7 @@ use crate::{
     puzzle::{label::label::Label, size::Size},
     solver::{
         projection::{
-            encoding,
+            encoding::Encoding,
             pdb::{compute_solved_state, compute_tally, Pdb},
             puzzle::ProjectedPuzzle,
         },
@@ -28,11 +28,14 @@ impl Pdb<Stm> {
         let size = Size::new(W as u64, H as u64).unwrap();
         let solved_state = compute_solved_state::<W, H, N, L>(label, size);
         let tally = compute_tally(&solved_state);
-        let pdb_size = encoding::multinomial(&tally) as usize;
+        let enc = Encoding::new(&tally);
+        let pdb_size = enc.size() as usize;
 
         let mut pdb = vec![u8::MAX; pdb_size];
         let solved_gap = (N - 1) as u8;
-        let solved_idx = encoding::encode_multiset(&solved_state, &tally) as usize;
+        let mut solved_arr = [0u8; N];
+        solved_arr.copy_from_slice(&solved_state);
+        let solved_idx = enc.encode(&solved_arr) as usize;
         pdb[solved_idx] = 0;
 
         let mut visited: HashSet<(Vec<u8>, u8)> = HashSet::new();
@@ -65,7 +68,7 @@ impl Pdb<Stm> {
                     if puzzle.do_move(dir) {
                         let key = (puzzle.pieces.to_vec(), puzzle.gap);
                         if visited.insert(key) {
-                            let idx = encoding::encode_multiset(&puzzle.pieces, &tally) as usize;
+                            let idx = enc.encode(&puzzle.pieces) as usize;
                             if pdb[idx] == u8::MAX {
                                 pdb[idx] = depth + 1;
                             }
@@ -87,7 +90,7 @@ impl Pdb<Stm> {
 
         Self {
             pdb: pdb.into_boxed_slice(),
-            tally: tally.into_boxed_slice(),
+            enc,
             solved_state: solved_state.into_boxed_slice(),
             phantom_metric: PhantomData,
         }

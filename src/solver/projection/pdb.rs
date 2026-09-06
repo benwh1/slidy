@@ -2,12 +2,12 @@ use std::marker::PhantomData;
 
 use crate::{
     puzzle::{label::label::Label, size::Size},
-    solver::projection::{encoding, puzzle::ProjectedPuzzle},
+    solver::projection::{encoding::Encoding, puzzle::ProjectedPuzzle},
 };
 
 pub(super) struct Pdb<Metric> {
     pub(super) pdb: Box<[u8]>,
-    pub(super) tally: Box<[u8]>,
+    pub(super) enc: Encoding,
     pub(super) solved_state: Box<[u8]>,
     pub(super) phantom_metric: PhantomData<Metric>,
 }
@@ -25,7 +25,7 @@ impl<Metric> Pdb<Metric> {
         &self,
         puzzle: &ProjectedPuzzle<W, H, N>,
     ) -> usize {
-        encoding::encode_multiset(&puzzle.pieces, &self.tally) as usize
+        self.enc.encode(&puzzle.pieces) as usize
     }
 }
 

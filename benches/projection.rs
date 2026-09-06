@@ -7,10 +7,7 @@ use slidy::{
         label::label::{SplitSquareFringe, SquareFringe},
         puzzle::Puzzle,
     },
-    solver::{
-        projection::solver::Solver,
-        solver::Solver as _,
-    },
+    solver::{projection::solver::Solver, solver::Solver as _},
 };
 
 type SolverStm = Solver<4, 4, 16, SplitSquareFringe, SquareFringe, Stm>;
