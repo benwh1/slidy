@@ -90,7 +90,6 @@ impl Pdb<Stm> {
         Self {
             pdb: pdb.into_boxed_slice(),
             tally: tally.into_boxed_slice(),
-            solved_state: solved_state.into_boxed_slice(),
             phantom_metric: PhantomData,
         }
     }

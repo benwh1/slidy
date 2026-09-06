@@ -8,17 +8,12 @@ use crate::{
 pub(super) struct Pdb<Metric> {
     pub(super) pdb: Box<[u8]>,
     pub(super) tally: Box<[u8]>,
-    pub(super) solved_state: Box<[u8]>,
     pub(super) phantom_metric: PhantomData<Metric>,
 }
 
 impl<Metric> Pdb<Metric> {
     pub(super) fn get(&self, index: usize) -> u8 {
         self.pdb[index]
-    }
-
-    pub(super) fn solved_state(&self) -> &[u8] {
-        &self.solved_state
     }
 
     pub(super) fn encode<const W: usize, const H: usize, const N: usize>(
@@ -32,11 +27,11 @@ impl<Metric> Pdb<Metric> {
 pub(super) fn compute_solved_state<const W: usize, const H: usize, const N: usize, L>(
     label: &L,
     size: Size,
-) -> Vec<u8>
+) -> [u8; N]
 where
     L: Label,
 {
-    let mut state = vec![0u8; N];
+    let mut state = [0u8; N];
     for (i, s) in state.iter_mut().enumerate() {
         let x = (i % W) as u64;
         let y = (i / W) as u64;
