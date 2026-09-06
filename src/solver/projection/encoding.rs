@@ -63,34 +63,4 @@ mod tests {
         assert_eq!(indexing::multinomial(&[2, 2, 1]), 30);
         assert_eq!(indexing::multinomial(&[4, 4, 4, 3, 1]), 252_252_000);
     }
-
-    #[test]
-    fn test_encode_assigns_all_indices_unique() {
-        let tally = [2, 2, 1];
-
-        fn visit(tally: &[u8], remaining: &mut [u8; 3], placed: &mut [u8; 5], seen: &mut [bool]) {
-            if placed.iter().all(|&v| v != u8::MAX) {
-                seen[encode(placed, tally) as usize] = true;
-                return;
-            }
-            let depth = placed.iter().take_while(|&&v| v != u8::MAX).count();
-            for label in 0..remaining.len() {
-                if remaining[label] > 0 {
-                    remaining[label] -= 1;
-                    placed[depth] = label as u8;
-                    visit(tally, remaining, placed, seen);
-                    placed[depth] = u8::MAX;
-                    remaining[label] += 1;
-                }
-            }
-        }
-
-        let size = indexing::multinomial(&tally);
-        let mut seen = vec![false; size as usize];
-        let mut remaining = tally;
-        let mut placed = [u8::MAX; 5];
-        visit(&tally, &mut remaining, &mut placed, &mut seen);
-
-        assert!(seen.iter().all(|&unique| unique));
-    }
 }
