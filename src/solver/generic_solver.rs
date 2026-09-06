@@ -224,7 +224,7 @@ where
                 continue;
             }
 
-            let mut count = 0u64;
+            let mut count = 0;
 
             while puzzle.can_move_dir(dir) {
                 puzzle.move_dir(dir);
@@ -293,7 +293,7 @@ mod tests {
 
     #[test]
     fn test_row_grids_manhattan_stm() {
-        let solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
+        let solver: GenericSolver<'_, _, _, _, Stm> =
             GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
 
@@ -307,7 +307,7 @@ mod tests {
 
     #[test]
     fn test_rows_manhattan_stm() {
-        let solver: GenericSolver<'_, Puzzle, Rows, ManhattanDistance<'_, Rows>, Stm> =
+        let solver: GenericSolver<'_, _, _, _, Stm> =
             GenericSolver::new(&ManhattanDistance(&Rows), &Rows);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
@@ -316,7 +316,7 @@ mod tests {
 
     #[test]
     fn test_row_grids_manhattan_mtm() {
-        let solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Mtm> =
+        let solver: GenericSolver<'_, _, _, _, Mtm> =
             GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
@@ -325,7 +325,7 @@ mod tests {
 
     #[test]
     fn test_solve_with_bounds_too_low() {
-        let solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
+        let solver: GenericSolver<'_, _, _, _, Stm> =
             GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let config = SolverConfig {
@@ -339,7 +339,7 @@ mod tests {
 
     #[test]
     fn test_solve() {
-        let solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
+        let solver: GenericSolver<'_, _, _, _, Stm> =
             GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
@@ -348,7 +348,7 @@ mod tests {
 
     #[test]
     fn test_solve_with_config() {
-        let solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
+        let solver: GenericSolver<'_, _, _, _, Stm> =
             GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let config = SolverConfig {
@@ -363,7 +363,7 @@ mod tests {
 
     #[test]
     fn test_solve_with_config_2() {
-        let solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
+        let solver: GenericSolver<'_, _, _, _, Stm> =
             GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let config = SolverConfig {
@@ -377,7 +377,7 @@ mod tests {
 
     #[test]
     fn test_solve_with_config_3() {
-        let solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
+        let solver: GenericSolver<'_, _, _, _, Stm> =
             GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let config = SolverConfig {
@@ -392,7 +392,7 @@ mod tests {
 
     #[test]
     fn test_solve_with_config_4() {
-        let solver: GenericSolver<'_, Puzzle, RowGrids, ManhattanDistance<'_, RowGrids>, Stm> =
+        let solver: GenericSolver<'_, _, _, _, Stm> =
             GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let config = SolverConfig {
@@ -407,7 +407,7 @@ mod tests {
 
     #[test]
     fn test_solve_with_solved_state_mtm() {
-        let solver: GenericSolver<'_, Puzzle, Rows, ManhattanDistance<'_, Rows>, Mtm> =
+        let solver: GenericSolver<'_, _, _, _, Mtm> =
             GenericSolver::new(&ManhattanDistance(&Rows), &Rows);
         let puzzle = Puzzle::from_str("2 7 11 1/5 9 3 14/15 10 6 12/4 0 8 13").unwrap();
         let config = SolverConfig {

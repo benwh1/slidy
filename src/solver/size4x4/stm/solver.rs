@@ -167,7 +167,7 @@ impl Solver {
         self.solutions_found.set(0);
         *self.config.borrow_mut() = Some(config);
 
-        let mut pieces = [0u8; 16];
+        let mut pieces = [0; 16];
         for (i, piece) in pieces.iter_mut().enumerate() {
             *piece = puzzle.piece_at(i as u64).to_u8().unwrap();
         }

@@ -134,7 +134,7 @@ mod tests {
         let base_5_table = Base5Table::new();
 
         let max_counts = TALLY;
-        let mut counts = [0u8, 0, 0, 0, 0];
+        let mut counts = [0, 0, 0, 0, 0];
 
         let mut index = 0;
 

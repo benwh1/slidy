@@ -1,11 +1,11 @@
 use crate::solver::indexing;
 
 pub(super) fn encode<const N: usize>(arr: &[u8; N], tally: &[u8]) -> u64 {
-    let mut remaining = [0u8; N];
+    let mut remaining = [0; N];
     remaining[..tally.len()].copy_from_slice(tally);
     let mut total = N;
     let mut mult = indexing::multinomial(tally);
-    let mut encoded = 0u64;
+    let mut encoded = 0;
 
     for &value in arr {
         let cur = value as usize;

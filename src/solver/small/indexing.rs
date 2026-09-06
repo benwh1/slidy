@@ -13,12 +13,12 @@ pub(super) fn encode<const N: usize>(perm: [u8; N]) -> u64 {
 
     let n = N - 1;
 
-    let mut code = [0u8; N];
+    let mut code = [0; N];
     let mut seen = 0u32;
 
     for (i, &p) in perm2.iter().enumerate().take(n).rev() {
-        code[i] = (seen & ((1u32 << p) - 1)).count_ones() as u8;
-        seen |= 1u32 << p;
+        code[i] = (seen & ((1 << p) - 1)).count_ones() as u8;
+        seen |= 1 << p;
     }
 
     let encoded = code
@@ -38,7 +38,7 @@ fn decode<const W: usize, const N: usize>(k: u64) -> [u8; N] {
 
     let n = N - 1;
     let mut k = (k / N as u64) * 2;
-    let mut code = [0u8; N];
+    let mut code = [0; N];
     let mut total = 0;
 
     for i in 0..n {
@@ -59,7 +59,7 @@ fn decode<const W: usize, const N: usize>(k: u64) -> [u8; N] {
         code[n - 2] = 1 - code[n - 2];
     }
 
-    let mut permutation = [0u8; N];
+    let mut permutation = [0; N];
     let mut remaining = (1..N).collect::<Vec<_>>();
 
     for (i, &c) in code.iter().enumerate().take(n) {

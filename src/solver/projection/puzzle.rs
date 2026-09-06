@@ -79,7 +79,7 @@ where
     L: Label,
 {
     let size = Size::new(W as u64, H as u64).unwrap();
-    let mut pieces = [0u8; N];
+    let mut pieces = [0; N];
     for (i, p) in pieces.iter_mut().enumerate() {
         let piece = puzzle.piece_at(i as u64);
         if piece.is_zero() {

@@ -1,5 +1,5 @@
 pub(super) const BINOMIAL: [[u64; 33]; 33] = {
-    let mut out = [[0u64; 33]; 33];
+    let mut out = [[0; 33]; 33];
 
     let mut n = 0;
     while n < 33 {

@@ -31,7 +31,7 @@ pub(super) fn compute_solved_state<const W: usize, const H: usize, const N: usiz
 where
     L: Label,
 {
-    let mut state = [0u8; N];
+    let mut state = [0; N];
     for (i, s) in state.iter_mut().enumerate() {
         let x = (i % W) as u64;
         let y = (i / W) as u64;
@@ -43,7 +43,7 @@ where
 
 pub(super) fn compute_tally(solved_state: &[u8]) -> Vec<u8> {
     let max_label = *solved_state.iter().max().unwrap() as usize;
-    let mut tally = vec![0u8; max_label + 1];
+    let mut tally = vec![0; max_label + 1];
     for &l in solved_state {
         tally[l as usize] += 1;
     }

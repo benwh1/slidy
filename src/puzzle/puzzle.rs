@@ -53,7 +53,7 @@ impl Puzzle {
     pub fn new(size: Size) -> Self {
         Self {
             pieces: {
-                let mut v: Vec<u64> = (1..size.area()).collect();
+                let mut v = (1..size.area()).collect::<Vec<_>>();
                 v.push(0);
                 v
             },
