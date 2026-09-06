@@ -4,4 +4,4 @@
 
 pub mod builder;
 pub mod pdb;
-pub mod solver;
+mod solver;

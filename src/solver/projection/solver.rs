@@ -1,24 +1,24 @@
 //! Projection [`Solver`] and its metric-specific implementations.
 //!
 //! The [`Solver`] struct and the implementation shared by all metrics live here; the
-//! metric-specific implementations live in the [`stm`] and [`mtm`] submodules.
+//! metric-specific implementations live in the `stm` and `mtm` submodules.
 
 use std::{
     cell::{Cell, Ref, RefCell},
     marker::PhantomData,
 };
 
-use super::builder::SolverBuilder;
 use crate::{
     puzzle::{
         label::label::Label,
         size::Size,
-        sliding_puzzle::SlidingPuzzle,
+        sliding_puzzle::SlidingPuzzle as _,
         small::{sealed::SmallPuzzle, Puzzle},
         solved_state::SolvedState,
     },
     solver::{
         projection::{
+            builder::SolverBuilder,
             pdb::{compute_solved_state, Pdb},
             puzzle::{project_puzzle, ProjectedPuzzle},
         },
@@ -27,6 +27,8 @@ use crate::{
     },
 };
 
+/// An iterative deepening solver that uses a pattern database of projected puzzle states as its
+/// heuristic.
 pub struct Solver<const W: usize, const H: usize, const N: usize, Target, PruneTarget, Metric> {
     pub(super) pdb: Pdb<Metric>,
     pub(super) stack: Stack<128>,
@@ -47,6 +49,7 @@ where
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
     #[must_use]
+    /// Creates a [`SolverBuilder`] for constructing a [`Solver`].
     pub fn builder<'a>() -> SolverBuilder<'a, W, H, N, Target, PruneTarget, Metric> {
         SolverBuilder::new()
     }

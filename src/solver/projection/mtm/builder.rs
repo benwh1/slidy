@@ -20,6 +20,7 @@ where
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
     #[must_use]
+    /// Builds the [`Solver`], using default values for parameters that weren't set.
     pub fn build(self) -> Solver<W, H, N, Target, PruneTarget, Mtm> {
         let prune_target = self.prune_target.unwrap_or_default();
         let target = self.target.unwrap_or_default();

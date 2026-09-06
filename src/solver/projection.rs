@@ -1,7 +1,10 @@
+//! Solvers that prune using a pattern database built from states projected onto a choice of
+//! [`Label`].
+
 pub mod builder;
-pub mod encoding;
+mod encoding;
 pub mod mtm;
-pub mod pdb;
-pub mod puzzle;
+mod pdb;
+mod puzzle;
 pub mod solver;
-pub mod stm;
+mod stm;

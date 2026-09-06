@@ -1,7 +1,3 @@
-//! Mtm-specific implementation of the projection [`Solver`].
-//!
-//! [`Solver`]: crate::solver::projection::solver::Solver
-
 use num_traits::AsPrimitive;
 
 use crate::{

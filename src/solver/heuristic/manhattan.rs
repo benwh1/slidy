@@ -44,6 +44,8 @@ pub trait Distance {
     /// Suppose the solved position of the piece in position `pos` is `solved_pos`, then this
     /// function returns the minimum Manhattan distance from `pos` to any position where the piece
     /// is considered solved (according to some [`SolvedState`]).
+    ///
+    /// [`SolvedState`]: crate::puzzle::solved_state::SolvedState
     fn dist(&self, pos: (u64, u64), solved_pos: (u64, u64), size: Size) -> u64;
 }
 

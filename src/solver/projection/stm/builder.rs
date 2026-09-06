@@ -1,6 +1,4 @@
 //! Stm-specific implementation of the projection [`SolverBuilder`].
-//!
-//! [`SolverBuilder`]: crate::solver::projection::builder::SolverBuilder
 
 use crate::{
     algorithm::metric::Stm,
@@ -20,6 +18,7 @@ where
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
     #[must_use]
+    /// Builds the [`Solver`], using default values for parameters that weren't set.
     pub fn build(self) -> Solver<W, H, N, Target, PruneTarget, Stm> {
         let prune_target = self.prune_target.unwrap_or_default();
         let target = self.target.unwrap_or_default();
