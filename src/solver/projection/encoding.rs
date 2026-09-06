@@ -11,10 +11,7 @@ pub(super) fn encode<const N: usize>(arr: &[u8; N], tally: &[u8]) -> u64 {
         let cur = value as usize;
         for &c in &remaining[..cur] {
             if c > 0 {
-                let saved = mult;
-                mult = mult * c as u64 / total as u64;
-                encoded += mult;
-                mult = saved;
+                encoded += mult * c as u64 / total as u64;
             }
         }
         let c = remaining[cur];

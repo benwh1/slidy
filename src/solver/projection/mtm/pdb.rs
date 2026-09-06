@@ -33,17 +33,13 @@ impl Pdb<Mtm> {
 
         let mut pdb = vec![u8::MAX; pdb_size];
         let solved_gap = (N - 1) as u8;
-        let mut solved_arr = [0; N];
-        solved_arr.copy_from_slice(&solved_state);
-        let solved_idx = encoding::encode(&solved_arr, &tally) as usize;
+        let solved_idx = encoding::encode(&solved_state, &tally) as usize;
         pdb[solved_idx] = 0;
 
         let mut visited = HashSet::new();
         visited.insert(solved_idx);
 
-        let mut solved_arr = [0; N];
-        solved_arr.copy_from_slice(&solved_state);
-        let mut current = vec![ProjectedPuzzle::<W, H, N>::new(solved_arr, solved_gap)];
+        let mut current = vec![ProjectedPuzzle::<W, H, N>::new(solved_state, solved_gap)];
 
         let mut depth = 0;
         let mut new = 1;

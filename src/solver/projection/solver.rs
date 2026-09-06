@@ -13,7 +13,7 @@ use crate::{
     puzzle::{
         label::label::Label,
         size::Size,
-        sliding_puzzle::SlidingPuzzle as _,
+        sliding_puzzle::SlidingPuzzle,
         small::{sealed::SmallPuzzle, Puzzle},
         solved_state::SolvedState,
     },
