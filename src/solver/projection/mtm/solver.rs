@@ -158,24 +158,54 @@ mod tests {
     use crate::puzzle::{
         label::label::{Rows, Trivial},
         puzzle::Puzzle,
+        size::Size,
     };
 
     type Solver3x3MtmTrivial = Solver<3, 3, 9, Trivial, Trivial, Mtm>;
     type Solver3x3MtmRows = Solver<3, 3, 9, Rows, Rows, Mtm>;
 
     #[test]
-    fn test_mtm_trivial() {
+    fn test_trivial() {
         let solver = Solver3x3MtmTrivial::builder().build();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
-        assert!(solution.len_mtm::<u64>() > 0);
+        assert_eq!(solution.len_mtm::<u64>(), 2);
     }
 
     #[test]
-    fn test_mtm_rows() {
+    fn test_rows() {
         let solver = Solver3x3MtmRows::builder().build();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
-        assert!(solution.len_mtm::<u64>() > 0);
+        assert_eq!(solution.len_mtm::<u64>(), 13);
+    }
+
+    #[test]
+    fn test_4x4_rows() {
+        #[derive(Default)]
+        struct Rows211;
+
+        impl Label for Rows211 {
+            fn position_label(&self, _: Size, (_, y): (u64, u64)) -> u64 {
+                [0, 0, 1, 2][y as usize]
+            }
+
+            fn num_labels(&self, _: Size) -> u64 {
+                3
+            }
+        }
+
+        let solver = Solver::<4, 4, 16, _, _, _>::builder()
+            .target(Rows)
+            .prune_target(Rows211)
+            .pdb_iteration_callback(&|s| {
+                println!("depth {} new {} total {}", s.depth, s.new, s.total);
+            })
+            .metric(Mtm)
+            .build();
+        let puzzle = Puzzle::from_str("15 14 4 8/2 7 9 11/1 12 3 10/6 13 0 5").unwrap();
+        let solution = solver.solve(&puzzle).unwrap();
+
+        assert_eq!(solution.len_mtm::<u64>(), 22);
     }
 }
