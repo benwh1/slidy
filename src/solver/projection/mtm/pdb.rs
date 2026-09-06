@@ -20,14 +20,14 @@ use crate::{
 
 impl Pdb<Mtm> {
     pub(super) fn new<const W: usize, const H: usize, const N: usize, L>(
-        label: L,
+        label: &L,
         iteration_callback: Option<&dyn Fn(PdbIterationStats)>,
     ) -> Self
     where
         L: Label,
     {
         let size = Size::new(W as u64, H as u64).unwrap();
-        let solved_state = compute_solved_state::<W, H, N, L>(&label, size);
+        let solved_state = compute_solved_state::<W, H, N, L>(label, size);
         let tally = compute_tally(&solved_state);
         let pdb_size = indexing::multinomial(&tally) as usize;
 
@@ -49,7 +49,7 @@ impl Pdb<Mtm> {
         let mut new = 1;
         let mut total = 1;
 
-        if let Some(f) = iteration_callback.as_ref() {
+        if let Some(f) = iteration_callback {
             f(PdbIterationStats { depth, new, total });
         }
 
@@ -81,7 +81,7 @@ impl Pdb<Mtm> {
             depth += 1;
             current = next;
 
-            if let Some(f) = iteration_callback.as_ref() {
+            if let Some(f) = iteration_callback {
                 f(PdbIterationStats { depth, new, total });
             }
         }
