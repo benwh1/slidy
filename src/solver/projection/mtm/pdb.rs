@@ -38,8 +38,8 @@ impl Pdb<Mtm> {
         let solved_idx = enc.encode(&solved_arr) as usize;
         pdb[solved_idx] = 0;
 
-        let mut visited: HashSet<(Vec<u8>, u8)> = HashSet::new();
-        visited.insert((solved_state.clone(), solved_gap));
+        let mut visited: HashSet<usize> = HashSet::new();
+        visited.insert(solved_idx);
 
         let mut solved_arr = [0u8; N];
         solved_arr.copy_from_slice(&solved_state);
@@ -66,9 +66,8 @@ impl Pdb<Mtm> {
                 ] {
                     let mut puzzle = *state;
                     while puzzle.do_move(dir) {
-                        let key = (puzzle.pieces.to_vec(), puzzle.gap);
-                        if visited.insert(key) {
-                            let idx = enc.encode(&puzzle.pieces) as usize;
+                        let idx = enc.encode(&puzzle.pieces) as usize;
+                        if visited.insert(idx) {
                             if pdb[idx] == u8::MAX {
                                 pdb[idx] = depth + 1;
                             }
