@@ -1,68 +1,64 @@
 pub(super) struct Encoding {
-    table: Box<[u64]>,
     tally: Box<[u8]>,
-    total: usize,
+    size: u64,
 }
 
 impl Encoding {
     pub(super) fn new(tally: &[u8]) -> Self {
         let total: usize = tally.iter().map(|&c| c as usize).sum();
-        let rows = total + 1;
-        let mut table = vec![0u64; rows * (rows + 1) / 2];
-        for n in 0..=total {
-            let base = n * (n + 1) / 2;
-            table[base] = 1;
-            table[base + n] = 1;
-            for k in 1..n {
-                let prev = (n - 1) * n / 2;
-                table[base + k] = table[prev + k - 1] + table[prev + k];
+        let mut size = 1u64;
+        let mut rem = total;
+        for &count in tally {
+            if count == 0 {
+                continue;
             }
+            size *= binomial(rem, count as usize);
+            rem -= count as usize;
         }
         Self {
-            table: table.into_boxed_slice(),
             tally: tally.to_vec().into_boxed_slice(),
-            total,
+            size,
         }
     }
 
-    pub(super) fn size(&self) -> u64 {
-        self.multinomial(&self.tally, self.total)
+    pub(super) const fn size(&self) -> u64 {
+        self.size
     }
 
     pub(super) fn encode<const N: usize>(&self, arr: &[u8; N]) -> u64 {
         let mut remaining = [0u8; N];
         remaining[..self.tally.len()].copy_from_slice(&self.tally);
         let mut total = N;
+        let mut mult = self.size;
         let mut encoded = 0u64;
 
         for &value in arr {
             let cur = value as usize;
-            for label in 0..cur {
-                if remaining[label] > 0 {
-                    remaining[label] -= 1;
-                    encoded += self.multinomial(&remaining, total - 1);
-                    remaining[label] += 1;
+            for &c in &remaining[..cur] {
+                if c > 0 {
+                    let saved = mult;
+                    mult = mult * c as u64 / total as u64;
+                    encoded += mult;
+                    mult = saved;
                 }
             }
+            let c = remaining[cur];
+            mult = mult * c as u64 / total as u64;
             remaining[cur] -= 1;
             total -= 1;
         }
 
         encoded
     }
+}
 
-    fn multinomial(&self, counts: &[u8], total: usize) -> u64 {
-        let mut rem = total;
-        let mut result = 1u64;
-        for &count in counts {
-            if count == 0 {
-                continue;
-            }
-            result *= self.table[rem * (rem + 1) / 2 + count as usize];
-            rem -= count as usize;
-        }
-        result
+fn binomial(n: usize, k: usize) -> u64 {
+    let k = k.min(n - k);
+    let mut result = 1u64;
+    for i in 0..k {
+        result = result * (n - i) as u64 / (i + 1) as u64;
     }
+    result
 }
 
 #[cfg(test)]
@@ -101,5 +97,36 @@ mod tests {
     fn test_pdb_size() {
         assert_eq!(Encoding::new(&[2, 2, 1]).size(), 30);
         assert_eq!(Encoding::new(&[4, 4, 4, 3, 1]).size(), 252_252_000);
+    }
+
+    #[test]
+    fn test_encode_assigns_all_indices_unique() {
+        let tally = [2, 2, 1];
+        let enc = Encoding::new(&tally);
+        let size = enc.size();
+        let mut seen = vec![false; size as usize];
+
+        fn visit(enc: &Encoding, remaining: &mut [u8; 3], placed: &mut [u8; 5], seen: &mut [bool]) {
+            if placed.iter().all(|&v| v != u8::MAX) {
+                seen[enc.encode(placed) as usize] = true;
+                return;
+            }
+            let depth = placed.iter().take_while(|&&v| v != u8::MAX).count();
+            for label in 0..remaining.len() {
+                if remaining[label] > 0 {
+                    remaining[label] -= 1;
+                    placed[depth] = label as u8;
+                    visit(enc, remaining, placed, seen);
+                    placed[depth] = u8::MAX;
+                    remaining[label] += 1;
+                }
+            }
+        }
+
+        let mut remaining = tally;
+        let mut placed = [u8::MAX; 5];
+        visit(&enc, &mut remaining, &mut placed, &mut seen);
+
+        assert!(seen.iter().all(|&unique| unique));
     }
 }
