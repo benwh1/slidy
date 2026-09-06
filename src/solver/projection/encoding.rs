@@ -1,3 +1,5 @@
+use crate::solver::indexing::BINOMIAL;
+
 pub(super) struct Encoding {
     tally: Box<[u8]>,
     size: u64,
@@ -12,7 +14,7 @@ impl Encoding {
             if count == 0 {
                 continue;
             }
-            size *= binomial(rem, count as usize);
+            size *= BINOMIAL[rem][count as usize];
             rem -= count as usize;
         }
         Self {
@@ -50,15 +52,6 @@ impl Encoding {
 
         encoded
     }
-}
-
-fn binomial(n: usize, k: usize) -> u64 {
-    let k = k.min(n - k);
-    let mut result = 1u64;
-    for i in 0..k {
-        result = result * (n - i) as u64 / (i + 1) as u64;
-    }
-    result
 }
 
 #[cfg(test)]

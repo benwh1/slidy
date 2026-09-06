@@ -1,4 +1,7 @@
-use crate::solver::size4x4::mtm::{base_5_table::Base5Table, consts::TALLY, indexing};
+use crate::solver::{
+    indexing,
+    size4x4::mtm::{base_5_table::Base5Table, consts::TALLY},
+};
 
 pub(super) struct IndexingTable {
     high: Box<[u32]>,

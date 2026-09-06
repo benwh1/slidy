@@ -1,4 +1,18 @@
-use crate::solver::size4x4::mtm::consts::BINOMIAL;
+pub(super) const BINOMIAL: [[u64; 33]; 33] = {
+    let mut out = [[0u64; 33]; 33];
+
+    let mut n = 0;
+    while n < 33 {
+        let mut k = 0;
+        while k < 33 {
+            out[n as usize][k as usize] = binomial(n, k);
+            k += 1;
+        }
+        n += 1;
+    }
+
+    out
+};
 
 pub(super) const fn binomial(n: u64, k: u64) -> u64 {
     if k > n {
