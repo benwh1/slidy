@@ -25,27 +25,27 @@ use crate::{
 };
 
 /// An optimal puzzle solver using a [`Heuristic`] `H` to speed up the search.
-pub struct GenericSolver<'a, P, S, H, M> {
+pub struct GenericSolver<P, S, H, M> {
     stack: Stack<256>,
-    heuristic: &'a H,
-    solved_state: &'a S,
+    heuristic: H,
+    solved_state: S,
     solutions_found: Cell<u64>,
     config: RefCell<Option<SolverConfig>>,
     phantom_p: PhantomData<P>,
     phantom_m: PhantomData<M>,
 }
 
-impl<'a, P: SlidingPuzzle + Clone> Default
-    for GenericSolver<'a, P, RowGrids, ManhattanDistance<'a, RowGrids>, Stm>
+impl<P: SlidingPuzzle + Clone> Default
+    for GenericSolver<P, RowGrids, ManhattanDistance<RowGrids>, Stm>
 {
     fn default() -> Self {
-        Self::new(&ManhattanDistance(&RowGrids), &RowGrids)
+        Self::new(ManhattanDistance(RowGrids), RowGrids)
     }
 }
 
-impl<'a, P, S, H, M> GenericSolver<'a, P, S, H, M> {
+impl<P, S, H, M> GenericSolver<P, S, H, M> {
     /// Creates a new [`GenericSolver`] using the given [`Heuristic`] and [`SolvedState`].
-    pub fn new(heuristic: &'a H, solved_state: &'a S) -> Self {
+    pub fn new(heuristic: H, solved_state: S) -> Self {
         Self {
             stack: Stack::default(),
             heuristic,
@@ -63,7 +63,7 @@ impl<'a, P, S, H, M> GenericSolver<'a, P, S, H, M> {
     }
 }
 
-impl<P, S, H> Solver<P> for GenericSolver<'_, P, S, H, Stm>
+impl<P, S, H> Solver<P> for GenericSolver<P, S, H, Stm>
 where
     P: SlidingPuzzle + Clone,
     S: SolvedState + Solvable,
@@ -80,7 +80,7 @@ where
     }
 }
 
-impl<P, S, H> Solver<P> for GenericSolver<'_, P, S, H, Mtm>
+impl<P, S, H> Solver<P> for GenericSolver<P, S, H, Mtm>
 where
     P: SlidingPuzzle + Clone,
     S: SolvedState + Solvable,
@@ -97,7 +97,7 @@ where
     }
 }
 
-impl<P, S, H> GenericSolver<'_, P, S, H, Stm>
+impl<P, S, H> GenericSolver<P, S, H, Stm>
 where
     P: SlidingPuzzle + Clone,
     S: SolvedState + Solvable,
@@ -190,7 +190,7 @@ where
     }
 }
 
-impl<P, S, H> GenericSolver<'_, P, S, H, Mtm>
+impl<P, S, H> GenericSolver<P, S, H, Mtm>
 where
     P: SlidingPuzzle + Clone,
     S: SolvedState + Solvable,
@@ -293,8 +293,8 @@ mod tests {
 
     #[test]
     fn test_row_grids_manhattan_stm() {
-        let solver: GenericSolver<'_, _, _, _, Stm> =
-            GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
+        let solver: GenericSolver<_, _, _, Stm> =
+            GenericSolver::new(ManhattanDistance(RowGrids), RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
 
         let solution = solver.solve(&puzzle).unwrap();
@@ -307,8 +307,7 @@ mod tests {
 
     #[test]
     fn test_rows_manhattan_stm() {
-        let solver: GenericSolver<'_, _, _, _, Stm> =
-            GenericSolver::new(&ManhattanDistance(&Rows), &Rows);
+        let solver: GenericSolver<_, _, _, Stm> = GenericSolver::new(ManhattanDistance(Rows), Rows);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_stm::<u64>(), 23);
@@ -316,8 +315,8 @@ mod tests {
 
     #[test]
     fn test_row_grids_manhattan_mtm() {
-        let solver: GenericSolver<'_, _, _, _, Mtm> =
-            GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
+        let solver: GenericSolver<_, _, _, Mtm> =
+            GenericSolver::new(ManhattanDistance(RowGrids), RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_mtm::<u64>(), 24);
@@ -325,8 +324,8 @@ mod tests {
 
     #[test]
     fn test_solve_with_bounds_too_low() {
-        let solver: GenericSolver<'_, _, _, _, Stm> =
-            GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
+        let solver: GenericSolver<_, _, _, Stm> =
+            GenericSolver::new(ManhattanDistance(RowGrids), RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let config = SolverConfig {
             min: 0,
@@ -339,8 +338,8 @@ mod tests {
 
     #[test]
     fn test_solve() {
-        let solver: GenericSolver<'_, _, _, _, Stm> =
-            GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
+        let solver: GenericSolver<_, _, _, Stm> =
+            GenericSolver::new(ManhattanDistance(RowGrids), RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_stm::<u64>(), 31);
@@ -348,8 +347,8 @@ mod tests {
 
     #[test]
     fn test_solve_with_config() {
-        let solver: GenericSolver<'_, _, _, _, Stm> =
-            GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
+        let solver: GenericSolver<_, _, _, Stm> =
+            GenericSolver::new(ManhattanDistance(RowGrids), RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let config = SolverConfig {
             min: 31,
@@ -363,8 +362,8 @@ mod tests {
 
     #[test]
     fn test_solve_with_config_2() {
-        let solver: GenericSolver<'_, _, _, _, Stm> =
-            GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
+        let solver: GenericSolver<_, _, _, Stm> =
+            GenericSolver::new(ManhattanDistance(RowGrids), RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let config = SolverConfig {
             min: 0,
@@ -377,8 +376,8 @@ mod tests {
 
     #[test]
     fn test_solve_with_config_3() {
-        let solver: GenericSolver<'_, _, _, _, Stm> =
-            GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
+        let solver: GenericSolver<_, _, _, Stm> =
+            GenericSolver::new(ManhattanDistance(RowGrids), RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let config = SolverConfig {
             min: 20,
@@ -392,8 +391,8 @@ mod tests {
 
     #[test]
     fn test_solve_with_config_4() {
-        let solver: GenericSolver<'_, _, _, _, Stm> =
-            GenericSolver::new(&ManhattanDistance(&RowGrids), &RowGrids);
+        let solver: GenericSolver<_, _, _, Stm> =
+            GenericSolver::new(ManhattanDistance(RowGrids), RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let config = SolverConfig {
             min: 33,
@@ -407,8 +406,7 @@ mod tests {
 
     #[test]
     fn test_solve_with_solved_state_mtm() {
-        let solver: GenericSolver<'_, _, _, _, Mtm> =
-            GenericSolver::new(&ManhattanDistance(&Rows), &Rows);
+        let solver: GenericSolver<_, _, _, Mtm> = GenericSolver::new(ManhattanDistance(Rows), Rows);
         let puzzle = Puzzle::from_str("2 7 11 1/5 9 3 14/15 10 6 12/4 0 8 13").unwrap();
         let config = SolverConfig {
             min: 0,

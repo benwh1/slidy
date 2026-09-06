@@ -14,16 +14,15 @@ use crate::{
         },
         size::Size,
         sliding_puzzle::SlidingPuzzle,
-        solved_state::SolvedState,
     },
     solver::heuristic::Heuristic,
 };
 
 /// Manhattan distance heuristic.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ManhattanDistance<'a, S: SolvedState>(pub &'a S);
+pub struct ManhattanDistance<S>(pub S);
 
-impl<P, T, S, M> Heuristic<P, T, S, M> for ManhattanDistance<'_, Trivial>
+impl<P, T, S, M> Heuristic<P, T, S, M> for ManhattanDistance<Trivial>
 where
     P: SlidingPuzzle,
     T: PrimInt + Unsigned + 'static,
@@ -48,7 +47,7 @@ pub trait Distance {
     fn dist(&self, pos: (u64, u64), solved_pos: (u64, u64), size: Size) -> u64;
 }
 
-impl Distance for ManhattanDistance<'_, RowGrids> {
+impl Distance for ManhattanDistance<RowGrids> {
     const HAS_PARITY_CONSTRAINT: bool = true;
 
     fn dist(&self, (x, y): (u64, u64), (sx, sy): (u64, u64), _size: Size) -> u64 {
@@ -56,7 +55,7 @@ impl Distance for ManhattanDistance<'_, RowGrids> {
     }
 }
 
-impl Distance for ManhattanDistance<'_, Rows> {
+impl Distance for ManhattanDistance<Rows> {
     const HAS_PARITY_CONSTRAINT: bool = false;
 
     fn dist(&self, (_, y): (u64, u64), (_, sy): (u64, u64), _size: Size) -> u64 {
@@ -64,7 +63,7 @@ impl Distance for ManhattanDistance<'_, Rows> {
     }
 }
 
-impl Distance for ManhattanDistance<'_, Fringe> {
+impl Distance for ManhattanDistance<Fringe> {
     const HAS_PARITY_CONSTRAINT: bool = false;
 
     fn dist(&self, (x, y): (u64, u64), (sx, sy): (u64, u64), size: Size) -> u64 {
@@ -75,7 +74,7 @@ impl Distance for ManhattanDistance<'_, Fringe> {
     }
 }
 
-impl Distance for ManhattanDistance<'_, SquareFringe> {
+impl Distance for ManhattanDistance<SquareFringe> {
     const HAS_PARITY_CONSTRAINT: bool = false;
 
     fn dist(&self, (x, y): (u64, u64), (sx, sy): (u64, u64), size: Size) -> u64 {
@@ -92,7 +91,7 @@ impl Distance for ManhattanDistance<'_, SquareFringe> {
                     // square part), plus the distance within the square part.
                     let size_diff = h - w;
                     let vertical_distance = size_diff.saturating_sub(y);
-                    let square_distance = ManhattanDistance(&Fringe).dist(
+                    let square_distance = ManhattanDistance(Fringe).dist(
                         (x, y.saturating_sub(size_diff)),
                         (sx, sy - size_diff),
                         size.shrink_to_square(),
@@ -101,7 +100,7 @@ impl Distance for ManhattanDistance<'_, SquareFringe> {
                     vertical_distance + square_distance
                 }
             }
-            Ordering::Equal => ManhattanDistance(&Fringe).dist((x, y), (sx, sy), size),
+            Ordering::Equal => ManhattanDistance(Fringe).dist((x, y), (sx, sy), size),
             Ordering::Greater => {
                 // Same as above, but for the horizontal direction.
                 if sx < w.saturating_sub(h) {
@@ -109,7 +108,7 @@ impl Distance for ManhattanDistance<'_, SquareFringe> {
                 } else {
                     let size_diff = w - h;
                     let horizontal_distance = size_diff.saturating_sub(x);
-                    let square_distance = ManhattanDistance(&Fringe).dist(
+                    let square_distance = ManhattanDistance(Fringe).dist(
                         (x.saturating_sub(size_diff), y),
                         (sx - size_diff, sy),
                         size.shrink_to_square(),
@@ -122,7 +121,7 @@ impl Distance for ManhattanDistance<'_, SquareFringe> {
     }
 }
 
-impl Distance for ManhattanDistance<'_, SplitFringe> {
+impl Distance for ManhattanDistance<SplitFringe> {
     const HAS_PARITY_CONSTRAINT: bool = false;
 
     fn dist(&self, (x, y): (u64, u64), (sx, sy): (u64, u64), _size: Size) -> u64 {
@@ -134,7 +133,7 @@ impl Distance for ManhattanDistance<'_, SplitFringe> {
     }
 }
 
-impl Distance for ManhattanDistance<'_, SplitSquareFringe> {
+impl Distance for ManhattanDistance<SplitSquareFringe> {
     const HAS_PARITY_CONSTRAINT: bool = false;
 
     fn dist(&self, (x, y): (u64, u64), (sx, sy): (u64, u64), size: Size) -> u64 {
@@ -147,7 +146,7 @@ impl Distance for ManhattanDistance<'_, SplitSquareFringe> {
                 } else {
                     let size_diff = h - w;
                     let vertical_distance = size_diff.saturating_sub(y);
-                    let square_distance = ManhattanDistance(&SplitFringe).dist(
+                    let square_distance = ManhattanDistance(SplitFringe).dist(
                         (x, y.saturating_sub(size_diff)),
                         (sx, sy - size_diff),
                         size.shrink_to_square(),
@@ -156,14 +155,14 @@ impl Distance for ManhattanDistance<'_, SplitSquareFringe> {
                     vertical_distance + square_distance
                 }
             }
-            Ordering::Equal => ManhattanDistance(&SplitFringe).dist((x, y), (sx, sy), size),
+            Ordering::Equal => ManhattanDistance(SplitFringe).dist((x, y), (sx, sy), size),
             Ordering::Greater => {
                 if sx < w.saturating_sub(h) {
                     x.abs_diff(sx)
                 } else {
                     let size_diff = w - h;
                     let horizontal_distance = size_diff.saturating_sub(x);
-                    let square_distance = ManhattanDistance(&SplitFringe).dist(
+                    let square_distance = ManhattanDistance(SplitFringe).dist(
                         (x.saturating_sub(size_diff), y),
                         (sx - size_diff, sy),
                         size.shrink_to_square(),
@@ -176,7 +175,7 @@ impl Distance for ManhattanDistance<'_, SplitSquareFringe> {
     }
 }
 
-impl Distance for ManhattanDistance<'_, Diagonals> {
+impl Distance for ManhattanDistance<Diagonals> {
     const HAS_PARITY_CONSTRAINT: bool = false;
 
     fn dist(&self, (x, y): (u64, u64), (sx, sy): (u64, u64), _size: Size) -> u64 {
@@ -184,7 +183,7 @@ impl Distance for ManhattanDistance<'_, Diagonals> {
     }
 }
 
-impl Distance for ManhattanDistance<'_, Checkerboard> {
+impl Distance for ManhattanDistance<Checkerboard> {
     const HAS_PARITY_CONSTRAINT: bool = false;
 
     fn dist(&self, (x, y): (u64, u64), (sx, sy): (u64, u64), _size: Size) -> u64 {
@@ -192,7 +191,7 @@ impl Distance for ManhattanDistance<'_, Checkerboard> {
     }
 }
 
-impl<P, T, S, M, L: Label> Heuristic<P, T, S, M> for ManhattanDistance<'_, L>
+impl<P, T, S, M, L: Label> Heuristic<P, T, S, M> for ManhattanDistance<L>
 where
     P: SlidingPuzzle,
     T: PrimInt + Unsigned + 'static,
@@ -248,7 +247,7 @@ mod tests {
                     $(#[test]
                     fn [< test_ $label:snake _ $w x $h _ $solved_pos >] () {
                         let size = Size::new($w, $h).unwrap();
-                        let md = ManhattanDistance(&$label);
+                        let md = ManhattanDistance($label);
 
                         #[allow(clippy::identity_op)]
                         let solved_pos_xy = ($solved_pos % $w, $solved_pos / $w);
