@@ -1,12 +1,12 @@
 use crate::solver::indexing;
 
 pub(super) fn encode<const N: usize>(arr: &[u8; N], tally: &[u8]) -> u64 {
-    debug_assert!(N <= 32);
+    debug_assert!(N <= 16);
 
     let k = tally.len();
 
     // `m[v]` = number of slots available to values >= v, i.e. N minus the tally of values < v.
-    let mut m = [0u8; 32];
+    let mut m = [0u8; 16];
     let mut rem = N as u8;
     for v in 0..k {
         m[v] = rem;
@@ -15,7 +15,7 @@ pub(super) fn encode<const N: usize>(arr: &[u8; N], tally: &[u8]) -> u64 {
 
     // `weight[v]` = product over u > v of C(m[u], tally[u]): the mixed-radix place value of the
     // ranked subset of value-v positions (least-significant digit is the highest value).
-    let mut weight = [0u64; 32];
+    let mut weight = [0u64; 16];
     let mut prod = 1;
     for v in (0..k).rev() {
         weight[v] = prod;
@@ -27,9 +27,9 @@ pub(super) fn encode<const N: usize>(arr: &[u8; N], tally: &[u8]) -> u64 {
     // position with value v contributes C(pos - less, occ[v] + 1), where `less` is the number of
     // earlier positions holding a smaller value and `occ[v]` the number of earlier value-v
     // positions. `less` is tracked with a Fenwick tree over prefix value counts.
-    let mut rank = [0u64; 32];
-    let mut occ = [0u8; 32];
-    let mut bit = [0u8; 33];
+    let mut rank = [0u64; 16];
+    let mut occ = [0u8; 16];
+    let mut bit = [0u8; 17];
     for (pos, &value) in arr.iter().enumerate() {
         let v = value as usize;
 
