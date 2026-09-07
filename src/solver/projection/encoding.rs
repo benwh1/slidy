@@ -1,7 +1,7 @@
 use crate::solver::indexing;
 
 pub(super) fn encode<const N: usize>(arr: &[u8; N], tally: &[u8]) -> u64 {
-    debug_assert!(N <= 16);
+    const { assert!(N <= 16) };
 
     let k = tally.len();
 
