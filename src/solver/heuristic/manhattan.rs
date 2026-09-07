@@ -7,13 +7,15 @@ use itertools::Itertools as _;
 use num_traits::{AsPrimitive, PrimInt, Unsigned, Zero as _};
 
 use crate::{
+    algorithm::metric::Stm,
     puzzle::{
         label::label::{
-            Checkerboard, Diagonals, Fringe, Label, RowGrids, Rows, SplitFringe, SplitSquareFringe,
-            SquareFringe, Trivial,
+            Checkerboard, Diagonals, Fringe, Label as _, RowGrids, Rows, SplitFringe,
+            SplitSquareFringe, SquareFringe, Trivial,
         },
         size::Size,
         sliding_puzzle::SlidingPuzzle,
+        solved_state::SolvedState,
     },
     solver::heuristic::Heuristic,
 };
@@ -22,7 +24,7 @@ use crate::{
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ManhattanDistance<S>(pub S);
 
-impl<P, T, S, M> Heuristic<P, T, S, M> for ManhattanDistance<Trivial>
+impl<P, T> Heuristic<P, T, Trivial, Stm> for ManhattanDistance<Trivial>
 where
     P: SlidingPuzzle,
     T: PrimInt + Unsigned + 'static,
@@ -193,10 +195,11 @@ impl Distance for ManhattanDistance<Checkerboard> {
     }
 }
 
-impl<P, T, S, M, L: Label> Heuristic<P, T, S, M> for ManhattanDistance<L>
+impl<P, T, S> Heuristic<P, T, S, Stm> for ManhattanDistance<S>
 where
     P: SlidingPuzzle,
     T: PrimInt + Unsigned + 'static,
+    S: SolvedState,
     u64: AsPrimitive<T>,
     Self: Distance,
 {
@@ -236,7 +239,20 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr as _;
+
     use super::*;
+    use crate::puzzle::puzzle::Puzzle;
+
+    #[test]
+    fn test_trivial_stm_bound() {
+        let cases = [("1 2 3/4 5 6/7 8 0", 0), ("1 0 3/4 2 6/7 5 8", 3)];
+        for (state, expected) in cases {
+            let puzzle = Puzzle::from_str(state).unwrap();
+            let bound: u8 = ManhattanDistance(Trivial).bound(&puzzle);
+            assert_eq!(bound, expected, "state {state}");
+        }
+    }
 
     macro_rules! test_manhattan_distance {
         ($label:ty, $($w:literal x $h:literal, $solved_pos:literal : $dists:expr),+ $(,)?) => {

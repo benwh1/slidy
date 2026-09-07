@@ -289,6 +289,7 @@ mod tests {
     use crate::{
         algorithm::metric::{Mtm, Stm},
         puzzle::{label::label::Rows, puzzle::Puzzle},
+        solver::heuristic::mtm::MtmHeuristic,
     };
 
     #[test]
@@ -316,10 +317,14 @@ mod tests {
     #[test]
     fn test_row_grids_manhattan_mtm() {
         let solver: GenericSolver<_, _, _, Mtm> =
-            GenericSolver::new(ManhattanDistance(RowGrids), RowGrids);
+            GenericSolver::new(MtmHeuristic(ManhattanDistance(RowGrids)), RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
-        assert_eq!(solution.len_mtm::<u64>(), 24);
+        assert_eq!(solution.len_mtm::<u64>(), 20);
+
+        // Test it twice to make sure the internal state gets reset properly
+        let solution = solver.solve(&puzzle).unwrap();
+        assert_eq!(solution.len_mtm::<u64>(), 20);
     }
 
     #[test]
@@ -406,12 +411,15 @@ mod tests {
 
     #[test]
     fn test_solve_with_solved_state_mtm() {
-        let solver: GenericSolver<_, _, _, Mtm> = GenericSolver::new(ManhattanDistance(Rows), Rows);
-        let puzzle = Puzzle::from_str("2 7 11 1/5 9 3 14/15 10 6 12/4 0 8 13").unwrap();
+        let solver: GenericSolver<_, _, _, Mtm> =
+            GenericSolver::new(MtmHeuristic(ManhattanDistance(Rows)), Rows);
+        let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let config = SolverConfig {
             min: 0,
             max: u8::MAX,
-            solution_callback: Some(Box::new(|s| assert_eq!(s.len_mtm::<u64>(), 21))),
+            // The true optimum (13) is verified against the complete projection solver in
+            // `projection::mtm::solver::tests`.
+            solution_callback: Some(Box::new(|s| assert_eq!(s.len_mtm::<u64>(), 13))),
             ..Default::default()
         };
         let result = solver.solve_with_config(&puzzle, config);

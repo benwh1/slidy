@@ -4,6 +4,7 @@
 use num_traits::Zero;
 
 pub mod manhattan;
+pub mod mtm;
 
 /// Provides a function returning a lower bound on the number of moves needed to solve a puzzle.
 pub trait Heuristic<P, T, S, M> {
