@@ -1,6 +1,4 @@
-//! Mtm-specific implementation of the projection [`Pdb`].
-//!
-//! [`Pdb`]: crate::solver::projection::pdb::Pdb
+//! Mtm-specific implementation of the projection PDB.
 
 use std::{collections::HashSet, marker::PhantomData};
 

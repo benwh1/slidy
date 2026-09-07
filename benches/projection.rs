@@ -21,7 +21,7 @@ fn bench_pdb_stm(c: &mut Criterion) {
     group.measurement_time(Duration::from_secs(15));
 
     group.bench_function("build", |b| {
-        b.iter(|| black_box(PdbSolver::builder().build()));
+        b.iter(|| black_box(PdbSolver::builder().build().unwrap()));
     });
     group.finish();
 }
@@ -35,7 +35,7 @@ fn bench_pdb_mtm(c: &mut Criterion) {
     group.measurement_time(Duration::from_secs(15));
 
     group.bench_function("build", |b| {
-        b.iter(|| black_box(PdbSolver::builder().build()));
+        b.iter(|| black_box(PdbSolver::builder().build().unwrap()));
     });
     group.finish();
 }
@@ -49,7 +49,7 @@ fn bench_solve_stm(c: &mut Criterion) {
     group.measurement_time(Duration::from_secs(10));
 
     let puzzle = Puzzle::from_str(SCRAMBLE).unwrap();
-    let solver = SolveSolver::builder().build();
+    let solver = SolveSolver::builder().build().unwrap();
     let p = puzzle.clone();
     group.bench_function("solve", move |b| {
         b.iter(|| {
@@ -69,7 +69,7 @@ fn bench_solve_mtm(c: &mut Criterion) {
     group.measurement_time(Duration::from_secs(10));
 
     let puzzle = Puzzle::from_str(SCRAMBLE).unwrap();
-    let solver = SolveSolver::builder().build();
+    let solver = SolveSolver::builder().build().unwrap();
     let p = puzzle.clone();
     group.bench_function("solve", move |b| {
         b.iter(|| {

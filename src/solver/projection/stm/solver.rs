@@ -116,18 +116,6 @@ where
     }
 }
 
-impl<const W: usize, const H: usize, const N: usize, Target, PruneTarget> Default
-    for Solver<W, H, N, Target, PruneTarget, Stm>
-where
-    Target: Label + SolvedState + Default,
-    PruneTarget: Label + SolvedState + Default,
-    Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
-{
-    fn default() -> Self {
-        Self::builder().build()
-    }
-}
-
 impl<P, const W: usize, const H: usize, const N: usize, Target, PruneTarget> SolverT<P>
     for Solver<W, H, N, Target, PruneTarget, Stm>
 where
@@ -167,7 +155,7 @@ mod tests {
 
     #[test]
     fn test_stm_trivial() {
-        let solver = Solver3x3StmTrivial::builder().build();
+        let solver = Solver3x3StmTrivial::builder().build().unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert!(solution.len_stm::<u64>() > 0);
@@ -175,7 +163,7 @@ mod tests {
 
     #[test]
     fn test_stm_rows() {
-        let solver = Solver3x3StmRows::builder().build();
+        let solver = Solver3x3StmRows::builder().build().unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert!(solution.len_stm::<u64>() > 0);
@@ -183,7 +171,7 @@ mod tests {
 
     #[test]
     fn test_stm_different_targets() {
-        let solver = Solver3x3StmDiff::builder().build();
+        let solver = Solver3x3StmDiff::builder().build().unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert!(solution.len_stm::<u64>() > 0);
@@ -191,7 +179,7 @@ mod tests {
 
     #[test]
     fn test_solution_validates() {
-        let solver = Solver3x3StmRows::builder().build();
+        let solver = Solver3x3StmRows::builder().build().unwrap();
         let mut puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         puzzle.apply_alg(&solution);
@@ -200,7 +188,7 @@ mod tests {
 
     #[test]
     fn test_solve_twice() {
-        let solver = Solver3x3StmRows::builder().build();
+        let solver = Solver3x3StmRows::builder().build().unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let s1 = solver.solve(&puzzle).unwrap();
         let s2 = solver.solve(&puzzle).unwrap();
@@ -212,7 +200,8 @@ mod tests {
         let prune = Scaled::new(Rows, (2, 2)).unwrap();
         let solver = Solver::<4, 4, 16, Rows, Scaled<Rows>, Stm>::builder()
             .prune_target(prune)
-            .build();
+            .build()
+            .unwrap();
         let puzzle = Puzzle::from_str("12 7 9 10/5 6 0 14/11 15 2 8/3 1 4 13").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_stm::<u64>(), 45);
@@ -226,7 +215,8 @@ mod tests {
                 assert!(stats.total > 0);
                 iterations.set(iterations.get() + 1);
             })
-            .build();
+            .build()
+            .unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert!(solution.len_stm::<u64>() > 0);
@@ -240,7 +230,8 @@ mod tests {
             .target(Rows)
             .prune_target(prune)
             .pdb_iteration_callback(&|_| {})
-            .build();
+            .build()
+            .unwrap();
         let puzzle = Puzzle::from_str("12 7 9 10/5 6 0 14/11 15 2 8/3 1 4 13").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_stm::<u64>(), 45);

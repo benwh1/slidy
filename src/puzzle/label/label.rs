@@ -48,6 +48,42 @@ pub trait Label {
     #[must_use]
     fn num_labels(&self, size: Size) -> u64;
 
+    /// Returns true if `self` is a projection of `other` on a puzzle of the given size.
+    ///
+    /// `self` is a projection of `other` if every two positions that are assigned the same label
+    /// by `other` are also assigned the same label by `self`. This means `self`'s labels partition
+    /// the positions into coarser (or equal) classes than `other`'s labels, e.g. on a 4x4 puzzle
+    /// [`SquareFringe`] is a projection of [`SplitSquareFringe`].
+    #[must_use]
+    fn is_projection_of<L>(&self, size: Size, other: &L) -> bool
+    where
+        L: Label,
+    {
+        let (width, height) = size.into();
+
+        // For each label of `other`, the label that `self` assigns to the first position seen
+        // with that label.
+        let mut labels = vec![None; other.num_labels(size) as usize];
+
+        for y in 0..height {
+            for x in 0..width {
+                let pos = (x, y);
+                let other_label = other.position_label(size, pos) as usize;
+                let label = self.position_label(size, pos);
+
+                if let Some(prev) = labels[other_label] {
+                    if prev != label {
+                        return false;
+                    }
+                } else {
+                    labels[other_label] = Some(label);
+                }
+            }
+        }
+
+        true
+    }
+
     /// Restricts the [`Label`] to a single size.
     #[must_use]
     fn fixed_size(self, size: Size) -> FixedSize<Self>
@@ -568,6 +604,8 @@ trivial_grids!(RowGrids, FringeGrids, SpiralGrids);
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     macro_rules! test_label {
         ($label:ty, $($w:literal x $h:literal : $labels:expr),+ $(,)?) => {
             paste::paste! {
@@ -1119,4 +1157,20 @@ mod tests {
             1, 0, 1, 0, 1, 0,
         ],
     );
+
+    #[test]
+    fn test_is_projection_of() {
+        let size = Size::new(4, 4).unwrap();
+
+        assert!(RowGrids.is_projection_of(size, &RowGrids));
+        assert!(Rows.is_projection_of(size, &RowGrids));
+        assert!(Trivial.is_projection_of(size, &RowGrids));
+        assert!(Trivial.is_projection_of(size, &Rows));
+        assert!(SquareFringe.is_projection_of(size, &SplitSquareFringe));
+
+        assert!(!RowGrids.is_projection_of(size, &Rows));
+        assert!(!Rows.is_projection_of(size, &Trivial));
+        assert!(!RowGrids.is_projection_of(size, &Trivial));
+        assert!(!SplitSquareFringe.is_projection_of(size, &SquareFringe));
+    }
 }

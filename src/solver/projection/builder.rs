@@ -4,6 +4,10 @@
 
 use std::marker::PhantomData;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
+
 use crate::{
     puzzle::{
         label::label::Label,
@@ -12,6 +16,16 @@ use crate::{
     },
     solver::statistics::PdbIterationStats,
 };
+
+/// Error type for [`SolverBuilder::build`].
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum ProjectionError {
+    /// Returned from [`SolverBuilder::build`] when the pruning label is not a projection of the
+    /// target label.
+    #[error("InvalidProjection: the pruning label is not a projection of the target label")]
+    InvalidProjection,
+}
 
 /// Builder for a [`Solver`].
 ///

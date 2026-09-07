@@ -1,5 +1,7 @@
 //! Solvers that prune using a pattern database built from states projected onto a choice of
 //! [`Label`].
+//!
+//! [`Label`]: crate::puzzle::label::label::Label
 
 pub mod builder;
 mod encoding;

@@ -113,18 +113,6 @@ where
     }
 }
 
-impl<const W: usize, const H: usize, const N: usize, Target, PruneTarget> Default
-    for Solver<W, H, N, Target, PruneTarget, Mtm>
-where
-    Target: Label + SolvedState + Default,
-    PruneTarget: Label + SolvedState + Default,
-    Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
-{
-    fn default() -> Self {
-        Self::builder().build()
-    }
-}
-
 impl<P, const W: usize, const H: usize, const N: usize, Target, PruneTarget> SolverT<P>
     for Solver<W, H, N, Target, PruneTarget, Mtm>
 where
@@ -161,7 +149,7 @@ mod tests {
 
     #[test]
     fn test_trivial() {
-        let solver = Solver3x3MtmTrivial::builder().build();
+        let solver = Solver3x3MtmTrivial::builder().build().unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_mtm::<u64>(), 2);
@@ -169,7 +157,7 @@ mod tests {
 
     #[test]
     fn test_rows() {
-        let solver = Solver3x3MtmRows::builder().build();
+        let solver = Solver3x3MtmRows::builder().build().unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_mtm::<u64>(), 13);
@@ -197,7 +185,8 @@ mod tests {
                 println!("depth {} new {} total {}", s.depth, s.new, s.total);
             })
             .metric(Mtm)
-            .build();
+            .build()
+            .unwrap();
         let puzzle = Puzzle::from_str("15 14 4 8/2 7 9 11/1 12 3 10/6 13 0 5").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
 

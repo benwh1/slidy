@@ -6,10 +6,15 @@ use crate::{
     algorithm::metric::Mtm,
     puzzle::{
         label::label::Label,
+        size::Size,
         small::{sealed::SmallPuzzle, Puzzle},
         solved_state::SolvedState,
     },
-    solver::projection::{builder::SolverBuilder, pdb::Pdb, solver::Solver},
+    solver::projection::{
+        builder::{ProjectionError, SolverBuilder},
+        pdb::Pdb,
+        solver::Solver,
+    },
 };
 
 impl<const W: usize, const H: usize, const N: usize, Target, PruneTarget>
@@ -19,12 +24,20 @@ where
     PruneTarget: Label + SolvedState + Default,
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
-    #[must_use]
     /// Builds the [`Solver`], using default values for parameters that weren't set.
-    pub fn build(self) -> Solver<W, H, N, Target, PruneTarget, Mtm> {
+    ///
+    /// Returns a [`ProjectionError::InvalidProjection`] if the pruning label is not a projection
+    /// of the target label.
+    pub fn build(self) -> Result<Solver<W, H, N, Target, PruneTarget, Mtm>, ProjectionError> {
         let prune_target = self.prune_target.unwrap_or_default();
         let target = self.target.unwrap_or_default();
+        let size = Size::new(W as u64, H as u64).unwrap();
+
+        if !prune_target.is_projection_of(size, &target) {
+            return Err(ProjectionError::InvalidProjection);
+        }
+
         let pdb = Pdb::new::<W, H, N, _>(&prune_target, self.pdb_iteration_callback);
-        Solver::with_pdb(pdb, target, prune_target)
+        Ok(Solver::with_pdb(pdb, target, prune_target))
     }
 }
