@@ -53,12 +53,12 @@ where
                 continue;
             }
 
-            let mut proj = original.clone();
+            let mut proj = original;
             let mut count = 0;
             while proj.do_move(dir) {
                 count += 1;
                 self.stack.push(dir);
-                if self.dfs(puzzle, depth - 1, Some(dir.into()), proj.clone()) {
+                if self.dfs(puzzle, depth - 1, Some(dir.into()), proj) {
                     return true;
                 }
             }
@@ -89,7 +89,7 @@ where
         let mut depth = self.pdb.get(start_idx).max(min);
 
         while depth <= max {
-            if self.dfs(puzzle, depth, None, projected.clone()) {
+            if self.dfs(puzzle, depth, None, projected) {
                 return Ok(());
             }
 

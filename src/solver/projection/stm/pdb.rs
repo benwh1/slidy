@@ -32,7 +32,7 @@ impl Pdb<Stm> {
 
         let mut pdb = vec![u8::MAX; pdb_size];
         let solved =
-            ProjectedPuzzle::new(solved_state, (size.area() - 1) as u8, size.width() as u8);
+            ProjectedPuzzle::new(&solved_state, (size.area() - 1) as u8, size.width() as u8);
         let solved_idx = solved.encode(&tally) as usize;
         pdb[solved_idx] = 0;
 
@@ -59,7 +59,7 @@ impl Pdb<Stm> {
                     Direction::Down,
                     Direction::Right,
                 ] {
-                    let mut puzzle = state.clone();
+                    let mut puzzle = *state;
                     if puzzle.do_move(dir) {
                         let idx = puzzle.encode(&tally) as usize;
                         if visited.insert(idx) {

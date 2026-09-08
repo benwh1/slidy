@@ -1,15 +1,30 @@
 use crate::solver::indexing;
 
+/// Maximum number of cells (i.e. puzzle area) supported by the encoder. Chosen so that the
+/// intermediate multinomial computations fit in the fixed-size lookup tables below.
 pub(super) const MAX_PIECES: usize = 32;
+
+/// Puzzles with up to 16 cells (the historical maximum) use 16-wide scratch tables, which keeps
+/// the hot loop small; larger puzzles fall through to the 32-wide path.
+const SMALL: usize = 16;
 
 pub(super) fn encode(arr: &[u8; MAX_PIECES], tally: &[u8]) -> u64 {
     let n = tally.iter().map(|&t| t as usize).sum::<usize>();
     assert!(n <= MAX_PIECES);
 
+    if n <= SMALL {
+        encode_impl::<SMALL>(arr[..SMALL].try_into().unwrap(), tally, n)
+    } else {
+        encode_impl::<MAX_PIECES>(arr, tally, n)
+    }
+}
+
+#[inline]
+fn encode_impl<const N: usize>(arr: &[u8; N], tally: &[u8], n: usize) -> u64 {
     let k = tally.len();
 
     // `m[v]` = number of slots available to values >= v, i.e. N minus the tally of values < v.
-    let mut m = [0u8; MAX_PIECES];
+    let mut m = [0u8; N];
     let mut rem = n as u8;
     for v in 0..k {
         m[v] = rem;
@@ -18,7 +33,7 @@ pub(super) fn encode(arr: &[u8; MAX_PIECES], tally: &[u8]) -> u64 {
 
     // `weight[v]` = product over u > v of C(m[u], tally[u]): the mixed-radix place value of the
     // ranked subset of value-v positions (least-significant digit is the highest value).
-    let mut weight = [0u64; MAX_PIECES];
+    let mut weight = [0u64; N];
     let mut prod = 1;
     for v in (0..k).rev() {
         weight[v] = prod;
@@ -30,8 +45,8 @@ pub(super) fn encode(arr: &[u8; MAX_PIECES], tally: &[u8]) -> u64 {
     // position with value v contributes C(pos - less, occ[v] + 1), where `less` is the number of
     // earlier positions holding a smaller value and `occ[v]` the number of earlier value-v
     // positions. `less` is tracked with a Fenwick tree over prefix value counts.
-    let mut rank = [0u64; MAX_PIECES];
-    let mut occ = [0u8; MAX_PIECES];
+    let mut rank = [0u64; N];
+    let mut occ = [0u8; N];
     let mut bit = [0u8; MAX_PIECES + 1];
     for (pos, &value) in arr.iter().take(n).enumerate() {
         let v = value as usize;

@@ -6,75 +6,79 @@ use crate::{
     solver::projection::encoding,
 };
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct ProjectedPuzzle {
-    pieces: Vec<u8>,
+    pieces: [u8; encoding::MAX_PIECES],
+    len: u8,
     gap: u8,
     width: u8,
+    height: u8,
+    gx: u8,
+    gy: u8,
 }
 
 impl ProjectedPuzzle {
-    pub(super) fn new(pieces: Vec<u8>, gap: u8, width: u8) -> Self {
-        assert!(pieces.len() <= encoding::MAX_PIECES);
-        Self { pieces, gap, width }
+    pub(super) fn new(pieces: &[u8], gap: u8, width: u8) -> Self {
+        let len = pieces.len();
+        assert!(len <= encoding::MAX_PIECES);
+        let height = (len / width as usize) as u8;
+        let mut buf = [0u8; encoding::MAX_PIECES];
+        buf[..len].copy_from_slice(pieces);
+        Self {
+            pieces: buf,
+            len: len as u8,
+            gap,
+            width,
+            height,
+            gx: gap % width,
+            gy: gap / width,
+        }
     }
 
     pub(super) fn is_solved(&self, solved_state: &[u8]) -> bool {
-        self.pieces == solved_state
+        self.pieces[..self.len as usize] == *solved_state
     }
 
     pub(super) fn do_move(&mut self, dir: Direction) -> bool {
-        let width = self.width as usize;
-        let height = self.pieces.len() / width;
-        let gap = self.gap as usize;
-        let new_gap = Self::new_gap_pos(gap, width, height, dir);
-        if new_gap == gap {
-            return false;
-        }
-        self.pieces.swap(gap, new_gap);
-        self.gap = new_gap as u8;
+        let (new_gap, next_gx, next_gy) = match dir {
+            Direction::Up => {
+                if self.gy + 1 < self.height {
+                    (self.gap + self.width, self.gx, self.gy + 1)
+                } else {
+                    return false;
+                }
+            }
+            Direction::Left => {
+                if self.gx + 1 < self.width {
+                    (self.gap + 1, self.gx + 1, self.gy)
+                } else {
+                    return false;
+                }
+            }
+            Direction::Down => {
+                if self.gy > 0 {
+                    (self.gap - self.width, self.gx, self.gy - 1)
+                } else {
+                    return false;
+                }
+            }
+            Direction::Right => {
+                if self.gx > 0 {
+                    (self.gap - 1, self.gx - 1, self.gy)
+                } else {
+                    return false;
+                }
+            }
+        };
+        self.pieces.swap(self.gap as usize, new_gap as usize);
+        self.gap = new_gap;
+        self.gx = next_gx;
+        self.gy = next_gy;
         true
     }
 
     pub(super) fn encode(&self, tally: &[u8]) -> u64 {
-        let mut buf = [0u8; encoding::MAX_PIECES];
-        buf[..self.pieces.len()].copy_from_slice(&self.pieces);
-        encoding::encode(&buf, tally)
-    }
-
-    fn new_gap_pos(gap: usize, width: usize, height: usize, dir: Direction) -> usize {
-        let gx = gap % width;
-        let gy = gap / width;
-        match dir {
-            Direction::Up => {
-                if gy + 1 < height {
-                    gap + width
-                } else {
-                    gap
-                }
-            }
-            Direction::Left => {
-                if gx + 1 < width {
-                    gap + 1
-                } else {
-                    gap
-                }
-            }
-            Direction::Down => {
-                if gy > 0 {
-                    gap - width
-                } else {
-                    gap
-                }
-            }
-            Direction::Right => {
-                if gx > 0 {
-                    gap - 1
-                } else {
-                    gap
-                }
-            }
-        }
+        encoding::encode(&self.pieces, tally)
     }
 }
 
@@ -94,5 +98,5 @@ where
             pieces.push(label.position_label(size, solved_pos) as u8 + 1);
         }
     }
-    ProjectedPuzzle::new(pieces, puzzle.gap_position() as u8, size.width() as u8)
+    ProjectedPuzzle::new(&pieces, puzzle.gap_position() as u8, size.width() as u8)
 }
