@@ -2,7 +2,7 @@
 //!
 //! [`Pdb`]: crate::solver::projection::pdb::Pdb
 
-use std::{collections::HashSet, marker::PhantomData};
+use std::marker::PhantomData;
 
 use crate::{
     algorithm::{direction::Direction, metric::Stm},
@@ -36,9 +36,6 @@ impl Pdb<Stm> {
         let solved_idx = solved.encode(&tally) as usize;
         pdb[solved_idx] = 0;
 
-        let mut visited = HashSet::new();
-        visited.insert(solved_idx);
-
         let mut current = vec![solved];
 
         let mut depth = 0;
@@ -62,10 +59,10 @@ impl Pdb<Stm> {
                     let mut puzzle = *state;
                     if puzzle.do_move(dir) {
                         let idx = puzzle.encode(&tally) as usize;
-                        if visited.insert(idx) {
-                            if pdb[idx] == u8::MAX {
-                                pdb[idx] = depth + 1;
-                            }
+                        // `pdb` doubles as the visited set: BFS reaches every rank at its minimal
+                        // depth, so an entry that is still `u8::MAX` has not been seen yet.
+                        if pdb[idx] == u8::MAX {
+                            pdb[idx] = depth + 1;
                             next.push(puzzle);
                         }
                     }

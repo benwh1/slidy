@@ -29,6 +29,10 @@ rand_xoshiro = "^0.8"
 name = "projection"
 harness = false
 
+[[bench]]
+name = "memory"
+harness = false
+
 [features]
 default = ["thread_rng"]
 nightly = []
