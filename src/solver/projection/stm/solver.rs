@@ -23,7 +23,8 @@ where
         last_dir: Option<Direction>,
         projected: ProjectedPuzzle,
     ) -> bool {
-        if projected.is_solved(&self.prune_target_solved_state) && self.check_solution(puzzle) {
+        let idx = self.pdb.encode(&projected);
+        if idx == self.prune_target_solved_idx && self.check_solution(puzzle) {
             self.solutions_found.update(|n| n + 1);
             if let Some(f) = &self.cfg().solution_callback {
                 f(self.stack.to_alg());
@@ -35,7 +36,6 @@ where
             return false;
         }
 
-        let idx = self.pdb.encode(&projected);
         let heuristic = self.pdb.get(idx);
         if heuristic > depth {
             return false;

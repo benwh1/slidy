@@ -13,7 +13,9 @@ pub(super) struct Pdb<Metric> {
 
 impl<Metric> Pdb<Metric> {
     pub(super) fn get(&self, index: usize) -> u8 {
-        self.pdb[index]
+        // `index` is an encode rank, which is always `0 .. pdb.len()` by construction.
+        debug_assert!(index < self.pdb.len());
+        unsafe { *self.pdb.get_unchecked(index) }
     }
 
     pub(super) fn encode(&self, puzzle: &ProjectedPuzzle) -> usize {

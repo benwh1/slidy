@@ -36,7 +36,7 @@ pub struct Solver<P, Target, PruneTarget, Metric> {
     pub(super) config: RefCell<Option<SolverConfig>>,
     target: Target,
     prune_target: PruneTarget,
-    pub(super) prune_target_solved_state: Vec<u8>,
+    pub(super) prune_target_solved_idx: usize,
     phantom_p: PhantomData<P>,
     phantom_metric: PhantomData<Metric>,
 }
@@ -64,12 +64,18 @@ where
         size: Size,
     ) -> Self {
         let prune_target_solved_state = compute_solved_state(&prune_target, size);
+        let solved_projected = ProjectedPuzzle::new(
+            &prune_target_solved_state,
+            (size.area() - 1) as u8,
+            size.width() as u8,
+        );
+        let prune_target_solved_idx = solved_projected.encode(&pdb.tally) as usize;
 
         Self {
             pdb,
             stack: Stack::default(),
             size,
-            prune_target_solved_state,
+            prune_target_solved_idx,
             solutions_found: Cell::new(0),
             config: RefCell::new(None),
             target,

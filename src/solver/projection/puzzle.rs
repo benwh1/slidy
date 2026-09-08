@@ -9,7 +9,6 @@ use crate::{
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct ProjectedPuzzle {
     pieces: [u8; encoding::MAX_PIECES],
-    len: u8,
     gap: u8,
     width: u8,
     height: u8,
@@ -26,17 +25,12 @@ impl ProjectedPuzzle {
         buf[..len].copy_from_slice(pieces);
         Self {
             pieces: buf,
-            len: len as u8,
             gap,
             width,
             height,
             gx: gap % width,
             gy: gap / width,
         }
-    }
-
-    pub(super) fn is_solved(&self, solved_state: &[u8]) -> bool {
-        self.pieces[..self.len as usize] == *solved_state
     }
 
     pub(super) fn do_move(&mut self, dir: Direction) -> bool {
