@@ -10,7 +10,6 @@ use crate::{
     solver::{
         indexing,
         projection::{
-            encoding,
             pdb::{compute_solved_state, compute_tally, Pdb},
             puzzle::ProjectedPuzzle,
         },
@@ -19,27 +18,28 @@ use crate::{
 };
 
 impl Pdb<Stm> {
-    pub(super) fn new<const W: usize, const H: usize, const N: usize, L>(
+    pub(super) fn new<L>(
         label: &L,
+        size: Size,
         iteration_callback: Option<&dyn Fn(PdbIterationStats)>,
     ) -> Self
     where
         L: Label,
     {
-        let size = Size::new(W as u64, H as u64).unwrap();
-        let solved_state = compute_solved_state::<W, H, N, L>(label, size);
+        let solved_state = compute_solved_state(label, size);
         let tally = compute_tally(&solved_state);
         let pdb_size = indexing::multinomial(&tally) as usize;
 
         let mut pdb = vec![u8::MAX; pdb_size];
-        let solved_gap = (N - 1) as u8;
-        let solved_idx = encoding::encode(&solved_state, &tally) as usize;
+        let solved =
+            ProjectedPuzzle::new(solved_state, (size.area() - 1) as u8, size.width() as u8);
+        let solved_idx = solved.encode(&tally) as usize;
         pdb[solved_idx] = 0;
 
         let mut visited = HashSet::new();
         visited.insert(solved_idx);
 
-        let mut current = vec![ProjectedPuzzle::<W, H, N>::new(solved_state, solved_gap)];
+        let mut current = vec![solved];
 
         let mut depth = 0;
         let mut new = 1;
@@ -59,9 +59,9 @@ impl Pdb<Stm> {
                     Direction::Down,
                     Direction::Right,
                 ] {
-                    let mut puzzle = *state;
+                    let mut puzzle = state.clone();
                     if puzzle.do_move(dir) {
-                        let idx = encoding::encode(&puzzle.pieces, &tally) as usize;
+                        let idx = puzzle.encode(&tally) as usize;
                         if visited.insert(idx) {
                             if pdb[idx] == u8::MAX {
                                 pdb[idx] = depth + 1;

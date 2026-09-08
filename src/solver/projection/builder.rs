@@ -9,11 +9,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
-    puzzle::{
-        label::label::Label,
-        small::{sealed::SmallPuzzle, Puzzle},
-        solved_state::SolvedState,
-    },
+    puzzle::{label::label::Label, size::Size, solved_state::SolvedState},
     solver::statistics::PdbIterationStats,
 };
 
@@ -21,46 +17,56 @@ use crate::{
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ProjectionError {
+    /// Returned from [`SolverBuilder::build`] when no puzzle [`Size`] was provided.
+    #[error("MissingSize: a puzzle size must be provided to the solver builder")]
+    MissingSize,
+
     /// Returned from [`SolverBuilder::build`] when the pruning label is not a projection of the
     /// target label.
     #[error("InvalidProjection: the pruning label is not a projection of the target label")]
     InvalidProjection,
 }
 
+/// Result of `SolverBuilder::build_projecting`: the resolved target and pruning labels, the PDB
+/// iteration callback, and the puzzle size.
+type BuildProjectionResult<'a, Target, PruneTarget> = (
+    Target,
+    PruneTarget,
+    Option<&'a dyn Fn(PdbIterationStats)>,
+    Size,
+);
+
 /// Builder for a [`Solver`].
 ///
 /// [`Solver`]: crate::solver::projection::solver::Solver
-pub struct SolverBuilder<
-    'a,
-    const W: usize,
-    const H: usize,
-    const N: usize,
-    Target,
-    PruneTarget,
-    Metric,
-> {
+pub struct SolverBuilder<'a, P, Target, PruneTarget, Metric> {
+    size: Option<Size>,
     pub(super) target: Option<Target>,
     pub(super) prune_target: Option<PruneTarget>,
     pub(super) pdb_iteration_callback: Option<&'a dyn Fn(PdbIterationStats)>,
+    phantom_p: PhantomData<P>,
     phantom_metric: PhantomData<Metric>,
 }
 
-impl<'a, const W: usize, const H: usize, const N: usize, Target, PruneTarget, Metric>
-    SolverBuilder<'a, W, H, N, Target, PruneTarget, Metric>
-where
-    Target: Label + SolvedState + Default,
-    PruneTarget: Label + SolvedState + Default,
-    Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
-{
+impl<'a, P, Target, PruneTarget, Metric> SolverBuilder<'a, P, Target, PruneTarget, Metric> {
     #[must_use]
-    /// Creates a [`SolverBuilder`] with no labels or callback set.
+    /// Creates a [`SolverBuilder`] with no size, labels or callback set.
     pub fn new() -> Self {
         Self {
+            size: None,
             target: None,
             prune_target: None,
             pdb_iteration_callback: None,
+            phantom_p: PhantomData,
             phantom_metric: PhantomData,
         }
+    }
+
+    #[must_use]
+    /// Sets the size of puzzle that the solver will solve.
+    pub fn size(mut self, size: Size) -> Self {
+        self.size = Some(size);
+        self
     }
 
     #[must_use]
@@ -91,15 +97,35 @@ where
     }
 }
 
-impl<const W: usize, const H: usize, const N: usize, Target, PruneTarget, Metric> Default
-    for SolverBuilder<'_, W, H, N, Target, PruneTarget, Metric>
-{
+impl<P, Target, PruneTarget, Metric> Default for SolverBuilder<'_, P, Target, PruneTarget, Metric> {
     fn default() -> Self {
         Self {
+            size: None,
             target: None,
             prune_target: None,
             pdb_iteration_callback: None,
+            phantom_p: PhantomData,
             phantom_metric: PhantomData,
         }
+    }
+}
+
+impl<'a, P, Target, PruneTarget, Metric> SolverBuilder<'a, P, Target, PruneTarget, Metric>
+where
+    Target: Label + SolvedState + Default,
+    PruneTarget: Label + SolvedState + Default,
+{
+    pub(super) fn build_projecting(
+        self,
+    ) -> Result<BuildProjectionResult<'a, Target, PruneTarget>, ProjectionError> {
+        let prune_target = self.prune_target.unwrap_or_default();
+        let target = self.target.unwrap_or_default();
+        let size = self.size.ok_or(ProjectionError::MissingSize)?;
+
+        if !prune_target.is_projection_of(size, &target) {
+            return Err(ProjectionError::InvalidProjection);
+        }
+
+        Ok((target, prune_target, self.pdb_iteration_callback, size))
     }
 }

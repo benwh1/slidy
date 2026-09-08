@@ -1,13 +1,8 @@
-use num_traits::AsPrimitive;
+//! Stm-specific implementation of the projection [`Solver`].
 
 use crate::{
     algorithm::{direction::Direction, metric::Stm},
-    puzzle::{
-        label::label::Label,
-        sliding_puzzle::SlidingPuzzle,
-        small::{sealed::SmallPuzzle, Puzzle},
-        solved_state::SolvedState,
-    },
+    puzzle::{label::label::Label, sliding_puzzle::SlidingPuzzle, solved_state::SolvedState},
     solver::{
         projection::{puzzle::ProjectedPuzzle, solver::Solver},
         solver::{Solver as SolverT, SolverConfig, SolverError},
@@ -15,20 +10,20 @@ use crate::{
     },
 };
 
-impl<const W: usize, const H: usize, const N: usize, Target, PruneTarget>
-    Solver<W, H, N, Target, PruneTarget, Stm>
+impl<P, Target, PruneTarget> Solver<P, Target, PruneTarget, Stm>
 where
+    P: SlidingPuzzle + Clone,
     Target: Label + SolvedState + Default,
     PruneTarget: Label + SolvedState + Default,
-    Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
     fn dfs(
         &self,
+        puzzle: &P,
         depth: u8,
         last_dir: Option<Direction>,
-        projected: ProjectedPuzzle<W, H, N>,
+        projected: ProjectedPuzzle,
     ) -> bool {
-        if projected.is_solved(&self.prune_target_solved_state) && self.check_solution() {
+        if projected.is_solved(&self.prune_target_solved_state) && self.check_solution(puzzle) {
             self.solutions_found.update(|n| n + 1);
             if let Some(f) = &self.cfg().solution_callback {
                 f(self.stack.to_alg());
@@ -58,10 +53,10 @@ where
                 continue;
             }
 
-            let mut proj = original;
+            let mut proj = original.clone();
             if proj.do_move(dir) {
                 self.stack.push(dir);
-                if self.dfs(depth - 1, Some(dir), proj) {
+                if self.dfs(puzzle, depth - 1, Some(dir), proj) {
                     return true;
                 }
                 self.stack.pop();
@@ -71,13 +66,8 @@ where
         false
     }
 
-    fn solve_impl<P>(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>
-    where
-        P: SlidingPuzzle,
-        P::Piece: AsPrimitive<u8>,
-    {
-        let mut p = Puzzle::<W, H>::new();
-        if !p.try_set_state(puzzle) {
+    fn solve_impl(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
+        if puzzle.size() != self.size {
             return Err(SolverError::IncompatiblePuzzleSize);
         }
 
@@ -89,16 +79,15 @@ where
         let max = config.max;
 
         self.stack.clear();
-        self.puzzle.set(p);
         self.solutions_found.set(0);
         *self.config.borrow_mut() = Some(config);
 
-        let projected = self.initial_projected();
+        let projected = self.initial_projected(puzzle);
         let start_idx = self.pdb.encode(&projected);
         let mut depth = self.pdb.get(start_idx).max(min);
 
         while depth <= max {
-            if self.dfs(depth, None, projected) {
+            if self.dfs(puzzle, depth, None, projected.clone()) {
                 return Ok(());
             }
 
@@ -116,14 +105,11 @@ where
     }
 }
 
-impl<P, const W: usize, const H: usize, const N: usize, Target, PruneTarget> SolverT<P>
-    for Solver<W, H, N, Target, PruneTarget, Stm>
+impl<P, Target, PruneTarget> SolverT<P> for Solver<P, Target, PruneTarget, Stm>
 where
-    P: SlidingPuzzle,
-    P::Piece: AsPrimitive<u8>,
+    P: SlidingPuzzle + Clone,
     Target: Label + SolvedState + Default,
     PruneTarget: Label + SolvedState + Default,
-    Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
     fn is_initialised(&self) -> bool {
         true
@@ -147,15 +133,23 @@ mod tests {
             scaled::Scaled,
         },
         puzzle::Puzzle,
+        size::Size,
     };
 
-    type Solver3x3StmTrivial = Solver<3, 3, 9, Trivial, Trivial, Stm>;
-    type Solver3x3StmRows = Solver<3, 3, 9, Rows, Rows, Stm>;
-    type Solver3x3StmDiff = Solver<3, 3, 9, Rows, Trivial, Stm>;
+    type Solver3x3StmTrivial = Solver<Puzzle, Trivial, Trivial, Stm>;
+    type Solver3x3StmRows = Solver<Puzzle, Rows, Rows, Stm>;
+    type Solver3x3StmDiff = Solver<Puzzle, Rows, Trivial, Stm>;
+
+    fn size_3x3() -> Size {
+        Size::new(3, 3).unwrap()
+    }
 
     #[test]
     fn test_stm_trivial() {
-        let solver = Solver3x3StmTrivial::builder().build().unwrap();
+        let solver = Solver3x3StmTrivial::builder()
+            .size(size_3x3())
+            .build()
+            .unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert!(solution.len_stm::<u64>() > 0);
@@ -163,7 +157,10 @@ mod tests {
 
     #[test]
     fn test_stm_rows() {
-        let solver = Solver3x3StmRows::builder().build().unwrap();
+        let solver = Solver3x3StmRows::builder()
+            .size(size_3x3())
+            .build()
+            .unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert!(solution.len_stm::<u64>() > 0);
@@ -171,7 +168,10 @@ mod tests {
 
     #[test]
     fn test_stm_different_targets() {
-        let solver = Solver3x3StmDiff::builder().build().unwrap();
+        let solver = Solver3x3StmDiff::builder()
+            .size(size_3x3())
+            .build()
+            .unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert!(solution.len_stm::<u64>() > 0);
@@ -179,7 +179,10 @@ mod tests {
 
     #[test]
     fn test_solution_validates() {
-        let solver = Solver3x3StmRows::builder().build().unwrap();
+        let solver = Solver3x3StmRows::builder()
+            .size(size_3x3())
+            .build()
+            .unwrap();
         let mut puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         puzzle.apply_alg(&solution);
@@ -188,7 +191,10 @@ mod tests {
 
     #[test]
     fn test_solve_twice() {
-        let solver = Solver3x3StmRows::builder().build().unwrap();
+        let solver = Solver3x3StmRows::builder()
+            .size(size_3x3())
+            .build()
+            .unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let s1 = solver.solve(&puzzle).unwrap();
         let s2 = solver.solve(&puzzle).unwrap();
@@ -197,8 +203,10 @@ mod tests {
 
     #[test]
     fn test_stm_rows_double_rows_4x4() {
+        let size = Size::new(4, 4).unwrap();
         let prune = Scaled::new(Rows, (2, 2)).unwrap();
-        let solver = Solver::<4, 4, 16, Rows, Scaled<Rows>, Stm>::builder()
+        let solver = Solver::<Puzzle, Rows, Scaled<Rows>, Stm>::builder()
+            .size(size)
             .prune_target(prune)
             .build()
             .unwrap();
@@ -211,6 +219,7 @@ mod tests {
     fn test_stm_rows_with_pdb_iteration_callback() {
         let iterations = Cell::new(0u64);
         let solver = Solver3x3StmRows::builder()
+            .size(size_3x3())
             .pdb_iteration_callback(&|stats| {
                 assert!(stats.total > 0);
                 iterations.set(iterations.get() + 1);
@@ -225,8 +234,10 @@ mod tests {
 
     #[test]
     fn test_stm_all_builder_options() {
+        let size = Size::new(4, 4).unwrap();
         let prune = Scaled::new(Rows, (2, 2)).unwrap();
-        let solver = Solver::<4, 4, 16, Rows, Scaled<Rows>, Stm>::builder()
+        let solver = Solver::<Puzzle, Rows, Scaled<Rows>, Stm>::builder()
+            .size(size)
             .target(Rows)
             .prune_target(prune)
             .pdb_iteration_callback(&|_| {})
@@ -235,5 +246,14 @@ mod tests {
         let puzzle = Puzzle::from_str("12 7 9 10/5 6 0 14/11 15 2 8/3 1 4 13").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_stm::<u64>(), 45);
+    }
+
+    #[test]
+    fn test_stm_missing_size_error() {
+        let err = Solver3x3StmRows::builder().build();
+        assert!(matches!(
+            err,
+            Err(crate::solver::projection::builder::ProjectionError::MissingSize)
+        ));
     }
 }

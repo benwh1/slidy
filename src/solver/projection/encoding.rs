@@ -1,13 +1,16 @@
 use crate::solver::indexing;
 
-pub(super) fn encode<const N: usize>(arr: &[u8; N], tally: &[u8]) -> u64 {
-    const { assert!(N <= 16) };
+pub(super) const MAX_PIECES: usize = 32;
+
+pub(super) fn encode(arr: &[u8; MAX_PIECES], tally: &[u8]) -> u64 {
+    let n = tally.iter().map(|&t| t as usize).sum::<usize>();
+    assert!(n <= MAX_PIECES);
 
     let k = tally.len();
 
     // `m[v]` = number of slots available to values >= v, i.e. N minus the tally of values < v.
-    let mut m = [0u8; 16];
-    let mut rem = N as u8;
+    let mut m = [0u8; MAX_PIECES];
+    let mut rem = n as u8;
     for v in 0..k {
         m[v] = rem;
         rem -= tally[v];
@@ -15,7 +18,7 @@ pub(super) fn encode<const N: usize>(arr: &[u8; N], tally: &[u8]) -> u64 {
 
     // `weight[v]` = product over u > v of C(m[u], tally[u]): the mixed-radix place value of the
     // ranked subset of value-v positions (least-significant digit is the highest value).
-    let mut weight = [0u64; 16];
+    let mut weight = [0u64; MAX_PIECES];
     let mut prod = 1;
     for v in (0..k).rev() {
         weight[v] = prod;
@@ -27,10 +30,10 @@ pub(super) fn encode<const N: usize>(arr: &[u8; N], tally: &[u8]) -> u64 {
     // position with value v contributes C(pos - less, occ[v] + 1), where `less` is the number of
     // earlier positions holding a smaller value and `occ[v]` the number of earlier value-v
     // positions. `less` is tracked with a Fenwick tree over prefix value counts.
-    let mut rank = [0u64; 16];
-    let mut occ = [0u8; 16];
-    let mut bit = [0u8; 17];
-    for (pos, &value) in arr.iter().enumerate() {
+    let mut rank = [0u64; MAX_PIECES];
+    let mut occ = [0u8; MAX_PIECES];
+    let mut bit = [0u8; MAX_PIECES + 1];
+    for (pos, &value) in arr.iter().take(n).enumerate() {
         let v = value as usize;
 
         let mut less = 0;
@@ -66,14 +69,15 @@ pub(super) fn encode<const N: usize>(arr: &[u8; N], tally: &[u8]) -> u64 {
 mod tests {
     use super::*;
 
-    fn enumerate<const N: usize>(
+    fn enumerate(
         counts: &mut [u8],
         tally: &[u8],
-        arr: &mut [u8; N],
+        arr: &mut [u8; MAX_PIECES],
         depth: usize,
         out: &mut Vec<u64>,
     ) {
-        if depth == N {
+        let n = tally.iter().map(|&t| t as usize).sum::<usize>();
+        if depth == n {
             out.push(encode(arr, tally));
             return;
         }
@@ -87,11 +91,11 @@ mod tests {
         }
     }
 
-    fn check_bijection<const N: usize>(tally: &[u8]) {
+    fn check_bijection(tally: &[u8]) {
         let mult = indexing::multinomial(tally);
         let mut vals = Vec::with_capacity(mult as usize);
         let mut counts = tally.to_vec();
-        let mut arr = [0u8; N];
+        let mut arr = [0u8; MAX_PIECES];
         enumerate(&mut counts, tally, &mut arr, 0, &mut vals);
         vals.sort_unstable();
         assert_eq!(
@@ -103,46 +107,42 @@ mod tests {
 
     #[test]
     fn test_encode_multiset_simple() {
+        let mut arr = [0u8; MAX_PIECES];
+
+        arr[..4].copy_from_slice(&[0, 0, 1, 1]);
         let tally = [2, 2];
-        let arr = [0, 0, 1, 1];
-        let idx = encode(&arr, &tally);
-        assert_eq!(idx, 0);
+        assert_eq!(encode(&arr, &tally), 0);
 
-        let arr = [0, 1, 0, 1];
-        let idx = encode(&arr, &tally);
-        assert_eq!(idx, 1);
+        arr[..4].copy_from_slice(&[0, 1, 0, 1]);
+        assert_eq!(encode(&arr, &tally), 1);
 
-        let arr = [1, 0, 0, 1];
-        let idx = encode(&arr, &tally);
-        assert_eq!(idx, 2);
+        arr[..4].copy_from_slice(&[1, 0, 0, 1]);
+        assert_eq!(encode(&arr, &tally), 2);
 
-        let arr = [0, 1, 1, 0];
-        let idx = encode(&arr, &tally);
-        assert_eq!(idx, 3);
+        arr[..4].copy_from_slice(&[0, 1, 1, 0]);
+        assert_eq!(encode(&arr, &tally), 3);
 
-        let arr = [1, 0, 1, 0];
-        let idx = encode(&arr, &tally);
-        assert_eq!(idx, 4);
+        arr[..4].copy_from_slice(&[1, 0, 1, 0]);
+        assert_eq!(encode(&arr, &tally), 4);
 
-        let arr = [1, 1, 0, 0];
-        let idx = encode(&arr, &tally);
-        assert_eq!(idx, 5);
+        arr[..4].copy_from_slice(&[1, 1, 0, 0]);
+        assert_eq!(encode(&arr, &tally), 5);
     }
 
     #[test]
     fn test_encode_is_bijection() {
-        check_bijection::<4>(&[2, 2]);
-        check_bijection::<5>(&[2, 2, 1]);
-        check_bijection::<5>(&[3, 2]);
-        check_bijection::<4>(&[1, 1, 1, 1]);
-        check_bijection::<5>(&[2, 1, 1, 1]);
-        check_bijection::<6>(&[3, 3]);
-        check_bijection::<6>(&[2, 2, 2]);
-        check_bijection::<7>(&[4, 2, 1]);
-        check_bijection::<6>(&[2, 2, 1, 1]);
-        check_bijection::<7>(&[3, 2, 2]);
-        check_bijection::<7>(&[2, 2, 2, 1]);
-        check_bijection::<8>(&[4, 4]);
+        check_bijection(&[2, 2]);
+        check_bijection(&[2, 2, 1]);
+        check_bijection(&[3, 2]);
+        check_bijection(&[1, 1, 1, 1]);
+        check_bijection(&[2, 1, 1, 1]);
+        check_bijection(&[3, 3]);
+        check_bijection(&[2, 2, 2]);
+        check_bijection(&[4, 2, 1]);
+        check_bijection(&[2, 2, 1, 1]);
+        check_bijection(&[3, 2, 2]);
+        check_bijection(&[2, 2, 2, 1]);
+        check_bijection(&[4, 4]);
     }
 
     #[test]

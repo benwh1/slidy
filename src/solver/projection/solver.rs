@@ -10,11 +10,7 @@ use std::{
 
 use crate::{
     puzzle::{
-        label::label::Label,
-        size::Size,
-        sliding_puzzle::SlidingPuzzle as _,
-        small::{sealed::SmallPuzzle, Puzzle},
-        solved_state::SolvedState,
+        label::label::Label, size::Size, sliding_puzzle::SlidingPuzzle, solved_state::SolvedState,
     },
     solver::{
         projection::{
@@ -29,28 +25,31 @@ use crate::{
 
 /// An iterative deepening solver that uses a pattern database of projected puzzle states as its
 /// heuristic.
-pub struct Solver<const W: usize, const H: usize, const N: usize, Target, PruneTarget, Metric> {
+///
+/// The solver is generic over the puzzle type `P`, which can be any [`SlidingPuzzle`]; the size
+/// of the puzzle must match the [`Size`] provided to the [`builder`](Solver::builder).
+pub struct Solver<P, Target, PruneTarget, Metric> {
     pub(super) pdb: Pdb<Metric>,
     pub(super) stack: Stack<128>,
-    pub(super) puzzle: Cell<Puzzle<W, H>>,
+    pub(super) size: Size,
     pub(super) solutions_found: Cell<u64>,
     pub(super) config: RefCell<Option<SolverConfig>>,
     target: Target,
     prune_target: PruneTarget,
-    pub(super) prune_target_solved_state: [u8; N],
+    pub(super) prune_target_solved_state: Vec<u8>,
+    phantom_p: PhantomData<P>,
     phantom_metric: PhantomData<Metric>,
 }
 
-impl<const W: usize, const H: usize, const N: usize, Target, PruneTarget, Metric>
-    Solver<W, H, N, Target, PruneTarget, Metric>
+impl<P, Target, PruneTarget, Metric> Solver<P, Target, PruneTarget, Metric>
 where
+    P: SlidingPuzzle + Clone,
     Target: Label + SolvedState + Default,
     PruneTarget: Label + SolvedState + Default,
-    Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
     #[must_use]
     /// Creates a [`SolverBuilder`] for constructing a [`Solver`].
-    pub fn builder<'a>() -> SolverBuilder<'a, W, H, N, Target, PruneTarget, Metric> {
+    pub fn builder<'a>() -> SolverBuilder<'a, P, Target, PruneTarget, Metric> {
         SolverBuilder::new()
     }
 
@@ -58,29 +57,34 @@ where
         Ref::map(self.config.borrow(), |b| b.as_ref().unwrap())
     }
 
-    pub(super) fn with_pdb(pdb: Pdb<Metric>, target: Target, prune_target: PruneTarget) -> Self {
-        let size = Size::new(W as u64, H as u64).unwrap();
-        let prune_target_solved_state = compute_solved_state::<W, H, N, _>(&prune_target, size);
+    pub(super) fn with_pdb(
+        pdb: Pdb<Metric>,
+        target: Target,
+        prune_target: PruneTarget,
+        size: Size,
+    ) -> Self {
+        let prune_target_solved_state = compute_solved_state(&prune_target, size);
 
         Self {
             pdb,
             stack: Stack::default(),
-            puzzle: Cell::new(Puzzle::<W, H>::new()),
+            size,
             prune_target_solved_state,
             solutions_found: Cell::new(0),
             config: RefCell::new(None),
             target,
             prune_target,
+            phantom_p: PhantomData,
             phantom_metric: PhantomData,
         }
     }
 
-    pub(super) fn initial_projected(&self) -> ProjectedPuzzle<W, H, N> {
-        project_puzzle::<W, H, N, Puzzle<W, H>, PruneTarget>(&self.puzzle.get(), &self.prune_target)
+    pub(super) fn initial_projected(&self, puzzle: &P) -> ProjectedPuzzle {
+        project_puzzle(puzzle, &self.prune_target)
     }
 
-    pub(super) fn check_solution(&self) -> bool {
-        let mut p = self.puzzle.get();
+    pub(super) fn check_solution(&self, puzzle: &P) -> bool {
+        let mut p = puzzle.clone();
         for dir in self.stack.iter() {
             p.try_move_dir(dir);
         }

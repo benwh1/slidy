@@ -1,13 +1,8 @@
-use num_traits::AsPrimitive;
+//! Mtm-specific implementation of the projection [`Solver`].
 
 use crate::{
     algorithm::{axis::Axis, direction::Direction, metric::Mtm},
-    puzzle::{
-        label::label::Label,
-        sliding_puzzle::SlidingPuzzle,
-        small::{sealed::SmallPuzzle, Puzzle},
-        solved_state::SolvedState,
-    },
+    puzzle::{label::label::Label, sliding_puzzle::SlidingPuzzle, solved_state::SolvedState},
     solver::{
         projection::{puzzle::ProjectedPuzzle, solver::Solver},
         solver::{Solver as SolverT, SolverConfig, SolverError},
@@ -15,15 +10,20 @@ use crate::{
     },
 };
 
-impl<const W: usize, const H: usize, const N: usize, Target, PruneTarget>
-    Solver<W, H, N, Target, PruneTarget, Mtm>
+impl<P, Target, PruneTarget> Solver<P, Target, PruneTarget, Mtm>
 where
+    P: SlidingPuzzle + Clone,
     Target: Label + SolvedState + Default,
     PruneTarget: Label + SolvedState + Default,
-    Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
-    fn dfs(&self, depth: u8, last_axis: Option<Axis>, projected: ProjectedPuzzle<W, H, N>) -> bool {
-        if projected.is_solved(&self.prune_target_solved_state) && self.check_solution() {
+    fn dfs(
+        &self,
+        puzzle: &P,
+        depth: u8,
+        last_axis: Option<Axis>,
+        projected: ProjectedPuzzle,
+    ) -> bool {
+        if projected.is_solved(&self.prune_target_solved_state) && self.check_solution(puzzle) {
             self.solutions_found.update(|n| n + 1);
             if let Some(f) = &self.cfg().solution_callback {
                 f(self.stack.to_alg());
@@ -53,12 +53,12 @@ where
                 continue;
             }
 
-            let mut proj = original;
+            let mut proj = original.clone();
             let mut count = 0;
             while proj.do_move(dir) {
                 count += 1;
                 self.stack.push(dir);
-                if self.dfs(depth - 1, Some(dir.into()), proj) {
+                if self.dfs(puzzle, depth - 1, Some(dir.into()), proj.clone()) {
                     return true;
                 }
             }
@@ -68,13 +68,8 @@ where
         false
     }
 
-    fn solve_impl<P>(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>
-    where
-        P: SlidingPuzzle,
-        P::Piece: AsPrimitive<u8>,
-    {
-        let mut p = Puzzle::<W, H>::new();
-        if !p.try_set_state(puzzle) {
+    fn solve_impl(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
+        if puzzle.size() != self.size {
             return Err(SolverError::IncompatiblePuzzleSize);
         }
 
@@ -86,16 +81,15 @@ where
         let max = config.max;
 
         self.stack.clear();
-        self.puzzle.set(p);
         self.solutions_found.set(0);
         *self.config.borrow_mut() = Some(config);
 
-        let projected = self.initial_projected();
+        let projected = self.initial_projected(puzzle);
         let start_idx = self.pdb.encode(&projected);
         let mut depth = self.pdb.get(start_idx).max(min);
 
         while depth <= max {
-            if self.dfs(depth, None, projected) {
+            if self.dfs(puzzle, depth, None, projected.clone()) {
                 return Ok(());
             }
 
@@ -113,14 +107,11 @@ where
     }
 }
 
-impl<P, const W: usize, const H: usize, const N: usize, Target, PruneTarget> SolverT<P>
-    for Solver<W, H, N, Target, PruneTarget, Mtm>
+impl<P, Target, PruneTarget> SolverT<P> for Solver<P, Target, PruneTarget, Mtm>
 where
-    P: SlidingPuzzle,
-    P::Piece: AsPrimitive<u8>,
+    P: SlidingPuzzle + Clone,
     Target: Label + SolvedState + Default,
     PruneTarget: Label + SolvedState + Default,
-    Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
     fn is_initialised(&self) -> bool {
         true
@@ -144,12 +135,19 @@ mod tests {
         size::Size,
     };
 
-    type Solver3x3MtmTrivial = Solver<3, 3, 9, Trivial, Trivial, Mtm>;
-    type Solver3x3MtmRows = Solver<3, 3, 9, Rows, Rows, Mtm>;
+    type Solver3x3MtmTrivial = Solver<Puzzle, Trivial, Trivial, Mtm>;
+    type Solver3x3MtmRows = Solver<Puzzle, Rows, Rows, Mtm>;
+
+    fn size_3x3() -> Size {
+        Size::new(3, 3).unwrap()
+    }
 
     #[test]
     fn test_trivial() {
-        let solver = Solver3x3MtmTrivial::builder().build().unwrap();
+        let solver = Solver3x3MtmTrivial::builder()
+            .size(size_3x3())
+            .build()
+            .unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_mtm::<u64>(), 2);
@@ -157,7 +155,10 @@ mod tests {
 
     #[test]
     fn test_rows() {
-        let solver = Solver3x3MtmRows::builder().build().unwrap();
+        let solver = Solver3x3MtmRows::builder()
+            .size(size_3x3())
+            .build()
+            .unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_mtm::<u64>(), 13);
@@ -178,7 +179,9 @@ mod tests {
             }
         }
 
-        let solver = Solver::<4, 4, 16, _, _, _>::builder()
+        let size = Size::new(4, 4).unwrap();
+        let solver = Solver::<Puzzle, Rows, Rows211, Mtm>::builder()
+            .size(size)
             .target(Rows)
             .prune_target(Rows211)
             .pdb_iteration_callback(&|s| {

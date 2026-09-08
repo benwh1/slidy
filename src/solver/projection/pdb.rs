@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use crate::{
     puzzle::{label::label::Label, size::Size},
-    solver::projection::{encoding, puzzle::ProjectedPuzzle},
+    solver::projection::puzzle::ProjectedPuzzle,
 };
 
 pub(super) struct Pdb<Metric> {
@@ -16,28 +16,23 @@ impl<Metric> Pdb<Metric> {
         self.pdb[index]
     }
 
-    pub(super) fn encode<const W: usize, const H: usize, const N: usize>(
-        &self,
-        puzzle: &ProjectedPuzzle<W, H, N>,
-    ) -> usize {
-        encoding::encode(&puzzle.pieces, &self.tally) as usize
+    pub(super) fn encode(&self, puzzle: &ProjectedPuzzle) -> usize {
+        puzzle.encode(&self.tally) as usize
     }
 }
 
-pub(super) fn compute_solved_state<const W: usize, const H: usize, const N: usize, L>(
-    label: &L,
-    size: Size,
-) -> [u8; N]
+pub(super) fn compute_solved_state<L>(label: &L, size: Size) -> Vec<u8>
 where
     L: Label,
 {
-    let mut state = [0; N];
+    let n = size.area() as usize;
+    let mut state = vec![0; n];
     for (i, s) in state.iter_mut().enumerate() {
-        let x = (i % W) as u64;
-        let y = (i / W) as u64;
+        let x = (i as u64) % size.width();
+        let y = (i as u64) / size.width();
         *s = label.position_label(size, (x, y)) as u8 + 1;
     }
-    state[N - 1] = 0;
+    state[n - 1] = 0;
     state
 }
 
