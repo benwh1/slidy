@@ -5,8 +5,9 @@ use crate::solver::indexing;
 pub(super) const MAX_PIECES: usize = 32;
 
 /// Puzzles with up to 16 cells (the historical maximum) use 16-wide scratch tables, which keeps
-/// the hot loop small; larger puzzles fall through to the 32-wide path.
-const SMALL: usize = 16;
+/// the hot loop small; larger puzzles fall through to the 32-wide path. Also the size chosen for
+/// the compact PDB-build frontier state, whose entries omit the unused half of a 32-wide array.
+pub(super) const SMALL: usize = 16;
 
 pub(super) fn encode(arr: &[u8; MAX_PIECES], tally: &[u8]) -> u64 {
     let n = tally.iter().map(|&t| t as usize).sum::<usize>();
@@ -17,6 +18,13 @@ pub(super) fn encode(arr: &[u8; MAX_PIECES], tally: &[u8]) -> u64 {
     } else {
         encode_impl::<MAX_PIECES>(arr, tally, n)
     }
+}
+
+pub(super) fn encode_compact(arr: &[u8; SMALL], tally: &[u8]) -> u64 {
+    let n = tally.iter().map(|&t| t as usize).sum::<usize>();
+    assert!(n <= SMALL);
+
+    encode_impl::<SMALL>(arr, tally, n)
 }
 
 #[inline]
