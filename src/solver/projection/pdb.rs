@@ -13,8 +13,8 @@ pub(super) struct Pdb<Metric> {
 
 impl<Metric> Pdb<Metric> {
     pub(super) fn get(&self, index: usize) -> u8 {
-        // `index` is an encode rank, which is always `0 .. pdb.len()` by construction.
         debug_assert!(index < self.pdb.len());
+        // SAFETY: `index` is an encode rank, which is always `0 .. pdb.len()` by construction.
         unsafe { *self.pdb.get_unchecked(index) }
     }
 
