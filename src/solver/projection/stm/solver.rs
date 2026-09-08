@@ -23,8 +23,8 @@ where
         last_dir: Option<Direction>,
         projected: ProjectedPuzzle,
     ) -> bool {
-        let idx = self.pdb.encode(&projected);
-        if idx == self.prune_target_solved_idx && self.check_solution(puzzle) {
+        let index = self.pdb.encode(&projected);
+        if index == self.prune_target_solved_index && self.check_solution(puzzle) {
             self.solutions_found.update(|n| n + 1);
             if let Some(f) = &self.cfg().solution_callback {
                 f(self.stack.to_alg());
@@ -36,7 +36,8 @@ where
             return false;
         }
 
-        let heuristic = self.pdb.get(idx);
+        // SAFETY: `index` comes from encoding a projected puzzle, so is within bounds.
+        let heuristic = unsafe { self.pdb.get_unchecked(index) };
         if heuristic > depth {
             return false;
         }
@@ -83,8 +84,10 @@ where
         *self.config.borrow_mut() = Some(config);
 
         let projected = self.initial_projected(puzzle);
-        let start_idx = self.pdb.encode(&projected);
-        let mut depth = self.pdb.get(start_idx).max(min);
+        let start_index = self.pdb.encode(&projected);
+        // SAFETY: `start_index` comes from encoding a projected puzzle, so is within bounds.
+        let pdb_val = unsafe { self.pdb.get_unchecked(start_index) };
+        let mut depth = pdb_val.max(min);
 
         while depth <= max {
             if self.dfs(puzzle, depth, None, projected) {
@@ -140,14 +143,10 @@ mod tests {
     type Solver3x3StmRows = Solver<Puzzle, Rows, Rows, Stm>;
     type Solver3x3StmDiff = Solver<Puzzle, Rows, Trivial, Stm>;
 
-    fn size_3x3() -> Size {
-        Size::new(3, 3).unwrap()
-    }
-
     #[test]
     fn test_stm_trivial() {
         let solver = Solver3x3StmTrivial::builder()
-            .size(size_3x3())
+            .size(Size::new(3, 3).unwrap())
             .build()
             .unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
@@ -158,7 +157,7 @@ mod tests {
     #[test]
     fn test_stm_rows() {
         let solver = Solver3x3StmRows::builder()
-            .size(size_3x3())
+            .size(Size::new(3, 3).unwrap())
             .build()
             .unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
@@ -169,7 +168,7 @@ mod tests {
     #[test]
     fn test_stm_different_targets() {
         let solver = Solver3x3StmDiff::builder()
-            .size(size_3x3())
+            .size(Size::new(3, 3).unwrap())
             .build()
             .unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
@@ -180,7 +179,7 @@ mod tests {
     #[test]
     fn test_solution_validates() {
         let solver = Solver3x3StmRows::builder()
-            .size(size_3x3())
+            .size(Size::new(3, 3).unwrap())
             .build()
             .unwrap();
         let mut puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
@@ -192,7 +191,7 @@ mod tests {
     #[test]
     fn test_solve_twice() {
         let solver = Solver3x3StmRows::builder()
-            .size(size_3x3())
+            .size(Size::new(3, 3).unwrap())
             .build()
             .unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
@@ -219,7 +218,7 @@ mod tests {
     fn test_stm_rows_with_pdb_iteration_callback() {
         let iterations = Cell::new(0u64);
         let solver = Solver3x3StmRows::builder()
-            .size(size_3x3())
+            .size(Size::new(3, 3).unwrap())
             .pdb_iteration_callback(&|stats| {
                 assert!(stats.total > 0);
                 iterations.set(iterations.get() + 1);

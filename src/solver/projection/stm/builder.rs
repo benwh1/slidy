@@ -18,9 +18,7 @@ where
 {
     /// Builds the [`Solver`], using default values for parameters that weren't set.
     ///
-    /// Returns a [`ProjectionError::MissingSize`] if no size was provided, or a
-    /// [`ProjectionError::InvalidProjection`] if the pruning label is not a projection of the
-    /// target label.
+    /// See [`ProjectionError`] for possible errors.
     pub fn build(self) -> Result<Solver<P, Target, PruneTarget, Stm>, ProjectionError> {
         let (target, prune_target, callback, size) = self.build_projecting()?;
         let pdb = Pdb::<Stm>::new(&prune_target, size, callback);

@@ -3,12 +3,12 @@ use num_traits::Zero as _;
 use crate::{
     algorithm::direction::Direction,
     puzzle::{label::label::Label, sliding_puzzle::SlidingPuzzle},
-    solver::projection::encoding,
+    solver::projection::encoding::{self, MAX_PIECES},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct ProjectedPuzzle {
-    pieces: [u8; encoding::MAX_PIECES],
+    pieces: [u8; MAX_PIECES],
     gap: u8,
     width: u8,
     height: u8,
@@ -19,9 +19,9 @@ pub(super) struct ProjectedPuzzle {
 impl ProjectedPuzzle {
     pub(super) fn new(pieces: &[u8], gap: u8, width: u8) -> Self {
         let len = pieces.len();
-        assert!(len <= encoding::MAX_PIECES);
+        assert!(len <= MAX_PIECES);
         let height = (len / width as usize) as u8;
-        let mut buf = [0u8; encoding::MAX_PIECES];
+        let mut buf = [0u8; MAX_PIECES];
         buf[..len].copy_from_slice(pieces);
         Self {
             pieces: buf,

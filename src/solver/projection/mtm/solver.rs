@@ -23,8 +23,8 @@ where
         last_axis: Option<Axis>,
         projected: ProjectedPuzzle,
     ) -> bool {
-        let idx = self.pdb.encode(&projected);
-        if idx == self.prune_target_solved_idx && self.check_solution(puzzle) {
+        let index = self.pdb.encode(&projected);
+        if index == self.prune_target_solved_index && self.check_solution(puzzle) {
             self.solutions_found.update(|n| n + 1);
             if let Some(f) = &self.cfg().solution_callback {
                 f(self.stack.to_alg());
@@ -36,7 +36,8 @@ where
             return false;
         }
 
-        let heuristic = self.pdb.get(idx);
+        // SAFETY: `index` comes from encoding a projected puzzle, so is within bounds.
+        let heuristic = unsafe { self.pdb.get_unchecked(index) };
         if heuristic > depth {
             return false;
         }
@@ -85,8 +86,10 @@ where
         *self.config.borrow_mut() = Some(config);
 
         let projected = self.initial_projected(puzzle);
-        let start_idx = self.pdb.encode(&projected);
-        let mut depth = self.pdb.get(start_idx).max(min);
+        let start_index = self.pdb.encode(&projected);
+        // SAFETY: `start_index` comes from encoding a projected puzzle, so is within bounds.
+        let pdb_val = unsafe { self.pdb.get_unchecked(start_index) };
+        let mut depth = pdb_val.max(min);
 
         while depth <= max {
             if self.dfs(puzzle, depth, None, projected) {

@@ -36,7 +36,7 @@ pub struct Solver<P, Target, PruneTarget, Metric> {
     pub(super) config: RefCell<Option<SolverConfig>>,
     target: Target,
     prune_target: PruneTarget,
-    pub(super) prune_target_solved_idx: usize,
+    pub(super) prune_target_solved_index: usize,
     phantom_p: PhantomData<P>,
     phantom_metric: PhantomData<Metric>,
 }
@@ -69,13 +69,13 @@ where
             (size.area() - 1) as u8,
             size.width() as u8,
         );
-        let prune_target_solved_idx = solved_projected.encode(&pdb.tally) as usize;
+        let prune_target_solved_index = solved_projected.encode(&pdb.tally) as usize;
 
         Self {
             pdb,
             stack: Stack::default(),
             size,
-            prune_target_solved_idx,
+            prune_target_solved_index,
             solutions_found: Cell::new(0),
             config: RefCell::new(None),
             target,
