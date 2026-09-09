@@ -106,9 +106,11 @@ where
     fn dfs(&self, puzzle: &mut P, depth: u8, last_dir: Option<Direction>) -> bool {
         if depth == 0 {
             if self.solved_state.is_solved(puzzle) {
+                self.solutions_found.update(|n| n + 1);
                 if let Some(f) = &self.cfg().solution_callback {
-                    self.solutions_found.update(|n| n + 1);
-                    f(self.stack.to_alg());
+                    if f(self.stack.to_alg()).is_break() {
+                        return true;
+                    }
                 }
 
                 return self.cfg().num_solutions == self.solutions_found.get();
@@ -154,6 +156,7 @@ where
 
         let min = config.min;
         let max = config.max;
+        let depth_beyond_optimal = config.depth_beyond_optimal;
 
         // Reset state
         self.stack.clear();
@@ -170,14 +173,27 @@ where
         };
 
         let mut depth = start_heuristic.max(min);
+        let mut first_solution_depth: Option<u8> = None;
 
         while depth <= max {
+            if first_solution_depth.is_some_and(|fd| {
+                depth_beyond_optimal.is_some_and(|e| depth > fd.saturating_add(e))
+            }) {
+                break;
+            }
+
+            let found_before = self.solutions_found.get();
             if self.dfs(&mut puzzle, depth, None) {
                 return Ok(());
             }
+            if first_solution_depth.is_none() && self.solutions_found.get() > found_before {
+                first_solution_depth = Some(depth);
+            }
 
             if let Some(f) = &self.cfg().end_of_iter_callback {
-                f(SolverIterationStats { depth });
+                if f(SolverIterationStats { depth }).is_break() {
+                    return Ok(());
+                }
             }
 
             depth = match depth.checked_add(2) {
@@ -186,7 +202,11 @@ where
             };
         }
 
-        Err(SolverError::NoSolutionFound)
+        if self.solutions_found.get() > 0 {
+            Ok(())
+        } else {
+            Err(SolverError::NoSolutionFound)
+        }
     }
 }
 
@@ -199,9 +219,11 @@ where
     fn dfs(&self, puzzle: &mut P, depth: u8, last_dir: Option<Direction>) -> bool {
         if depth == 0 {
             if self.solved_state.is_solved(puzzle) {
+                self.solutions_found.update(|n| n + 1);
                 if let Some(f) = &self.cfg().solution_callback {
-                    self.solutions_found.update(|n| n + 1);
-                    f(self.stack.to_alg());
+                    if f(self.stack.to_alg()).is_break() {
+                        return true;
+                    }
                 }
 
                 return self.cfg().num_solutions == self.solutions_found.get();
@@ -253,6 +275,7 @@ where
 
         let min = config.min;
         let max = config.max;
+        let depth_beyond_optimal = config.depth_beyond_optimal;
 
         // Reset state
         self.stack.clear();
@@ -261,14 +284,27 @@ where
 
         let mut puzzle = puzzle.clone();
         let mut depth = min;
+        let mut first_solution_depth: Option<u8> = None;
 
         while depth <= max {
+            if first_solution_depth.is_some_and(|fd| {
+                depth_beyond_optimal.is_some_and(|e| depth > fd.saturating_add(e))
+            }) {
+                break;
+            }
+
+            let found_before = self.solutions_found.get();
             if self.dfs(&mut puzzle, depth, None) {
                 return Ok(());
             }
+            if first_solution_depth.is_none() && self.solutions_found.get() > found_before {
+                first_solution_depth = Some(depth);
+            }
 
             if let Some(f) = &self.cfg().end_of_iter_callback {
-                f(SolverIterationStats { depth });
+                if f(SolverIterationStats { depth }).is_break() {
+                    return Ok(());
+                }
             }
 
             depth = match depth.checked_add(1) {
@@ -277,13 +313,17 @@ where
             };
         }
 
-        Err(SolverError::NoSolutionFound)
+        if self.solutions_found.get() > 0 {
+            Ok(())
+        } else {
+            Err(SolverError::NoSolutionFound)
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr as _;
+    use std::{ops::ControlFlow, str::FromStr as _};
 
     use super::*;
     use crate::{
@@ -358,7 +398,10 @@ mod tests {
         let config = SolverConfig {
             min: 31,
             max: 31,
-            solution_callback: Some(Box::new(|s| assert_eq!(s.len_stm::<u64>(), 31))),
+            solution_callback: Some(Box::new(|s| {
+                assert_eq!(s.len_stm::<u64>(), 31);
+                ControlFlow::Continue(())
+            })),
             ..Default::default()
         };
         let result = solver.solve_with_config(&puzzle, config);
@@ -387,7 +430,10 @@ mod tests {
         let config = SolverConfig {
             min: 20,
             max: 40,
-            solution_callback: Some(Box::new(|s| assert_eq!(s.len_stm::<u64>(), 31))),
+            solution_callback: Some(Box::new(|s| {
+                assert_eq!(s.len_stm::<u64>(), 31);
+                ControlFlow::Continue(())
+            })),
             ..Default::default()
         };
         let result = solver.solve_with_config(&puzzle, config);
@@ -402,7 +448,10 @@ mod tests {
         let config = SolverConfig {
             min: 33,
             max: 33,
-            solution_callback: Some(Box::new(|s| assert_eq!(s.len_stm::<u64>(), 33))),
+            solution_callback: Some(Box::new(|s| {
+                assert_eq!(s.len_stm::<u64>(), 33);
+                ControlFlow::Continue(())
+            })),
             ..Default::default()
         };
         let result = solver.solve_with_config(&puzzle, config);
@@ -419,7 +468,10 @@ mod tests {
             max: u8::MAX,
             // The true optimum (13) is verified against the complete projection solver in
             // `projection::mtm::solver::tests`.
-            solution_callback: Some(Box::new(|s| assert_eq!(s.len_mtm::<u64>(), 13))),
+            solution_callback: Some(Box::new(|s| {
+                assert_eq!(s.len_mtm::<u64>(), 13);
+                ControlFlow::Continue(())
+            })),
             ..Default::default()
         };
         let result = solver.solve_with_config(&puzzle, config);

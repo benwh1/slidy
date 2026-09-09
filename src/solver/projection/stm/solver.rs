@@ -29,7 +29,9 @@ where
             if index == self.prune_target_solved_index && self.check_solution(puzzle) {
                 self.solutions_found.update(|n| n + 1);
                 if let Some(f) = &self.cfg().solution_callback {
-                    f(self.stack.to_alg());
+                    if f(self.stack.to_alg()).is_break() {
+                        return true;
+                    }
                 }
                 return self.cfg().num_solutions == self.solutions_found.get();
             }
@@ -91,6 +93,7 @@ where
     ) -> Result<(), SolverError> {
         let min = config.min;
         let max = config.max;
+        let depth_beyond_optimal = config.depth_beyond_optimal;
 
         self.stack.clear();
         self.solutions_found.set(0);
@@ -101,14 +104,27 @@ where
         // SAFETY: `start_index` comes from encoding a projected puzzle, so is within bounds.
         let pdb_val = unsafe { self.pdb.get_unchecked(start_index) };
         let mut depth = pdb_val.max(min);
+        let mut first_solution_depth: Option<u8> = None;
 
         while depth <= max {
+            if first_solution_depth.is_some_and(|fd| {
+                depth_beyond_optimal.is_some_and(|e| depth > fd.saturating_add(e))
+            }) {
+                break;
+            }
+
+            let found_before = self.solutions_found.get();
             if self.dfs::<N>(puzzle, depth, None, projected) {
                 return Ok(());
             }
+            if first_solution_depth.is_none() && self.solutions_found.get() > found_before {
+                first_solution_depth = Some(depth);
+            }
 
             if let Some(f) = &self.cfg().end_of_iter_callback {
-                f(SolverIterationStats { depth });
+                if f(SolverIterationStats { depth }).is_break() {
+                    return Ok(());
+                }
             }
 
             depth = match depth.checked_add(1) {
@@ -117,7 +133,11 @@ where
             };
         }
 
-        Err(SolverError::NoSolutionFound)
+        if self.solutions_found.get() > 0 {
+            Ok(())
+        } else {
+            Err(SolverError::NoSolutionFound)
+        }
     }
 }
 
@@ -140,7 +160,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::Cell, str::FromStr as _};
+    use std::{
+        cell::{Cell, RefCell},
+        ops::ControlFlow,
+        rc::Rc,
+        str::FromStr as _,
+    };
 
     use super::*;
     use crate::puzzle::{
@@ -292,5 +317,99 @@ mod tests {
 
             assert_eq!(solutions.len(), 5, "failed on {puzzle}");
         }
+    }
+
+    #[test]
+    fn test_depth_beyond_optimal_bounds_solutions() {
+        let size = Size::new(4, 4).unwrap();
+        let solver = Solver::<Puzzle, _, _, _>::builder()
+            .target(Checkerboard)
+            .prune_target(Checkerboard)
+            .metric(Stm)
+            .size(size)
+            .build()
+            .unwrap();
+        let puzzle = Puzzle::from_str("5 6 2 9/13 15 14 7/8 1 11 12/4 3 10 0").unwrap();
+        let optimal = solver.solve(&puzzle).unwrap().len_stm::<u64>();
+
+        for (depth_beyond_optimal, max_len) in [(Some(0), optimal), (Some(2), optimal + 2)] {
+            let solutions = Rc::new(RefCell::new(Vec::new()));
+            let sc = solutions.clone();
+            let config = SolverConfig {
+                depth_beyond_optimal,
+                num_solutions: 1000,
+                solution_callback: Some(Box::new(move |s| {
+                    sc.borrow_mut().push(s.len_stm::<u64>());
+                    ControlFlow::Continue(())
+                })),
+                ..Default::default()
+            };
+
+            solver.solve_with_config(&puzzle, config).unwrap();
+
+            let lens = solutions.borrow();
+            assert!(
+                !lens.is_empty(),
+                "no solutions for depth_beyond_optimal={depth_beyond_optimal:?}"
+            );
+            for len in lens.iter() {
+                assert!(
+                    *len <= max_len && *len >= optimal,
+                    "len {len} outside [{optimal}, {max_len}] for depth_beyond_optimal={depth_beyond_optimal:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_solution_callback_break_stops() {
+        let size = Size::new(4, 4).unwrap();
+        let solver = Solver::<Puzzle, _, _, _>::builder()
+            .target(Checkerboard)
+            .prune_target(Checkerboard)
+            .metric(Stm)
+            .size(size)
+            .build()
+            .unwrap();
+        let puzzle = Puzzle::from_str("5 6 2 9/13 15 14 7/8 1 11 12/4 3 10 0").unwrap();
+
+        let calls = Rc::new(RefCell::new(0u64));
+        let cc = calls.clone();
+        let config = SolverConfig {
+            num_solutions: u64::MAX,
+            solution_callback: Some(Box::new(move |_| {
+                *cc.borrow_mut() += 1;
+                ControlFlow::Break(())
+            })),
+            ..Default::default()
+        };
+
+        let result = solver.solve_with_config(&puzzle, config);
+
+        assert_eq!(result, Ok(()));
+        assert_eq!(*calls.borrow(), 1);
+    }
+
+    #[test]
+    fn test_end_of_iter_callback_break_stops() {
+        let size = Size::new(4, 4).unwrap();
+        let solver = Solver::<Puzzle, _, _, _>::builder()
+            .target(Checkerboard)
+            .prune_target(Checkerboard)
+            .metric(Stm)
+            .size(size)
+            .build()
+            .unwrap();
+        let puzzle = Puzzle::from_str("5 6 2 9/13 15 14 7/8 1 11 12/4 3 10 0").unwrap();
+
+        let config = SolverConfig {
+            num_solutions: u64::MAX,
+            end_of_iter_callback: Some(Box::new(|_| ControlFlow::Break(()))),
+            ..Default::default()
+        };
+
+        let result = solver.solve_with_config(&puzzle, config);
+
+        assert_eq!(result, Ok(()));
     }
 }

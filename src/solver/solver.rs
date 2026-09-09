@@ -1,6 +1,6 @@
 //! Defines the [`Solver`] trait for a unified solver interface.
 
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, ops::ControlFlow, rc::Rc};
 
 use thiserror::Error;
 
@@ -26,17 +26,38 @@ pub enum SolverError {
 }
 
 /// Configuration for [`Solver::solve_with_config`].
+///
+/// The search stops as soon as any of the configured stop conditions is met. These are orthogonal:
+/// - [`min`](SolverConfig::min) sets the depth the search starts from, [`max`](SolverConfig::max)
+///   the absolute depth it stops at (inclusive).
+/// - [`depth_beyond_optimal`](SolverConfig::depth_beyond_optimal) stops the search at most `n`
+///   deeper than the depth of the first (optimal) solution found.
+/// - [`num_solutions`](SolverConfig::num_solutions) stops the search after that many solutions.
+/// - Returning [`ControlFlow::Break`] from either callback stops the search at an arbitrary point.
 pub struct SolverConfig {
     /// The minimum depth to begin iterative deepening from.
     pub min: u8,
+
     /// The maximum depth to search to (inclusive).
     pub max: u8,
+
+    /// When set, the search stops once it has deepened at most this far past the depth of the
+    /// first solution found. For example `Some(0)` finds only optimal solutions and `Some(2)`
+    /// all solutions within two moves of optimal.
+    pub depth_beyond_optimal: Option<u8>,
+
     /// The number of solutions to find.
     pub num_solutions: u64,
+
     /// A callback that runs after each iteration of the depth-first search.
-    pub end_of_iter_callback: Option<Box<dyn Fn(SolverIterationStats)>>,
+    ///
+    /// Returning [`ControlFlow::Break`] stops the search.
+    pub end_of_iter_callback: Option<Box<dyn Fn(SolverIterationStats) -> ControlFlow<()>>>,
+
     /// A callback that runs when a solution is found.
-    pub solution_callback: Option<Box<dyn Fn(Algorithm)>>,
+    ///
+    /// Returning [`ControlFlow::Break`] stops the search.
+    pub solution_callback: Option<Box<dyn Fn(Algorithm) -> ControlFlow<()>>>,
 }
 
 impl Default for SolverConfig {
@@ -44,6 +65,7 @@ impl Default for SolverConfig {
         Self {
             min: 0,
             max: u8::MAX,
+            depth_beyond_optimal: None,
             num_solutions: 1,
             end_of_iter_callback: None,
             solution_callback: None,
@@ -79,7 +101,10 @@ where
 
         let config = SolverConfig {
             num_solutions,
-            solution_callback: Some(Box::new(move |s| c.borrow_mut().push(s))),
+            solution_callback: Some(Box::new(move |s| {
+                c.borrow_mut().push(s);
+                ControlFlow::Continue(())
+            })),
             ..Default::default()
         };
 

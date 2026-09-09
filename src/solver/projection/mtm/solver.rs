@@ -29,7 +29,9 @@ where
             if index == self.prune_target_solved_index && self.check_solution(puzzle) {
                 self.solutions_found.update(|n| n + 1);
                 if let Some(f) = &self.cfg().solution_callback {
-                    f(self.stack.to_alg());
+                    if f(self.stack.to_alg()).is_break() {
+                        return true;
+                    }
                 }
                 return self.cfg().num_solutions == self.solutions_found.get();
             }
@@ -93,6 +95,7 @@ where
     ) -> Result<(), SolverError> {
         let min = config.min;
         let max = config.max;
+        let depth_beyond_optimal = config.depth_beyond_optimal;
 
         self.stack.clear();
         self.solutions_found.set(0);
@@ -103,14 +106,27 @@ where
         // SAFETY: `start_index` comes from encoding a projected puzzle, so is within bounds.
         let pdb_val = unsafe { self.pdb.get_unchecked(start_index) };
         let mut depth = pdb_val.max(min);
+        let mut first_solution_depth: Option<u8> = None;
 
         while depth <= max {
+            if first_solution_depth.is_some_and(|fd| {
+                depth_beyond_optimal.is_some_and(|e| depth > fd.saturating_add(e))
+            }) {
+                break;
+            }
+
+            let found_before = self.solutions_found.get();
             if self.dfs::<N>(puzzle, depth, None, projected) {
                 return Ok(());
             }
+            if first_solution_depth.is_none() && self.solutions_found.get() > found_before {
+                first_solution_depth = Some(depth);
+            }
 
             if let Some(f) = &self.cfg().end_of_iter_callback {
-                f(SolverIterationStats { depth });
+                if f(SolverIterationStats { depth }).is_break() {
+                    return Ok(());
+                }
             }
 
             depth = match depth.checked_add(1) {
@@ -119,7 +135,11 @@ where
             };
         }
 
-        Err(SolverError::NoSolutionFound)
+        if self.solutions_found.get() > 0 {
+            Ok(())
+        } else {
+            Err(SolverError::NoSolutionFound)
+        }
     }
 }
 

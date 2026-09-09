@@ -1,6 +1,7 @@
 use std::{
     cell::{Cell, RefCell},
     marker::PhantomData,
+    ops::ControlFlow,
 };
 
 use num_traits::AsPrimitive;
@@ -69,9 +70,11 @@ where
         }
 
         if depth == 0 {
+            self.solutions_found.update(|n| n + 1);
             if let Some(f) = &self.cfg().solution_callback {
-                self.solutions_found.update(|n| n + 1);
-                f(self.stack.to_alg());
+                if f(self.stack.to_alg()).is_break() {
+                    return true;
+                }
             }
 
             return self.cfg().num_solutions == self.solutions_found.get();
@@ -120,6 +123,7 @@ where
             let SolverConfig {
                 min,
                 max,
+                depth_beyond_optimal,
                 num_solutions,
                 end_of_iter_callback,
                 solution_callback,
@@ -128,12 +132,12 @@ where
             let transpose_config = SolverConfig {
                 min,
                 max,
+                depth_beyond_optimal,
                 num_solutions,
                 end_of_iter_callback,
-                solution_callback: Some(Box::new(move |s| {
-                    if let Some(f) = &solution_callback {
-                        f(s.transpose());
-                    }
+                solution_callback: Some(Box::new(move |s| match &solution_callback {
+                    Some(f) => f(s.transpose()),
+                    None => ControlFlow::Continue(()),
                 })),
             };
 
@@ -154,6 +158,7 @@ where
 
         let min = config.min;
         let max = config.max;
+        let depth_beyond_optimal = config.depth_beyond_optimal;
 
         // Reset state
         self.stack.clear();
@@ -169,14 +174,27 @@ where
         };
 
         let mut depth = start_heuristic.max(min);
+        let mut first_solution_depth: Option<u8> = None;
 
         while depth <= max {
+            if first_solution_depth.is_some_and(|fd| {
+                depth_beyond_optimal.is_some_and(|e| depth > fd.saturating_add(e))
+            }) {
+                break;
+            }
+
+            let found_before = self.solutions_found.get();
             if self.dfs(depth, None, puzzle) {
                 return Ok(());
             }
+            if first_solution_depth.is_none() && self.solutions_found.get() > found_before {
+                first_solution_depth = Some(depth);
+            }
 
             if let Some(f) = &self.cfg().end_of_iter_callback {
-                f(SolverIterationStats { depth });
+                if f(SolverIterationStats { depth }).is_break() {
+                    return Ok(());
+                }
             }
 
             depth = match depth.checked_add(2) {
@@ -185,7 +203,11 @@ where
             };
         }
 
-        Err(SolverError::NoSolutionFound)
+        if self.solutions_found.get() > 0 {
+            Ok(())
+        } else {
+            Err(SolverError::NoSolutionFound)
+        }
     }
 }
 

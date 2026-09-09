@@ -168,18 +168,14 @@ impl Solver {
             }
 
             if p.pieces() == Puzzle4x4::SOLVED {
-                if let Some(f) = self
-                    .config
-                    .borrow()
-                    .as_ref()
-                    .and_then(|c| c.solution_callback.as_ref())
-                {
-                    self.solutions_found.update(|n| n + 1);
-                    f(self.stack.to_alg());
+                self.solutions_found.update(|n| n + 1);
+                if let Some(f) = &self.cfg().solution_callback {
+                    if f(self.stack.to_alg()).is_break() {
+                        return true;
+                    }
                 }
 
-                return self.config.borrow().as_ref().unwrap().num_solutions
-                    == self.solutions_found.get();
+                return self.cfg().num_solutions == self.solutions_found.get();
             }
 
             return false;
@@ -239,6 +235,7 @@ impl Solver {
 
         let min = config.min;
         let max = config.max;
+        let depth_beyond_optimal = config.depth_beyond_optimal;
 
         // Reset state
         self.stack.clear();
@@ -250,14 +247,27 @@ impl Solver {
             .indexing_table
             .encode(reduced_puzzle.pieces, &self.base_5_table);
         let mut depth = self.pdb.get(coord as usize).max(min);
+        let mut first_solution_depth: Option<u8> = None;
 
         while depth <= max {
+            if first_solution_depth.is_some_and(|fd| {
+                depth_beyond_optimal.is_some_and(|e| depth > fd.saturating_add(e))
+            }) {
+                break;
+            }
+
+            let found_before = self.solutions_found.get();
             if self.dfs(depth, None, reduced_puzzle, transposed_reduced_puzzle) {
                 return Ok(());
             }
+            if first_solution_depth.is_none() && self.solutions_found.get() > found_before {
+                first_solution_depth = Some(depth);
+            }
 
             if let Some(f) = &self.cfg().end_of_iter_callback {
-                f(SolverIterationStats { depth });
+                if f(SolverIterationStats { depth }).is_break() {
+                    return Ok(());
+                }
             }
 
             depth = match depth.checked_add(1) {
@@ -266,7 +276,11 @@ impl Solver {
             };
         }
 
-        Err(SolverError::NoSolutionFound)
+        if self.solutions_found.get() > 0 {
+            Ok(())
+        } else {
+            Err(SolverError::NoSolutionFound)
+        }
     }
 
     /// Returns a reference to the data contained in the pattern database, in order to allow it to
