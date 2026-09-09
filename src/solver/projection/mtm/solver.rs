@@ -24,15 +24,16 @@ where
         projected: ProjectedPuzzle<N>,
     ) -> bool {
         let index = self.pdb.encode(&projected);
-        if index == self.prune_target_solved_index && self.check_solution(puzzle) {
-            self.solutions_found.update(|n| n + 1);
-            if let Some(f) = &self.cfg().solution_callback {
-                f(self.stack.to_alg());
-            }
-            return self.cfg().num_solutions == self.solutions_found.get();
-        }
 
         if depth == 0 {
+            if index == self.prune_target_solved_index && self.check_solution(puzzle) {
+                self.solutions_found.update(|n| n + 1);
+                if let Some(f) = &self.cfg().solution_callback {
+                    f(self.stack.to_alg());
+                }
+                return self.cfg().num_solutions == self.solutions_found.get();
+            }
+
             return false;
         }
 
@@ -145,8 +146,9 @@ mod tests {
 
     use super::*;
     use crate::puzzle::{
-        label::label::{Rows, Trivial},
+        label::label::{Checkerboard, Rows, Trivial},
         puzzle::Puzzle,
+        scrambler::{RandomState, Scrambler as _},
         size::Size,
     };
 
@@ -209,5 +211,29 @@ mod tests {
         let solution = solver.solve(&puzzle).unwrap();
 
         assert_eq!(solution.len_mtm::<u64>(), 22);
+    }
+
+    #[test]
+    fn test_solutions_distinct() {
+        let size = Size::new(4, 4).unwrap();
+        let solver = Solver::<Puzzle, _, _, _>::builder()
+            .target(Checkerboard)
+            .prune_target(Checkerboard)
+            .metric(Mtm)
+            .size(size)
+            .build()
+            .unwrap();
+
+        let mut puzzle = Puzzle::new(size);
+
+        for _ in 0..100 {
+            RandomState.scramble(&mut puzzle);
+
+            let mut solutions = solver.solve_many(&puzzle, 5).unwrap();
+            solutions.sort_by_cached_key(|s| s.to_string());
+            solutions.dedup();
+
+            assert_eq!(solutions.len(), 5, "failed on {puzzle}");
+        }
     }
 }
