@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use crate::{
     puzzle::{label::label::Label, size::Size},
-    solver::projection::{encoding, puzzle::ProjectedPuzzle},
+    solver::projection::puzzle::ProjectedPuzzle,
 };
 
 pub(super) struct Pdb<Metric> {
@@ -18,7 +18,7 @@ impl<Metric> Pdb<Metric> {
         unsafe { *self.pdb.get_unchecked(index) }
     }
 
-    pub(super) fn encode(&self, puzzle: &ProjectedPuzzle<{ encoding::MAX_PIECES }>) -> usize {
+    pub(super) fn encode<const N: usize>(&self, puzzle: &ProjectedPuzzle<N>) -> usize {
         puzzle.encode(&self.tally) as usize
     }
 }

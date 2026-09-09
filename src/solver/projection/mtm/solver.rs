@@ -16,12 +16,12 @@ where
     Target: Label + SolvedState + Default,
     PruneTarget: Label + SolvedState + Default,
 {
-    fn dfs(
+    fn dfs<const N: usize>(
         &self,
         puzzle: &P,
         depth: u8,
         last_axis: Option<Axis>,
-        projected: ProjectedPuzzle<{ encoding::MAX_PIECES }>,
+        projected: ProjectedPuzzle<N>,
     ) -> bool {
         let index = self.pdb.encode(&projected);
         if index == self.prune_target_solved_index && self.check_solution(puzzle) {
@@ -78,6 +78,18 @@ where
             return Err(SolverError::Unsolvable);
         }
 
+        if self.size.area() as usize <= encoding::SMALL {
+            self.solve_with_size::<{ encoding::SMALL }>(puzzle, config)
+        } else {
+            self.solve_with_size::<{ encoding::MAX_PIECES }>(puzzle, config)
+        }
+    }
+
+    fn solve_with_size<const N: usize>(
+        &self,
+        puzzle: &P,
+        config: SolverConfig,
+    ) -> Result<(), SolverError> {
         let min = config.min;
         let max = config.max;
 
@@ -85,14 +97,14 @@ where
         self.solutions_found.set(0);
         *self.config.borrow_mut() = Some(config);
 
-        let projected = self.initial_projected(puzzle);
+        let projected = self.initial_projected::<N>(puzzle);
         let start_index = self.pdb.encode(&projected);
         // SAFETY: `start_index` comes from encoding a projected puzzle, so is within bounds.
         let pdb_val = unsafe { self.pdb.get_unchecked(start_index) };
         let mut depth = pdb_val.max(min);
 
         while depth <= max {
-            if self.dfs(puzzle, depth, None, projected) {
+            if self.dfs::<N>(puzzle, depth, None, projected) {
                 return Ok(());
             }
 

@@ -86,11 +86,8 @@ where
         }
     }
 
-    pub(super) fn initial_projected(
-        &self,
-        puzzle: &P,
-    ) -> ProjectedPuzzle<{ encoding::MAX_PIECES }> {
-        project_puzzle(puzzle, &self.prune_target)
+    pub(super) fn initial_projected<const N: usize>(&self, puzzle: &P) -> ProjectedPuzzle<N> {
+        project_puzzle::<N, P, PruneTarget>(puzzle, &self.prune_target)
     }
 
     pub(super) fn check_solution(&self, puzzle: &P) -> bool {

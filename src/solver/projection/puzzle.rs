@@ -3,7 +3,7 @@ use num_traits::Zero as _;
 use crate::{
     algorithm::direction::Direction,
     puzzle::{label::label::Label, sliding_puzzle::SlidingPuzzle},
-    solver::projection::encoding::{self, MAX_PIECES, SMALL},
+    solver::projection::encoding,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -70,21 +70,15 @@ impl<const N: usize> ProjectedPuzzle<N> {
         self.gy = next_gy;
         true
     }
-}
 
-impl ProjectedPuzzle<SMALL> {
+    /// Ranks the projected state to the multiset index used for the PDB arrays. `N` is the width
+    /// of the scratch `pieces` buffer (16 for projections of up to 16 cells, 32 otherwise).
     pub(super) fn encode(&self, tally: &[u8]) -> u64 {
-        encoding::encode_arr::<SMALL>(&self.pieces, tally)
+        encoding::encode::<N>(&self.pieces, tally)
     }
 }
 
-impl ProjectedPuzzle<MAX_PIECES> {
-    pub(super) fn encode(&self, tally: &[u8]) -> u64 {
-        encoding::encode(&self.pieces, tally)
-    }
-}
-
-pub(super) fn project_puzzle<P, L>(puzzle: &P, label: &L) -> ProjectedPuzzle<MAX_PIECES>
+pub(super) fn project_puzzle<const N: usize, P, L>(puzzle: &P, label: &L) -> ProjectedPuzzle<N>
 where
     P: SlidingPuzzle,
     L: Label,

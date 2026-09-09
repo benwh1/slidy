@@ -10,18 +10,11 @@ pub(super) const MAX_PIECES: usize = 32;
 /// 32-wide array.
 pub(super) const SMALL: usize = 16;
 
-pub(super) fn encode(arr: &[u8; MAX_PIECES], tally: &[u8]) -> u64 {
-    let n = tally.iter().map(|&t| t as usize).sum::<usize>();
-    assert!(n <= MAX_PIECES);
-
-    if n <= SMALL {
-        encode_impl::<SMALL>(arr[..SMALL].try_into().unwrap(), tally, n)
-    } else {
-        encode_impl::<MAX_PIECES>(arr, tally, n)
-    }
-}
-
-pub(super) fn encode_arr<const N: usize>(arr: &[u8; N], tally: &[u8]) -> u64 {
+/// Encodes `arr[..n]` (the `n` pieces, values in `0..k`) to its multiset rank, where `tally`
+/// counts each value and `n` is the sum of the tally. `N` is the width of the `arr` scratch
+/// buffer; callers pick `N = SMALL` for projections of up to 16 cells and `N = MAX_PIECES`
+/// otherwise.
+pub(super) fn encode<const N: usize>(arr: &[u8; N], tally: &[u8]) -> u64 {
     let n = tally.iter().map(|&t| t as usize).sum::<usize>();
     assert!(n <= N && N <= MAX_PIECES);
 
@@ -102,7 +95,7 @@ mod tests {
     ) {
         let n = tally.iter().map(|&t| t as usize).sum::<usize>();
         if depth == n {
-            out.push(encode(arr, tally));
+            out.push(encode::<MAX_PIECES>(arr, tally));
             return;
         }
         for v in 0..tally.len() {
@@ -135,22 +128,22 @@ mod tests {
 
         arr[..4].copy_from_slice(&[0, 0, 1, 1]);
         let tally = [2, 2];
-        assert_eq!(encode(&arr, &tally), 0);
+        assert_eq!(encode::<MAX_PIECES>(&arr, &tally), 0);
 
         arr[..4].copy_from_slice(&[0, 1, 0, 1]);
-        assert_eq!(encode(&arr, &tally), 1);
+        assert_eq!(encode::<MAX_PIECES>(&arr, &tally), 1);
 
         arr[..4].copy_from_slice(&[1, 0, 0, 1]);
-        assert_eq!(encode(&arr, &tally), 2);
+        assert_eq!(encode::<MAX_PIECES>(&arr, &tally), 2);
 
         arr[..4].copy_from_slice(&[0, 1, 1, 0]);
-        assert_eq!(encode(&arr, &tally), 3);
+        assert_eq!(encode::<MAX_PIECES>(&arr, &tally), 3);
 
         arr[..4].copy_from_slice(&[1, 0, 1, 0]);
-        assert_eq!(encode(&arr, &tally), 4);
+        assert_eq!(encode::<MAX_PIECES>(&arr, &tally), 4);
 
         arr[..4].copy_from_slice(&[1, 1, 0, 0]);
-        assert_eq!(encode(&arr, &tally), 5);
+        assert_eq!(encode::<MAX_PIECES>(&arr, &tally), 5);
     }
 
     #[test]
