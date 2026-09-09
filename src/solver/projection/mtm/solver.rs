@@ -4,8 +4,9 @@ use crate::{
     algorithm::{axis::Axis, direction::Direction, metric::Mtm},
     puzzle::{label::label::Label, sliding_puzzle::SlidingPuzzle, solved_state::SolvedState},
     solver::{
+        config::SolverConfig,
         projection::{puzzle::ProjectedPuzzle, solver::Solver, LARGE, SMALL},
-        solver::{Solver as SolverT, SolverConfig, SolverError},
+        solver::{Solver as SolverT, SolverError},
         statistics::SolverIterationStats,
     },
 };

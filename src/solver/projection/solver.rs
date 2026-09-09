@@ -13,13 +13,13 @@ use crate::{
         label::label::Label, size::Size, sliding_puzzle::SlidingPuzzle, solved_state::SolvedState,
     },
     solver::{
+        config::SolverConfig,
         projection::{
             builder::SolverBuilder,
             pdb::{compute_solved_state, Pdb},
             puzzle::{project_puzzle, ProjectedPuzzle},
             LARGE,
         },
-        solver::SolverConfig,
         stack::Stack,
     },
 };

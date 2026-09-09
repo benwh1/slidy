@@ -6,7 +6,7 @@ use thiserror::Error;
 
 use crate::{
     algorithm::algorithm::Algorithm, puzzle::sliding_puzzle::SlidingPuzzle,
-    solver::statistics::SolverIterationStats,
+    solver::config::SolverConfig,
 };
 
 /// Error type for solvers.
@@ -23,54 +23,6 @@ pub enum SolverError {
     /// Returned when the solver is given an unsolvable puzzle.
     #[error("Unsolvable: the puzzle is unsolvable")]
     Unsolvable,
-}
-
-/// Configuration for [`Solver::solve_with_config`].
-///
-/// The search stops as soon as any of the configured stop conditions is met. These are orthogonal:
-/// - [`min`](SolverConfig::min) sets the depth the search starts from, [`max`](SolverConfig::max)
-///   the absolute depth it stops at (inclusive).
-/// - [`depth_beyond_optimal`](SolverConfig::depth_beyond_optimal) stops the search at most `n`
-///   deeper than the depth of the first (optimal) solution found.
-/// - [`num_solutions`](SolverConfig::num_solutions) stops the search after that many solutions.
-/// - Returning [`ControlFlow::Break`] from either callback stops the search at an arbitrary point.
-pub struct SolverConfig {
-    /// The minimum depth to begin iterative deepening from.
-    pub min: u8,
-
-    /// The maximum depth to search to (inclusive).
-    pub max: u8,
-
-    /// When set, the search stops once it has deepened at most this far past the depth of the
-    /// first solution found. For example `Some(0)` finds only optimal solutions and `Some(2)`
-    /// all solutions within two moves of optimal.
-    pub depth_beyond_optimal: Option<u8>,
-
-    /// The number of solutions to find.
-    pub num_solutions: u64,
-
-    /// A callback that runs after each iteration of the depth-first search.
-    ///
-    /// Returning [`ControlFlow::Break`] stops the search.
-    pub end_of_iter_callback: Option<Box<dyn Fn(SolverIterationStats) -> ControlFlow<()>>>,
-
-    /// A callback that runs when a solution is found.
-    ///
-    /// Returning [`ControlFlow::Break`] stops the search.
-    pub solution_callback: Option<Box<dyn Fn(Algorithm) -> ControlFlow<()>>>,
-}
-
-impl Default for SolverConfig {
-    fn default() -> Self {
-        Self {
-            min: 0,
-            max: u8::MAX,
-            depth_beyond_optimal: None,
-            num_solutions: 1,
-            end_of_iter_callback: None,
-            solution_callback: None,
-        }
-    }
 }
 
 /// A generic interface for sliding puzzle solvers.

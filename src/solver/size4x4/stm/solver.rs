@@ -8,8 +8,9 @@ use crate::{
     algorithm::direction::Direction,
     puzzle::{size::Size, sliding_puzzle::SlidingPuzzle},
     solver::{
+        config::SolverConfig,
         size4x4::stm::{pattern::Pattern, pdb::Pdb, puzzle::Puzzle as Puzzle4},
-        solver::{Solver as SolverT, SolverConfig, SolverError},
+        solver::{Solver as SolverT, SolverError},
         stack::Stack,
         statistics::{PdbIterationStats, SolverIterationStats},
     },

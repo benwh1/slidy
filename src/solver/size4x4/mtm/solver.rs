@@ -8,13 +8,14 @@ use crate::{
     algorithm::{axis::Axis, direction::Direction},
     puzzle::{sliding_puzzle::SlidingPuzzle, small::Puzzle4x4},
     solver::{
+        config::SolverConfig,
         size4x4::mtm::{
             base_5_table::Base5Table,
             indexing_table::IndexingTable,
             pdb::Pdb,
             puzzle::{FourBitPuzzle, ReducedFourBitPuzzle},
         },
-        solver::{Solver as SolverT, SolverConfig, SolverError},
+        solver::{Solver as SolverT, SolverError},
         stack::Stack,
         statistics::{PdbIterationStats, SolverIterationStats},
     },

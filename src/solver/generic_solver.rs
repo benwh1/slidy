@@ -17,8 +17,9 @@ use crate::{
         solved_state::SolvedState,
     },
     solver::{
+        config::SolverConfig,
         heuristic::{manhattan::ManhattanDistance, Heuristic},
-        solver::{Solver, SolverConfig, SolverError},
+        solver::{Solver, SolverError},
         stack::Stack,
         statistics::SolverIterationStats,
     },

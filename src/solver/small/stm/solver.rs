@@ -13,8 +13,9 @@ use crate::{
         small::{sealed::SmallPuzzle, Puzzle},
     },
     solver::{
+        config::SolverConfig,
         small::{indexing, pdb::Pdb, solver::Solver},
-        solver::{Solver as SolverT, SolverConfig, SolverError},
+        solver::{Solver as SolverT, SolverError},
         stack::Stack,
         statistics::SolverIterationStats,
     },

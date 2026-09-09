@@ -8,7 +8,7 @@ use std::{
     marker::PhantomData,
 };
 
-use crate::solver::{small::pdb::Pdb, solver::SolverConfig, stack::Stack};
+use crate::solver::{config::SolverConfig, small::pdb::Pdb, stack::Stack};
 
 /// An optimal solver for `WxH` and `HxW` puzzles.
 pub struct Solver<const W: usize, const H: usize, const N: usize, Metric> {
