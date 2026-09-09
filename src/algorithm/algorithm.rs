@@ -3,13 +3,12 @@
 use std::{
     cmp::Ordering,
     fmt::Display,
-    iter::{self, Sum},
+    iter,
     ops::{Add, AddAssign, Range},
     str::FromStr,
 };
 
 use itertools::Itertools as _;
-use num_traits::{AsPrimitive, PrimInt};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -75,24 +74,18 @@ impl Algorithm {
 
     /// The length of the algorithm in the [`Metric`] `M`.
     #[must_use]
-    pub fn len<M, T>(&self) -> T
+    pub fn len<M>(&self) -> u64
     where
         M: Metric,
-        T: PrimInt + Sum + 'static,
-        u64: AsPrimitive<T>,
     {
-        self.as_slice().len::<M, T>()
+        self.as_slice().len::<M>()
     }
 
     /// The length of the algorithm in the [`Stm`] [`Metric`].
     ///
     /// [`Stm`]: ../metric.html
     #[must_use]
-    pub fn len_stm<T>(&self) -> T
-    where
-        T: PrimInt + Sum + 'static,
-        u64: AsPrimitive<T>,
-    {
+    pub fn len_stm(&self) -> u64 {
         self.as_slice().len_stm()
     }
 
@@ -100,11 +93,7 @@ impl Algorithm {
     ///
     /// [`Mtm`]: ../metric.html
     #[must_use]
-    pub fn len_mtm<T>(&self) -> T
-    where
-        T: PrimInt + Sum + 'static,
-        u64: AsPrimitive<T>,
-    {
+    pub fn len_mtm(&self) -> u64 {
         self.as_slice().len_mtm()
     }
 
@@ -507,22 +496,22 @@ mod tests {
     #[test]
     fn test_len() {
         let a = Algorithm::from_str("ULDR").unwrap();
-        assert_eq!(a.len_stm::<u64>(), 4);
-        assert_eq!(a.len_mtm::<u64>(), 4);
+        assert_eq!(a.len_stm(), 4);
+        assert_eq!(a.len_mtm(), 4);
     }
 
     #[test]
     fn test_len_2() {
         let a = Algorithm::from_str("U3L6D2R20").unwrap();
-        assert_eq!(a.len_stm::<u64>(), 31);
-        assert_eq!(a.len_mtm::<u64>(), 4);
+        assert_eq!(a.len_stm(), 31);
+        assert_eq!(a.len_mtm(), 4);
     }
 
     #[test]
     fn test_len_3() {
         let a = Algorithm::from_str("UUU3").unwrap();
-        assert_eq!(a.len_stm::<u64>(), 5);
-        assert_eq!(a.len_mtm::<u64>(), 3);
+        assert_eq!(a.len_stm(), 5);
+        assert_eq!(a.len_mtm(), 3);
     }
 
     #[test]

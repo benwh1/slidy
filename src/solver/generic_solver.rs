@@ -340,11 +340,11 @@ mod tests {
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
 
         let solution = solver.solve(&puzzle).unwrap();
-        assert_eq!(solution.len_stm::<u64>(), 31);
+        assert_eq!(solution.len_stm(), 31);
 
         // Test it twice to make sure the internal state gets reset properly
         let solution = solver.solve(&puzzle).unwrap();
-        assert_eq!(solution.len_stm::<u64>(), 31);
+        assert_eq!(solution.len_stm(), 31);
     }
 
     #[test]
@@ -352,7 +352,7 @@ mod tests {
         let solver: GenericSolver<_, _, _, Stm> = GenericSolver::new(ManhattanDistance(Rows), Rows);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
-        assert_eq!(solution.len_stm::<u64>(), 23);
+        assert_eq!(solution.len_stm(), 23);
     }
 
     #[test]
@@ -361,11 +361,11 @@ mod tests {
             GenericSolver::new(MtmHeuristic(ManhattanDistance(RowGrids)), RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
-        assert_eq!(solution.len_mtm::<u64>(), 20);
+        assert_eq!(solution.len_mtm(), 20);
 
         // Test it twice to make sure the internal state gets reset properly
         let solution = solver.solve(&puzzle).unwrap();
-        assert_eq!(solution.len_mtm::<u64>(), 20);
+        assert_eq!(solution.len_mtm(), 20);
     }
 
     #[test]
@@ -388,7 +388,7 @@ mod tests {
             GenericSolver::new(ManhattanDistance(RowGrids), RowGrids);
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
-        assert_eq!(solution.len_stm::<u64>(), 31);
+        assert_eq!(solution.len_stm(), 31);
     }
 
     #[test]
@@ -400,7 +400,7 @@ mod tests {
             min: 31,
             max: 31,
             solution_callback: Some(Box::new(|s| {
-                assert_eq!(s.len_stm::<u64>(), 31);
+                assert_eq!(s.len_stm(), 31);
                 ControlFlow::Continue(())
             })),
             ..Default::default()
@@ -432,7 +432,7 @@ mod tests {
             min: 20,
             max: 40,
             solution_callback: Some(Box::new(|s| {
-                assert_eq!(s.len_stm::<u64>(), 31);
+                assert_eq!(s.len_stm(), 31);
                 ControlFlow::Continue(())
             })),
             ..Default::default()
@@ -450,7 +450,7 @@ mod tests {
             min: 33,
             max: 33,
             solution_callback: Some(Box::new(|s| {
-                assert_eq!(s.len_stm::<u64>(), 33);
+                assert_eq!(s.len_stm(), 33);
                 ControlFlow::Continue(())
             })),
             ..Default::default()
@@ -470,7 +470,7 @@ mod tests {
             // The true optimum (13) is verified against the complete projection solver in
             // `projection::mtm::solver::tests`.
             solution_callback: Some(Box::new(|s| {
-                assert_eq!(s.len_mtm::<u64>(), 13);
+                assert_eq!(s.len_mtm(), 13);
                 ControlFlow::Continue(())
             })),
             ..Default::default()

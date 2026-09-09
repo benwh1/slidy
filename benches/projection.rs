@@ -71,7 +71,7 @@ fn bench_solve_stm(c: &mut Criterion) {
     group.bench_function("solve", move |b| {
         b.iter(|| {
             let solution = solver.solve(black_box(&puzzle)).unwrap();
-            black_box(solution.len_stm::<u64>());
+            black_box(solution.len_stm());
         });
     });
     group.finish();
@@ -93,7 +93,7 @@ fn bench_solve_mtm(c: &mut Criterion) {
     group.bench_function("solve", move |b| {
         b.iter(|| {
             let solution = solver.solve(black_box(&puzzle)).unwrap();
-            black_box(solution.len_mtm::<u64>());
+            black_box(solution.len_mtm());
         });
     });
     group.finish();

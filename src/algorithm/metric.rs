@@ -1,6 +1,5 @@
 //! Defines the [`Metric`] trait and the [`Stm`] and [`Mtm`] metrics.
 
-use num_traits::{AsPrimitive, PrimInt};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -12,10 +11,7 @@ pub trait Metric {
     const HAS_MOVECOUNT_PARITY: bool;
 
     /// The length of a [`Move`].
-    fn len<T>(mv: Move) -> T
-    where
-        T: PrimInt + 'static,
-        u64: AsPrimitive<T>;
+    fn len(mv: Move) -> u64;
 }
 
 /// Single tile move metric, where moves like U5 have length 5, etc.
@@ -31,23 +27,15 @@ pub struct Mtm;
 impl Metric for Stm {
     const HAS_MOVECOUNT_PARITY: bool = true;
 
-    fn len<T>(mv: Move) -> T
-    where
-        T: PrimInt + 'static,
-        u64: AsPrimitive<T>,
-    {
-        mv.amount().as_()
+    fn len(mv: Move) -> u64 {
+        mv.amount()
     }
 }
 
 impl Metric for Mtm {
     const HAS_MOVECOUNT_PARITY: bool = false;
 
-    fn len<T>(_mv: Move) -> T
-    where
-        T: PrimInt + 'static,
-        u64: AsPrimitive<T>,
-    {
-        T::one()
+    fn len(_: Move) -> u64 {
+        1
     }
 }

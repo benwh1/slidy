@@ -191,7 +191,7 @@ mod tests {
             .unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
-        assert!(solution.len_stm::<u64>() > 0);
+        assert!(solution.len_stm() > 0);
     }
 
     #[test]
@@ -202,7 +202,7 @@ mod tests {
             .unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
-        assert!(solution.len_stm::<u64>() > 0);
+        assert!(solution.len_stm() > 0);
     }
 
     #[test]
@@ -213,7 +213,7 @@ mod tests {
             .unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
-        assert!(solution.len_stm::<u64>() > 0);
+        assert!(solution.len_stm() > 0);
     }
 
     #[test]
@@ -237,7 +237,7 @@ mod tests {
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let s1 = solver.solve(&puzzle).unwrap();
         let s2 = solver.solve(&puzzle).unwrap();
-        assert_eq!(s1.len_stm::<u64>(), s2.len_stm::<u64>());
+        assert_eq!(s1.len_stm(), s2.len_stm());
     }
 
     #[test]
@@ -251,7 +251,7 @@ mod tests {
             .unwrap();
         let puzzle = Puzzle::from_str("12 7 9 10/5 6 0 14/11 15 2 8/3 1 4 13").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
-        assert_eq!(solution.len_stm::<u64>(), 45);
+        assert_eq!(solution.len_stm(), 45);
     }
 
     #[test]
@@ -267,7 +267,7 @@ mod tests {
             .unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
-        assert!(solution.len_stm::<u64>() > 0);
+        assert!(solution.len_stm() > 0);
         assert!(iterations.get() > 0);
     }
 
@@ -284,7 +284,7 @@ mod tests {
             .unwrap();
         let puzzle = Puzzle::from_str("12 7 9 10/5 6 0 14/11 15 2 8/3 1 4 13").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
-        assert_eq!(solution.len_stm::<u64>(), 45);
+        assert_eq!(solution.len_stm(), 45);
     }
 
     #[test]
@@ -331,7 +331,7 @@ mod tests {
             .build()
             .unwrap();
         let puzzle = Puzzle::from_str("5 6 2 9/13 15 14 7/8 1 11 12/4 3 10 0").unwrap();
-        let optimal = solver.solve(&puzzle).unwrap().len_stm::<u64>();
+        let optimal = solver.solve(&puzzle).unwrap().len_stm();
 
         for (depth_beyond_optimal, max_len) in [(Some(0), optimal), (Some(2), optimal + 2)] {
             let solutions = Rc::new(RefCell::new(Vec::new()));
@@ -340,7 +340,7 @@ mod tests {
                 depth_beyond_optimal,
                 num_solutions: 1000,
                 solution_callback: Some(Box::new(move |s| {
-                    sc.borrow_mut().push(s.len_stm::<u64>());
+                    sc.borrow_mut().push(s.len_stm());
                     ControlFlow::Continue(())
                 })),
                 ..Default::default()

@@ -270,11 +270,11 @@ mod tests {
         let solver = Solver::new();
 
         let solution = solver.solve(&puzzle).unwrap();
-        assert_eq!(solution.len_stm::<u64>(), 58);
+        assert_eq!(solution.len_stm(), 58);
 
         // Test it twice to make sure the internal state gets reset properly
         let solution = solver.solve(&puzzle).unwrap();
-        assert_eq!(solution.len_stm::<u64>(), 58);
+        assert_eq!(solution.len_stm(), 58);
     }
 
     #[test]

@@ -1,11 +1,6 @@
 //! Defines the [`AlgorithmSlice`] type.
 
-use std::{
-    fmt::Display,
-    iter::{self, Sum},
-};
-
-use num_traits::{AsPrimitive, PrimInt};
+use std::{fmt::Display, iter};
 
 use crate::{
     algorithm::{
@@ -35,33 +30,23 @@ pub struct AlgorithmSlice<'a> {
 impl AlgorithmSlice<'_> {
     /// The length of the slice in the [`Metric`] `M`.
     #[must_use]
-    pub fn len<M, T>(&self) -> T
+    pub fn len<M>(&self) -> u64
     where
         M: Metric,
-        T: PrimInt + Sum + 'static,
-        u64: AsPrimitive<T>,
     {
-        self.moves().map(|m| M::len::<T>(m)).sum()
+        self.moves().map(|m| M::len(m)).sum()
     }
 
     /// The length of the slice in the [`Stm`] [`Metric`].
     #[must_use]
-    pub fn len_stm<T>(&self) -> T
-    where
-        T: PrimInt + Sum + 'static,
-        u64: AsPrimitive<T>,
-    {
-        self.len::<Stm, T>()
+    pub fn len_stm(&self) -> u64 {
+        self.len::<Stm>()
     }
 
     /// The length of the slice in the [`Mtm`] [`Metric`].
     #[must_use]
-    pub fn len_mtm<T>(&self) -> T
-    where
-        T: PrimInt + Sum + 'static,
-        u64: AsPrimitive<T>,
-    {
-        self.len::<Mtm, T>()
+    pub fn len_mtm(&self) -> u64 {
+        self.len::<Mtm>()
     }
 
     /// Checks if the slice is empty.
@@ -267,7 +252,7 @@ mod tests {
         for start in 0..34 {
             for end in start..34 {
                 let slice = alg.try_slice(start..end)?;
-                assert_eq!(slice.len_stm::<u64>(), end - start);
+                assert_eq!(slice.len_stm(), end - start);
             }
         }
 

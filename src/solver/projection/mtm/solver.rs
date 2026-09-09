@@ -188,7 +188,7 @@ mod tests {
             .unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
-        assert_eq!(solution.len_mtm::<u64>(), 2);
+        assert_eq!(solution.len_mtm(), 2);
     }
 
     #[test]
@@ -199,7 +199,7 @@ mod tests {
             .unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
-        assert_eq!(solution.len_mtm::<u64>(), 13);
+        assert_eq!(solution.len_mtm(), 13);
     }
 
     #[test]
@@ -231,7 +231,7 @@ mod tests {
         let puzzle = Puzzle::from_str("15 14 4 8/2 7 9 11/1 12 3 10/6 13 0 5").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
 
-        assert_eq!(solution.len_mtm::<u64>(), 22);
+        assert_eq!(solution.len_mtm(), 22);
     }
 
     #[test]

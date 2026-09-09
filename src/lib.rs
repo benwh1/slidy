@@ -72,7 +72,7 @@
 //!     println!(
 //!         "Solution: {} ({} moves)",
 //!         solution,
-//!         solution.len_stm::<u64>(),
+//!         solution.len_stm(),
 //!     );
 //!
 //!     puzzle.apply_alg(&solution);
