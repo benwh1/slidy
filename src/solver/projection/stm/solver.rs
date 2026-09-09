@@ -4,7 +4,7 @@ use crate::{
     algorithm::{direction::Direction, metric::Stm},
     puzzle::{label::label::Label, sliding_puzzle::SlidingPuzzle, solved_state::SolvedState},
     solver::{
-        projection::{puzzle::ProjectedPuzzle, solver::Solver},
+        projection::{encoding, puzzle::ProjectedPuzzle, solver::Solver},
         solver::{Solver as SolverT, SolverConfig, SolverError},
         statistics::SolverIterationStats,
     },
@@ -21,7 +21,7 @@ where
         puzzle: &P,
         depth: u8,
         last_dir: Option<Direction>,
-        projected: ProjectedPuzzle,
+        projected: ProjectedPuzzle<{ encoding::MAX_PIECES }>,
     ) -> bool {
         let index = self.pdb.encode(&projected);
         if index == self.prune_target_solved_index && self.check_solution(puzzle) {

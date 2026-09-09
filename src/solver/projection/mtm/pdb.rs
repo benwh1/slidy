@@ -1,15 +1,18 @@
-//! Mtm-specific implementation of the projection PDB.
+//! Mtm-specific implementation of the projection [`Pdb`].
+//!
+//! [`Pdb`]: crate::solver::projection::pdb::Pdb
 
 use std::marker::PhantomData;
 
 use crate::{
-    algorithm::metric::Mtm,
+    algorithm::{direction::Direction, metric::Mtm},
     puzzle::{label::label::Label, size::Size},
     solver::{
+        indexing,
         projection::{
             encoding,
-            pdb::{build_pdb, compute_solved_state, compute_tally, Pdb},
-            puzzle::{CompactProjectedPuzzle, ProjectedPuzzle},
+            pdb::{compute_solved_state, compute_tally, Pdb},
+            puzzle::ProjectedPuzzle,
         },
         statistics::PdbIterationStats,
     },
@@ -29,12 +32,108 @@ impl Pdb<Mtm> {
         let gap = (size.area() - 1) as u8;
         let width = size.width() as u8;
 
+        // A move slides a tile as far as it can go, so every state passed along the slide is
+        // visited. The `pdb` array doubles as the visited set: BFS reaches every rank at its
+        // minimal depth, so an entry that is still `u8::MAX` has not been seen yet. Projections of
+        // up to 16 cells store a 16-wide `pieces` array, halving the frontier's peak memory; larger
+        // ones keep the full 32-wide state.
         let (pdb, tally) = if solved_state.len() <= encoding::SMALL {
-            let solved = CompactProjectedPuzzle::new(&solved_state, gap, width);
-            build_pdb::<CompactProjectedPuzzle, true>(solved, &tally, iteration_callback)
+            let solved = ProjectedPuzzle::<{ encoding::SMALL }>::new(&solved_state, gap, width);
+            let mut pdb = vec![u8::MAX; indexing::multinomial(&tally) as usize];
+            let solved_idx = solved.encode(&tally) as usize;
+            pdb[solved_idx] = 0;
+
+            let mut current = vec![solved];
+
+            let mut depth = 0;
+            let mut new = 1;
+            let mut total = 1;
+
+            if let Some(f) = iteration_callback {
+                f(PdbIterationStats { depth, new, total });
+            }
+
+            while !current.is_empty() {
+                let mut next = Vec::with_capacity(current.len() * 4);
+
+                for state in &current {
+                    for dir in [
+                        Direction::Up,
+                        Direction::Left,
+                        Direction::Down,
+                        Direction::Right,
+                    ] {
+                        let mut puzzle = *state;
+                        while puzzle.do_move(dir) {
+                            let idx = puzzle.encode(&tally) as usize;
+                            if pdb[idx] == u8::MAX {
+                                pdb[idx] = depth + 1;
+                                next.push(puzzle);
+                            }
+                        }
+                    }
+                }
+
+                new = next.len() as u64;
+                total += new;
+                depth += 1;
+                current = next;
+
+                if let Some(f) = iteration_callback {
+                    f(PdbIterationStats { depth, new, total });
+                }
+            }
+
+            (pdb.into_boxed_slice(), tally)
         } else {
-            let solved = ProjectedPuzzle::new(&solved_state, gap, width);
-            build_pdb::<ProjectedPuzzle, true>(solved, &tally, iteration_callback)
+            let solved =
+                ProjectedPuzzle::<{ encoding::MAX_PIECES }>::new(&solved_state, gap, width);
+            let mut pdb = vec![u8::MAX; indexing::multinomial(&tally) as usize];
+            let solved_idx = solved.encode(&tally) as usize;
+            pdb[solved_idx] = 0;
+
+            let mut current = vec![solved];
+
+            let mut depth = 0;
+            let mut new = 1;
+            let mut total = 1;
+
+            if let Some(f) = iteration_callback {
+                f(PdbIterationStats { depth, new, total });
+            }
+
+            while !current.is_empty() {
+                let mut next = Vec::with_capacity(current.len() * 4);
+
+                for state in &current {
+                    for dir in [
+                        Direction::Up,
+                        Direction::Left,
+                        Direction::Down,
+                        Direction::Right,
+                    ] {
+                        let mut puzzle = *state;
+                        while puzzle.do_move(dir) {
+                            let idx = puzzle.encode(&tally) as usize;
+                            if pdb[idx] == u8::MAX {
+                                pdb[idx] = depth + 1;
+                                next.push(puzzle);
+                            }
+                        }
+                    }
+                }
+
+                new = next.len() as u64;
+                total += new;
+                depth += 1;
+                current = next;
+
+                if let Some(f) = iteration_callback {
+                    f(PdbIterationStats { depth, new, total });
+                }
+            }
+
+            (pdb.into_boxed_slice(), tally)
         };
 
         Self {

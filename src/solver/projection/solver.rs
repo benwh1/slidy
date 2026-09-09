@@ -15,6 +15,7 @@ use crate::{
     solver::{
         projection::{
             builder::SolverBuilder,
+            encoding,
             pdb::{compute_solved_state, Pdb},
             puzzle::{project_puzzle, ProjectedPuzzle},
         },
@@ -64,7 +65,7 @@ where
         size: Size,
     ) -> Self {
         let prune_target_solved_state = compute_solved_state(&prune_target, size);
-        let solved_projected = ProjectedPuzzle::new(
+        let solved_projected = ProjectedPuzzle::<{ encoding::MAX_PIECES }>::new(
             &prune_target_solved_state,
             (size.area() - 1) as u8,
             size.width() as u8,
@@ -85,7 +86,10 @@ where
         }
     }
 
-    pub(super) fn initial_projected(&self, puzzle: &P) -> ProjectedPuzzle {
+    pub(super) fn initial_projected(
+        &self,
+        puzzle: &P,
+    ) -> ProjectedPuzzle<{ encoding::MAX_PIECES }> {
         project_puzzle(puzzle, &self.prune_target)
     }
 
