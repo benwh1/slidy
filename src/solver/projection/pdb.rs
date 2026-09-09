@@ -14,6 +14,7 @@ pub(super) struct Pdb<Metric> {
 impl<Metric> Pdb<Metric> {
     pub(super) unsafe fn get_unchecked(&self, index: usize) -> u8 {
         debug_assert!(index < self.pdb.len());
+
         // SAFETY: `index` is an encode rank, which is always `0 .. pdb.len()` by construction.
         unsafe { *self.pdb.get_unchecked(index) }
     }

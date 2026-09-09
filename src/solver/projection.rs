@@ -10,3 +10,6 @@ mod pdb;
 mod puzzle;
 pub mod solver;
 mod stm;
+
+const SMALL: usize = 16;
+const LARGE: usize = 32;

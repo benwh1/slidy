@@ -1,6 +1,4 @@
-//! Stm-specific implementation of the projection [`Pdb`].
-//!
-//! [`Pdb`]: crate::solver::projection::pdb::Pdb
+//! [`Stm`]-specific implementation of the projection PDB.
 
 use std::marker::PhantomData;
 
@@ -10,9 +8,9 @@ use crate::{
     solver::{
         indexing,
         projection::{
-            encoding,
             pdb::{compute_solved_state, compute_tally, Pdb},
             puzzle::ProjectedPuzzle,
+            LARGE, SMALL,
         },
         statistics::PdbIterationStats,
     },
@@ -29,18 +27,19 @@ impl Pdb<Stm> {
     {
         let solved_state = compute_solved_state(label, size);
         let tally = compute_tally(&solved_state);
-        let gap = (size.area() - 1) as u8;
+        let gap = size.num_pieces() as u8;
         let width = size.width() as u8;
+        let area = size.area() as usize;
 
-        let pdb = if solved_state.len() <= encoding::SMALL {
-            bfs::<{ encoding::SMALL }>(
-                ProjectedPuzzle::<{ encoding::SMALL }>::new(&solved_state, gap, width),
+        let pdb = if area <= SMALL {
+            bfs::<SMALL>(
+                ProjectedPuzzle::<SMALL>::new(&solved_state, gap, width),
                 &tally,
                 iteration_callback,
             )
         } else {
-            bfs::<{ encoding::MAX_PIECES }>(
-                ProjectedPuzzle::<{ encoding::MAX_PIECES }>::new(&solved_state, gap, width),
+            bfs::<LARGE>(
+                ProjectedPuzzle::<LARGE>::new(&solved_state, gap, width),
                 &tally,
                 iteration_callback,
             )

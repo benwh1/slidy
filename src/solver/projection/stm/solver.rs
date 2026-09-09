@@ -4,7 +4,7 @@ use crate::{
     algorithm::{direction::Direction, metric::Stm},
     puzzle::{label::label::Label, sliding_puzzle::SlidingPuzzle, solved_state::SolvedState},
     solver::{
-        projection::{encoding, puzzle::ProjectedPuzzle, solver::Solver},
+        projection::{puzzle::ProjectedPuzzle, solver::Solver, LARGE, SMALL},
         solver::{Solver as SolverT, SolverConfig, SolverError},
         statistics::SolverIterationStats,
     },
@@ -76,14 +76,14 @@ where
             return Err(SolverError::Unsolvable);
         }
 
-        if self.size.area() as usize <= encoding::SMALL {
-            self.solve_with_size::<{ encoding::SMALL }>(puzzle, config)
+        if self.size.area() as usize <= SMALL {
+            self.solve_impl_n::<SMALL>(puzzle, config)
         } else {
-            self.solve_with_size::<{ encoding::MAX_PIECES }>(puzzle, config)
+            self.solve_impl_n::<LARGE>(puzzle, config)
         }
     }
 
-    fn solve_with_size<const N: usize>(
+    fn solve_impl_n<const N: usize>(
         &self,
         puzzle: &P,
         config: SolverConfig,

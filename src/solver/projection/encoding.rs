@@ -1,22 +1,13 @@
-use crate::solver::indexing;
+use crate::solver::{indexing, projection::LARGE};
 
-/// Maximum number of cells (i.e. puzzle area) supported by the encoder. Chosen so that the
-/// intermediate multinomial computations fit in the fixed-size lookup tables below.
-pub(super) const MAX_PIECES: usize = 32;
-
-/// Puzzles with up to 16 cells (the historical maximum) use 16-wide scratch tables, which keeps
-/// the hot loop small; larger puzzles fall through to the 32-wide path. Also the size of a
-/// `ProjectedPuzzle` for projections of up to 16 cells, whose entries omit the unused half of a
-/// 32-wide array.
-pub(super) const SMALL: usize = 16;
-
-/// Encodes `arr[..n]` (the `n` pieces, values in `0..k`) to its multiset rank, where `tally`
-/// counts each value and `n` is the sum of the tally. `N` is the width of the `arr` scratch
-/// buffer; callers pick `N = SMALL` for projections of up to 16 cells and `N = MAX_PIECES`
-/// otherwise.
 pub(super) fn encode<const N: usize>(arr: &[u8; N], tally: &[u8]) -> u64 {
     let n = tally.iter().map(|&t| t as usize).sum::<usize>();
-    assert!(n <= N && N <= MAX_PIECES);
+    debug_assert!(n <= N);
+
+    // Need `n < LARGE` because `encode_impl` uses an array of length `LARGE` where an array of
+    // length `N + 1` is needed, because const generic operations aren't currently supported. So
+    // `N + 1 <= LARGE` is required.
+    debug_assert!(n < LARGE);
 
     encode_impl::<N>(arr, tally, n)
 }
@@ -49,7 +40,10 @@ fn encode_impl<const N: usize>(arr: &[u8; N], tally: &[u8], n: usize) -> u64 {
     // positions. `less` is tracked with a Fenwick tree over prefix value counts.
     let mut rank = [0u64; N];
     let mut occ = [0u8; N];
-    let mut bit = [0u8; MAX_PIECES + 1];
+
+    // Should actually be length N + 1, but const generic operations aren't supported yet.
+    let mut bit = [0u8; LARGE];
+
     for (pos, &value) in arr.iter().take(n).enumerate() {
         let v = value as usize;
 
@@ -85,17 +79,18 @@ fn encode_impl<const N: usize>(arr: &[u8; N], tally: &[u8], n: usize) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::solver::projection::LARGE;
 
     fn enumerate(
         counts: &mut [u8],
         tally: &[u8],
-        arr: &mut [u8; MAX_PIECES],
+        arr: &mut [u8; LARGE],
         depth: usize,
         out: &mut Vec<u64>,
     ) {
         let n = tally.iter().map(|&t| t as usize).sum::<usize>();
         if depth == n {
-            out.push(encode::<MAX_PIECES>(arr, tally));
+            out.push(encode::<LARGE>(arr, tally));
             return;
         }
         for v in 0..tally.len() {
@@ -112,7 +107,7 @@ mod tests {
         let mult = indexing::multinomial(tally);
         let mut vals = Vec::with_capacity(mult as usize);
         let mut counts = tally.to_vec();
-        let mut arr = [0u8; MAX_PIECES];
+        let mut arr = [0u8; LARGE];
         enumerate(&mut counts, tally, &mut arr, 0, &mut vals);
         vals.sort_unstable();
         assert_eq!(
@@ -124,26 +119,26 @@ mod tests {
 
     #[test]
     fn test_encode_multiset_simple() {
-        let mut arr = [0u8; MAX_PIECES];
+        let mut arr = [0u8; LARGE];
 
         arr[..4].copy_from_slice(&[0, 0, 1, 1]);
         let tally = [2, 2];
-        assert_eq!(encode::<MAX_PIECES>(&arr, &tally), 0);
+        assert_eq!(encode::<LARGE>(&arr, &tally), 0);
 
         arr[..4].copy_from_slice(&[0, 1, 0, 1]);
-        assert_eq!(encode::<MAX_PIECES>(&arr, &tally), 1);
+        assert_eq!(encode::<LARGE>(&arr, &tally), 1);
 
         arr[..4].copy_from_slice(&[1, 0, 0, 1]);
-        assert_eq!(encode::<MAX_PIECES>(&arr, &tally), 2);
+        assert_eq!(encode::<LARGE>(&arr, &tally), 2);
 
         arr[..4].copy_from_slice(&[0, 1, 1, 0]);
-        assert_eq!(encode::<MAX_PIECES>(&arr, &tally), 3);
+        assert_eq!(encode::<LARGE>(&arr, &tally), 3);
 
         arr[..4].copy_from_slice(&[1, 0, 1, 0]);
-        assert_eq!(encode::<MAX_PIECES>(&arr, &tally), 4);
+        assert_eq!(encode::<LARGE>(&arr, &tally), 4);
 
         arr[..4].copy_from_slice(&[1, 1, 0, 0]);
-        assert_eq!(encode::<MAX_PIECES>(&arr, &tally), 5);
+        assert_eq!(encode::<LARGE>(&arr, &tally), 5);
     }
 
     #[test]
