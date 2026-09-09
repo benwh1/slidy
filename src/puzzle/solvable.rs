@@ -178,7 +178,10 @@ mod tests {
     use super::*;
     use crate::puzzle::puzzle::Puzzle;
 
-    fn test<S: Solvable + Default>(solvable: &[&str], unsolvable: &[&str]) {
+    fn test<S>(solvable: &[&str], unsolvable: &[&str])
+    where
+        S: Solvable + Default,
+    {
         for s in solvable {
             let p = Puzzle::from_str(s).unwrap();
             assert!(S::default().is_solvable(&p));
