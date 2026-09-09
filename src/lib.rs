@@ -143,7 +143,6 @@
 //!   any unsafe code, and most of them are just a call to `foo` or a re-implementation of `foo`
 //!   using other unchecked functions.
 
-#![cfg_attr(feature = "nightly", feature(test))]
 #![deny(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]
 

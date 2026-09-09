@@ -34,9 +34,32 @@ harness = false
 name = "memory"
 harness = false
 
+[[bench]]
+name = "algorithm"
+harness = false
+
+[[bench]]
+name = "algorithm_display"
+harness = false
+
+[[bench]]
+name = "move"
+harness = false
+
+[[bench]]
+name = "puzzle"
+harness = false
+
+[[bench]]
+name = "puzzle_display"
+harness = false
+
+[[bench]]
+name = "scrambler"
+harness = false
+
 [features]
 default = ["thread_rng"]
-nightly = []
 serde = ["enterpolation/serde", "palette/serializing", "dep:serde"]
 thread_rng = ["rand/thread_rng"]
 

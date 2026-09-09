@@ -1039,21 +1039,3 @@ mod tests {
         }
     }
 }
-
-#[cfg(all(feature = "nightly", test))]
-mod benchmarks {
-    extern crate test;
-
-    use test::Bencher;
-
-    use super::*;
-
-    #[bench]
-    fn bench_from_str(b: &mut Bencher) {
-        b.iter(|| {
-            Algorithm::from_str(
-                "DR2D2LULURUR2DL2DRU2RD2LDRULULDRDL2URDLU3RDLUR3DLDLU2RD3LU3R2DLD2LULU2R3D3",
-            )
-        });
-    }
-}

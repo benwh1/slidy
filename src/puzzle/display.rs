@@ -145,25 +145,3 @@ mod tests {
         assert_eq!(s1, s3);
     }
 }
-
-#[cfg(all(feature = "nightly", test))]
-mod benchmarks {
-    extern crate test;
-
-    use test::Bencher;
-
-    use super::*;
-    use crate::puzzle::puzzle::Puzzle;
-
-    #[bench]
-    fn bench_display_inline(b: &mut Bencher) {
-        let p = Puzzle::default();
-        b.iter(|| DisplayInline::new(&p).to_string());
-    }
-
-    #[bench]
-    fn bench_display_grid(b: &mut Bencher) {
-        let p = Puzzle::default();
-        b.iter(|| DisplayGrid::new(&p).to_string());
-    }
-}
