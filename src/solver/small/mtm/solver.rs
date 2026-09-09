@@ -134,9 +134,10 @@ where
                 depth_beyond_optimal,
                 num_solutions,
                 end_of_iter_callback,
-                solution_callback: Some(Box::new(move |s| match &solution_callback {
-                    Some(f) => f(s.transpose()),
-                    None => ControlFlow::Continue(()),
+                solution_callback: Some(Box::new(move |s| {
+                    solution_callback
+                        .as_ref()
+                        .map_or(ControlFlow::Continue(()), |f| f(s.transpose()))
                 })),
             };
 

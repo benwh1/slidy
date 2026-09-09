@@ -174,7 +174,7 @@ mod tests {
             scaled::Scaled,
         },
         puzzle::Puzzle,
-        scrambler::{RandomState, Scrambler},
+        scrambler::{RandomState, Scrambler as _},
         size::Size,
     };
 
