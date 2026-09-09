@@ -85,12 +85,12 @@ where
     /// expensive operations.
     fn init(&mut self);
 
-    /// Solves `puzzle` using default config.
+    /// Solves `puzzle`, returning an optimal solution.
     fn solve(&self, puzzle: &P) -> Result<Algorithm, SolverError> {
         self.solve_many(puzzle, 1).map(|mut v| v.pop().unwrap())
     }
 
-    /// Solves `puzzle` using default config, returning `n` solutions.
+    /// Solves `puzzle`, returning the `n` shortest solutions.
     fn solve_many(&self, puzzle: &P, num_solutions: u64) -> Result<Vec<Algorithm>, SolverError> {
         if num_solutions == 0 {
             return Ok(Vec::new());
@@ -101,6 +101,27 @@ where
 
         let config = SolverConfig {
             num_solutions,
+            solution_callback: Some(Box::new(move |s| {
+                c.borrow_mut().push(s);
+                ControlFlow::Continue(())
+            })),
+            ..Default::default()
+        };
+
+        self.solve_with_config(puzzle, config)?;
+
+        let solutions = solutions.borrow().clone();
+        Ok(solutions)
+    }
+
+    /// Solves `puzzle`, returning all optimal solutions.
+    fn solve_all_optimal(&self, puzzle: &P) -> Result<Vec<Algorithm>, SolverError> {
+        let solutions = Rc::new(RefCell::new(Vec::new()));
+        let c = solutions.clone();
+
+        let config = SolverConfig {
+            depth_beyond_optimal: Some(0),
+            num_solutions: u64::MAX,
             solution_callback: Some(Box::new(move |s| {
                 c.borrow_mut().push(s);
                 ControlFlow::Continue(())
