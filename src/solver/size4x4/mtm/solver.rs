@@ -11,7 +11,7 @@ use crate::{
     algorithm::{axis::Axis, direction::Direction},
     puzzle::{sliding_puzzle::SlidingPuzzle, small::Puzzle4x4},
     solver::{
-        config::SolverConfig,
+        config::{PdbConfig, SolverConfig},
         size4x4::mtm::{
             base_5_table::Base5Table,
             indexing_table::IndexingTable,
@@ -60,10 +60,10 @@ impl Solver {
         }
     }
 
-    fn new_impl(pdb_iteration_callback: Option<&dyn Fn(PdbIterationStats)>) -> Self {
+    fn new_impl(pdb_config: &PdbConfig) -> Self {
         let indexing_table = IndexingTable::new();
         let base_5_table = Base5Table::new();
-        let pdb = Pdb::new(&indexing_table, &base_5_table, pdb_iteration_callback);
+        let pdb = Pdb::new(&indexing_table, &base_5_table, pdb_config);
 
         Self::with_tables_and_pdb(indexing_table, base_5_table, pdb)
     }
@@ -73,15 +73,19 @@ impl Solver {
     /// Building the pattern database takes several minutes.
     #[must_use]
     pub fn new() -> Self {
-        Self::new_impl(None)
+        Self::new_impl(&PdbConfig::default())
     }
 
     /// See [`Self::new`].
     ///
     /// Runs `pdb_iteration_callback` after each iteration of the breadth-first search used to build
     /// the pattern database.
-    pub fn with_pdb_iteration_callback(pdb_iteration_callback: &dyn Fn(PdbIterationStats)) -> Self {
-        Self::new_impl(Some(pdb_iteration_callback))
+    pub fn with_pdb_iteration_callback(
+        pdb_iteration_callback: impl Fn(PdbIterationStats) + 'static,
+    ) -> Self {
+        Self::new_impl(&PdbConfig {
+            end_of_iter_callback: Some(Box::new(pdb_iteration_callback)),
+        })
     }
 
     /// See [`Self::new`].

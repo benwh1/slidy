@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-impl<P, Target, PruneTarget> SolverBuilder<'_, P, Target, PruneTarget, Stm>
+impl<P, Target, PruneTarget> SolverBuilder<P, Target, PruneTarget, Stm>
 where
     P: SlidingPuzzle + Clone,
     Target: Label + SolvedState + Default,
@@ -20,8 +20,8 @@ where
     ///
     /// See [`ProjectionError`] for possible errors.
     pub fn build(self) -> Result<Solver<P, Target, PruneTarget, Stm>, ProjectionError> {
-        let (target, prune_target, callback, size) = self.build_projecting()?;
-        let pdb = Pdb::<Stm>::new(&prune_target, size, callback);
+        let (target, prune_target, pdb_config, size) = self.build_projecting()?;
+        let pdb = Pdb::<Stm>::new(&prune_target, size, &pdb_config);
         Ok(Solver::with_pdb(pdb, target, prune_target, size))
     }
 }

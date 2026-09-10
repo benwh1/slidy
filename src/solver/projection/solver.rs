@@ -51,7 +51,7 @@ where
 {
     #[must_use]
     /// Creates a [`SolverBuilder`] for constructing a [`Solver`].
-    pub fn builder<'a>() -> SolverBuilder<'a, P, Target, PruneTarget, Metric> {
+    pub fn builder() -> SolverBuilder<P, Target, PruneTarget, Metric> {
         SolverBuilder::new()
     }
 

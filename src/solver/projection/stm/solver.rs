@@ -277,12 +277,13 @@ mod tests {
 
     #[test]
     fn test_rows_with_pdb_iteration_callback() {
-        let iterations = Cell::new(0u64);
+        let iterations = Rc::new(Cell::new(0u64));
+        let iterations_ref = iterations.clone();
         let solver = Solver3x3StmRows::builder()
             .size(Size::new(3, 3).unwrap())
-            .pdb_iteration_callback(&|stats| {
+            .pdb_iteration_callback(move |stats| {
                 assert!(stats.total > 0);
-                iterations.set(iterations.get() + 1);
+                iterations_ref.set(iterations_ref.get() + 1);
             })
             .build()
             .unwrap();
@@ -300,7 +301,7 @@ mod tests {
             .size(size)
             .target(Rows)
             .prune_target(prune)
-            .pdb_iteration_callback(&|_| {})
+            .pdb_iteration_callback(|_| {})
             .build()
             .unwrap();
         let puzzle = Puzzle::from_str("12 7 9 10/5 6 0 14/11 15 2 8/3 1 4 13").unwrap();

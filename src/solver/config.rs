@@ -1,10 +1,13 @@
-//! Defines the [`SolverConfig`] struct which is used by solvers implementing the [`Solver`] trait.
+//! Defines the [`SolverConfig`] and [`PdbConfig`] structs used by solvers and pattern databases.
 //!
 //! [`Solver`]: crate::solver::solver::Solver
 
 use std::ops::ControlFlow;
 
-use crate::{algorithm::algorithm::Algorithm, solver::statistics::SolverIterationStats};
+use crate::{
+    algorithm::algorithm::Algorithm,
+    solver::statistics::{PdbIterationStats, SolverIterationStats},
+};
 
 /// Configuration for
 /// [`Solver::solve_with_config`](crate::solver::solver::Solver::solve_with_config).
@@ -45,4 +48,12 @@ impl Default for SolverConfig {
             solution_callback: None,
         }
     }
+}
+
+/// Configuration for constructing pattern databases.
+#[derive(Default)]
+pub struct PdbConfig {
+    /// A callback that runs after each breadth-first-search iteration of the pattern database
+    /// creation.
+    pub end_of_iter_callback: Option<Box<dyn Fn(PdbIterationStats)>>,
 }

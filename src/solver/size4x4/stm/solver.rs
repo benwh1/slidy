@@ -11,7 +11,7 @@ use crate::{
     algorithm::direction::Direction,
     puzzle::{size::Size, sliding_puzzle::SlidingPuzzle},
     solver::{
-        config::SolverConfig,
+        config::{PdbConfig, SolverConfig},
         size4x4::stm::{pattern::Pattern, pdb::Pdb, puzzle::Puzzle as Puzzle4},
         solver::{Solver as SolverT, SolverError},
         stack::Stack,
@@ -35,12 +35,12 @@ impl Default for Solver {
 }
 
 impl Solver {
-    fn new_impl(pdb_iteration_callback: Option<&dyn Fn(PdbIterationStats)>) -> Self {
+    fn new_impl(pdb_config: &PdbConfig) -> Self {
         let pat4 = Pattern::new(&[1, 2, 5, 6, 0]);
         let pat3 = Pattern::new(&[11, 12, 15, 0]);
 
-        let pdb4 = Pdb::new(pat4, pdb_iteration_callback);
-        let pdb3 = Pdb::new(pat3, pdb_iteration_callback);
+        let pdb4 = Pdb::new(pat4, pdb_config);
+        let pdb3 = Pdb::new(pat3, pdb_config);
 
         Self {
             pdb4,
@@ -54,15 +54,19 @@ impl Solver {
     /// Creates a new [`Solver`] and builds the transposition tables and pattern databases.
     #[must_use]
     pub fn new() -> Self {
-        Self::new_impl(None)
+        Self::new_impl(&PdbConfig::default())
     }
 
     /// See [`Self::new`].
     ///
     /// Runs `pdb_iteration_callback` after each iteration of the breadth-first search used to build
     /// the pattern databases.
-    pub fn with_pdb_iteration_callback(pdb_iteration_callback: &dyn Fn(PdbIterationStats)) -> Self {
-        Self::new_impl(Some(pdb_iteration_callback))
+    pub fn with_pdb_iteration_callback(
+        pdb_iteration_callback: impl Fn(PdbIterationStats) + 'static,
+    ) -> Self {
+        Self::new_impl(&PdbConfig {
+            end_of_iter_callback: Some(Box::new(pdb_iteration_callback)),
+        })
     }
 
     fn cfg(&self) -> Ref<'_, SolverConfig> {

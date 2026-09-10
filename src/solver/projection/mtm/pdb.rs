@@ -6,6 +6,7 @@ use crate::{
     algorithm::{direction::Direction, metric::Mtm},
     puzzle::{label::label::Label, size::Size},
     solver::{
+        config::PdbConfig,
         indexing,
         projection::{
             pdb::{compute_solved_state, compute_tally, Pdb},
@@ -17,26 +18,18 @@ use crate::{
 };
 
 impl Pdb<Mtm> {
-    pub(super) fn new<L>(
-        label: &L,
-        size: Size,
-        iteration_callback: Option<&dyn Fn(PdbIterationStats)>,
-    ) -> Self
+    pub(super) fn new<L>(label: &L, size: Size, config: &PdbConfig) -> Self
     where
         L: Label,
     {
         if size.area() as usize <= SMALL {
-            Self::new_impl::<SMALL, _>(label, size, iteration_callback)
+            Self::new_impl::<SMALL, _>(label, size, config)
         } else {
-            Self::new_impl::<LARGE, _>(label, size, iteration_callback)
+            Self::new_impl::<LARGE, _>(label, size, config)
         }
     }
 
-    fn new_impl<const N: usize, L>(
-        label: &L,
-        size: Size,
-        iteration_callback: Option<&dyn Fn(PdbIterationStats)>,
-    ) -> Self
+    fn new_impl<const N: usize, L>(label: &L, size: Size, config: &PdbConfig) -> Self
     where
         L: Label,
     {
@@ -57,7 +50,7 @@ impl Pdb<Mtm> {
         let mut new = 1;
         let mut total = 1;
 
-        if let Some(f) = iteration_callback {
+        if let Some(f) = &config.end_of_iter_callback {
             f(PdbIterationStats { depth, new, total });
         }
 
@@ -87,7 +80,7 @@ impl Pdb<Mtm> {
             depth += 1;
             current = next;
 
-            if let Some(f) = iteration_callback {
+            if let Some(f) = &config.end_of_iter_callback {
                 f(PdbIterationStats { depth, new, total });
             }
         }

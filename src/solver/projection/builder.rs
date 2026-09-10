@@ -10,7 +10,7 @@ use thiserror::Error;
 
 use crate::{
     puzzle::{label::label::Label, size::Size, solved_state::SolvedState},
-    solver::statistics::PdbIterationStats,
+    solver::{config::PdbConfig, statistics::PdbIterationStats},
 };
 
 /// Error type for [`SolverBuilder::build`].
@@ -27,36 +27,31 @@ pub enum ProjectionError {
     InvalidProjection,
 }
 
-/// Result of `SolverBuilder::build_projecting`: the resolved target and pruning labels, the PDB
-/// iteration callback, and the puzzle size.
-type BuildProjectionResult<'a, Target, PruneTarget> = (
-    Target,
-    PruneTarget,
-    Option<&'a dyn Fn(PdbIterationStats)>,
-    Size,
-);
+/// Result of `SolverBuilder::build_projecting`: the resolved target and pruning labels, the
+/// [`PdbConfig`] used to construct the PDB, and the puzzle size.
+type BuildProjectionResult<Target, PruneTarget> = (Target, PruneTarget, PdbConfig, Size);
 
 /// Builder for a [`Solver`].
 ///
 /// [`Solver`]: crate::solver::projection::solver::Solver
-pub struct SolverBuilder<'a, P, Target, PruneTarget, Metric> {
+pub struct SolverBuilder<P, Target, PruneTarget, Metric> {
     size: Option<Size>,
     pub(super) target: Option<Target>,
     pub(super) prune_target: Option<PruneTarget>,
-    pub(super) pdb_iteration_callback: Option<&'a dyn Fn(PdbIterationStats)>,
+    pub(super) pdb_config: PdbConfig,
     phantom_p: PhantomData<P>,
     phantom_metric: PhantomData<Metric>,
 }
 
-impl<'a, P, Target, PruneTarget, Metric> SolverBuilder<'a, P, Target, PruneTarget, Metric> {
+impl<P, Target, PruneTarget, Metric> SolverBuilder<P, Target, PruneTarget, Metric> {
     #[must_use]
-    /// Creates a [`SolverBuilder`] with no size, labels or callback set.
+    /// Creates a [`SolverBuilder`] with no size or labels set.
     pub fn new() -> Self {
         Self {
             size: None,
             target: None,
             prune_target: None,
-            pdb_iteration_callback: None,
+            pdb_config: PdbConfig::default(),
             phantom_p: PhantomData,
             phantom_metric: PhantomData,
         }
@@ -91,33 +86,36 @@ impl<'a, P, Target, PruneTarget, Metric> SolverBuilder<'a, P, Target, PruneTarge
 
     #[must_use]
     /// Sets a callback that runs after each iteration of the pattern database creation.
-    pub fn pdb_iteration_callback(mut self, callback: &'a dyn Fn(PdbIterationStats)) -> Self {
-        self.pdb_iteration_callback = Some(callback);
+    pub fn pdb_iteration_callback(
+        mut self,
+        callback: impl Fn(PdbIterationStats) + 'static,
+    ) -> Self {
+        self.pdb_config.end_of_iter_callback = Some(Box::new(callback));
         self
     }
 }
 
-impl<P, Target, PruneTarget, Metric> Default for SolverBuilder<'_, P, Target, PruneTarget, Metric> {
+impl<P, Target, PruneTarget, Metric> Default for SolverBuilder<P, Target, PruneTarget, Metric> {
     fn default() -> Self {
         Self {
             size: None,
             target: None,
             prune_target: None,
-            pdb_iteration_callback: None,
+            pdb_config: PdbConfig::default(),
             phantom_p: PhantomData,
             phantom_metric: PhantomData,
         }
     }
 }
 
-impl<'a, P, Target, PruneTarget, Metric> SolverBuilder<'a, P, Target, PruneTarget, Metric>
+impl<P, Target, PruneTarget, Metric> SolverBuilder<P, Target, PruneTarget, Metric>
 where
     Target: Label + SolvedState + Default,
     PruneTarget: Label + SolvedState + Default,
 {
     pub(super) fn build_projecting(
         self,
-    ) -> Result<BuildProjectionResult<'a, Target, PruneTarget>, ProjectionError> {
+    ) -> Result<BuildProjectionResult<Target, PruneTarget>, ProjectionError> {
         let prune_target = self.prune_target.unwrap_or_default();
         let target = self.target.unwrap_or_default();
         let size = self.size.ok_or(ProjectionError::MissingSize)?;
@@ -126,6 +124,6 @@ where
             return Err(ProjectionError::InvalidProjection);
         }
 
-        Ok((target, prune_target, self.pdb_iteration_callback, size))
+        Ok((target, prune_target, self.pdb_config, size))
     }
 }

@@ -245,7 +245,7 @@ mod tests {
             .size(size)
             .target(Rows)
             .prune_target(Rows211)
-            .pdb_iteration_callback(&|s| {
+            .pdb_iteration_callback(|s| {
                 println!("depth {} new {} total {}", s.depth, s.new, s.total);
             })
             .metric(Mtm)

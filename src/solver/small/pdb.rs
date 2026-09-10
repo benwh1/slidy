@@ -18,7 +18,7 @@ use crate::{
         sliding_puzzle::SlidingPuzzle as _,
         small::{sealed::SmallPuzzle, Puzzle},
     },
-    solver::{small::indexing, statistics::PdbIterationStats},
+    solver::{config::PdbConfig, small::indexing, statistics::PdbIterationStats},
 };
 
 const HASHES_STM: [(usize, usize, u64); 12] = [
@@ -128,7 +128,7 @@ impl<const W: usize, const H: usize, const N: usize> Pdb<W, H, N, Stm>
 where
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
-    pub(super) fn new_impl(iteration_callback: Option<&dyn Fn(PdbIterationStats)>) -> Self {
+    pub(super) fn new_impl(config: &PdbConfig) -> Self {
         let puzzle = Puzzle::<W, H>::new();
         let num_states = puzzle.size().num_states().try_into().unwrap();
 
@@ -142,7 +142,7 @@ where
         let mut new = 1;
         let mut total = 1;
 
-        if let Some(f) = iteration_callback {
+        if let Some(f) = &config.end_of_iter_callback {
             f(PdbIterationStats { depth, new, total });
         }
 
@@ -174,7 +174,7 @@ where
 
             current = next;
 
-            if let Some(f) = iteration_callback {
+            if let Some(f) = &config.end_of_iter_callback {
                 f(PdbIterationStats { depth, new, total });
             }
         }
@@ -192,15 +192,19 @@ where
     /// Depending on the size of the puzzle, this may take several minutes to run.
     #[must_use]
     pub fn new() -> Self {
-        Self::new_impl(None)
+        Self::new_impl(&PdbConfig::default())
     }
 
     /// See [`Self::new`].
     ///
     /// Runs `iteration_callback` after each iteration of the breadth-first search used to build the
     /// pattern database.
-    pub fn new_with_iteration_callback(iteration_callback: &dyn Fn(PdbIterationStats)) -> Self {
-        Self::new_impl(Some(iteration_callback))
+    pub fn new_with_iteration_callback(
+        iteration_callback: impl Fn(PdbIterationStats) + 'static,
+    ) -> Self {
+        Self::new_impl(&PdbConfig {
+            end_of_iter_callback: Some(Box::new(iteration_callback)),
+        })
     }
 
     /// Initializes a [`Pdb`] from a boxed byte slice containing the pre-computed data.
@@ -240,7 +244,7 @@ impl<const W: usize, const H: usize, const N: usize> Pdb<W, H, N, Mtm>
 where
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
-    pub(super) fn new_impl(iteration_callback: Option<&dyn Fn(PdbIterationStats)>) -> Self {
+    pub(super) fn new_impl(config: &PdbConfig) -> Self {
         let puzzle = Puzzle::<W, H>::new();
         let num_states = puzzle.size().num_states().try_into().unwrap();
 
@@ -254,7 +258,7 @@ where
         let mut new = 1;
         let mut total = 1;
 
-        if let Some(f) = iteration_callback {
+        if let Some(f) = &config.end_of_iter_callback {
             f(PdbIterationStats { depth, new, total });
         }
 
@@ -286,7 +290,7 @@ where
 
             current = next;
 
-            if let Some(f) = iteration_callback {
+            if let Some(f) = &config.end_of_iter_callback {
                 f(PdbIterationStats { depth, new, total });
             }
         }
@@ -304,15 +308,19 @@ where
     /// Depending on the size of the puzzle, this may take several minutes to run.
     #[must_use]
     pub fn new() -> Self {
-        Self::new_impl(None)
+        Self::new_impl(&PdbConfig::default())
     }
 
     /// See [`Self::new`].
     ///
     /// Runs `iteration_callback` after each iteration of the breadth-first search used to build the
     /// pattern database.
-    pub fn new_with_iteration_callback(iteration_callback: &dyn Fn(PdbIterationStats)) -> Self {
-        Self::new_impl(Some(iteration_callback))
+    pub fn new_with_iteration_callback(
+        iteration_callback: impl Fn(PdbIterationStats) + 'static,
+    ) -> Self {
+        Self::new_impl(&PdbConfig {
+            end_of_iter_callback: Some(Box::new(iteration_callback)),
+        })
     }
 
     /// Initializes a [`Pdb`] from a boxed byte slice containing the pre-computed data.

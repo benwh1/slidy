@@ -7,6 +7,7 @@ use xxhash_rust::xxh3;
 use crate::{
     algorithm::direction::Direction,
     solver::{
+        config::PdbConfig,
         size4x4::mtm::{
             base_5_table::Base5Table, consts::SIZE, indexing_table::IndexingTable,
             puzzle::ReducedFourBitPuzzle,
@@ -28,7 +29,7 @@ impl Pdb {
     pub(super) fn new(
         indexing_table: &IndexingTable,
         base_5_table: &Base5Table,
-        iteration_callback: Option<&dyn Fn(PdbIterationStats)>,
+        config: &PdbConfig,
     ) -> Self {
         let mut pdb = vec![u8::MAX; SIZE];
 
@@ -42,7 +43,7 @@ impl Pdb {
         let mut new = 1;
         let mut total = 1;
 
-        if let Some(f) = iteration_callback {
+        if let Some(f) = &config.end_of_iter_callback {
             f(PdbIterationStats { depth, new, total });
         }
 
@@ -74,7 +75,7 @@ impl Pdb {
 
             current = next;
 
-            if let Some(f) = iteration_callback {
+            if let Some(f) = &config.end_of_iter_callback {
                 f(PdbIterationStats { depth, new, total });
             }
         }
@@ -163,7 +164,7 @@ mod tests {
     fn test_pdb() {
         let indexing_table = IndexingTable::new();
         let base_5_table = Base5Table::new();
-        let pdb = Pdb::new(&indexing_table, &base_5_table, None);
+        let pdb = Pdb::new(&indexing_table, &base_5_table, &PdbConfig::default());
         let hash = xxh3::xxh3_64(pdb.as_ref());
         assert_eq!(hash, HASH);
     }

@@ -1,6 +1,7 @@
 use crate::{
     algorithm::direction::Direction,
     solver::{
+        config::PdbConfig,
         size4x4::stm::{
             pattern::Pattern,
             puzzle::{MoveResult, Puzzle},
@@ -16,10 +17,7 @@ pub(super) struct Pdb {
 }
 
 impl Pdb {
-    pub(super) fn new(
-        pattern: Pattern,
-        iteration_callback: Option<&dyn Fn(PdbIterationStats)>,
-    ) -> Self {
+    pub(super) fn new(pattern: Pattern, config: &PdbConfig) -> Self {
         let mut this = Self {
             pattern,
             transposition_table: Vec::new(),
@@ -27,7 +25,7 @@ impl Pdb {
         };
 
         this.make_transposition_table();
-        this.make_pdb(iteration_callback);
+        this.make_pdb(config);
 
         this
     }
@@ -105,7 +103,7 @@ impl Pdb {
         new
     }
 
-    fn make_pdb(&mut self, iteration_callback: Option<&dyn Fn(PdbIterationStats)>) {
+    fn make_pdb(&mut self, config: &PdbConfig) {
         let size = self.pattern.pdb_size();
         self.pdb = vec![u8::MAX; size];
 
@@ -133,7 +131,7 @@ impl Pdb {
             depth += 1;
             total += new;
 
-            if let Some(callback) = &iteration_callback {
+            if let Some(callback) = &config.end_of_iter_callback {
                 callback(PdbIterationStats { depth, new, total });
             }
         }
@@ -168,7 +166,7 @@ mod tests {
     #[test]
     fn test_pdb4_size() {
         let pattern = Pattern::new(&[1, 2, 5, 6, 0]);
-        let pdb = Pdb::new(pattern, None);
+        let pdb = Pdb::new(pattern, &PdbConfig::default());
 
         assert_eq!(pdb.transposition_table.len(), 524160);
         assert_eq!(pdb.pdb.len(), 524160);
@@ -177,7 +175,7 @@ mod tests {
     #[test]
     fn test_pdb3_size() {
         let pattern = Pattern::new(&[11, 12, 15, 0]);
-        let pdb = Pdb::new(pattern, None);
+        let pdb = Pdb::new(pattern, &PdbConfig::default());
 
         assert_eq!(pdb.transposition_table.len(), 43680);
         assert_eq!(pdb.pdb.len(), 43680);
@@ -186,7 +184,7 @@ mod tests {
     #[test]
     fn test_transposition_table_pdb4() {
         let pattern = Pattern::new(&[1, 2, 5, 6, 0]);
-        let pdb = Pdb::new(pattern, None);
+        let pdb = Pdb::new(pattern, &PdbConfig::default());
 
         for arr in pdb.transposition_table {
             for entry in arr {
@@ -198,7 +196,7 @@ mod tests {
     #[test]
     fn test_transposition_table_pdb3() {
         let pattern = Pattern::new(&[11, 12, 15, 0]);
-        let pdb = Pdb::new(pattern, None);
+        let pdb = Pdb::new(pattern, &PdbConfig::default());
 
         for arr in pdb.transposition_table {
             for entry in arr {
