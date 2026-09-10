@@ -1,6 +1,6 @@
 //! Defines the [`Label`] trait and several implementations.
 
-use std::cmp::Ordering;
+use std::{cmp::Ordering, collections::HashSet};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -45,8 +45,22 @@ pub trait Label {
     }
 
     /// Returns the total number of distinct labels across all `(x, y)` positions in the puzzle.
+    ///
+    /// This function has a default implementation that directly counts the labels, but this can be
+    /// very slow and should be manually implemented for custom types implementing this trait.
     #[must_use]
-    fn num_labels(&self, size: Size) -> u64;
+    fn num_labels(&self, size: Size) -> u64 {
+        let mut set = HashSet::new();
+
+        for y in 0..size.height() {
+            for x in 0..size.width() {
+                let label = self.position_label(size, (x, y));
+                set.insert(label);
+            }
+        }
+
+        set.len() as u64
+    }
 
     /// Returns true if `self` is a projection of `other` on a puzzle of the given size.
     ///
