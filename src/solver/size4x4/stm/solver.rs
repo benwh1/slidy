@@ -15,11 +15,13 @@ use crate::{
         size4x4::stm::{pattern::Pattern, pdb::Pdb, puzzle::Puzzle as Puzzle4},
         solver::{Solver as SolverT, SolverError},
         stack::Stack,
-        statistics::{PdbIterationStats, SolverIterationStats},
+        statistics::SolverIterationStats,
     },
 };
 
-/// The pdb4443 solver.
+/// An optimal solver for 4x4 puzzles in [`Stm`].
+///
+/// [`Stm`]: crate::algorithm::metric::Stm
 pub struct Solver {
     pdb4: Pdb,
     pdb3: Pdb,
@@ -30,12 +32,14 @@ pub struct Solver {
 
 impl Default for Solver {
     fn default() -> Self {
-        Self::new()
+        Self::new(&PdbConfig::default())
     }
 }
 
 impl Solver {
-    fn new_impl(pdb_config: &PdbConfig) -> Self {
+    /// Creates a new [`Solver`] and builds the transposition tables and pattern databases.
+    #[must_use]
+    pub fn new(pdb_config: &PdbConfig) -> Self {
         let pat4 = Pattern::new(&[1, 2, 5, 6, 0]);
         let pat3 = Pattern::new(&[11, 12, 15, 0]);
 
@@ -49,24 +53,6 @@ impl Solver {
             solutions_found: Cell::new(0),
             config: RefCell::new(None),
         }
-    }
-
-    /// Creates a new [`Solver`] and builds the transposition tables and pattern databases.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::new_impl(&PdbConfig::default())
-    }
-
-    /// See [`Self::new`].
-    ///
-    /// Runs `pdb_iteration_callback` after each iteration of the breadth-first search used to build
-    /// the pattern databases.
-    pub fn with_pdb_iteration_callback(
-        pdb_iteration_callback: impl Fn(PdbIterationStats) + 'static,
-    ) -> Self {
-        Self::new_impl(&PdbConfig {
-            end_of_iter_callback: Some(Box::new(pdb_iteration_callback)),
-        })
     }
 
     fn cfg(&self) -> Ref<'_, SolverConfig> {
@@ -288,7 +274,7 @@ mod tests {
     #[test]
     fn test_solver() {
         let puzzle = Puzzle::from_str("12 15 5 1/11 9 2 13/0 10 8 6/14 7 4 3").unwrap();
-        let solver = Solver::new();
+        let solver = Solver::default();
 
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_stm(), 58);
@@ -301,7 +287,7 @@ mod tests {
     #[test]
     fn test_solve_all_optimal() {
         let puzzle = Puzzle::from_str("1 11 14 15/0 9 4 12/3 10 7 8/13 5 6 2").unwrap();
-        let solver = Solver::new();
+        let solver = Solver::default();
 
         let solutions = solver
             .solve_all_optimal(&puzzle)

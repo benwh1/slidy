@@ -111,7 +111,7 @@ where
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
     fn default() -> Self {
-        Self::new()
+        Self::new(&PdbConfig::default())
     }
 }
 
@@ -120,7 +120,7 @@ where
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
     fn default() -> Self {
-        Self::new()
+        Self::new(&PdbConfig::default())
     }
 }
 
@@ -128,7 +128,11 @@ impl<const W: usize, const H: usize, const N: usize> Pdb<W, H, N, Stm>
 where
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
-    pub(super) fn new_impl(config: &PdbConfig) -> Self {
+    /// Creates and builds a new pattern database for a `WxH` puzzle in the [`Stm`] metric.
+    ///
+    /// Depending on the size of the puzzle, this may take several minutes to run.
+    #[must_use]
+    pub fn new(config: &PdbConfig) -> Self {
         let puzzle = Puzzle::<W, H>::new();
         let num_states = puzzle.size().num_states().try_into().unwrap();
 
@@ -187,26 +191,6 @@ where
         }
     }
 
-    /// Creates and builds a new pattern database for a `WxH` puzzle in the [`Stm`] metric.
-    ///
-    /// Depending on the size of the puzzle, this may take several minutes to run.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::new_impl(&PdbConfig::default())
-    }
-
-    /// See [`Self::new`].
-    ///
-    /// Runs `iteration_callback` after each iteration of the breadth-first search used to build the
-    /// pattern database.
-    pub fn new_with_iteration_callback(
-        iteration_callback: impl Fn(PdbIterationStats) + 'static,
-    ) -> Self {
-        Self::new_impl(&PdbConfig {
-            end_of_iter_callback: Some(Box::new(iteration_callback)),
-        })
-    }
-
     /// Initializes a [`Pdb`] from a boxed byte slice containing the pre-computed data.
     ///
     /// The length of the data is checked, and the [`xxh3`] hash is computed and checked against a
@@ -244,7 +228,11 @@ impl<const W: usize, const H: usize, const N: usize> Pdb<W, H, N, Mtm>
 where
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
-    pub(super) fn new_impl(config: &PdbConfig) -> Self {
+    /// Creates and builds a new pattern database for a `WxH` puzzle in the [`Mtm`] metric.
+    ///
+    /// Depending on the size of the puzzle, this may take several minutes to run.
+    #[must_use]
+    pub fn new(config: &PdbConfig) -> Self {
         let puzzle = Puzzle::<W, H>::new();
         let num_states = puzzle.size().num_states().try_into().unwrap();
 
@@ -301,26 +289,6 @@ where
             pdb,
             phantom_metric: PhantomData,
         }
-    }
-
-    /// Creates and builds a new pattern database for a `WxH` puzzle in the [`Mtm`] metric.
-    ///
-    /// Depending on the size of the puzzle, this may take several minutes to run.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::new_impl(&PdbConfig::default())
-    }
-
-    /// See [`Self::new`].
-    ///
-    /// Runs `iteration_callback` after each iteration of the breadth-first search used to build the
-    /// pattern database.
-    pub fn new_with_iteration_callback(
-        iteration_callback: impl Fn(PdbIterationStats) + 'static,
-    ) -> Self {
-        Self::new_impl(&PdbConfig {
-            end_of_iter_callback: Some(Box::new(iteration_callback)),
-        })
     }
 
     /// Initializes a [`Pdb`] from a boxed byte slice containing the pre-computed data.

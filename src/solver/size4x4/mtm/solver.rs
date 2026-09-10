@@ -20,7 +20,7 @@ use crate::{
         },
         solver::{Solver as SolverT, SolverError},
         stack::Stack,
-        statistics::{PdbIterationStats, SolverIterationStats},
+        statistics::SolverIterationStats,
     },
 };
 
@@ -39,7 +39,7 @@ pub struct Solver {
 
 impl Default for Solver {
     fn default() -> Self {
-        Self::new()
+        Self::new(&PdbConfig::default())
     }
 }
 
@@ -60,7 +60,11 @@ impl Solver {
         }
     }
 
-    fn new_impl(pdb_config: &PdbConfig) -> Self {
+    /// Creates a new [`Solver`] and builds the pattern database.
+    ///
+    /// Building the pattern database takes several minutes.
+    #[must_use]
+    pub fn new(pdb_config: &PdbConfig) -> Self {
         let indexing_table = IndexingTable::new();
         let base_5_table = Base5Table::new();
         let pdb = Pdb::new(&indexing_table, &base_5_table, pdb_config);
@@ -68,28 +72,6 @@ impl Solver {
         Self::with_tables_and_pdb(indexing_table, base_5_table, pdb)
     }
 
-    /// Creates a new [`Solver`] and builds the pattern database.
-    ///
-    /// Building the pattern database takes several minutes.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::new_impl(&PdbConfig::default())
-    }
-
-    /// See [`Self::new`].
-    ///
-    /// Runs `pdb_iteration_callback` after each iteration of the breadth-first search used to build
-    /// the pattern database.
-    pub fn with_pdb_iteration_callback(
-        pdb_iteration_callback: impl Fn(PdbIterationStats) + 'static,
-    ) -> Self {
-        Self::new_impl(&PdbConfig {
-            end_of_iter_callback: Some(Box::new(pdb_iteration_callback)),
-        })
-    }
-
-    /// See [`Self::new`].
-    ///
     /// Initializes a [`Solver`] using a boxed byte slice containing the pre-computed pattern
     /// database data.
     ///

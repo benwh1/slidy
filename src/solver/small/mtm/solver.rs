@@ -39,7 +39,7 @@ where
     /// Creates a [`Solver`], building a new pattern database.
     #[must_use]
     pub fn new() -> Self {
-        Self::with_pdb(Pdb::<W, H, N, Mtm>::new())
+        Self::with_pdb(Pdb::default())
     }
 
     /// Creates a [`Solver`] using an existing pattern database.
