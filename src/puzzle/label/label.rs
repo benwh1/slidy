@@ -8,6 +8,22 @@ use thiserror::Error;
 
 use crate::puzzle::{grids::Grids, label::rect_partition::Rect, size::Size};
 
+fn naive_num_labels<L>(label: &L, size: Size) -> u64
+where
+    L: Label + ?Sized,
+{
+    let mut set = HashSet::new();
+
+    for y in 0..size.height() {
+        for x in 0..size.width() {
+            let val = label.position_label(size, (x, y));
+            set.insert(val);
+        }
+    }
+
+    set.len() as u64
+}
+
 /// Error type for [`Label`].
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -50,16 +66,7 @@ pub trait Label {
     /// very slow and should be manually implemented for custom types implementing this trait.
     #[must_use]
     fn num_labels(&self, size: Size) -> u64 {
-        let mut set = HashSet::new();
-
-        for y in 0..size.height() {
-            for x in 0..size.width() {
-                let label = self.position_label(size, (x, y));
-                set.insert(label);
-            }
-        }
-
-        set.len() as u64
+        naive_num_labels(self, size)
     }
 
     /// Returns true if `self` is a projection of `other` on a puzzle of the given size.
@@ -624,22 +631,25 @@ mod tests {
         ($label:ty, $($w:literal x $h:literal : $labels:expr),+ $(,)?) => {
             paste::paste! {
                 mod [< $label:snake >] {
-                    use crate::puzzle::{label::label::{Label as _, $label}, size::Size};
+                    use super::*;
 
                     $(#[test]
                     fn [< test_ $label:snake _ $w x $h >] () {
                         let size = Size::new($w, $h).unwrap();
+                        let label = $label;
                         let labels = (0..size.area())
                             .map(|i| {
                                 #[allow(clippy::modulo_one)]
                                 let position = (i % $w, i / $w);
 
-                                $label.position_label(size, position)
+                                label.position_label(size, position)
                             })
                             .collect::<Vec<_>>();
-                        let num_labels = $label.num_labels(size);
+                        let num_labels = label.num_labels(size);
+                        let naive_num_labels = naive_num_labels(&label, size);
                         let expected_num_labels = $labels.iter().max().unwrap() + 1;
                         assert_eq!(labels, $labels);
+                        assert_eq!(num_labels, naive_num_labels);
                         assert_eq!(num_labels, expected_num_labels);
                     })*
                 }
