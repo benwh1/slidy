@@ -678,7 +678,7 @@ where
     {
         let (mut gx, mut gy) = self.gap_position_xy();
 
-        for m in alg.as_slice().moves() {
+        for m in alg.as_slice().moves_mtm() {
             let (new_gx, new_gy) = match m.direction {
                 Direction::Up => (Some(gx), gy.checked_add(m.amount)),
                 Direction::Left => (gx.checked_add(m.amount), Some(gy)),
@@ -709,7 +709,7 @@ where
     where
         Alg: AsAlgorithmSlice<'a>,
     {
-        for m in alg.as_slice().moves() {
+        for m in alg.as_slice().moves_mtm() {
             self.apply_move(m);
         }
     }
@@ -734,7 +734,7 @@ where
     where
         Alg: AsAlgorithmSlice<'a>,
     {
-        for m in alg.as_slice().moves() {
+        for m in alg.as_slice().moves_mtm() {
             self.apply_move_unchecked(m);
         }
     }

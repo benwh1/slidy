@@ -22,6 +22,7 @@ use crate::{
             r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
         },
         metric::Metric,
+        moves::Moves,
         r#move::r#move::Move,
         slice::AlgorithmSlice,
     },
@@ -70,6 +71,63 @@ impl Algorithm {
     #[must_use]
     pub fn moves(&self) -> &[Move] {
         &self.moves
+    }
+
+    /// An iterator over the single-tile moves in the algorithm.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use std::str::FromStr as _;
+    /// # use slidy::algorithm::{
+    /// #     algorithm::Algorithm, as_slice::AsAlgorithmSlice, direction::Direction, r#move::r#move::Move,
+    /// # };
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let alg = Algorithm::from_str("RD3LUR2")?;
+    /// let mut iter = alg.moves_stm();
+    ///
+    /// assert_eq!(iter.next(), Some(Direction::Right));
+    /// assert_eq!(iter.next(), Some(Direction::Down));
+    /// assert_eq!(iter.next(), Some(Direction::Down));
+    /// assert_eq!(iter.next(), Some(Direction::Down));
+    /// assert_eq!(iter.next(), Some(Direction::Left));
+    /// assert_eq!(iter.next(), Some(Direction::Up));
+    /// assert_eq!(iter.next(), Some(Direction::Right));
+    /// assert_eq!(iter.next(), Some(Direction::Right));
+    /// assert_eq!(iter.next(), None);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn moves_stm(&self) -> impl Iterator<Item = Direction> + '_ {
+        self.moves_mtm()
+            .flat_map(|m| iter::repeat_n(m.direction, m.amount as usize))
+    }
+
+    /// An iterator over the multi-tile moves in the algorithm.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use std::str::FromStr as _;
+    /// # use slidy::algorithm::{
+    /// #     algorithm::Algorithm, as_slice::AsAlgorithmSlice, direction::Direction, r#move::r#move::Move,
+    /// # };
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let alg = Algorithm::from_str("RD3LUR2")?;
+    /// let mut iter = alg.moves_mtm();
+    ///
+    /// assert_eq!(iter.next(), Some(Move::new(Direction::Right, 1)));
+    /// assert_eq!(iter.next(), Some(Move::new(Direction::Down, 3)));
+    /// assert_eq!(iter.next(), Some(Move::new(Direction::Left, 1)));
+    /// assert_eq!(iter.next(), Some(Move::new(Direction::Up, 1)));
+    /// assert_eq!(iter.next(), Some(Move::new(Direction::Right, 2)));
+    /// assert_eq!(iter.next(), None);
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn moves_mtm(&self) -> Moves<'_> {
+        Moves::new(self.as_slice())
     }
 
     /// The length of the algorithm in the [`Metric`] `M`.

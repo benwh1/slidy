@@ -34,7 +34,7 @@ impl AlgorithmSlice<'_> {
     where
         M: Metric,
     {
-        self.moves().map(|m| M::len(m)).sum()
+        self.moves_mtm().map(|m| M::len(m)).sum()
     }
 
     /// The length of the slice in the [`Stm`] [`Metric`].
@@ -59,7 +59,7 @@ impl AlgorithmSlice<'_> {
     /// that cancel completely. Returns the result as a new [`Algorithm`].
     #[must_use]
     pub fn simplified(&self) -> Algorithm {
-        if self.moves().count() < 2 {
+        if self.moves_mtm().count() < 2 {
             return Algorithm::from(*self);
         }
 
@@ -70,7 +70,7 @@ impl AlgorithmSlice<'_> {
         // reach a move that can't be added to it.
         let mut acc_move = None;
 
-        for next in self.moves() {
+        for next in self.moves_mtm() {
             match acc_move {
                 Some(sum) => match sum + next {
                     MoveSum::Ok(m) => {
@@ -110,14 +110,14 @@ impl AlgorithmSlice<'_> {
     /// [`Algorithm`].
     #[must_use]
     pub fn transpose(&self) -> Algorithm {
-        Algorithm::with_moves(self.moves().map(|m| m.transpose()).collect())
+        Algorithm::with_moves(self.moves_mtm().map(|m| m.transpose()).collect())
     }
 
     /// Concatenates `n` copies of `self` and returns the result as a new [`Algorithm`].
     #[must_use]
     pub fn repeat(&self, n: usize) -> Algorithm {
-        let len = self.moves().len();
-        Algorithm::with_moves(self.moves().cycle().take(len * n).collect::<Vec<_>>())
+        let len = self.moves_mtm().len();
+        Algorithm::with_moves(self.moves_mtm().cycle().take(len * n).collect::<Vec<_>>())
     }
 
     /// Returns `Some(size)` if `self` can be applied to a solved puzzle (with the gap in the
@@ -129,7 +129,7 @@ impl AlgorithmSlice<'_> {
         let (mut max_gx, mut max_gy) = (0u64, 0u64);
         let (mut gx, mut gy) = (0u64, 0u64);
 
-        for mv in self.moves() {
+        for mv in self.moves_mtm() {
             let n = mv.amount;
 
             // Update the gap position occurs and return `None` if overflow/underflow occurs
@@ -148,61 +148,14 @@ impl AlgorithmSlice<'_> {
     }
 
     /// An iterator over the single-tile moves in the slice.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use std::str::FromStr as _;
-    /// # use slidy::algorithm::{
-    /// #     algorithm::Algorithm, as_slice::AsAlgorithmSlice, direction::Direction, r#move::r#move::Move,
-    /// # };
-    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// let alg = Algorithm::from_str("RD3LUR2")?;
-    /// let slice = alg.as_slice();
-    ///
-    /// let mut iter = slice.single_tile_moves();
-    /// assert_eq!(iter.next(), Some(Direction::Right));
-    /// assert_eq!(iter.next(), Some(Direction::Down));
-    /// assert_eq!(iter.next(), Some(Direction::Down));
-    /// assert_eq!(iter.next(), Some(Direction::Down));
-    /// assert_eq!(iter.next(), Some(Direction::Left));
-    /// assert_eq!(iter.next(), Some(Direction::Up));
-    /// assert_eq!(iter.next(), Some(Direction::Right));
-    /// assert_eq!(iter.next(), Some(Direction::Right));
-    /// assert_eq!(iter.next(), None);
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn single_tile_moves(&self) -> impl Iterator<Item = Direction> + '_ {
-        self.moves()
+    pub fn moves_stm(&self) -> impl Iterator<Item = Direction> + '_ {
+        self.moves_mtm()
             .flat_map(|m| iter::repeat_n(m.direction, m.amount as usize))
     }
 
     /// An iterator over the multi-tile moves in the slice.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use std::str::FromStr as _;
-    /// # use slidy::algorithm::{
-    /// #     algorithm::Algorithm, as_slice::AsAlgorithmSlice, direction::Direction, r#move::r#move::Move,
-    /// # };
-    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// let alg = Algorithm::from_str("RD3LUR2")?;
-    /// let slice = alg.as_slice();
-    ///
-    /// let mut iter = slice.moves();
-    /// assert_eq!(iter.next(), Some(Move::new(Direction::Right, 1)));
-    /// assert_eq!(iter.next(), Some(Move::new(Direction::Down, 3)));
-    /// assert_eq!(iter.next(), Some(Move::new(Direction::Left, 1)));
-    /// assert_eq!(iter.next(), Some(Move::new(Direction::Up, 1)));
-    /// assert_eq!(iter.next(), Some(Move::new(Direction::Right, 2)));
-    /// assert_eq!(iter.next(), None);
-    /// # Ok(())
-    /// # }
-    /// ```
     #[must_use]
-    pub fn moves(&self) -> Moves<'_> {
+    pub fn moves_mtm(&self) -> Moves<'_> {
         Moves::new(*self)
     }
 
@@ -297,10 +250,10 @@ mod tests {
     }
 
     #[test]
-    fn test_single_tile_moves() -> Result<(), Box<dyn std::error::Error>> {
+    fn test_moves_stm() -> Result<(), Box<dyn std::error::Error>> {
         let alg = Algorithm::from_str("R3D2LDR5U12RD3LU4R")?;
         let slice = alg.try_slice(4..19)?;
-        let mut moves = slice.single_tile_moves();
+        let mut moves = slice.moves_stm();
 
         assert_eq!(moves.next(), Some(Direction::Down));
         assert_eq!(moves.next(), Some(Direction::Left));

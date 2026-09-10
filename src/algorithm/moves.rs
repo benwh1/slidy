@@ -87,7 +87,7 @@ mod tests {
     fn test_multi_tile_moves() -> Result<(), Box<dyn std::error::Error>> {
         let alg = Algorithm::from_str("R3D2LDR5U12RD3LU4R")?;
         let slice = alg.try_slice(4..19)?;
-        let mut moves = slice.moves();
+        let mut moves = slice.moves_mtm();
 
         assert_eq!(moves.next(), Some(Move::from_str("D")?));
         assert_eq!(moves.next(), Some(Move::from_str("L")?));
@@ -105,7 +105,7 @@ mod tests {
         let alg = Algorithm::from_str("R3D2LDR5U12RD3LU4R")?;
         let slice = alg.try_slice(2..20)?;
 
-        let mut iter = slice.moves();
+        let mut iter = slice.moves_mtm();
         for i in 0..7 {
             assert_eq!(iter.len(), 6 - i);
             iter.next();

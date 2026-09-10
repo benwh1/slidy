@@ -57,7 +57,7 @@ define_display!(
 
 impl<T: MoveDisplay + Display> Display for DisplaySpaced<'_, T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut moves = self.algorithm.moves();
+        let mut moves = self.algorithm.moves_mtm();
 
         if let Some(first) = moves.next() {
             f.write_str(&T::new(first).to_string())?;
@@ -74,7 +74,7 @@ impl<T: MoveDisplay + Display> Display for DisplaySpaced<'_, T> {
 
 impl<T: MoveDisplay + Display> Display for DisplayUnspaced<'_, T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for m in self.algorithm.moves() {
+        for m in self.algorithm.moves_mtm() {
             T::new(m).fmt(f)?;
         }
         Ok(())
