@@ -1,4 +1,4 @@
-//! Mtm-projection solver and its builder.
+//! [`Mtm`]-projection solver and its builder.
 //!
 //! [`Mtm`]: crate::algorithm::metric::Mtm
 

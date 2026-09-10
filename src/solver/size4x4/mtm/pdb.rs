@@ -1,3 +1,7 @@
+//! Defines the [`Pdb`] struct, which is a pattern database used to accelerate [`Solver`].
+//!
+//! [`Solver`]: crate::solver::size4x4::mtm::solver::Solver
+
 use xxhash_rust::xxh3;
 
 use crate::{
@@ -13,7 +17,10 @@ use crate::{
 
 const HASH: u64 = 0x73b712151249d829;
 
-pub(super) struct Pdb {
+/// Pattern database used by [`Solver`].
+///
+/// [`Solver`]: crate::solver::size4x4::mtm::solver::Solver
+pub struct Pdb {
     pdb: Box<[u8]>,
 }
 
@@ -77,8 +84,23 @@ impl Pdb {
         Self { pdb }
     }
 
-    /// See [`crate::solver::small::pdb::Pdb::try_from_bytes`].
-    pub(super) unsafe fn try_from_bytes(bytes: Box<[u8]>) -> Option<Self> {
+    /// Initializes a [`Pdb`] from a boxed byte slice containing the pre-computed data.
+    ///
+    /// The length of the data is checked, and the [`xxh3`] hash is computed and checked against a
+    /// known value to verify integrity.
+    ///
+    /// # Safety
+    ///
+    /// Despite the correctness checks described above, this function is unsafe because it is
+    /// still technically possible for `bytes` to contain incorrect data in the event of a hash
+    /// collision.
+    ///
+    /// If the data is incorrect, then using the resulting [`Pdb`] in [`Solver`] can cause undefined
+    /// behavior.
+    ///
+    /// [`Solver`]: crate::solver::size4x4::mtm::solver::Solver
+    #[must_use]
+    pub unsafe fn try_from_bytes(bytes: Box<[u8]>) -> Option<Self> {
         if bytes.len() != SIZE {
             return None;
         }
@@ -94,16 +116,35 @@ impl Pdb {
         Some(unsafe { Self::from_bytes_unchecked(bytes) })
     }
 
-    /// See [`crate::solver::small::pdb::Pdb::from_bytes_unchecked`].
-    pub(super) unsafe fn from_bytes_unchecked(bytes: Box<[u8]>) -> Self {
+    /// Initialises the [`Pdb`] with `bytes`.
+    ///
+    /// # Safety
+    ///
+    /// The caller is responsible for the correctness of the data contained in `bytes`. No
+    /// correctness checks are performed.
+    ///
+    /// If incorrect data is used, then use of the [`Pdb`] in [`Solver`] could lead to incorrect
+    /// results or undefined behavior.
+    ///
+    /// [`Solver`]: crate::solver::size4x4::mtm::solver::Solver
+    #[must_use]
+    pub unsafe fn from_bytes_unchecked(bytes: Box<[u8]>) -> Self {
         Self { pdb: bytes }
     }
 
-    pub(super) fn get(&self, index: usize) -> u8 {
+    /// Returns the entry for the state at `index`.
+    #[must_use]
+    pub fn get(&self, index: usize) -> u8 {
         self.pdb[index]
     }
 
-    pub(super) unsafe fn get_unchecked(&self, index: usize) -> u8 {
+    /// Returns the entry for the state at `index`, without bounds checking.
+    ///
+    /// # Safety
+    ///
+    /// `index` must be within bounds.
+    #[must_use]
+    pub unsafe fn get_unchecked(&self, index: usize) -> u8 {
         *self.pdb.get_unchecked(index)
     }
 }

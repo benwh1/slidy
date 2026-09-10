@@ -1,5 +1,5 @@
-//! Defines the [`Pdb`] type, which is a pattern database containing the optimal solution length of
-//! every state of a small `WxH` puzzle.
+//! Defines the [`Pdb`] struct, which is a pattern database containing the optimal solution length
+//! of every state of a small `WxH` puzzle.
 //!
 //! This is used by [`Solver`] to efficiently find optimal solutions.
 //!
@@ -349,14 +349,6 @@ where
 }
 
 impl<const W: usize, const H: usize, const N: usize, Metric> Pdb<W, H, N, Metric> {
-    pub(super) fn get(&self, index: usize) -> u8 {
-        self.pdb[index]
-    }
-
-    pub(super) unsafe fn get_unchecked(&self, index: usize) -> u8 {
-        *self.pdb.get_unchecked(index)
-    }
-
     /// See [`Self::try_from_bytes`].
     ///
     /// # Safety
@@ -369,6 +361,22 @@ impl<const W: usize, const H: usize, const N: usize, Metric> Pdb<W, H, N, Metric
             pdb: bytes,
             phantom_metric: PhantomData,
         }
+    }
+
+    /// Returns the entry for the state at `index`.
+    #[must_use]
+    pub fn get(&self, index: usize) -> u8 {
+        self.pdb[index]
+    }
+
+    /// Returns the entry for the state at `index`, without bounds checking.
+    ///
+    /// # Safety
+    ///
+    /// `index` must be a valid index into the PDB.
+    #[must_use]
+    pub unsafe fn get_unchecked(&self, index: usize) -> u8 {
+        *self.pdb.get_unchecked(index)
     }
 }
 

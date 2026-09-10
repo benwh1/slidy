@@ -1,4 +1,4 @@
-//! Mtm-specific implementation of the projection [`SolverBuilder`].
+//! [`Mtm`]-specific implementation of the projection [`SolverBuilder`].
 
 use crate::{
     algorithm::metric::Mtm,

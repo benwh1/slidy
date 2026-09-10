@@ -16,7 +16,7 @@ use crate::{
         config::SolverConfig,
         projection::{
             builder::SolverBuilder,
-            pdb::{compute_solved_state, Pdb},
+            pdb::{compute_solved_state, compute_tally, Pdb},
             puzzle::{project_puzzle, ProjectedPuzzle},
             LARGE,
         },
@@ -31,6 +31,7 @@ use crate::{
 /// of the puzzle must match the [`Size`] provided to the [`builder`](Solver::builder).
 pub struct Solver<P, Target, PruneTarget, Metric> {
     pub(super) pdb: Pdb<Metric>,
+    pub(super) tally: Box<[u8]>,
     pub(super) stack: Stack<128>,
     pub(super) size: Size,
     pub(super) solutions_found: Cell<u64>,
@@ -65,15 +66,17 @@ where
         size: Size,
     ) -> Self {
         let prune_target_solved_state = compute_solved_state(&prune_target, size);
+        let tally = compute_tally(&prune_target_solved_state).into_boxed_slice();
         let solved_projected = ProjectedPuzzle::<LARGE>::new(
             &prune_target_solved_state,
             (size.area() - 1) as u8,
             size.width() as u8,
         );
-        let prune_target_solved_index = solved_projected.encode(&pdb.tally) as usize;
+        let prune_target_solved_index = solved_projected.encode(&tally) as usize;
 
         Self {
             pdb,
+            tally,
             stack: Stack::default(),
             size,
             prune_target_solved_index,

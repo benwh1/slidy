@@ -1,4 +1,4 @@
-//! Stm-specific implementation of the projection [`Solver`].
+//! [`Stm`]-specific implementation of the projection [`Solver`].
 
 use std::ops::ControlFlow;
 
@@ -29,7 +29,7 @@ where
         last_dir: Option<Direction>,
         projected: ProjectedPuzzle<N>,
     ) -> ControlFlow<()> {
-        let index = self.pdb.encode(&projected);
+        let index = projected.encode(&self.tally) as usize;
 
         if depth == 0 {
             if index == self.prune_target_solved_index && self.check_solution(puzzle) {
@@ -109,7 +109,7 @@ where
         *self.config.borrow_mut() = Some(config);
 
         let projected = self.initial_projected::<N>(puzzle);
-        let start_index = self.pdb.encode(&projected);
+        let start_index = projected.encode(&self.tally) as usize;
         // SAFETY: `start_index` comes from encoding a projected puzzle, so is within bounds.
         let hval = unsafe { self.pdb.get_unchecked(start_index) };
         let min = if hval % 2 == min % 2 { min } else { min + 1 };

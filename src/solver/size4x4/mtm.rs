@@ -17,6 +17,6 @@
 mod base_5_table;
 mod consts;
 mod indexing_table;
-mod pdb;
+pub mod pdb;
 mod puzzle;
 pub mod solver;

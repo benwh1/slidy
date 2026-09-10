@@ -1,4 +1,4 @@
-//! Stm-specific implementation of the projection [`SolverBuilder`].
+//! [`Stm`]-specific implementation of the projection [`SolverBuilder`].
 
 use crate::{
     algorithm::metric::Stm,

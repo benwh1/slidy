@@ -1,4 +1,4 @@
-//! Stm-projection solver and its builder.
+//! [`Stm`]-projection solver and its builder.
 //!
 //! [`Stm`]: crate::algorithm::metric::Stm
 
