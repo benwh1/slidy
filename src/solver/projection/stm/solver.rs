@@ -184,7 +184,7 @@ mod tests {
     type Solver3x3StmDiff = Solver<Puzzle, Rows, Trivial, Stm>;
 
     #[test]
-    fn test_stm_trivial() {
+    fn test_trivial() {
         let solver = Solver3x3StmTrivial::builder()
             .size(Size::new(3, 3).unwrap())
             .build()
@@ -195,7 +195,7 @@ mod tests {
     }
 
     #[test]
-    fn test_stm_rows() {
+    fn test_rows() {
         let solver = Solver3x3StmRows::builder()
             .size(Size::new(3, 3).unwrap())
             .build()
@@ -206,7 +206,7 @@ mod tests {
     }
 
     #[test]
-    fn test_stm_different_targets() {
+    fn test_different_targets() {
         let solver = Solver3x3StmDiff::builder()
             .size(Size::new(3, 3).unwrap())
             .build()
@@ -241,7 +241,7 @@ mod tests {
     }
 
     #[test]
-    fn test_stm_rows_double_rows_4x4() {
+    fn test_rows_double_rows_4x4() {
         let size = Size::new(4, 4).unwrap();
         let prune = Scaled::new(Rows, (2, 2)).unwrap();
         let solver = Solver::<Puzzle, Rows, Scaled<Rows>, Stm>::builder()
@@ -255,7 +255,7 @@ mod tests {
     }
 
     #[test]
-    fn test_stm_rows_with_pdb_iteration_callback() {
+    fn test_rows_with_pdb_iteration_callback() {
         let iterations = Cell::new(0u64);
         let solver = Solver3x3StmRows::builder()
             .size(Size::new(3, 3).unwrap())
@@ -272,7 +272,7 @@ mod tests {
     }
 
     #[test]
-    fn test_stm_all_builder_options() {
+    fn test_all_builder_options() {
         let size = Size::new(4, 4).unwrap();
         let prune = Scaled::new(Rows, (2, 2)).unwrap();
         let solver = Solver::<Puzzle, Rows, Scaled<Rows>, Stm>::builder()
@@ -288,7 +288,7 @@ mod tests {
     }
 
     #[test]
-    fn test_stm_missing_size_error() {
+    fn test_missing_size_error() {
         let err = Solver3x3StmRows::builder().build();
         assert!(matches!(
             err,
