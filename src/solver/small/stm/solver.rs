@@ -1,8 +1,4 @@
-use std::{
-    cell::{Cell, RefCell},
-    marker::PhantomData,
-    ops::ControlFlow,
-};
+use std::ops::ControlFlow;
 
 use num_traits::AsPrimitive;
 
@@ -13,10 +9,9 @@ use crate::{
         small::{sealed::SmallPuzzle, Puzzle},
     },
     solver::{
-        config::SolverConfig,
+        config::{PdbConfig, SolverConfig},
         small::{indexing, pdb::Pdb, solver::Solver},
         solver::{Solver as SolverT, SolverError},
-        stack::Stack,
         statistics::SolverIterationStats,
     },
 };
@@ -27,7 +22,7 @@ where
     Puzzle<H, W>: SmallPuzzle<PieceArray = [u8; N], TransposedPuzzle = Puzzle<W, H>>,
 {
     fn default() -> Self {
-        Self::new()
+        Self::new(&PdbConfig::default())
     }
 }
 
@@ -38,20 +33,8 @@ where
 {
     /// Creates a [`Solver`], building a new pattern database.
     #[must_use]
-    pub fn new() -> Self {
-        Self::with_pdb(Pdb::default())
-    }
-
-    /// Creates a [`Solver`] using an existing pattern database.
-    #[must_use]
-    pub fn with_pdb(pdb: Pdb<W, H, N, Stm>) -> Self {
-        Self {
-            pdb,
-            stack: Stack::default(),
-            solutions_found: Cell::new(0),
-            config: RefCell::new(None),
-            phantom_metric: PhantomData,
-        }
+    pub fn new(config: &PdbConfig) -> Self {
+        Self::with_pdb(Pdb::<_, _, _, Stm>::new(config))
     }
 
     fn dfs(
@@ -253,7 +236,7 @@ mod tests {
 
     #[test]
     fn test_solver() {
-        let solver = Solver3x3Stm::new();
+        let solver = Solver3x3Stm::default();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
 
         let solution = solver.solve(&puzzle).unwrap();
@@ -266,7 +249,7 @@ mod tests {
 
     #[test]
     fn test_solver_2() {
-        let solver = Solver4x2Stm::new();
+        let solver = Solver4x2Stm::default();
         let mut puzzle = Puzzle::from_str("4 6/2 5/0 1/7 3").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         puzzle.apply_alg(&solution);

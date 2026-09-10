@@ -20,6 +20,18 @@ pub struct Solver<const W: usize, const H: usize, const N: usize, Metric> {
 }
 
 impl<const W: usize, const H: usize, const N: usize, Metric> Solver<W, H, N, Metric> {
+    /// Creates a [`Solver`] using an existing pattern database.
+    #[must_use]
+    pub fn with_pdb(pdb: Pdb<W, H, N, Metric>) -> Self {
+        Self {
+            pdb,
+            stack: Stack::default(),
+            solutions_found: Cell::new(0),
+            config: RefCell::new(None),
+            phantom_metric: PhantomData,
+        }
+    }
+
     pub(super) fn cfg(&self) -> Ref<'_, SolverConfig> {
         let borrow = self.config.borrow();
         Ref::map(borrow, |b| b.as_ref().unwrap())
