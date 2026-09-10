@@ -104,7 +104,9 @@ where
         let start_index = self.pdb.encode(&projected);
         // SAFETY: `start_index` comes from encoding a projected puzzle, so is within bounds.
         let pdb_val = unsafe { self.pdb.get_unchecked(start_index) };
+        let min = if pdb_val % 2 == min % 2 { min } else { min + 1 };
         let mut depth = pdb_val.max(min);
+
         let mut first_solution_depth: Option<u8> = None;
 
         while depth <= max {
@@ -128,7 +130,7 @@ where
                 }
             }
 
-            depth = match depth.checked_add(1) {
+            depth = match depth.checked_add(2) {
                 Some(d) => d,
                 None => break,
             };
