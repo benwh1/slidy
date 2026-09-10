@@ -62,10 +62,10 @@ impl Solver {
 
     /// Creates a new [`Solver`] and builds the pattern database.
     #[must_use]
-    pub fn new(pdb_config: &PdbConfig) -> Self {
+    pub fn new(config: &PdbConfig) -> Self {
         let indexing_table = IndexingTable::new();
         let base_5_table = Base5Table::new();
-        let pdb = Pdb::new(&indexing_table, &base_5_table, pdb_config);
+        let pdb = Pdb::new(&indexing_table, &base_5_table, config);
 
         Self::with_tables_and_pdb(indexing_table, base_5_table, pdb)
     }

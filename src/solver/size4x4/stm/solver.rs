@@ -39,12 +39,12 @@ impl Default for Solver {
 impl Solver {
     /// Creates a new [`Solver`] and builds the transposition tables and pattern databases.
     #[must_use]
-    pub fn new(pdb_config: &PdbConfig) -> Self {
+    pub fn new(config: &PdbConfig) -> Self {
         let pat4 = Pattern::new(&[1, 2, 5, 6, 0]);
         let pat3 = Pattern::new(&[11, 12, 15, 0]);
 
-        let pdb4 = Pdb::new(pat4, pdb_config);
-        let pdb3 = Pdb::new(pat3, pdb_config);
+        let pdb4 = Pdb::new(pat4, config);
+        let pdb3 = Pdb::new(pat3, config);
 
         Self {
             pdb4,
