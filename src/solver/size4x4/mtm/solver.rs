@@ -61,8 +61,6 @@ impl Solver {
     }
 
     /// Creates a new [`Solver`] and builds the pattern database.
-    ///
-    /// Building the pattern database takes several minutes.
     #[must_use]
     pub fn new(pdb_config: &PdbConfig) -> Self {
         let indexing_table = IndexingTable::new();
