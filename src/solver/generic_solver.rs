@@ -296,7 +296,9 @@ where
         *self.config.borrow_mut() = Some(config);
 
         let mut puzzle = puzzle.clone();
-        let mut depth = min;
+
+        let hval = self.heuristic.bound(&puzzle);
+        let mut depth = hval.max(min);
 
         let mut first_solution_depth = None;
 
