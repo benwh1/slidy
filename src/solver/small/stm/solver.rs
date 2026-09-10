@@ -59,7 +59,7 @@ where
         depth: u8,
         inverse_last_move: Option<Direction>,
         mut puzzle: Puzzle<W, H>,
-    ) -> bool {
+    ) -> ControlFlow<()> {
         let coord = indexing::encode(puzzle.piece_array());
 
         // SAFETY: `encode` produces integers from 0 to k-1 where k is the size of the PDB, so the
@@ -67,18 +67,22 @@ where
         let heuristic = unsafe { self.pdb.get_unchecked(coord as usize) };
 
         if heuristic > depth {
-            return false;
+            return ControlFlow::Continue(());
         }
 
         if depth == 0 {
             self.solutions_found.update(|n| n + 1);
             if let Some(f) = &self.cfg().solution_callback {
                 if f(self.stack.to_alg()).is_break() {
-                    return true;
+                    return ControlFlow::Break(());
                 }
             }
 
-            return self.cfg().num_solutions == self.solutions_found.get();
+            if self.cfg().num_solutions == self.solutions_found.get() {
+                return ControlFlow::Break(());
+            }
+
+            return ControlFlow::Continue(());
         }
 
         let original_puzzle = puzzle;
@@ -98,15 +102,15 @@ where
             if puzzle.try_move_dir(dir) {
                 self.stack.push(dir);
 
-                if self.dfs(depth - 1, Some(dir.inverse()), puzzle) {
-                    return true;
+                if self.dfs(depth - 1, Some(dir.inverse()), puzzle).is_break() {
+                    return ControlFlow::Break(());
                 }
 
                 self.stack.pop();
             }
         }
 
-        false
+        ControlFlow::Continue(())
     }
 
     fn solve_impl<P>(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>
@@ -168,41 +172,48 @@ where
         *self.config.borrow_mut() = Some(config);
 
         let coord = indexing::encode(puzzle.piece_array());
-        let start_heuristic = self.pdb.get(coord as usize);
-        let min = if start_heuristic % 2 == min % 2 {
-            min
-        } else {
-            min + 1
-        };
+        let hval = self.pdb.get(coord as usize);
+        let min = if hval % 2 == min % 2 { min } else { min + 1 };
+        let mut depth = hval.max(min);
 
-        let mut depth = start_heuristic.max(min);
-        let mut first_solution_depth: Option<u8> = None;
+        let mut first_solution_depth = None;
 
-        while depth <= max {
-            if first_solution_depth.is_some_and(|fd| {
-                depth_beyond_optimal.is_some_and(|e| depth > fd.saturating_add(e))
-            }) {
+        loop {
+            // Run DFS. This checks against `num_solutions` and the return value of the solution
+            // callback.
+            if self.dfs(depth, None, puzzle).is_break() {
                 break;
             }
 
-            let found_before = self.solutions_found.get();
-            if self.dfs(depth, None, puzzle) {
-                return Ok(());
-            }
-            if first_solution_depth.is_none() && self.solutions_found.get() > found_before {
+            // Set first solution depth.
+            if first_solution_depth.is_none() && self.solutions_found.get() > 0 {
                 first_solution_depth = Some(depth);
             }
 
+            // Run end of iteration callback and check return value.
             if let Some(f) = &self.cfg().end_of_iter_callback {
                 if f(SolverIterationStats { depth }).is_break() {
-                    return Ok(());
+                    break;
                 }
             }
 
+            // Go to next depth.
             depth = match depth.checked_add(2) {
                 Some(d) => d,
                 None => break,
             };
+
+            // Check against `max`.
+            if depth > max {
+                break;
+            }
+
+            // Check against `depth_beyond_optimal`.
+            if first_solution_depth.is_some_and(|first| {
+                depth_beyond_optimal.is_some_and(|extra| depth - first > extra)
+            }) {
+                break;
+            }
         }
 
         if self.solutions_found.get() > 0 {

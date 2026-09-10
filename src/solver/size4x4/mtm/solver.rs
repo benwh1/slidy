@@ -1,6 +1,9 @@
 //! Defines the [`Solver`] struct for optimally solving 4x4 puzzles using pattern databases.
 
-use std::cell::{Cell, Ref, RefCell};
+use std::{
+    cell::{Cell, Ref, RefCell},
+    ops::ControlFlow,
+};
 
 use num_traits::AsPrimitive;
 
@@ -138,7 +141,7 @@ impl Solver {
         last_axis: Option<Axis>,
         mut puzzle: ReducedFourBitPuzzle,
         mut transposed_puzzle: ReducedFourBitPuzzle,
-    ) -> bool {
+    ) -> ControlFlow<()> {
         let coord = self
             .indexing_table
             .encode(puzzle.pieces, &self.base_5_table) as usize;
@@ -148,7 +151,7 @@ impl Solver {
         let heuristic = unsafe { self.pdb.get_unchecked(coord) };
 
         if heuristic > depth {
-            return false;
+            return ControlFlow::Continue(());
         }
 
         let coord = self
@@ -159,7 +162,7 @@ impl Solver {
         let heuristic = unsafe { self.pdb.get_unchecked(coord) };
 
         if heuristic > depth {
-            return false;
+            return ControlFlow::Continue(());
         }
 
         if depth == 0 {
@@ -172,14 +175,16 @@ impl Solver {
                 self.solutions_found.update(|n| n + 1);
                 if let Some(f) = &self.cfg().solution_callback {
                     if f(self.stack.to_alg()).is_break() {
-                        return true;
+                        return ControlFlow::Break(());
                     }
                 }
 
-                return self.cfg().num_solutions == self.solutions_found.get();
+                if self.cfg().num_solutions == self.solutions_found.get() {
+                    return ControlFlow::Break(());
+                }
             }
 
-            return false;
+            return ControlFlow::Continue(());
         }
 
         let original_puzzle = puzzle;
@@ -206,15 +211,18 @@ impl Solver {
 
                 self.stack.push(dir);
 
-                if self.dfs(depth - 1, Some(dir.into()), puzzle, transposed_puzzle) {
-                    return true;
+                if self
+                    .dfs(depth - 1, Some(dir.into()), puzzle, transposed_puzzle)
+                    .is_break()
+                {
+                    return ControlFlow::Break(());
                 }
             }
 
             self.stack.remove_n(count);
         }
 
-        false
+        ControlFlow::Continue(())
     }
 
     fn solve_impl<P>(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>
@@ -247,34 +255,50 @@ impl Solver {
         let coord = self
             .indexing_table
             .encode(reduced_puzzle.pieces, &self.base_5_table);
-        let mut depth = self.pdb.get(coord as usize).max(min);
-        let mut first_solution_depth: Option<u8> = None;
+        let hval = self.pdb.get(coord as usize);
+        let mut depth = hval.max(min);
 
-        while depth <= max {
-            if first_solution_depth.is_some_and(|fd| {
-                depth_beyond_optimal.is_some_and(|e| depth > fd.saturating_add(e))
-            }) {
+        let mut first_solution_depth = None;
+
+        loop {
+            // Run DFS. This checks against `num_solutions` and the return value of the solution
+            // callback.
+            if self
+                .dfs(depth, None, reduced_puzzle, transposed_reduced_puzzle)
+                .is_break()
+            {
                 break;
             }
 
-            let found_before = self.solutions_found.get();
-            if self.dfs(depth, None, reduced_puzzle, transposed_reduced_puzzle) {
-                return Ok(());
-            }
-            if first_solution_depth.is_none() && self.solutions_found.get() > found_before {
+            // Set first solution depth.
+            if first_solution_depth.is_none() && self.solutions_found.get() > 0 {
                 first_solution_depth = Some(depth);
             }
 
+            // Run end of iteration callback and check return value.
             if let Some(f) = &self.cfg().end_of_iter_callback {
                 if f(SolverIterationStats { depth }).is_break() {
-                    return Ok(());
+                    break;
                 }
             }
 
+            // Go to next depth.
             depth = match depth.checked_add(1) {
                 Some(d) => d,
                 None => break,
             };
+
+            // Check against `max`.
+            if depth > max {
+                break;
+            }
+
+            // Check against `depth_beyond_optimal`.
+            if first_solution_depth.is_some_and(|first| {
+                depth_beyond_optimal.is_some_and(|extra| depth - first > extra)
+            }) {
+                break;
+            }
         }
 
         if self.solutions_found.get() > 0 {

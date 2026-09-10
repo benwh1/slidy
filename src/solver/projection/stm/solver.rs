@@ -1,8 +1,13 @@
 //! Stm-specific implementation of the projection [`Solver`].
 
+use std::ops::ControlFlow;
+
 use crate::{
     algorithm::{direction::Direction, metric::Stm},
-    puzzle::{label::label::Label, sliding_puzzle::SlidingPuzzle, solved_state::SolvedState},
+    puzzle::{
+        label::label::Label, sliding_puzzle::SlidingPuzzle, solvable::Solvable,
+        solved_state::SolvedState,
+    },
     solver::{
         config::SolverConfig,
         projection::{puzzle::ProjectedPuzzle, solver::Solver, LARGE, SMALL},
@@ -14,7 +19,7 @@ use crate::{
 impl<P, Target, PruneTarget> Solver<P, Target, PruneTarget, Stm>
 where
     P: SlidingPuzzle + Clone,
-    Target: Label + SolvedState + Default,
+    Target: Label + SolvedState + Solvable + Default,
     PruneTarget: Label + SolvedState + Default,
 {
     fn dfs<const N: usize>(
@@ -23,7 +28,7 @@ where
         depth: u8,
         last_dir: Option<Direction>,
         projected: ProjectedPuzzle<N>,
-    ) -> bool {
+    ) -> ControlFlow<()> {
         let index = self.pdb.encode(&projected);
 
         if depth == 0 {
@@ -31,19 +36,22 @@ where
                 self.solutions_found.update(|n| n + 1);
                 if let Some(f) = &self.cfg().solution_callback {
                     if f(self.stack.to_alg()).is_break() {
-                        return true;
+                        return ControlFlow::Break(());
                     }
                 }
-                return self.cfg().num_solutions == self.solutions_found.get();
+
+                if self.cfg().num_solutions == self.solutions_found.get() {
+                    return ControlFlow::Break(());
+                }
             }
 
-            return false;
+            return ControlFlow::Continue(());
         }
 
         // SAFETY: `index` comes from encoding a projected puzzle, so is within bounds.
         let heuristic = unsafe { self.pdb.get_unchecked(index) };
         if heuristic > depth {
-            return false;
+            return ControlFlow::Continue(());
         }
 
         let original = projected;
@@ -61,25 +69,17 @@ where
             let mut proj = original;
             if proj.do_move(dir) {
                 self.stack.push(dir);
-                if self.dfs(puzzle, depth - 1, Some(dir), proj) {
-                    return true;
+                if self.dfs(puzzle, depth - 1, Some(dir), proj).is_break() {
+                    return ControlFlow::Break(());
                 }
                 self.stack.pop();
             }
         }
 
-        false
+        ControlFlow::Continue(())
     }
 
     fn solve_impl(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
-        if puzzle.size() != self.size {
-            return Err(SolverError::IncompatiblePuzzleSize);
-        }
-
-        if !puzzle.is_solvable() {
-            return Err(SolverError::Unsolvable);
-        }
-
         if self.size.area() as usize <= SMALL {
             self.solve_impl_n::<SMALL>(puzzle, config)
         } else {
@@ -92,6 +92,14 @@ where
         puzzle: &P,
         config: SolverConfig,
     ) -> Result<(), SolverError> {
+        if puzzle.size() != self.size {
+            return Err(SolverError::IncompatiblePuzzleSize);
+        }
+
+        if !self.target.is_solvable(puzzle) {
+            return Err(SolverError::Unsolvable);
+        }
+
         let min = config.min;
         let max = config.max;
         let depth_beyond_optimal = config.depth_beyond_optimal;
@@ -103,37 +111,48 @@ where
         let projected = self.initial_projected::<N>(puzzle);
         let start_index = self.pdb.encode(&projected);
         // SAFETY: `start_index` comes from encoding a projected puzzle, so is within bounds.
-        let pdb_val = unsafe { self.pdb.get_unchecked(start_index) };
-        let min = if pdb_val % 2 == min % 2 { min } else { min + 1 };
-        let mut depth = pdb_val.max(min);
+        let hval = unsafe { self.pdb.get_unchecked(start_index) };
+        let min = if hval % 2 == min % 2 { min } else { min + 1 };
+        let mut depth = hval.max(min);
 
-        let mut first_solution_depth: Option<u8> = None;
+        let mut first_solution_depth = None;
 
-        while depth <= max {
-            if first_solution_depth.is_some_and(|fd| {
-                depth_beyond_optimal.is_some_and(|e| depth > fd.saturating_add(e))
-            }) {
+        loop {
+            // Run DFS. This checks against `num_solutions` and the return value of the solution
+            // callback.
+            if self.dfs::<N>(puzzle, depth, None, projected).is_break() {
                 break;
             }
 
-            let found_before = self.solutions_found.get();
-            if self.dfs::<N>(puzzle, depth, None, projected) {
-                return Ok(());
-            }
-            if first_solution_depth.is_none() && self.solutions_found.get() > found_before {
+            // Set first solution depth.
+            if first_solution_depth.is_none() && self.solutions_found.get() > 0 {
                 first_solution_depth = Some(depth);
             }
 
+            // Run end of iteration callback and check return value.
             if let Some(f) = &self.cfg().end_of_iter_callback {
                 if f(SolverIterationStats { depth }).is_break() {
-                    return Ok(());
+                    break;
                 }
             }
 
+            // Go to next depth.
             depth = match depth.checked_add(2) {
                 Some(d) => d,
                 None => break,
             };
+
+            // Check against `max`.
+            if depth > max {
+                break;
+            }
+
+            // Check against `depth_beyond_optimal`.
+            if first_solution_depth.is_some_and(|first| {
+                depth_beyond_optimal.is_some_and(|extra| depth - first > extra)
+            }) {
+                break;
+            }
         }
 
         if self.solutions_found.get() > 0 {
@@ -147,7 +166,7 @@ where
 impl<P, Target, PruneTarget> SolverT<P> for Solver<P, Target, PruneTarget, Stm>
 where
     P: SlidingPuzzle + Clone,
-    Target: Label + SolvedState + Default,
+    Target: Label + SolvedState + Solvable + Default,
     PruneTarget: Label + SolvedState + Default,
 {
     fn is_initialised(&self) -> bool {

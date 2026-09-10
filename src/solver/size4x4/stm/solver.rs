@@ -1,6 +1,9 @@
 //! Defines the [`Solver`] struct for solving 4x4 puzzles using pattern databases.
 
-use std::cell::{Cell, Ref, RefCell};
+use std::{
+    cell::{Cell, Ref, RefCell},
+    ops::ControlFlow,
+};
 
 use num_traits::ToPrimitive as _;
 
@@ -67,7 +70,7 @@ impl Solver {
         Ref::map(borrow, |b| b.as_ref().unwrap())
     }
 
-    fn dfs(&self, depth: u8, last_inverse: Option<Direction>, coords: [u32; 4]) -> bool {
+    fn dfs(&self, depth: u8, last_inverse: Option<Direction>, coords: [u32; 4]) -> ControlFlow<()> {
         // SAFETY: The entries in `coords` all come from encoding a puzzle (in `solve`) or from the
         // transposition table (in `dfs`), and we have tests to guarantee that these values are all
         // within bounds.
@@ -81,18 +84,22 @@ impl Solver {
         };
 
         if heuristic > depth {
-            return false;
+            return ControlFlow::Continue(());
         }
 
         if depth == 0 {
             self.solutions_found.update(|n| n + 1);
             if let Some(f) = &self.cfg().solution_callback {
                 if f(self.stack.to_alg()).is_break() {
-                    return true;
+                    return ControlFlow::Break(());
                 }
             }
 
-            return self.cfg().num_solutions == self.solutions_found.get();
+            if self.cfg().num_solutions == self.solutions_found.get() {
+                return ControlFlow::Break(());
+            }
+
+            return ControlFlow::Continue(());
         }
 
         // SAFETY: See above.
@@ -140,14 +147,17 @@ impl Solver {
 
             self.stack.push(dir);
 
-            if self.dfs(depth - 1, Some(dir.inverse()), new_coords) {
-                return true;
+            if self
+                .dfs(depth - 1, Some(dir.inverse()), new_coords)
+                .is_break()
+            {
+                return ControlFlow::Break(());
             }
 
             self.stack.pop();
         }
 
-        false
+        ControlFlow::Continue(())
     }
 
     fn solve_impl<P>(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>
@@ -195,41 +205,48 @@ impl Solver {
             self.pdb3.pdb()[coords[3] as usize],
         ];
 
-        let start_heuristic = entries.iter().copied().sum::<u8>();
-        let min = if start_heuristic % 2 == min % 2 {
-            min
-        } else {
-            min + 1
-        };
+        let hval = entries.iter().copied().sum::<u8>();
+        let min = if hval % 2 == min % 2 { min } else { min + 1 };
+        let mut depth = hval.max(min);
 
-        let mut depth = start_heuristic.max(min);
         let mut first_solution_depth: Option<u8> = None;
 
-        while depth <= max {
-            if first_solution_depth.is_some_and(|fd| {
-                depth_beyond_optimal.is_some_and(|e| depth > fd.saturating_add(e))
-            }) {
+        loop {
+            // Run DFS. This checks against `num_solutions` and the return value of the solution
+            // callback.
+            if self.dfs(depth, None, coords).is_break() {
                 break;
             }
 
-            let found_before = self.solutions_found.get();
-            if self.dfs(depth, None, coords) {
-                return Ok(());
-            }
-            if first_solution_depth.is_none() && self.solutions_found.get() > found_before {
+            // Set first solution depth.
+            if first_solution_depth.is_none() && self.solutions_found.get() > 0 {
                 first_solution_depth = Some(depth);
             }
 
+            // Run end of iteration callback and check return value.
             if let Some(f) = &self.cfg().end_of_iter_callback {
                 if f(SolverIterationStats { depth }).is_break() {
-                    return Ok(());
+                    break;
                 }
             }
 
+            // Go to next depth.
             depth = match depth.checked_add(2) {
                 Some(d) => d,
                 None => break,
             };
+
+            // Check against `max`.
+            if depth > max {
+                break;
+            }
+
+            // Check against `depth_beyond_optimal`.
+            if first_solution_depth.is_some_and(|first| {
+                depth_beyond_optimal.is_some_and(|extra| depth - first > extra)
+            }) {
+                break;
+            }
         }
 
         if self.solutions_found.get() > 0 {

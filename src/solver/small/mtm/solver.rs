@@ -54,7 +54,7 @@ where
         }
     }
 
-    fn dfs(&self, depth: u8, last_axis: Option<Axis>, mut puzzle: Puzzle<W, H>) -> bool {
+    fn dfs(&self, depth: u8, last_axis: Option<Axis>, mut puzzle: Puzzle<W, H>) -> ControlFlow<()> {
         let coord = indexing::encode(puzzle.piece_array());
 
         // SAFETY: `encode` produces integers from 0 to k-1 where k is the size of the PDB, so the
@@ -62,18 +62,22 @@ where
         let heuristic = unsafe { self.pdb.get_unchecked(coord as usize) };
 
         if heuristic > depth {
-            return false;
+            return ControlFlow::Continue(());
         }
 
         if depth == 0 {
             self.solutions_found.update(|n| n + 1);
             if let Some(f) = &self.cfg().solution_callback {
                 if f(self.stack.to_alg()).is_break() {
-                    return true;
+                    return ControlFlow::Break(());
                 }
             }
 
-            return self.cfg().num_solutions == self.solutions_found.get();
+            if self.cfg().num_solutions == self.solutions_found.get() {
+                return ControlFlow::Break(());
+            }
+
+            return ControlFlow::Continue(());
         }
 
         let original_puzzle = puzzle;
@@ -97,15 +101,15 @@ where
 
                 self.stack.push(dir);
 
-                if self.dfs(depth - 1, Some(dir.into()), puzzle) {
-                    return true;
+                if self.dfs(depth - 1, Some(dir.into()), puzzle).is_break() {
+                    return ControlFlow::Break(());
                 }
             }
 
             self.stack.remove_n(count);
         }
 
-        false
+        ControlFlow::Continue(())
     }
 
     fn solve_impl<P>(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>
@@ -167,34 +171,47 @@ where
         *self.config.borrow_mut() = Some(config);
 
         let coord = indexing::encode(puzzle.piece_array());
-        let mut depth = self.pdb.get(coord as usize).max(min);
-        let mut first_solution_depth: Option<u8> = None;
+        let hval = self.pdb.get(coord as usize);
+        let mut depth = hval.max(min);
 
-        while depth <= max {
-            if first_solution_depth.is_some_and(|fd| {
-                depth_beyond_optimal.is_some_and(|e| depth > fd.saturating_add(e))
-            }) {
+        let mut first_solution_depth = None;
+
+        loop {
+            // Run DFS. This checks against `num_solutions` and the return value of the solution
+            // callback.
+            if self.dfs(depth, None, puzzle).is_break() {
                 break;
             }
 
-            let found_before = self.solutions_found.get();
-            if self.dfs(depth, None, puzzle) {
-                return Ok(());
-            }
-            if first_solution_depth.is_none() && self.solutions_found.get() > found_before {
+            // Set first solution depth.
+            if first_solution_depth.is_none() && self.solutions_found.get() > 0 {
                 first_solution_depth = Some(depth);
             }
 
+            // Run end of iteration callback and check return value.
             if let Some(f) = &self.cfg().end_of_iter_callback {
                 if f(SolverIterationStats { depth }).is_break() {
-                    return Ok(());
+                    break;
                 }
             }
 
+            // Go to next depth.
             depth = match depth.checked_add(1) {
                 Some(d) => d,
                 None => break,
             };
+
+            // Check against `max`.
+            if depth > max {
+                break;
+            }
+
+            // Check against `depth_beyond_optimal`.
+            if first_solution_depth.is_some_and(|first| {
+                depth_beyond_optimal.is_some_and(|extra| depth - first > extra)
+            }) {
+                break;
+            }
         }
 
         if self.solutions_found.get() > 0 {

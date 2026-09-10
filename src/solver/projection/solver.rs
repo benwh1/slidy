@@ -35,7 +35,7 @@ pub struct Solver<P, Target, PruneTarget, Metric> {
     pub(super) size: Size,
     pub(super) solutions_found: Cell<u64>,
     pub(super) config: RefCell<Option<SolverConfig>>,
-    target: Target,
+    pub(super) target: Target,
     prune_target: PruneTarget,
     pub(super) prune_target_solved_index: usize,
     phantom_p: PhantomData<P>,

@@ -4,6 +4,7 @@
 use std::{
     cell::{Cell, Ref, RefCell},
     marker::PhantomData,
+    ops::ControlFlow,
 };
 
 use crate::{
@@ -104,24 +105,26 @@ where
     S: SolvedState + Solvable,
     H: Heuristic<P, u8, S, Stm>,
 {
-    fn dfs(&self, puzzle: &mut P, depth: u8, last_dir: Option<Direction>) -> bool {
+    fn dfs(&self, puzzle: &mut P, depth: u8, last_dir: Option<Direction>) -> ControlFlow<()> {
         if depth == 0 {
             if self.solved_state.is_solved(puzzle) {
                 self.solutions_found.update(|n| n + 1);
                 if let Some(f) = &self.cfg().solution_callback {
                     if f(self.stack.to_alg()).is_break() {
-                        return true;
+                        return ControlFlow::Break(());
                     }
                 }
 
-                return self.cfg().num_solutions == self.solutions_found.get();
+                if self.cfg().num_solutions == self.solutions_found.get() {
+                    return ControlFlow::Break(());
+                }
             }
 
-            return false;
+            return ControlFlow::Continue(());
         }
 
         if self.heuristic.bound(puzzle) > depth {
-            return false;
+            return ControlFlow::Continue(());
         }
 
         for dir in [
@@ -140,14 +143,14 @@ where
 
             self.stack.push(dir);
 
-            if self.dfs(puzzle, depth - 1, Some(dir)) {
-                return true;
+            if self.dfs(puzzle, depth - 1, Some(dir)).is_break() {
+                return ControlFlow::Break(());
             }
 
             self.stack.pop();
             puzzle.try_move_dir(dir.inverse());
         }
-        false
+        ControlFlow::Continue(())
     }
 
     fn solve_impl(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
@@ -166,41 +169,48 @@ where
 
         let mut puzzle = puzzle.clone();
 
-        let start_heuristic = self.heuristic.bound(&puzzle);
-        let min = if start_heuristic % 2 == min % 2 {
-            min
-        } else {
-            min + 1
-        };
+        let hval = self.heuristic.bound(&puzzle);
+        let min = if hval % 2 == min % 2 { min } else { min + 1 };
+        let mut depth = hval.max(min);
 
-        let mut depth = start_heuristic.max(min);
         let mut first_solution_depth: Option<u8> = None;
 
-        while depth <= max {
-            if first_solution_depth.is_some_and(|fd| {
-                depth_beyond_optimal.is_some_and(|e| depth > fd.saturating_add(e))
-            }) {
+        loop {
+            // Run DFS. This checks against `num_solutions` and the return value of the solution
+            // callback.
+            if self.dfs(&mut puzzle, depth, None).is_break() {
                 break;
             }
 
-            let found_before = self.solutions_found.get();
-            if self.dfs(&mut puzzle, depth, None) {
-                return Ok(());
-            }
-            if first_solution_depth.is_none() && self.solutions_found.get() > found_before {
+            // Set first solution depth.
+            if first_solution_depth.is_none() && self.solutions_found.get() > 0 {
                 first_solution_depth = Some(depth);
             }
 
+            // Run end of iteration callback and check return value.
             if let Some(f) = &self.cfg().end_of_iter_callback {
                 if f(SolverIterationStats { depth }).is_break() {
-                    return Ok(());
+                    break;
                 }
             }
 
+            // Go to next depth.
             depth = match depth.checked_add(2) {
                 Some(d) => d,
                 None => break,
             };
+
+            // Check against `max`.
+            if depth > max {
+                break;
+            }
+
+            // Check against `depth_beyond_optimal`.
+            if first_solution_depth.is_some_and(|first| {
+                depth_beyond_optimal.is_some_and(|extra| depth - first > extra)
+            }) {
+                break;
+            }
         }
 
         if self.solutions_found.get() > 0 {
@@ -217,24 +227,26 @@ where
     S: SolvedState + Solvable,
     H: Heuristic<P, u8, S, Mtm>,
 {
-    fn dfs(&self, puzzle: &mut P, depth: u8, last_dir: Option<Direction>) -> bool {
+    fn dfs(&self, puzzle: &mut P, depth: u8, last_dir: Option<Direction>) -> ControlFlow<()> {
         if depth == 0 {
             if self.solved_state.is_solved(puzzle) {
                 self.solutions_found.update(|n| n + 1);
                 if let Some(f) = &self.cfg().solution_callback {
                     if f(self.stack.to_alg()).is_break() {
-                        return true;
+                        return ControlFlow::Break(());
                     }
                 }
 
-                return self.cfg().num_solutions == self.solutions_found.get();
+                if self.cfg().num_solutions == self.solutions_found.get() {
+                    return ControlFlow::Break(());
+                }
             }
 
-            return false;
+            return ControlFlow::Continue(());
         }
 
         if self.heuristic.bound(puzzle) > depth {
-            return false;
+            return ControlFlow::Continue(());
         }
 
         for dir in [
@@ -255,8 +267,8 @@ where
 
                 self.stack.push(dir);
 
-                if self.dfs(puzzle, depth - 1, Some(dir)) {
-                    return true;
+                if self.dfs(puzzle, depth - 1, Some(dir)).is_break() {
+                    return ControlFlow::Break(());
                 }
             }
 
@@ -266,7 +278,7 @@ where
             }
         }
 
-        false
+        ControlFlow::Continue(())
     }
 
     fn solve_impl(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
@@ -285,33 +297,45 @@ where
 
         let mut puzzle = puzzle.clone();
         let mut depth = min;
-        let mut first_solution_depth: Option<u8> = None;
 
-        while depth <= max {
-            if first_solution_depth.is_some_and(|fd| {
-                depth_beyond_optimal.is_some_and(|e| depth > fd.saturating_add(e))
-            }) {
+        let mut first_solution_depth = None;
+
+        loop {
+            // Run DFS. This checks against `num_solutions` and the return value of the solution
+            // callback.
+            if self.dfs(&mut puzzle, depth, None).is_break() {
                 break;
             }
 
-            let found_before = self.solutions_found.get();
-            if self.dfs(&mut puzzle, depth, None) {
-                return Ok(());
-            }
-            if first_solution_depth.is_none() && self.solutions_found.get() > found_before {
+            // Set first solution depth.
+            if first_solution_depth.is_none() && self.solutions_found.get() > 0 {
                 first_solution_depth = Some(depth);
             }
 
+            // Run end of iteration callback and check return value.
             if let Some(f) = &self.cfg().end_of_iter_callback {
                 if f(SolverIterationStats { depth }).is_break() {
-                    return Ok(());
+                    break;
                 }
             }
 
+            // Go to next depth.
             depth = match depth.checked_add(1) {
                 Some(d) => d,
                 None => break,
             };
+
+            // Check against `max`.
+            if depth > max {
+                break;
+            }
+
+            // Check against `depth_beyond_optimal`.
+            if first_solution_depth.is_some_and(|first| {
+                depth_beyond_optimal.is_some_and(|extra| depth - first > extra)
+            }) {
+                break;
+            }
         }
 
         if self.solutions_found.get() > 0 {
