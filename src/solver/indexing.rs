@@ -77,3 +77,14 @@ pub(super) fn encode_multiset<const LEN: usize, const DISTINCT: usize>(
 
     t
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_multinomial() {
+        assert_eq!(multinomial(&[2, 2, 1]), 30);
+        assert_eq!(multinomial(&[4, 4, 4, 3, 1]), 252_252_000);
+    }
+}

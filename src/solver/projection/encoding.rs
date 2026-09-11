@@ -156,10 +156,4 @@ mod tests {
         check_bijection(&[2, 2, 2, 1]);
         check_bijection(&[4, 4]);
     }
-
-    #[test]
-    fn test_pdb_size() {
-        assert_eq!(indexing::multinomial(&[2, 2, 1]), 30);
-        assert_eq!(indexing::multinomial(&[4, 4, 4, 3, 1]), 252_252_000);
-    }
 }
