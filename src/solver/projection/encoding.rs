@@ -9,11 +9,6 @@ pub(super) fn encode<const N: usize>(arr: &[u8; N], tally: &[u8]) -> u64 {
     // `N + 1 <= LARGE` is required.
     debug_assert!(n < LARGE);
 
-    encode_impl::<N>(arr, tally, n)
-}
-
-#[inline]
-fn encode_impl<const N: usize>(arr: &[u8; N], tally: &[u8], n: usize) -> u64 {
     let k = tally.len();
 
     // `m[v]` = number of slots available to values >= v, i.e. N minus the tally of values < v.
