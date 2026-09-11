@@ -189,11 +189,14 @@ mod tests {
     use std::str::FromStr as _;
 
     use super::*;
-    use crate::puzzle::{
-        label::label::{Checkerboard, Rows, Trivial},
-        puzzle::Puzzle,
-        scrambler::{RandomState, Scrambler as _},
-        size::Size,
+    use crate::{
+        puzzle::{
+            label::label::{Checkerboard, Rows, Trivial},
+            puzzle::Puzzle,
+            scrambler::{RandomState, Scrambler as _},
+            size::Size,
+        },
+        solver::config::PdbConfig,
     };
 
     type Solver3x3MtmTrivial = Solver<Puzzle, Trivial, Trivial, Mtm>;
@@ -245,8 +248,10 @@ mod tests {
             .size(size)
             .target(Rows)
             .prune_target(Rows211)
-            .pdb_iteration_callback(|s| {
-                println!("depth {} new {} total {}", s.depth, s.new, s.total);
+            .pdb_config(PdbConfig {
+                end_of_iter_callback: Some(Box::new(|s| {
+                    println!("depth {} new {} total {}", s.depth, s.new, s.total);
+                })),
             })
             .metric(Mtm)
             .build()

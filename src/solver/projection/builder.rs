@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
-    puzzle::{label::label::Label, size::Size, solved_state::SolvedState},
-    solver::{config::PdbConfig, statistics::PdbIterationStats},
+    puzzle::size::Size,
+    solver::{config::PdbConfig, projection::pdb::Pdb},
 };
 
 /// Error type for [`SolverBuilder::build`].
@@ -18,8 +18,12 @@ use crate::{
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ProjectionError {
     /// Returned from [`SolverBuilder::build`] when no puzzle [`Size`] was provided.
-    #[error("MissingSize: a puzzle size must be provided to the solver builder")]
+    #[error("MissingSize: a puzzle size must be provided")]
     MissingSize,
+
+    /// Returned from [`SolverBuilder::build`] when no [`Pdb`] or [`PdbConfig`] was provided.
+    #[error("MissingPdbAction: a PDB or PDB build config must be provided")]
+    MissingPdbAction,
 
     /// Returned from [`SolverBuilder::build`] when the pruning label is not a projection of the
     /// target label.
@@ -27,20 +31,20 @@ pub enum ProjectionError {
     InvalidProjection,
 }
 
-/// Result of `SolverBuilder::build_projecting`: the resolved target and pruning labels, the
-/// [`PdbConfig`] used to construct the PDB, and the puzzle size.
-type BuildProjectionResult<Target, PruneTarget> = (Target, PruneTarget, PdbConfig, Size);
+pub(super) enum PdbAction<Metric> {
+    Build { config: PdbConfig },
+    UseExisting { pdb: Pdb<Metric> },
+}
 
 /// Builder for a [`Solver`].
 ///
 /// [`Solver`]: crate::solver::projection::solver::Solver
 pub struct SolverBuilder<P, Target, PruneTarget, Metric> {
-    size: Option<Size>,
+    pub(super) size: Option<Size>,
     pub(super) target: Option<Target>,
     pub(super) prune_target: Option<PruneTarget>,
-    pub(super) pdb_config: PdbConfig,
+    pub(super) pdb_action: Option<PdbAction<Metric>>,
     phantom_p: PhantomData<P>,
-    phantom_metric: PhantomData<Metric>,
 }
 
 impl<P, Target, PruneTarget, Metric> SolverBuilder<P, Target, PruneTarget, Metric> {
@@ -51,9 +55,8 @@ impl<P, Target, PruneTarget, Metric> SolverBuilder<P, Target, PruneTarget, Metri
             size: None,
             target: None,
             prune_target: None,
-            pdb_config: PdbConfig::default(),
+            pdb_action: None,
             phantom_p: PhantomData,
-            phantom_metric: PhantomData,
         }
     }
 
@@ -85,45 +88,28 @@ impl<P, Target, PruneTarget, Metric> SolverBuilder<P, Target, PruneTarget, Metri
     }
 
     #[must_use]
-    /// Sets a callback that runs after each iteration of the pattern database creation.
-    pub fn pdb_iteration_callback(
-        mut self,
-        callback: impl Fn(PdbIterationStats) + 'static,
-    ) -> Self {
-        self.pdb_config.end_of_iter_callback = Some(Box::new(callback));
+    /// Sets the [`PdbConfig`] used for creating the [`Pdb`].
+    ///
+    /// Use [`Self::pdb`] to build the [`Solver`] with an existing [`Pdb`].
+    ///
+    /// [`Solver`]: crate::solver::projection::solver::Solver
+    pub fn pdb_config(mut self, config: PdbConfig) -> Self {
+        self.pdb_action = Some(PdbAction::Build { config });
+        self
+    }
+
+    #[must_use]
+    /// Sets an existing [`Pdb`] to be used in the [`Solver`].
+    ///
+    /// [`Solver`]: crate::solver::projection::solver::Solver
+    pub fn pdb(mut self, pdb: Pdb<Metric>) -> Self {
+        self.pdb_action = Some(PdbAction::UseExisting { pdb });
         self
     }
 }
 
 impl<P, Target, PruneTarget, Metric> Default for SolverBuilder<P, Target, PruneTarget, Metric> {
     fn default() -> Self {
-        Self {
-            size: None,
-            target: None,
-            prune_target: None,
-            pdb_config: PdbConfig::default(),
-            phantom_p: PhantomData,
-            phantom_metric: PhantomData,
-        }
-    }
-}
-
-impl<P, Target, PruneTarget, Metric> SolverBuilder<P, Target, PruneTarget, Metric>
-where
-    Target: Label + SolvedState + Default,
-    PruneTarget: Label + SolvedState + Default,
-{
-    pub(super) fn build_projecting(
-        self,
-    ) -> Result<BuildProjectionResult<Target, PruneTarget>, ProjectionError> {
-        let prune_target = self.prune_target.unwrap_or_default();
-        let target = self.target.unwrap_or_default();
-        let size = self.size.ok_or(ProjectionError::MissingSize)?;
-
-        if !prune_target.is_projection_of(size, &target) {
-            return Err(ProjectionError::InvalidProjection);
-        }
-
-        Ok((target, prune_target, self.pdb_config, size))
+        Self::new()
     }
 }

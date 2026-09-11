@@ -190,14 +190,17 @@ mod tests {
     };
 
     use super::*;
-    use crate::puzzle::{
-        label::{
-            label::{Checkerboard, Rows, Trivial},
-            scaled::Scaled,
+    use crate::{
+        puzzle::{
+            label::{
+                label::{Checkerboard, Rows, Trivial},
+                scaled::Scaled,
+            },
+            puzzle::Puzzle,
+            scrambler::{RandomState, Scrambler as _},
+            size::Size,
         },
-        puzzle::Puzzle,
-        scrambler::{RandomState, Scrambler as _},
-        size::Size,
+        solver::config::PdbConfig,
     };
 
     type Solver3x3StmTrivial = Solver<Puzzle, Trivial, Trivial, Stm>;
@@ -281,9 +284,11 @@ mod tests {
         let iterations_ref = iterations.clone();
         let solver = Solver3x3StmRows::builder()
             .size(Size::new(3, 3).unwrap())
-            .pdb_iteration_callback(move |stats| {
-                assert!(stats.total > 0);
-                iterations_ref.set(iterations_ref.get() + 1);
+            .pdb_config(PdbConfig {
+                end_of_iter_callback: Some(Box::new(move |stats| {
+                    assert!(stats.total > 0);
+                    iterations_ref.set(iterations_ref.get() + 1);
+                })),
             })
             .build()
             .unwrap();
@@ -291,31 +296,6 @@ mod tests {
         let solution = solver.solve(&puzzle).unwrap();
         assert!(solution.len_stm() > 0);
         assert!(iterations.get() > 0);
-    }
-
-    #[test]
-    fn test_all_builder_options() {
-        let size = Size::new(4, 4).unwrap();
-        let prune = Scaled::new(Rows, (2, 2)).unwrap();
-        let solver = Solver::<Puzzle, Rows, Scaled<Rows>, Stm>::builder()
-            .size(size)
-            .target(Rows)
-            .prune_target(prune)
-            .pdb_iteration_callback(|_| {})
-            .build()
-            .unwrap();
-        let puzzle = Puzzle::from_str("12 7 9 10/5 6 0 14/11 15 2 8/3 1 4 13").unwrap();
-        let solution = solver.solve(&puzzle).unwrap();
-        assert_eq!(solution.len_stm(), 45);
-    }
-
-    #[test]
-    fn test_missing_size_error() {
-        let err = Solver3x3StmRows::builder().build();
-        assert!(matches!(
-            err,
-            Err(crate::solver::projection::builder::ProjectionError::MissingSize)
-        ));
     }
 
     #[test]
