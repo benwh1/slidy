@@ -21,10 +21,6 @@ pub enum SolverBuilderError {
     #[error("MissingSize: a puzzle size must be provided")]
     MissingSize,
 
-    /// Returned from [`SolverBuilder::build`] when no [`Pdb`] or [`PdbConfig`] was provided.
-    #[error("MissingPdbAction: a PDB or PDB build config must be provided")]
-    MissingPdbAction,
-
     /// Returned from [`SolverBuilder::build`] when the pruning label is not a projection of the
     /// target label.
     #[error("InvalidProjection: the pruning label is not a projection of the target label")]
@@ -43,19 +39,21 @@ pub struct SolverBuilder<P, Target, PruneTarget, Metric> {
     pub(super) size: Option<Size>,
     pub(super) target: Option<Target>,
     pub(super) prune_target: Option<PruneTarget>,
-    pub(super) pdb_action: Option<PdbAction<Metric>>,
+    pub(super) pdb_action: PdbAction<Metric>,
     phantom_p: PhantomData<P>,
 }
 
 impl<P, Target, PruneTarget, Metric> SolverBuilder<P, Target, PruneTarget, Metric> {
     #[must_use]
-    /// Creates a [`SolverBuilder`] with no size or labels set.
+    /// Creates a [`SolverBuilder`] with default values.
     pub fn new() -> Self {
         Self {
             size: None,
             target: None,
             prune_target: None,
-            pdb_action: None,
+            pdb_action: PdbAction::Build {
+                config: PdbConfig::default(),
+            },
             phantom_p: PhantomData,
         }
     }
@@ -94,16 +92,18 @@ impl<P, Target, PruneTarget, Metric> SolverBuilder<P, Target, PruneTarget, Metri
     ///
     /// [`Solver`]: crate::solver::projection::solver::Solver
     pub fn pdb_config(mut self, config: PdbConfig) -> Self {
-        self.pdb_action = Some(PdbAction::Build { config });
+        self.pdb_action = PdbAction::Build { config };
         self
     }
 
     #[must_use]
     /// Sets an existing [`Pdb`] to be used in the [`Solver`].
     ///
+    /// Use [`Self::pdb_config`] to build the [`Pdb`] from scratch with a custom configuration.
+    ///
     /// [`Solver`]: crate::solver::projection::solver::Solver
     pub fn pdb(mut self, pdb: Pdb<Metric>) -> Self {
-        self.pdb_action = Some(PdbAction::UseExisting { pdb });
+        self.pdb_action = PdbAction::UseExisting { pdb };
         self
     }
 }

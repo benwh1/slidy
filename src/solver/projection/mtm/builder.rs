@@ -28,10 +28,7 @@ where
             return Err(SolverBuilderError::InvalidProjection);
         }
 
-        let pdb = match self
-            .pdb_action
-            .ok_or(SolverBuilderError::MissingPdbAction)?
-        {
+        let pdb = match self.pdb_action {
             PdbAction::Build { config } => Pdb::new(&prune_target, size, &config),
             PdbAction::UseExisting { pdb } => pdb,
         };
