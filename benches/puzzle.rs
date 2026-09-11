@@ -15,14 +15,15 @@ use slidy::{
 
 fn bench_reset(c: &mut Criterion) {
     let mut p = Puzzle::default();
+
     c.bench_function("puzzle/reset", |b| {
-        b.iter(|| p.reset());
+        b.iter(|| black_box(p.reset()));
     });
-    black_box(p);
 }
 
 fn bench_is_solved(c: &mut Criterion) {
     let p = Puzzle::default();
+
     c.bench_function("puzzle/is_solved", |b| {
         b.iter(|| black_box(p.is_solved()));
     });
@@ -30,6 +31,7 @@ fn bench_is_solved(c: &mut Criterion) {
 
 fn bench_is_solved_100(c: &mut Criterion) {
     let p = Puzzle::new(Size::new(100, 100).unwrap());
+
     c.bench_function("puzzle/is_solved_100", |b| {
         b.iter(|| black_box(p.is_solved()));
     });
@@ -37,6 +39,7 @@ fn bench_is_solved_100(c: &mut Criterion) {
 
 fn bench_solved_pos(c: &mut Criterion) {
     let p = Puzzle::new(Size::new(4, 4).unwrap());
+
     c.bench_function("puzzle/solved_pos", |b| {
         b.iter(|| black_box(p.solved_pos(10)));
     });
@@ -44,6 +47,7 @@ fn bench_solved_pos(c: &mut Criterion) {
 
 fn bench_try_solved_pos(c: &mut Criterion) {
     let p = Puzzle::new(Size::new(4, 4).unwrap());
+
     c.bench_function("puzzle/try_solved_pos", |b| {
         b.iter(|| black_box(p.try_solved_pos(10).unwrap()));
     });
@@ -51,6 +55,7 @@ fn bench_try_solved_pos(c: &mut Criterion) {
 
 fn bench_solved_pos_xy(c: &mut Criterion) {
     let p = Puzzle::new(Size::new(4, 4).unwrap());
+
     c.bench_function("puzzle/solved_pos_xy", |b| {
         b.iter(|| black_box(p.solved_pos_xy(10)));
     });
@@ -58,6 +63,7 @@ fn bench_solved_pos_xy(c: &mut Criterion) {
 
 fn bench_try_solved_pos_xy(c: &mut Criterion) {
     let p = Puzzle::new(Size::new(4, 4).unwrap());
+
     c.bench_function("puzzle/try_solved_pos_xy", |b| {
         b.iter(|| black_box(p.try_solved_pos_xy(10).unwrap()));
     });
@@ -69,6 +75,7 @@ fn bench_can_apply_alg(c: &mut Criterion) {
         "DR2D2LULURUR2DL2DRU2RD2LDRULULDRDL2URDLU3RDLUR3DLDLU2RD3LU3R2DLD2LULU2R3D3",
     )
     .unwrap();
+
     c.bench_function("puzzle/can_apply_alg", |b| {
         b.iter(|| black_box(p.can_apply_alg(&a)));
     });
@@ -80,10 +87,10 @@ fn bench_apply_alg(c: &mut Criterion) {
         "DR2D2LULURUR2DL2DRU2RD2LDRULULDRDL2URDLU3RDLUR3DLDLU2RD3LU3R2DLD2LULU2",
     )
     .unwrap();
+
     c.bench_function("puzzle/apply_alg", |b| {
-        b.iter(|| p.apply_alg(&a));
+        b.iter(|| black_box(p.apply_alg(&a)));
     });
-    black_box(p);
 }
 
 fn bench_from_str(c: &mut Criterion) {

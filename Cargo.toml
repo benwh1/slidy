@@ -27,35 +27,48 @@ rand_xoshiro = "^0.8"
 sysinfo = "^0.39"
 
 [[bench]]
-name = "projection"
-harness = false
-
-[[bench]]
-name = "memory"
-harness = false
-
-[[bench]]
 name = "algorithm"
+path = "benches/algorithm.rs"
 harness = false
 
 [[bench]]
 name = "algorithm_display"
+path = "benches/algorithm/display.rs"
 harness = false
 
 [[bench]]
-name = "move"
+name = "algorithm_move"
+path = "benches/algorithm/move.rs"
 harness = false
 
 [[bench]]
 name = "puzzle"
+path = "benches/puzzle.rs"
 harness = false
 
 [[bench]]
 name = "puzzle_display"
+path = "benches/puzzle/display.rs"
 harness = false
 
 [[bench]]
-name = "scrambler"
+name = "puzzle_scrambler"
+path = "benches/puzzle/scrambler.rs"
+harness = false
+
+[[bench]]
+name = "solver_projection_memory"
+path = "benches/solver/projection/memory.rs"
+harness = false
+
+[[bench]]
+name = "solver_projection_pdb"
+path = "benches/solver/projection/pdb.rs"
+harness = false
+
+[[bench]]
+name = "solver_projection_solver"
+path = "benches/solver/projection/solver.rs"
 harness = false
 
 [features]

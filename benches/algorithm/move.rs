@@ -7,21 +7,24 @@ use slidy::algorithm::{
 
 fn bench_display_long_spaced(c: &mut Criterion) {
     let m = Move::new(Direction::Up, 10);
-    c.bench_function("move/display_long_spaced", |b| {
+
+    c.bench_function("algorithm/move/display_long_spaced", |b| {
         b.iter(|| DisplayLongSpaced::new(m).to_string());
     });
 }
 
 fn bench_display_long_unspaced(c: &mut Criterion) {
     let m = Move::new(Direction::Up, 10);
-    c.bench_function("move/display_long_unspaced", |b| {
+
+    c.bench_function("algorithm/move/display_long_unspaced", |b| {
         b.iter(|| DisplayLongUnspaced::new(m).to_string());
     });
 }
 
 fn bench_display_short(c: &mut Criterion) {
     let m = Move::new(Direction::Up, 10);
-    c.bench_function("move/display_short", |b| {
+
+    c.bench_function("algorithm/move/display_short", |b| {
         b.iter(|| DisplayShort::new(m).to_string());
     });
 }

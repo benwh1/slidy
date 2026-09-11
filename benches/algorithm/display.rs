@@ -13,14 +13,16 @@ const ALG: &str = "DR2D2LULURUR2DL2DRU2RD2LDRULULDRDL2URDLU3RDLUR3DLDLU2RD3LU3R2
 
 fn bench_display_spaced_display_short(c: &mut Criterion) {
     let a = Algorithm::from_str(ALG).unwrap();
-    c.bench_function("algorithm/display_spaced/display_short", |b| {
+
+    c.bench_function("algorithm/display/display_spaced_display_short", |b| {
         b.iter(|| DisplaySpaced::<DisplayShort>::new(&a).to_string());
     });
 }
 
 fn bench_display_unspaced_display_short(c: &mut Criterion) {
     let a = Algorithm::from_str(ALG).unwrap();
-    c.bench_function("algorithm/display_unspaced/display_short", |b| {
+
+    c.bench_function("algorithm/display/display_unspaced_display_short", |b| {
         b.iter(|| DisplayUnspaced::<DisplayShort>::new(&a).to_string());
     });
 }

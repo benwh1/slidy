@@ -11,7 +11,7 @@ fn bench_random_state(c: &mut Criterion) {
     let mut p = Puzzle::new(Size::new(100, 100).unwrap());
     let mut rng = Xoroshiro128StarStar::seed_from_u64(0);
 
-    c.bench_function("scrambler/random_state", |b| {
+    c.bench_function("puzzle/scrambler/random_state", |b| {
         b.iter(|| RandomState.scramble_with_rng(&mut p, &mut rng));
     });
 }
