@@ -69,7 +69,7 @@ where
         let tally = compute_tally(&prune_target_solved_state).into_boxed_slice();
         let solved_projected = ProjectedPuzzle::<LARGE>::new(
             &prune_target_solved_state,
-            (size.area() - 1) as u8,
+            size.num_pieces() as u8,
             size.width() as u8,
         );
         let prune_target_solved_index = solved_projected.encode(&tally) as usize;
