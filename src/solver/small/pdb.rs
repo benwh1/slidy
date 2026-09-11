@@ -424,28 +424,61 @@ mod tests {
         assert_eq!(tally, expected);
     }
 
-    /// Builds each small MTM PDB from scratch and checks its bytes against the reference xxh3 hash.
-    fn check_mtm_build<const W: usize, const H: usize, const N: usize>()
+    fn check_stm_pdb_hash<const W: usize, const H: usize, const N: usize>()
     where
         Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
     {
+        let pdb = Pdb::<W, H, N, Stm>::default();
+        let actual = xxh3::xxh3_64(pdb.as_ref());
+        let expected = HASHES_STM
+            .iter()
+            .find(|(w, h, _)| *w == W && *h == H)
+            .unwrap()
+            .2;
+        assert_eq!(
+            actual, expected,
+            "{W}x{H} STM PDB hash mismatch, got {actual}, expected {expected}",
+        );
+    }
+
+    fn check_mtm_pdb_hash<const W: usize, const H: usize, const N: usize>()
+    where
+        Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
+    {
+        let pdb = Pdb::<W, H, N, Mtm>::default();
+        let actual = xxh3::xxh3_64(pdb.as_ref());
         let expected = HASHES_MTM
             .iter()
             .find(|(w, h, _)| *w == W && *h == H)
             .unwrap()
             .2;
-        let pdb = Pdb::<W, H, N, Mtm>::default();
-        let actual = xxh3::xxh3_64(pdb.as_ref());
-        assert_eq!(actual, expected, "MTM Pdb {W}x{H} bytes changed");
+        assert_eq!(
+            actual, expected,
+            "{W}x{H} MTM PDB hash mismatch, got {actual}, expected {expected}",
+        );
     }
 
     #[test]
-    fn test_mtm_build_matches_reference_hash() {
-        check_mtm_build::<2, 2, 4>();
-        check_mtm_build::<2, 3, 6>();
-        check_mtm_build::<2, 4, 8>();
-        check_mtm_build::<3, 2, 6>();
-        check_mtm_build::<3, 3, 9>();
-        check_mtm_build::<4, 2, 8>();
+    fn test_small_stm_hashes() {
+        check_stm_pdb_hash::<2, 2, 4>();
+        check_stm_pdb_hash::<2, 3, 6>();
+        check_stm_pdb_hash::<2, 4, 8>();
+        check_stm_pdb_hash::<2, 5, 10>();
+        check_stm_pdb_hash::<3, 2, 6>();
+        check_stm_pdb_hash::<3, 3, 9>();
+        check_stm_pdb_hash::<4, 2, 8>();
+        check_stm_pdb_hash::<5, 2, 10>();
+    }
+
+    #[test]
+    fn test_small_mtm_hashes() {
+        check_mtm_pdb_hash::<2, 2, 4>();
+        check_mtm_pdb_hash::<2, 3, 6>();
+        check_mtm_pdb_hash::<2, 4, 8>();
+        check_mtm_pdb_hash::<2, 5, 10>();
+        check_mtm_pdb_hash::<3, 2, 6>();
+        check_mtm_pdb_hash::<3, 3, 9>();
+        check_mtm_pdb_hash::<4, 2, 8>();
+        check_mtm_pdb_hash::<5, 2, 10>();
     }
 }
