@@ -17,7 +17,7 @@ fn bench_reset(c: &mut Criterion) {
     let mut p = Puzzle::default();
 
     c.bench_function("puzzle/reset", |b| {
-        b.iter(|| black_box(p.reset()));
+        b.iter(|| p.reset());
     });
 }
 
@@ -89,7 +89,7 @@ fn bench_apply_alg(c: &mut Criterion) {
     .unwrap();
 
     c.bench_function("puzzle/apply_alg", |b| {
-        b.iter(|| black_box(p.apply_alg(&a)));
+        b.iter(|| p.apply_alg(&a));
     });
 }
 
