@@ -257,6 +257,7 @@ where
         pdb[solved_encoded as usize] = 0;
 
         let mut current = vec![puzzle];
+        let mut current_index = vec![solved_encoded];
 
         let mut depth = 0;
         let mut new = 1;
@@ -268,8 +269,9 @@ where
 
         while !current.is_empty() {
             let mut next = Vec::with_capacity(current.len() * 2);
+            let mut next_index = Vec::with_capacity(current.len() * 2);
 
-            for state in current {
+            for (state, parent_index) in current.into_iter().zip(current_index) {
                 for dir in [
                     Direction::Up,
                     Direction::Left,
@@ -277,12 +279,28 @@ where
                     Direction::Right,
                 ] {
                     let mut puzzle = state;
+                    let mut run_index = parent_index;
 
-                    while puzzle.try_move_dir(dir) {
-                        let idx = indexing::encode(puzzle.piece_array()) as usize;
+                    loop {
+                        let prev_gap = puzzle.gap();
+                        if !puzzle.try_move_dir(dir) {
+                            break;
+                        }
+                        let next_gap = puzzle.gap();
+                        run_index = if next_gap.abs_diff(prev_gap) == 1 {
+                            if next_gap > prev_gap {
+                                run_index + 1
+                            } else {
+                                run_index - 1
+                            }
+                        } else {
+                            indexing::encode_pieces::<N>(puzzle.pieces(), next_gap)
+                        };
+                        let idx = run_index as usize;
                         if pdb[idx] == u8::MAX {
                             pdb[idx] = depth + 1;
                             next.push(puzzle);
+                            next_index.push(run_index);
                         }
                     }
                 }
@@ -293,6 +311,7 @@ where
             depth += 1;
 
             current = next;
+            current_index = next_index;
 
             if let Some(f) = &config.end_of_iter_callback {
                 f(PdbIterationStats { depth, new, total });
@@ -401,5 +420,30 @@ mod tests {
         ];
 
         assert_eq!(tally, expected);
+    }
+
+    /// Builds each small MTM PDB from scratch and checks its bytes against the reference xxh3 hash.
+    fn check_mtm_build<const W: usize, const H: usize, const N: usize>()
+    where
+        Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
+    {
+        let expected = HASHES_MTM
+            .iter()
+            .find(|(w, h, _)| *w == W && *h == H)
+            .unwrap()
+            .2;
+        let pdb = Pdb::<W, H, N, Mtm>::default();
+        let actual = xxh3::xxh3_64(pdb.as_ref());
+        assert_eq!(actual, expected, "MTM Pdb {W}x{H} bytes changed");
+    }
+
+    #[test]
+    fn test_mtm_build_matches_reference_hash() {
+        check_mtm_build::<2, 2, 4>();
+        check_mtm_build::<2, 3, 6>();
+        check_mtm_build::<2, 4, 8>();
+        check_mtm_build::<3, 2, 6>();
+        check_mtm_build::<3, 3, 9>();
+        check_mtm_build::<4, 2, 8>();
     }
 }
