@@ -89,6 +89,11 @@ where
         }
     }
 
+    /// Returns a reference to the inner [`Pdb`].
+    pub fn pdb(&self) -> &Pdb<Metric> {
+        &self.pdb
+    }
+
     pub(super) fn initial_projected<const N: usize>(&self, puzzle: &P) -> ProjectedPuzzle<N> {
         project_puzzle::<N, P, PruneTarget>(puzzle, &self.prune_target)
     }

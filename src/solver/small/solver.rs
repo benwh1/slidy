@@ -41,4 +41,10 @@ impl<const W: usize, const H: usize, const N: usize, Metric> Solver<W, H, N, Met
     pub fn into_inner_pdb(self) -> Pdb<W, H, N, Metric> {
         self.pdb
     }
+
+    /// Returns a reference to the inner [`Pdb`].
+    #[must_use]
+    pub fn pdb(&self) -> &Pdb<W, H, N, Metric> {
+        &self.pdb
+    }
 }

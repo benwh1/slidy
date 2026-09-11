@@ -292,10 +292,10 @@ impl Solver {
         }
     }
 
-    /// Returns a reference to the data contained in the pattern database, in order to allow it to
-    /// be written to disk.
-    pub fn pdb_bytes(&self) -> &[u8] {
-        self.pdb.as_ref()
+    /// Returns a reference to the inner [`Pdb`].
+    #[must_use]
+    pub fn pdb(&self) -> &Pdb {
+        &self.pdb
     }
 }
 
