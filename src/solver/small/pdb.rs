@@ -137,10 +137,11 @@ where
         let num_states = puzzle.size().num_states().try_into().unwrap();
 
         let mut pdb = vec![u8::MAX; num_states];
-        let solved_encoded = indexing::encode(puzzle.piece_array());
+        let solved_encoded = indexing::encode_pieces::<N>(puzzle.pieces(), puzzle.gap());
         pdb[solved_encoded as usize] = 0;
 
         let mut current = vec![puzzle];
+        let mut current_index = vec![solved_encoded];
 
         let mut depth = 0;
         let mut new = 1;
@@ -152,8 +153,10 @@ where
 
         while !current.is_empty() {
             let mut next = Vec::with_capacity(current.len() * 2);
+            let mut next_index = Vec::with_capacity(current.len() * 2);
 
-            for state in current {
+            for (state, parent_index) in current.into_iter().zip(current_index) {
+                let parent_gap = state.gap();
                 for dir in [
                     Direction::Up,
                     Direction::Left,
@@ -163,10 +166,22 @@ where
                     let mut puzzle = state;
 
                     if puzzle.try_move_dir(dir) {
-                        let idx = indexing::encode(puzzle.piece_array()) as usize;
+                        let new_gap = puzzle.gap();
+                        let child_index = if new_gap.abs_diff(parent_gap) == 1 {
+                            if new_gap > parent_gap {
+                                parent_index + 1
+                            } else {
+                                parent_index - 1
+                            }
+                        } else {
+                            indexing::encode_pieces::<N>(puzzle.pieces(), new_gap)
+                        };
+
+                        let idx = child_index as usize;
                         if pdb[idx] == u8::MAX {
                             pdb[idx] = depth + 1;
                             next.push(puzzle);
+                            next_index.push(child_index);
                         }
                     }
                 }
@@ -177,6 +192,7 @@ where
             depth += 1;
 
             current = next;
+            current_index = next_index;
 
             if let Some(f) = &config.end_of_iter_callback {
                 f(PdbIterationStats { depth, new, total });

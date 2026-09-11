@@ -1,33 +1,36 @@
-pub(super) fn encode<const N: usize>(perm: [u8; N]) -> u64 {
-    let mut perm2 = [0; N];
-    let mut i = 0;
-    let mut gap = 0;
-    for (j, &p) in perm.iter().enumerate() {
-        if p == 0 {
-            gap = j;
-            continue;
-        }
-        perm2[i] = p - 1;
-        i += 1;
-    }
-
-    let n = N - 1;
-
-    let mut code = [0; N];
+/// Encodes a `WxH` puzzle state, given its pieces packed into a `u64` and the position of the gap.
+pub(super) fn encode_pieces<const N: usize>(pieces: u64, gap: u8) -> u64 {
     let mut seen = 0u32;
+    let mut acc = 0u64;
+    let mut place = 1u64;
+    let mut count = 0u64;
 
-    for (i, &p) in perm2.iter().enumerate().take(n).rev() {
-        code[i] = (seen & ((1 << p) - 1)).count_ones() as u8;
-        seen |= 1 << p;
+    for idx in (0..N).rev() {
+        let piece = ((pieces >> (4 * idx)) & 0xF) as u8;
+        if piece != 0 {
+            let p = piece - 1;
+            let code = (seen & ((1u32 << (p as u32)) - 1)).count_ones() as u64;
+            acc += code * place;
+            seen |= 1 << p;
+            place *= count + 1;
+            count += 1;
+        }
     }
 
-    let encoded = code
-        .iter()
-        .enumerate()
-        .take(n)
-        .fold(0, |acc, (i, &c)| acc * (n - i) as u64 + c as u64);
+    (acc / 2) * N as u64 + gap as u64
+}
 
-    (encoded / 2) * N as u64 + gap as u64
+pub(super) fn encode<const N: usize>(perm: [u8; N]) -> u64 {
+    let mut pieces = 0;
+    let mut gap = 0;
+    for (i, &p) in perm.iter().enumerate() {
+        pieces |= (p as u64) << (4 * i);
+        if p == 0 {
+            gap = i as u8;
+        }
+    }
+
+    encode_pieces::<N>(pieces, gap)
 }
 
 #[allow(dead_code)]
