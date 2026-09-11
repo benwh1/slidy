@@ -202,14 +202,10 @@ mod tests {
     type Solver3x3MtmTrivial = Solver<Puzzle, Trivial, Trivial, Mtm>;
     type Solver3x3MtmRows = Solver<Puzzle, Rows, Rows, Mtm>;
 
-    fn size_3x3() -> Size {
-        Size::new(3, 3).unwrap()
-    }
-
     #[test]
     fn test_trivial() {
         let solver = Solver3x3MtmTrivial::builder()
-            .size(size_3x3())
+            .size(Size::new(3, 3).unwrap())
             .build()
             .unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
@@ -220,7 +216,7 @@ mod tests {
     #[test]
     fn test_rows() {
         let solver = Solver3x3MtmRows::builder()
-            .size(size_3x3())
+            .size(Size::new(3, 3).unwrap())
             .build()
             .unwrap();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
