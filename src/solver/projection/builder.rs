@@ -16,7 +16,7 @@ use crate::{
 /// Error type for [`SolverBuilder::build`].
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub enum ProjectionError {
+pub enum SolverBuilderError {
     /// Returned from [`SolverBuilder::build`] when no puzzle [`Size`] was provided.
     #[error("MissingSize: a puzzle size must be provided")]
     MissingSize,

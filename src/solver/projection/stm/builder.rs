@@ -4,7 +4,7 @@ use crate::{
     algorithm::metric::Stm,
     puzzle::{label::label::Label, sliding_puzzle::SlidingPuzzle, solved_state::SolvedState},
     solver::projection::{
-        builder::{PdbAction, ProjectionError, SolverBuilder},
+        builder::{PdbAction, SolverBuilder, SolverBuilderError},
         pdb::Pdb,
         solver::Solver,
     },
@@ -18,17 +18,20 @@ where
 {
     /// Builds the [`Solver`], using default values for parameters that weren't set.
     ///
-    /// See [`ProjectionError`] for possible errors.
-    pub fn build(self) -> Result<Solver<P, Target, PruneTarget, Stm>, ProjectionError> {
+    /// See [`SolverBuilderError`] for possible errors.
+    pub fn build(self) -> Result<Solver<P, Target, PruneTarget, Stm>, SolverBuilderError> {
         let prune_target = self.prune_target.unwrap_or_default();
         let target = self.target.unwrap_or_default();
-        let size = self.size.ok_or(ProjectionError::MissingSize)?;
+        let size = self.size.ok_or(SolverBuilderError::MissingSize)?;
 
         if !prune_target.is_projection_of(size, &target) {
-            return Err(ProjectionError::InvalidProjection);
+            return Err(SolverBuilderError::InvalidProjection);
         }
 
-        let pdb = match self.pdb_action.ok_or(ProjectionError::MissingPdbAction)? {
+        let pdb = match self
+            .pdb_action
+            .ok_or(SolverBuilderError::MissingPdbAction)?
+        {
             PdbAction::Build { config } => Pdb::new(&prune_target, size, &config),
             PdbAction::UseExisting { pdb } => pdb,
         };
