@@ -77,7 +77,7 @@ where
         Self {
             pdb,
             tally,
-            stack: Stack::default(),
+            stack: Stack::new(),
             size,
             prune_target_solved_index,
             solutions_found: Cell::new(0),

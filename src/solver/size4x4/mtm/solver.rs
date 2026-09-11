@@ -53,7 +53,7 @@ impl Solver {
             indexing_table,
             base_5_table,
             pdb,
-            stack: Stack::default(),
+            stack: Stack::new(),
             puzzle: Cell::new(FourBitPuzzle::new()),
             solutions_found: Cell::new(0),
             config: RefCell::new(None),

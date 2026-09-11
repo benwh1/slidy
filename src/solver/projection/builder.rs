@@ -32,9 +32,18 @@ pub(super) enum PdbAction<Metric> {
     UseExisting { pdb: Pdb<Metric> },
 }
 
+impl<Metric> Default for PdbAction<Metric> {
+    fn default() -> Self {
+        Self::Build {
+            config: PdbConfig::default(),
+        }
+    }
+}
+
 /// Builder for a [`Solver`].
 ///
 /// [`Solver`]: crate::solver::projection::solver::Solver
+#[derive(Default)]
 pub struct SolverBuilder<P, Target, PruneTarget, Metric> {
     pub(super) size: Option<Size>,
     pub(super) target: Option<Target>,
@@ -105,11 +114,5 @@ impl<P, Target, PruneTarget, Metric> SolverBuilder<P, Target, PruneTarget, Metri
     pub fn pdb(mut self, pdb: Pdb<Metric>) -> Self {
         self.pdb_action = PdbAction::UseExisting { pdb };
         self
-    }
-}
-
-impl<P, Target, PruneTarget, Metric> Default for SolverBuilder<P, Target, PruneTarget, Metric> {
-    fn default() -> Self {
-        Self::new()
     }
 }

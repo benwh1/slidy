@@ -6,7 +6,7 @@ use crate::{
     solver::projection::encoding,
 };
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug)]
 pub(super) struct ProjectedPuzzle<const N: usize> {
     pieces: [u8; N],
     gap: u8,

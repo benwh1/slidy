@@ -25,7 +25,7 @@ impl<const W: usize, const H: usize, const N: usize, Metric> Solver<W, H, N, Met
     pub fn with_pdb(pdb: Pdb<W, H, N, Metric>) -> Self {
         Self {
             pdb,
-            stack: Stack::default(),
+            stack: Stack::new(),
             solutions_found: Cell::new(0),
             config: RefCell::new(None),
             phantom_metric: PhantomData,

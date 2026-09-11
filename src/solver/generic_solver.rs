@@ -49,7 +49,7 @@ impl<P, S, H, M> GenericSolver<P, S, H, M> {
     /// Creates a new [`GenericSolver`] using the given [`Heuristic`] and [`SolvedState`].
     pub fn new(heuristic: H, solved_state: S) -> Self {
         Self {
-            stack: Stack::default(),
+            stack: Stack::new(),
             heuristic,
             solved_state,
             solutions_found: Cell::new(0),

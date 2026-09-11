@@ -2,13 +2,19 @@ use std::cell::Cell;
 
 use crate::algorithm::{algorithm::Algorithm, direction::Direction};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct Stack<const N: usize> {
     stack: [Cell<Direction>; N],
     idx: Cell<usize>,
 }
 
 impl<const N: usize> Stack<N> {
+    pub(super) fn new() -> Self {
+        Self {
+            stack: [const { Cell::new(Direction::Up) }; N],
+            idx: Cell::new(0),
+        }
+    }
+
     pub(super) fn push(&self, d: Direction) {
         self.stack[self.idx.get()].set(d);
         self.idx.update(|n| n + 1);
@@ -32,14 +38,5 @@ impl<const N: usize> Stack<N> {
 
     pub(super) fn iter(&self) -> impl Iterator<Item = Direction> + use<'_, N> {
         self.stack[..self.idx.get()].iter().map(Cell::get)
-    }
-}
-
-impl<const N: usize> Default for Stack<N> {
-    fn default() -> Self {
-        Self {
-            stack: [const { Cell::new(Direction::Up) }; N],
-            idx: Cell::new(0),
-        }
     }
 }

@@ -49,7 +49,7 @@ impl Solver {
         Self {
             pdb4,
             pdb3,
-            stack: Stack::default(),
+            stack: Stack::new(),
             solutions_found: Cell::new(0),
             config: RefCell::new(None),
         }
