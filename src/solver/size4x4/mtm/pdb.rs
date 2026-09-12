@@ -2,8 +2,6 @@
 //!
 //! [`Solver`]: crate::solver::size4x4::mtm::solver::Solver
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 use xxhash_rust::xxh3;
 
 use crate::{
@@ -24,7 +22,6 @@ const HASH: u64 = 0x73b712151249d829;
 ///
 /// [`Solver`]: crate::solver::size4x4::mtm::solver::Solver
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Pdb {
     pdb: Box<[u8]>,
 }

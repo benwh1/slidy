@@ -7,8 +7,6 @@
 
 use std::marker::PhantomData;
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 use xxhash_rust::xxh3;
 
 use crate::{
@@ -55,7 +53,6 @@ const HASHES_MTM: [(usize, usize, u64); 12] = [
 
 /// A pattern database for a small `WxH` puzzle.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Pdb<const W: usize, const H: usize, const N: usize, Metric> {
     pdb: Box<[u8]>,
     phantom_metric: PhantomData<Metric>,

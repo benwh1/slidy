@@ -4,16 +4,12 @@
 
 use std::marker::PhantomData;
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
 use crate::puzzle::{label::label::Label, size::Size};
 
 /// Pattern database used by [`Solver`].
 ///
 /// [`Solver`]: crate::solver::projection::solver::Solver
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Pdb<Metric> {
     pub(super) pdb: Box<[u8]>,
     pub(super) phantom_metric: PhantomData<Metric>,
