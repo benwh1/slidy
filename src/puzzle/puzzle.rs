@@ -303,6 +303,10 @@ pub enum ParsePuzzleError {
     /// Returned when the string is parsed successfully, but creating a [`Puzzle`] fails.
     #[error("PuzzleError: {0}")]
     PuzzleError(PuzzleError),
+
+    /// Returned when integer overflow occurs.
+    #[error("Overflow: integer overflow occurred")]
+    Overflow,
 }
 
 impl FromStr for Puzzle {
@@ -339,7 +343,14 @@ impl FromStr for Puzzle {
                     current_number = None;
                 }
             } else if let Some(n) = c.to_digit(10) {
-                current_number = Some(current_number.unwrap_or(0) * 10 + n as u64);
+                current_number = Some(
+                    current_number
+                        .unwrap_or(0u64)
+                        .checked_mul(10)
+                        .ok_or(ParsePuzzleError::Overflow)?
+                        .checked_add(n as u64)
+                        .ok_or(ParsePuzzleError::Overflow)?,
+                );
             } else {
                 return Err(ParsePuzzleError::InvalidCharacter(c));
             }
@@ -935,6 +946,12 @@ mod tests {
         fn test_from_str_4() {
             let a = Puzzle::from_str("1 2 3 4/5t 6 7 8/9 10 11 12/13 14 15 0");
             assert_eq!(a, Err(ParsePuzzleError::InvalidCharacter('t')));
+        }
+
+        #[test]
+        fn test_from_str_5() {
+            let result = Puzzle::from_str("18446744073709551616");
+            assert_eq!(result, Err(ParsePuzzleError::Overflow));
         }
     }
 }
