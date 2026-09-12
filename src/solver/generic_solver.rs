@@ -173,7 +173,7 @@ where
         let min = if hval % 2 == min % 2 { min } else { min + 1 };
         let mut depth = hval.max(min);
 
-        let mut first_solution_depth: Option<u8> = None;
+        let mut first_solution_depth = None;
 
         loop {
             // Run DFS. This checks against `num_solutions` and the return value of the solution
