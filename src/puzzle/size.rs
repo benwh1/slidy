@@ -33,16 +33,24 @@ impl Default for Size {
 pub enum SizeError {
     /// Returned from [`Size::new`] when the width or height is 0.
     #[error("InvalidSize: width ({0}) and height ({1}) must be greater than 0")]
-    InvalidSize(u64, u64),
+    ZeroSize(u64, u64),
+
+    /// Returned from [`Size::new`] when the product of width and height overflows [`u64`].
+    #[error("Overflow: product of width ({0}) and height ({1}) overflowed")]
+    Overflow(u64, u64),
 }
 
 impl Size {
     /// Creates a new [`Size`] with the given `width` and `height`.
     pub fn new(width: u64, height: u64) -> Result<Self, SizeError> {
-        Ok(Self(
-            NonZeroU64::new(width).ok_or(SizeError::InvalidSize(width, height))?,
-            NonZeroU64::new(height).ok_or(SizeError::InvalidSize(width, height))?,
-        ))
+        let w = NonZeroU64::new(width).ok_or(SizeError::ZeroSize(width, height))?;
+        let h = NonZeroU64::new(height).ok_or(SizeError::ZeroSize(width, height))?;
+
+        let _area = width
+            .checked_mul(height)
+            .ok_or(SizeError::Overflow(width, height))?;
+
+        Ok(Self(w, h))
     }
 
     /// The width of the [`Size`].
@@ -190,9 +198,17 @@ mod tests {
         assert_eq!(Size::new(1, 1), Ok(size(1, 1)));
         assert_eq!(Size::new(1, 2), Ok(size(1, 2)));
         assert_eq!(Size::new(2, 1), Ok(size(2, 1)));
-        assert_eq!(Size::new(0, 0), Err(SizeError::InvalidSize(0, 0)));
-        assert_eq!(Size::new(0, 1), Err(SizeError::InvalidSize(0, 1)));
-        assert_eq!(Size::new(1, 0), Err(SizeError::InvalidSize(1, 0)));
+        assert_eq!(Size::new(0, 0), Err(SizeError::ZeroSize(0, 0)));
+        assert_eq!(Size::new(0, 1), Err(SizeError::ZeroSize(0, 1)));
+        assert_eq!(Size::new(1, 0), Err(SizeError::ZeroSize(1, 0)));
+    }
+
+    #[test]
+    fn test_new_2() {
+        assert_eq!(
+            Size::new(u64::MAX - 1, 2),
+            Err(SizeError::Overflow(u64::MAX - 1, 2)),
+        );
     }
 
     #[test]
