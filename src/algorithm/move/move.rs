@@ -21,15 +21,23 @@ pub struct Move {
     pub(crate) amount: u64,
 }
 
-/// Represents the sum of two moves.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// Error type for implementation of [`Add`] for [`Move`].
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub enum MoveSum {
-    /// The sum of two moves that are in the same or opposite directions is another move.
-    Ok(Move),
+pub enum MoveAddError {
+    /// If two moves are not along the same [`Axis`], they can not be added, unless at least one
+    /// has [`Move::amount`] equal to zero.
+    ///
+    /// [`Axis`]: crate::algorithm::axis::Axis
+    #[error(
+        "InvalidDirections: moves with non-zero amount must be along the same axis in order to be \
+        added"
+    )]
+    InvalidDirections,
 
-    /// If two moves are not in the same or opposite directions, they can not be added.
-    Invalid,
+    /// Returned when the sum of the two move amounts overflows [`u64`].
+    #[error("Overflow: integer overflow occurred when adding moves")]
+    Overflow,
 }
 
 /// Error type for [`Move`].
@@ -165,21 +173,24 @@ impl From<Direction> for Move {
 }
 
 impl Add for Move {
-    type Output = MoveSum;
+    type Output = Result<Move, MoveAddError>;
 
     fn add(self, rhs: Self) -> Self::Output {
         if self.direction == rhs.direction {
-            MoveSum::Ok(Self {
+            Ok(Self {
                 direction: self.direction,
-                amount: self.amount + rhs.amount,
+                amount: self
+                    .amount
+                    .checked_add(rhs.amount)
+                    .ok_or(MoveAddError::Overflow)?,
             })
         } else if self.direction == rhs.direction.inverse() {
             match self.amount.cmp(&rhs.amount) {
-                Ordering::Less => MoveSum::Ok(Self {
+                Ordering::Less => Ok(Self {
                     direction: rhs.direction,
                     amount: rhs.amount - self.amount,
                 }),
-                Ordering::Equal | Ordering::Greater => MoveSum::Ok(Self {
+                Ordering::Equal | Ordering::Greater => Ok(Self {
                     direction: self.direction,
                     amount: self.amount - rhs.amount,
                 }),
@@ -190,11 +201,11 @@ impl Add for Move {
         // Put the check for rhs.amount == 0 first so that if they are both 0, we return self
         // instead of rhs.
         else if rhs.amount == 0 {
-            MoveSum::Ok(self)
+            Ok(self)
         } else if self.amount == 0 {
-            MoveSum::Ok(rhs)
+            Ok(rhs)
         } else {
-            MoveSum::Invalid
+            Err(MoveAddError::InvalidDirections)
         }
     }
 }
@@ -287,7 +298,7 @@ mod tests {
             let m2 = Move::new(Direction::Up, 4);
             assert_eq!(
                 m1 + m2,
-                MoveSum::Ok(Move {
+                Ok(Move {
                     direction: Direction::Up,
                     amount: 7
                 })
@@ -306,7 +317,7 @@ mod tests {
             };
             assert_eq!(
                 m1 + m2,
-                MoveSum::Ok(Move {
+                Ok(Move {
                     direction: Direction::Down,
                     amount: 1
                 })
@@ -325,7 +336,7 @@ mod tests {
             };
             assert_eq!(
                 m1 + m2,
-                MoveSum::Ok(Move {
+                Ok(Move {
                     direction: Direction::Left,
                     amount: 0
                 })
@@ -342,7 +353,7 @@ mod tests {
                 direction: Direction::Up,
                 amount: 1,
             };
-            assert_eq!(m1 + m2, MoveSum::Invalid);
+            assert_eq!(m1 + m2, Err(MoveAddError::InvalidDirections));
         }
 
         #[test]
@@ -355,8 +366,8 @@ mod tests {
                 direction: Direction::Down,
                 amount: 2,
             };
-            assert_eq!(m1 + m2, MoveSum::Ok(m2));
-            assert_eq!(m2 + m1, MoveSum::Ok(m2));
+            assert_eq!(m1 + m2, Ok(m2));
+            assert_eq!(m2 + m1, Ok(m2));
         }
 
         #[test]
@@ -369,8 +380,8 @@ mod tests {
                 direction: Direction::Left,
                 amount: 2,
             };
-            assert_eq!(m1 + m2, MoveSum::Ok(m2));
-            assert_eq!(m2 + m1, MoveSum::Ok(m2));
+            assert_eq!(m1 + m2, Ok(m2));
+            assert_eq!(m2 + m1, Ok(m2));
         }
 
         #[test]
@@ -383,8 +394,22 @@ mod tests {
                 direction: Direction::Left,
                 amount: 0,
             };
-            assert_eq!(m1 + m2, MoveSum::Ok(m1));
-            assert_eq!(m2 + m1, MoveSum::Ok(m2));
+            assert_eq!(m1 + m2, Ok(m1));
+            assert_eq!(m2 + m1, Ok(m2));
+        }
+
+        #[test]
+        fn test_add_8() {
+            let m1 = Move {
+                direction: Direction::Up,
+                amount: u64::MAX,
+            };
+            let m2 = Move {
+                direction: Direction::Up,
+                amount: 1,
+            };
+            assert_eq!(m1 + m2, Err(MoveAddError::Overflow));
+            assert_eq!(m2 + m1, Err(MoveAddError::Overflow));
         }
     }
 }

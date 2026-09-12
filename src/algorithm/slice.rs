@@ -12,7 +12,7 @@ use crate::{
         },
         metric::{Metric, Mtm, Stm},
         moves::Moves,
-        r#move::r#move::{Move, MoveSum},
+        r#move::r#move::Move,
     },
     puzzle::size::Size,
 };
@@ -68,12 +68,12 @@ impl AlgorithmSlice<'_> {
 
         // Current move that we are accumulating into. This will be pushed to `moves` when we
         // reach a move that can't be added to it.
-        let mut acc_move = None;
+        let mut acc_move: Option<Move> = None;
 
         for next in self.moves_mtm() {
             match acc_move {
                 Some(sum) => match sum + next {
-                    MoveSum::Ok(m) => {
+                    Ok(m) => {
                         // Moves completely cancel.
                         acc_move = if m.amount == 0 {
                             // Try and pop a move off `moves`, because the next move might cancel.
@@ -87,7 +87,7 @@ impl AlgorithmSlice<'_> {
                         };
                     }
                     // Moves can't be added, there is no more simplification at this point.
-                    MoveSum::Invalid => {
+                    Err(_) => {
                         // Push mv and go to the next move.
                         moves.push(sum);
                         acc_move = Some(next);
