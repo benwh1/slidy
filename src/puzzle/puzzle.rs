@@ -45,6 +45,18 @@ pub enum PuzzleError {
     /// Returned when the puzzle has multiple pieces with the same number.
     #[error("DuplicatePiece: piece {0} appears more than once")]
     DuplicatePiece(u64),
+
+    /// Returned when the number of elements of the `pieces` vector does not match `size.area()`.
+    #[error(
+        "MismatchedPiecesAndSize: length of `pieces` ({pieces_len}) must equal `size.area()` \
+        ({area})"
+    )]
+    MismatchedPiecesAndSize {
+        /// Length of the `pieces` vector.
+        pieces_len: u64,
+        /// Value of `size.area()`.
+        area: u64,
+    },
 }
 
 impl Puzzle {
@@ -64,6 +76,13 @@ impl Puzzle {
 
     /// Create a new [`Puzzle`] from a list of numbers and a size.
     pub fn with_pieces(pieces: Vec<u64>, size: Size) -> Result<Self, PuzzleError> {
+        if pieces.len() as u64 != size.area() {
+            return Err(PuzzleError::MismatchedPiecesAndSize {
+                pieces_len: pieces.len() as u64,
+                area: size.area(),
+            });
+        }
+
         let mut gap = None;
         let mut seen = vec![false; size.area() as usize];
         for (i, &n) in pieces.iter().enumerate() {
@@ -393,6 +412,26 @@ mod tests {
         let pieces = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0];
         let p = Puzzle::with_pieces(pieces, size);
         assert!(p.is_ok());
+    }
+
+    #[test]
+    fn test_with_pieces_2() {
+        let size = Size::new(2, 2).unwrap();
+        assert!(Puzzle::with_pieces(vec![1, 2, 3], size).is_err());
+        assert!(Puzzle::with_pieces(vec![0, 1], size).is_err());
+        assert!(Puzzle::with_pieces(vec![0, 1, 2, 3, 0], size).is_err());
+    }
+
+    #[test]
+    fn test_with_pieces_3() {
+        let size = Size::new(2, 2).unwrap();
+        assert!(Puzzle::with_pieces(vec![0, 1], size).is_err());
+    }
+
+    #[test]
+    fn test_with_pieces_4() {
+        let size = Size::new(2, 2).unwrap();
+        assert!(Puzzle::with_pieces(vec![0, 1, 2, 3, 0], size).is_err());
     }
 
     #[test]
