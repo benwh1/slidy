@@ -7,6 +7,8 @@
 
 use std::marker::PhantomData;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use xxhash_rust::xxh3;
 
 use crate::{
