@@ -17,7 +17,7 @@ fn bench_solve_stm(c: &mut Criterion) {
     type SolverStm = Solver<Puzzle, SplitSquareFringe, SquareFringe, Stm>;
 
     let puzzle = Puzzle::from_str(SCRAMBLE).unwrap();
-    let solver = SolverStm::builder()
+    let mut solver = SolverStm::builder()
         .size(Size::new(4, 4).unwrap())
         .build()
         .unwrap();
@@ -34,7 +34,7 @@ fn bench_solve_mtm(c: &mut Criterion) {
     type SolverMtm = Solver<Puzzle, SplitSquareFringe, SquareFringe, Mtm>;
 
     let puzzle = Puzzle::from_str(SCRAMBLE).unwrap();
-    let solver = SolverMtm::builder()
+    let mut solver = SolverMtm::builder()
         .size(Size::new(4, 4).unwrap())
         .build()
         .unwrap();

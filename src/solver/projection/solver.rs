@@ -3,10 +3,7 @@
 //! The [`Solver`] struct and the implementation shared by all metrics live here; the
 //! metric-specific implementations live in the `stm` and `mtm` submodules.
 
-use std::{
-    cell::{Cell, Ref, RefCell},
-    marker::PhantomData,
-};
+use std::marker::PhantomData;
 
 use crate::{
     puzzle::{
@@ -34,8 +31,8 @@ pub struct Solver<P, Target, PruneTarget, Metric> {
     pub(super) tally: Box<[u8]>,
     pub(super) stack: Stack<128>,
     pub(super) size: Size,
-    pub(super) solutions_found: Cell<u64>,
-    pub(super) config: RefCell<Option<SolverConfig>>,
+    pub(super) solutions_found: u64,
+    pub(super) config: Option<SolverConfig>,
     pub(super) target: Target,
     prune_target: PruneTarget,
     pub(super) prune_target_solved_index: usize,
@@ -53,10 +50,6 @@ where
     /// Creates a [`SolverBuilder`] for constructing a [`Solver`].
     pub fn builder() -> SolverBuilder<P, Target, PruneTarget, Metric> {
         SolverBuilder::new()
-    }
-
-    pub(super) fn cfg(&self) -> Ref<'_, SolverConfig> {
-        Ref::map(self.config.borrow(), |b| b.as_ref().unwrap())
     }
 
     pub(super) fn with_pdb(
@@ -80,8 +73,8 @@ where
             stack: Stack::new(),
             size,
             prune_target_solved_index,
-            solutions_found: Cell::new(0),
-            config: RefCell::new(None),
+            solutions_found: 0,
+            config: None,
             target,
             prune_target,
             phantom_p: PhantomData,

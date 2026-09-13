@@ -1,35 +1,33 @@
-use std::cell::Cell;
-
 use crate::algorithm::{algorithm::Algorithm, direction::Direction};
 
 pub(super) struct Stack<const N: usize> {
-    stack: [Cell<Direction>; N],
-    idx: Cell<usize>,
+    stack: [Direction; N],
+    idx: usize,
 }
 
 impl<const N: usize> Stack<N> {
     pub(super) fn new() -> Self {
         Self {
-            stack: [const { Cell::new(Direction::Up) }; N],
-            idx: Cell::new(0),
+            stack: [Direction::Up; N],
+            idx: 0,
         }
     }
 
-    pub(super) fn push(&self, d: Direction) {
-        self.stack[self.idx.get()].set(d);
-        self.idx.update(|n| n + 1);
+    pub(super) fn push(&mut self, d: Direction) {
+        self.stack[self.idx] = d;
+        self.idx += 1;
     }
 
-    pub(super) fn pop(&self) {
+    pub(super) fn pop(&mut self) {
         self.remove_n(1);
     }
 
-    pub(super) fn remove_n(&self, n: usize) {
-        self.idx.update(|i| i - n);
+    pub(super) fn remove_n(&mut self, n: usize) {
+        self.idx -= n;
     }
 
-    pub(super) fn clear(&self) {
-        self.idx.set(0);
+    pub(super) fn clear(&mut self) {
+        self.idx = 0;
     }
 
     pub(super) fn to_alg(&self) -> Algorithm {
@@ -37,6 +35,6 @@ impl<const N: usize> Stack<N> {
     }
 
     pub(super) fn iter(&self) -> impl Iterator<Item = Direction> + use<'_, N> {
-        self.stack[..self.idx.get()].iter().map(Cell::get)
+        self.stack[..self.idx].iter().copied()
     }
 }

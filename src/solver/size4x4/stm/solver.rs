@@ -1,9 +1,6 @@
 //! Defines the [`Solver`] struct for solving 4x4 puzzles using pattern databases.
 
-use std::{
-    cell::{Cell, Ref, RefCell},
-    ops::ControlFlow,
-};
+use std::ops::ControlFlow;
 
 use num_traits::ToPrimitive as _;
 
@@ -26,8 +23,8 @@ pub struct Solver {
     pdb4: Pdb,
     pdb3: Pdb,
     stack: Stack<80>,
-    solutions_found: Cell<u64>,
-    config: RefCell<Option<SolverConfig>>,
+    solutions_found: u64,
+    config: Option<SolverConfig>,
 }
 
 impl Default for Solver {
@@ -50,17 +47,17 @@ impl Solver {
             pdb4,
             pdb3,
             stack: Stack::new(),
-            solutions_found: Cell::new(0),
-            config: RefCell::new(None),
+            solutions_found: 0,
+            config: None,
         }
     }
 
-    fn cfg(&self) -> Ref<'_, SolverConfig> {
-        let borrow = self.config.borrow();
-        Ref::map(borrow, |b| b.as_ref().unwrap())
-    }
-
-    fn dfs(&self, depth: u8, last_inverse: Option<Direction>, coords: [u32; 4]) -> ControlFlow<()> {
+    fn dfs(
+        &mut self,
+        depth: u8,
+        last_inverse: Option<Direction>,
+        coords: [u32; 4],
+    ) -> ControlFlow<()> {
         // SAFETY: The entries in `coords` all come from encoding a puzzle (in `solve`) or from the
         // transposition table (in `dfs`), and we have tests to guarantee that these values are all
         // within bounds.
@@ -78,14 +75,14 @@ impl Solver {
         }
 
         if depth == 0 {
-            self.solutions_found.update(|n| n + 1);
-            if let Some(f) = &self.cfg().solution_callback {
+            self.solutions_found += 1;
+            if let Some(f) = &self.config.as_ref().unwrap().solution_callback {
                 if f(self.stack.to_alg()).is_break() {
                     return ControlFlow::Break(());
                 }
             }
 
-            if self.cfg().num_solutions == self.solutions_found.get() {
+            if self.config.as_ref().unwrap().num_solutions == self.solutions_found {
                 return ControlFlow::Break(());
             }
 
@@ -150,7 +147,7 @@ impl Solver {
         ControlFlow::Continue(())
     }
 
-    fn solve_impl<P>(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>
+    fn solve_impl<P>(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>
     where
         P: SlidingPuzzle,
     {
@@ -168,8 +165,8 @@ impl Solver {
 
         // Reset state
         self.stack.clear();
-        self.solutions_found.set(0);
-        *self.config.borrow_mut() = Some(config);
+        self.solutions_found = 0;
+        self.config = Some(config);
 
         let mut pieces = [0; 16];
         for (i, piece) in pieces.iter_mut().enumerate() {
@@ -209,12 +206,12 @@ impl Solver {
             }
 
             // Set first solution depth.
-            if first_solution_depth.is_none() && self.solutions_found.get() > 0 {
+            if first_solution_depth.is_none() && self.solutions_found > 0 {
                 first_solution_depth = Some(depth);
             }
 
             // Run end of iteration callback and check return value.
-            if let Some(f) = &self.cfg().end_of_iter_callback {
+            if let Some(f) = &self.config.as_ref().unwrap().end_of_iter_callback {
                 if f(SolverIterationStats { depth }).is_break() {
                     break;
                 }
@@ -239,7 +236,7 @@ impl Solver {
             }
         }
 
-        if self.solutions_found.get() > 0 {
+        if self.solutions_found > 0 {
             Ok(())
         } else {
             Err(SolverError::NoSolutionFound)
@@ -257,7 +254,7 @@ where
 
     fn init(&mut self) {}
 
-    fn solve_with_config(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
+    fn solve_with_config(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
         self.solve_impl(puzzle, config)
     }
 }
@@ -274,7 +271,7 @@ mod tests {
     #[test]
     fn test_solver() {
         let puzzle = Puzzle::from_str("12 15 5 1/11 9 2 13/0 10 8 6/14 7 4 3").unwrap();
-        let solver = Solver::default();
+        let mut solver = Solver::default();
 
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_stm(), 58);
@@ -287,7 +284,7 @@ mod tests {
     #[test]
     fn test_solve_all_optimal() {
         let puzzle = Puzzle::from_str("1 11 14 15/0 9 4 12/3 10 7 8/13 5 6 2").unwrap();
-        let solver = Solver::default();
+        let mut solver = Solver::default();
 
         let solutions = solver
             .solve_all_optimal(&puzzle)

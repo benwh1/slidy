@@ -66,7 +66,7 @@
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     let mut puzzle = Puzzle::from_str("0 10 6 4/1 5 14 15/13 11 8 7/3 2 9 12")?;
 //!
-//!     let solver = GenericSolver::default();
+//!     let mut solver = GenericSolver::default();
 //!     let solution = solver.solve(&puzzle)?;
 //!
 //!     println!(

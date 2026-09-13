@@ -23,7 +23,7 @@ where
     PruneTarget: Label + SolvedState + Default,
 {
     fn dfs<const N: usize>(
-        &self,
+        &mut self,
         puzzle: &P,
         depth: u8,
         last_axis: Option<Axis>,
@@ -33,14 +33,14 @@ where
 
         if depth == 0 {
             if index == self.prune_target_solved_index && self.check_solution(puzzle) {
-                self.solutions_found.update(|n| n + 1);
-                if let Some(f) = &self.cfg().solution_callback {
+                self.solutions_found += 1;
+                if let Some(f) = &self.config.as_ref().unwrap().solution_callback {
                     if f(self.stack.to_alg()).is_break() {
                         return ControlFlow::Break(());
                     }
                 }
 
-                if self.cfg().num_solutions == self.solutions_found.get() {
+                if self.config.as_ref().unwrap().num_solutions == self.solutions_found {
                     return ControlFlow::Break(());
                 }
             }
@@ -84,7 +84,7 @@ where
         ControlFlow::Continue(())
     }
 
-    fn solve_impl(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
+    fn solve_impl(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
         if self.size.area() as usize <= SMALL {
             self.solve_impl_n::<SMALL>(puzzle, config)
         } else {
@@ -93,7 +93,7 @@ where
     }
 
     fn solve_impl_n<const N: usize>(
-        &self,
+        &mut self,
         puzzle: &P,
         config: SolverConfig,
     ) -> Result<(), SolverError> {
@@ -110,8 +110,8 @@ where
         let depth_beyond_optimal = config.depth_beyond_optimal;
 
         self.stack.clear();
-        self.solutions_found.set(0);
-        *self.config.borrow_mut() = Some(config);
+        self.solutions_found = 0;
+        self.config = Some(config);
 
         let projected = self.initial_projected::<N>(puzzle);
         let start_index = projected.encode(&self.tally) as usize;
@@ -129,12 +129,12 @@ where
             }
 
             // Set first solution depth.
-            if first_solution_depth.is_none() && self.solutions_found.get() > 0 {
+            if first_solution_depth.is_none() && self.solutions_found > 0 {
                 first_solution_depth = Some(depth);
             }
 
             // Run end of iteration callback and check return value.
-            if let Some(f) = &self.cfg().end_of_iter_callback {
+            if let Some(f) = &self.config.as_ref().unwrap().end_of_iter_callback {
                 if f(SolverIterationStats { depth }).is_break() {
                     break;
                 }
@@ -159,7 +159,7 @@ where
             }
         }
 
-        if self.solutions_found.get() > 0 {
+        if self.solutions_found > 0 {
             Ok(())
         } else {
             Err(SolverError::NoSolutionFound)
@@ -179,7 +179,7 @@ where
 
     fn init(&mut self) {}
 
-    fn solve_with_config(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
+    fn solve_with_config(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
         self.solve_impl(puzzle, config)
     }
 }
@@ -204,7 +204,7 @@ mod tests {
 
     #[test]
     fn test_trivial() {
-        let solver = Solver3x3MtmTrivial::builder()
+        let mut solver = Solver3x3MtmTrivial::builder()
             .size(Size::new(3, 3).unwrap())
             .build()
             .unwrap();
@@ -215,7 +215,7 @@ mod tests {
 
     #[test]
     fn test_rows() {
-        let solver = Solver3x3MtmRows::builder()
+        let mut solver = Solver3x3MtmRows::builder()
             .size(Size::new(3, 3).unwrap())
             .build()
             .unwrap();
@@ -240,7 +240,7 @@ mod tests {
         }
 
         let size = Size::new(4, 4).unwrap();
-        let solver = Solver::<Puzzle, Rows, Rows211, Mtm>::builder()
+        let mut solver = Solver::<Puzzle, Rows, Rows211, Mtm>::builder()
             .size(size)
             .target(Rows)
             .prune_target(Rows211)
@@ -261,7 +261,7 @@ mod tests {
     #[test]
     fn test_solutions_distinct() {
         let size = Size::new(4, 4).unwrap();
-        let solver = Solver::<Puzzle, _, _, _>::builder()
+        let mut solver = Solver::<Puzzle, _, _, _>::builder()
             .target(Checkerboard)
             .prune_target(Checkerboard)
             .metric(Mtm)

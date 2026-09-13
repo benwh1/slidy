@@ -38,7 +38,7 @@ where
     }
 
     fn dfs(
-        &self,
+        &mut self,
         depth: u8,
         inverse_last_move: Option<Direction>,
         mut puzzle: Puzzle<W, H>,
@@ -54,14 +54,14 @@ where
         }
 
         if depth == 0 {
-            self.solutions_found.update(|n| n + 1);
-            if let Some(f) = &self.cfg().solution_callback {
+            self.solutions_found += 1;
+            if let Some(f) = &self.config.as_ref().unwrap().solution_callback {
                 if f(self.stack.to_alg()).is_break() {
                     return ControlFlow::Break(());
                 }
             }
 
-            if self.cfg().num_solutions == self.solutions_found.get() {
+            if self.config.as_ref().unwrap().num_solutions == self.solutions_found {
                 return ControlFlow::Break(());
             }
 
@@ -96,7 +96,7 @@ where
         ControlFlow::Continue(())
     }
 
-    fn solve_impl<P>(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>
+    fn solve_impl<P>(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>
     where
         P: SlidingPuzzle,
         P::Piece: AsPrimitive<u8>,
@@ -137,7 +137,7 @@ where
     }
 
     fn solve_small_puzzle_impl(
-        &self,
+        &mut self,
         puzzle: Puzzle<W, H>,
         config: SolverConfig,
     ) -> Result<(), SolverError> {
@@ -151,8 +151,8 @@ where
 
         // Reset state
         self.stack.clear();
-        self.solutions_found.set(0);
-        *self.config.borrow_mut() = Some(config);
+        self.solutions_found = 0;
+        self.config = Some(config);
 
         let coord = indexing::encode(puzzle.piece_array());
         let hval = self.pdb.get(coord as usize);
@@ -169,12 +169,12 @@ where
             }
 
             // Set first solution depth.
-            if first_solution_depth.is_none() && self.solutions_found.get() > 0 {
+            if first_solution_depth.is_none() && self.solutions_found > 0 {
                 first_solution_depth = Some(depth);
             }
 
             // Run end of iteration callback and check return value.
-            if let Some(f) = &self.cfg().end_of_iter_callback {
+            if let Some(f) = &self.config.as_ref().unwrap().end_of_iter_callback {
                 if f(SolverIterationStats { depth }).is_break() {
                     break;
                 }
@@ -199,7 +199,7 @@ where
             }
         }
 
-        if self.solutions_found.get() > 0 {
+        if self.solutions_found > 0 {
             Ok(())
         } else {
             Err(SolverError::NoSolutionFound)
@@ -220,7 +220,7 @@ where
 
     fn init(&mut self) {}
 
-    fn solve_with_config(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
+    fn solve_with_config(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
         self.solve_impl(puzzle, config)
     }
 }
@@ -236,7 +236,7 @@ mod tests {
 
     #[test]
     fn test_solver() {
-        let solver = Solver3x3Stm::default();
+        let mut solver = Solver3x3Stm::default();
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
 
         let solution = solver.solve(&puzzle).unwrap();
@@ -249,7 +249,7 @@ mod tests {
 
     #[test]
     fn test_solver_2() {
-        let solver = Solver4x2Stm::default();
+        let mut solver = Solver4x2Stm::default();
         let mut puzzle = Puzzle::from_str("4 6/2 5/0 1/7 3").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         puzzle.apply_alg(&solution);

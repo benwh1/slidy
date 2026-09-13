@@ -38,12 +38,16 @@ where
     fn init(&mut self);
 
     /// Solves `puzzle`, returning an optimal solution.
-    fn solve(&self, puzzle: &P) -> Result<Algorithm, SolverError> {
+    fn solve(&mut self, puzzle: &P) -> Result<Algorithm, SolverError> {
         self.solve_many(puzzle, 1).map(|mut v| v.pop().unwrap())
     }
 
     /// Solves `puzzle`, returning the `n` shortest solutions.
-    fn solve_many(&self, puzzle: &P, num_solutions: u64) -> Result<Vec<Algorithm>, SolverError> {
+    fn solve_many(
+        &mut self,
+        puzzle: &P,
+        num_solutions: u64,
+    ) -> Result<Vec<Algorithm>, SolverError> {
         if num_solutions == 0 {
             return Ok(Vec::new());
         }
@@ -58,7 +62,7 @@ where
     }
 
     /// Solves `puzzle`, returning all optimal solutions.
-    fn solve_all_optimal(&self, puzzle: &P) -> Result<Vec<Algorithm>, SolverError> {
+    fn solve_all_optimal(&mut self, puzzle: &P) -> Result<Vec<Algorithm>, SolverError> {
         self.solve_collect(
             puzzle,
             SolverConfig {
@@ -71,7 +75,7 @@ where
 
     /// Solves `puzzle` using the given [`SolverConfig`], collecting the solutions into a [`Vec`].
     fn solve_collect(
-        &self,
+        &mut self,
         puzzle: &P,
         config: SolverConfig,
     ) -> Result<Vec<Algorithm>, SolverError> {
@@ -97,5 +101,5 @@ where
     }
 
     /// Solves `puzzle` using the given [`SolverConfig`].
-    fn solve_with_config(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>;
+    fn solve_with_config(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>;
 }

@@ -29,12 +29,13 @@ pub struct SolverConfig {
     /// A callback that runs after each iteration of the depth-first search.
     ///
     /// Returning [`ControlFlow::Break`] stops the search.
-    pub end_of_iter_callback: Option<Box<dyn Fn(SolverIterationStats) -> ControlFlow<()>>>,
+    pub end_of_iter_callback:
+        Option<Box<dyn Fn(SolverIterationStats) -> ControlFlow<()> + Send + Sync>>,
 
     /// A callback that runs when a solution is found.
     ///
     /// Returning [`ControlFlow::Break`] stops the search.
-    pub solution_callback: Option<Box<dyn Fn(Algorithm) -> ControlFlow<()>>>,
+    pub solution_callback: Option<Box<dyn Fn(Algorithm) -> ControlFlow<()> + Send + Sync>>,
 }
 
 impl Default for SolverConfig {
@@ -55,5 +56,5 @@ impl Default for SolverConfig {
 pub struct PdbConfig {
     /// A callback that runs after each breadth-first-search iteration of the pattern database
     /// creation.
-    pub end_of_iter_callback: Option<Box<dyn Fn(PdbIterationStats)>>,
+    pub end_of_iter_callback: Option<Box<dyn Fn(PdbIterationStats) + Send + Sync>>,
 }

@@ -23,7 +23,7 @@ where
     PruneTarget: Label + SolvedState + Default,
 {
     fn dfs<const N: usize>(
-        &self,
+        &mut self,
         puzzle: &P,
         depth: u8,
         last_dir: Option<Direction>,
@@ -33,14 +33,14 @@ where
 
         if depth == 0 {
             if index == self.prune_target_solved_index && self.check_solution(puzzle) {
-                self.solutions_found.update(|n| n + 1);
-                if let Some(f) = &self.cfg().solution_callback {
+                self.solutions_found += 1;
+                if let Some(f) = &self.config.as_ref().unwrap().solution_callback {
                     if f(self.stack.to_alg()).is_break() {
                         return ControlFlow::Break(());
                     }
                 }
 
-                if self.cfg().num_solutions == self.solutions_found.get() {
+                if self.config.as_ref().unwrap().num_solutions == self.solutions_found {
                     return ControlFlow::Break(());
                 }
             }
@@ -79,7 +79,7 @@ where
         ControlFlow::Continue(())
     }
 
-    fn solve_impl(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
+    fn solve_impl(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
         if self.size.area() as usize <= SMALL {
             self.solve_impl_n::<SMALL>(puzzle, config)
         } else {
@@ -88,7 +88,7 @@ where
     }
 
     fn solve_impl_n<const N: usize>(
-        &self,
+        &mut self,
         puzzle: &P,
         config: SolverConfig,
     ) -> Result<(), SolverError> {
@@ -105,8 +105,8 @@ where
         let depth_beyond_optimal = config.depth_beyond_optimal;
 
         self.stack.clear();
-        self.solutions_found.set(0);
-        *self.config.borrow_mut() = Some(config);
+        self.solutions_found = 0;
+        self.config = Some(config);
 
         let projected = self.initial_projected::<N>(puzzle);
         let start_index = projected.encode(&self.tally) as usize;
@@ -125,12 +125,12 @@ where
             }
 
             // Set first solution depth.
-            if first_solution_depth.is_none() && self.solutions_found.get() > 0 {
+            if first_solution_depth.is_none() && self.solutions_found > 0 {
                 first_solution_depth = Some(depth);
             }
 
             // Run end of iteration callback and check return value.
-            if let Some(f) = &self.cfg().end_of_iter_callback {
+            if let Some(f) = &self.config.as_ref().unwrap().end_of_iter_callback {
                 if f(SolverIterationStats { depth }).is_break() {
                     break;
                 }
@@ -155,7 +155,7 @@ where
             }
         }
 
-        if self.solutions_found.get() > 0 {
+        if self.solutions_found > 0 {
             Ok(())
         } else {
             Err(SolverError::NoSolutionFound)
@@ -175,7 +175,7 @@ where
 
     fn init(&mut self) {}
 
-    fn solve_with_config(&self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
+    fn solve_with_config(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
         self.solve_impl(puzzle, config)
     }
 }
@@ -183,10 +183,12 @@ where
 #[cfg(test)]
 mod tests {
     use std::{
-        cell::{Cell, RefCell},
         ops::ControlFlow,
-        rc::Rc,
         str::FromStr as _,
+        sync::{
+            atomic::{AtomicU64, Ordering},
+            Arc, Mutex,
+        },
     };
 
     use super::*;
@@ -209,7 +211,7 @@ mod tests {
 
     #[test]
     fn test_trivial() {
-        let solver = Solver3x3StmTrivial::builder()
+        let mut solver = Solver3x3StmTrivial::builder()
             .size(Size::new(3, 3).unwrap())
             .build()
             .unwrap();
@@ -220,7 +222,7 @@ mod tests {
 
     #[test]
     fn test_rows() {
-        let solver = Solver3x3StmRows::builder()
+        let mut solver = Solver3x3StmRows::builder()
             .size(Size::new(3, 3).unwrap())
             .build()
             .unwrap();
@@ -231,7 +233,7 @@ mod tests {
 
     #[test]
     fn test_different_targets() {
-        let solver = Solver3x3StmDiff::builder()
+        let mut solver = Solver3x3StmDiff::builder()
             .size(Size::new(3, 3).unwrap())
             .build()
             .unwrap();
@@ -242,7 +244,7 @@ mod tests {
 
     #[test]
     fn test_solution_validates() {
-        let solver = Solver3x3StmRows::builder()
+        let mut solver = Solver3x3StmRows::builder()
             .size(Size::new(3, 3).unwrap())
             .build()
             .unwrap();
@@ -254,7 +256,7 @@ mod tests {
 
     #[test]
     fn test_solve_twice() {
-        let solver = Solver3x3StmRows::builder()
+        let mut solver = Solver3x3StmRows::builder()
             .size(Size::new(3, 3).unwrap())
             .build()
             .unwrap();
@@ -268,7 +270,7 @@ mod tests {
     fn test_rows_double_rows_4x4() {
         let size = Size::new(4, 4).unwrap();
         let prune = Scaled::new(Rows, (2, 2)).unwrap();
-        let solver = Solver::<Puzzle, Rows, Scaled<Rows>, Stm>::builder()
+        let mut solver = Solver::<Puzzle, Rows, Scaled<Rows>, Stm>::builder()
             .size(size)
             .prune_target(prune)
             .build()
@@ -280,14 +282,14 @@ mod tests {
 
     #[test]
     fn test_rows_with_pdb_iteration_callback() {
-        let iterations = Rc::new(Cell::new(0u64));
+        let iterations = Arc::new(AtomicU64::new(0));
         let iterations_ref = iterations.clone();
-        let solver = Solver3x3StmRows::builder()
+        let mut solver = Solver3x3StmRows::builder()
             .size(Size::new(3, 3).unwrap())
             .pdb_config(PdbConfig {
                 end_of_iter_callback: Some(Box::new(move |stats| {
                     assert!(stats.total > 0);
-                    iterations_ref.set(iterations_ref.get() + 1);
+                    iterations_ref.fetch_add(1, Ordering::Relaxed);
                 })),
             })
             .build()
@@ -295,13 +297,13 @@ mod tests {
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         assert!(solution.len_stm() > 0);
-        assert!(iterations.get() > 0);
+        assert!(iterations.load(Ordering::Relaxed) > 0);
     }
 
     #[test]
     fn test_solutions_distinct() {
         let size = Size::new(4, 4).unwrap();
-        let solver = Solver::<Puzzle, _, _, _>::builder()
+        let mut solver = Solver::<Puzzle, _, _, _>::builder()
             .target(Checkerboard)
             .prune_target(Checkerboard)
             .metric(Stm)
@@ -325,7 +327,7 @@ mod tests {
     #[test]
     fn test_depth_beyond_optimal_bounds_solutions() {
         let size = Size::new(4, 4).unwrap();
-        let solver = Solver::<Puzzle, _, _, _>::builder()
+        let mut solver = Solver::<Puzzle, _, _, _>::builder()
             .target(Checkerboard)
             .prune_target(Checkerboard)
             .metric(Stm)
@@ -336,13 +338,13 @@ mod tests {
         let optimal = solver.solve(&puzzle).unwrap().len_stm();
 
         for (depth_beyond_optimal, max_len) in [(Some(0), optimal), (Some(2), optimal + 2)] {
-            let solutions = Rc::new(RefCell::new(Vec::new()));
+            let solutions = Arc::new(Mutex::new(Vec::new()));
             let sc = solutions.clone();
             let config = SolverConfig {
                 depth_beyond_optimal,
                 num_solutions: 1000,
                 solution_callback: Some(Box::new(move |s| {
-                    sc.borrow_mut().push(s.len_stm());
+                    sc.lock().unwrap().push(s.len_stm());
                     ControlFlow::Continue(())
                 })),
                 ..Default::default()
@@ -350,7 +352,7 @@ mod tests {
 
             solver.solve_with_config(&puzzle, config).unwrap();
 
-            let lens = solutions.borrow();
+            let lens = solutions.lock().unwrap();
             assert!(
                 !lens.is_empty(),
                 "no solutions for depth_beyond_optimal={depth_beyond_optimal:?}"
@@ -367,7 +369,7 @@ mod tests {
     #[test]
     fn test_solution_callback_break_stops() {
         let size = Size::new(4, 4).unwrap();
-        let solver = Solver::<Puzzle, _, _, _>::builder()
+        let mut solver = Solver::<Puzzle, _, _, _>::builder()
             .target(Checkerboard)
             .prune_target(Checkerboard)
             .metric(Stm)
@@ -376,12 +378,12 @@ mod tests {
             .unwrap();
         let puzzle = Puzzle::from_str("5 6 2 9/13 15 14 7/8 1 11 12/4 3 10 0").unwrap();
 
-        let calls = Rc::new(RefCell::new(0u64));
+        let calls = Arc::new(AtomicU64::new(0));
         let cc = calls.clone();
         let config = SolverConfig {
             num_solutions: u64::MAX,
             solution_callback: Some(Box::new(move |_| {
-                *cc.borrow_mut() += 1;
+                cc.fetch_add(1, Ordering::Relaxed);
                 ControlFlow::Break(())
             })),
             ..Default::default()
@@ -390,13 +392,13 @@ mod tests {
         let result = solver.solve_with_config(&puzzle, config);
 
         assert_eq!(result, Ok(()));
-        assert_eq!(*calls.borrow(), 1);
+        assert_eq!(calls.load(Ordering::Relaxed), 1);
     }
 
     #[test]
     fn test_end_of_iter_callback_break_stops() {
         let size = Size::new(4, 4).unwrap();
-        let solver = Solver::<Puzzle, _, _, _>::builder()
+        let mut solver = Solver::<Puzzle, _, _, _>::builder()
             .target(Checkerboard)
             .prune_target(Checkerboard)
             .metric(Stm)
