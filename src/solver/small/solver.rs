@@ -30,6 +30,7 @@ impl<const W: usize, const H: usize, const N: usize, Metric> Solver<W, H, N, Met
     }
 
     /// Consumes `self`, returning the inner [`Pdb`].
+    #[must_use]
     pub fn into_inner_pdb(self) -> Pdb<W, H, N, Metric> {
         self.pdb
     }

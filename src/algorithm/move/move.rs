@@ -173,7 +173,7 @@ impl From<Direction> for Move {
 }
 
 impl Add for Move {
-    type Output = Result<Move, MoveAddError>;
+    type Output = Result<Self, MoveAddError>;
 
     fn add(self, rhs: Self) -> Self::Output {
         if self.direction == rhs.direction {
