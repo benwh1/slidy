@@ -227,8 +227,11 @@ where
             // Actual Manhattan distance, not `dist`
             let parity = (x.abs_diff(sx) + y.abs_diff(sy)) % 2;
 
-            let adjusted_md = if md % 2 == parity { md } else { md + 1 };
-            adjusted_md
+            if md % 2 == parity {
+                md
+            } else {
+                md + 1
+            }
         }
     }
 }
