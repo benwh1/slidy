@@ -3,12 +3,15 @@
 //!
 //! [`SlidingPuzzle`]: sliding_puzzle/trait.SlidingPuzzle.html
 
+#[cfg(feature = "palette")]
 pub mod color_scheme;
+#[cfg(feature = "palette")]
 pub mod coloring;
 pub mod display;
 pub mod grids;
 pub mod label;
 pub mod puzzle;
+#[cfg(feature = "palette")]
 pub mod render;
 pub mod scrambler;
 pub mod size;

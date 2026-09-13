@@ -84,8 +84,12 @@
 //!
 //! ## Create an SVG image of a puzzle
 //!
+//! This example requires the `palette` feature.
+//!
 //! ```
+//! # #[cfg(feature = "palette")]
 //! use palette::rgb::Rgba;
+//! # #[cfg(feature = "palette")]
 //! use slidy::puzzle::{
 //!     color_scheme::{ColorScheme, Scheme},
 //!     coloring::{Monochrome, Rainbow},
@@ -94,6 +98,7 @@
 //!     render::{Borders, RendererBuilder, Text},
 //! };
 //!
+//! # #[cfg(feature = "palette")]
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     let scheme = Box::new(Scheme::new(
 //!         Trivial,
@@ -126,6 +131,8 @@
 //!
 //!     Ok(())
 //! }
+//! # #[cfg(not(feature = "palette"))]
+//! # fn main() {}
 //! ```
 //!
 //! # Safe, panicking, and unsafe functions

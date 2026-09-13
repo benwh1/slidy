@@ -10,13 +10,15 @@ keywords = ["puzzle", "15-puzzle"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-enterpolation = "^0.3"
+enterpolation = { version = "^0.3", optional = true }
 itertools = "^0.15"
 num-traits = "^0.2"
-palette = { version = "^0.7", default-features = false, features = ["std"] }
+palette = { version = "^0.7", optional = true, default-features = false, features = [
+    "std",
+] }
 rand = { version = "^0.10", default-features = false, features = ["alloc"] }
 serde = { version = "^1", optional = true, features = ["derive"] }
-svg = "^0.18"
+svg = { version = "^0.18", optional = true }
 thiserror = "^2"
 xxhash-rust = { version = "^0.8", features = ["xxh3"] }
 
@@ -83,6 +85,7 @@ harness = false
 
 [features]
 default = ["thread_rng"]
+palette = ["dep:palette", "dep:svg", "dep:enterpolation"]
 serde = ["enterpolation/serde", "palette/serializing", "dep:serde"]
 thread_rng = ["rand/thread_rng"]
 
