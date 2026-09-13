@@ -48,37 +48,47 @@ where
             return Ok(Vec::new());
         }
 
-        let solutions = Rc::new(RefCell::new(Vec::new()));
-        let c = solutions.clone();
-
-        let config = SolverConfig {
-            num_solutions,
-            solution_callback: Some(Box::new(move |s| {
-                c.borrow_mut().push(s);
-                ControlFlow::Continue(())
-            })),
-            ..Default::default()
-        };
-
-        self.solve_with_config(puzzle, config)?;
-
-        let solutions = solutions.borrow().clone();
-        Ok(solutions)
+        self.solve_collect(
+            puzzle,
+            SolverConfig {
+                num_solutions,
+                ..Default::default()
+            },
+        )
     }
 
     /// Solves `puzzle`, returning all optimal solutions.
     fn solve_all_optimal(&self, puzzle: &P) -> Result<Vec<Algorithm>, SolverError> {
+        self.solve_collect(
+            puzzle,
+            SolverConfig {
+                depth_beyond_optimal: Some(0),
+                num_solutions: u64::MAX,
+                ..Default::default()
+            },
+        )
+    }
+
+    /// Solves `puzzle` using the given [`SolverConfig`], collecting the solutions into a [`Vec`].
+    fn solve_collect(
+        &self,
+        puzzle: &P,
+        config: SolverConfig,
+    ) -> Result<Vec<Algorithm>, SolverError> {
         let solutions = Rc::new(RefCell::new(Vec::new()));
         let c = solutions.clone();
+        let user_callback = config.solution_callback;
 
         let config = SolverConfig {
-            depth_beyond_optimal: Some(0),
-            num_solutions: u64::MAX,
             solution_callback: Some(Box::new(move |s| {
-                c.borrow_mut().push(s);
-                ControlFlow::Continue(())
+                c.borrow_mut().push(s.clone());
+                if let Some(f) = &user_callback {
+                    f(s)
+                } else {
+                    ControlFlow::Continue(())
+                }
             })),
-            ..Default::default()
+            ..config
         };
 
         self.solve_with_config(puzzle, config)?;
