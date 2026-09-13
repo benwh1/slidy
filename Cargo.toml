@@ -72,6 +72,11 @@ path = "benches/solver/projection/solver.rs"
 harness = false
 
 [[bench]]
+name = "solver_size4x4_stm_solver"
+path = "benches/solver/size4x4/stm/solver.rs"
+harness = false
+
+[[bench]]
 name = "solver_small_pdb"
 path = "benches/solver/small/pdb.rs"
 harness = false
