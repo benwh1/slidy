@@ -4,7 +4,7 @@
 use std::cmp::Ordering;
 
 use itertools::Itertools as _;
-use num_traits::{AsPrimitive, PrimInt, Unsigned, Zero as _};
+use num_traits::Zero as _;
 
 use crate::{
     algorithm::metric::Stm,
@@ -24,16 +24,14 @@ use crate::{
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ManhattanDistance<S>(pub S);
 
-impl<P, T> Heuristic<P, T, Trivial, Stm> for ManhattanDistance<Trivial>
+impl<P> Heuristic<P, Trivial, Stm> for ManhattanDistance<Trivial>
 where
     P: SlidingPuzzle,
-    T: PrimInt + Unsigned + 'static,
-    u64: AsPrimitive<T>,
 {
-    fn bound(&self, puzzle: &P) -> T {
+    fn bound(&self, puzzle: &P) -> u64 {
         let (w, h) = puzzle.size().into();
         let (gx, gy) = puzzle.gap_position_xy();
-        (w + h - 2 - gx - gy).as_()
+        w + h - 2 - gx - gy
     }
 }
 
@@ -195,15 +193,13 @@ impl Distance for ManhattanDistance<Checkerboard> {
     }
 }
 
-impl<P, T, S> Heuristic<P, T, S, Stm> for ManhattanDistance<S>
+impl<P, S> Heuristic<P, S, Stm> for ManhattanDistance<S>
 where
     P: SlidingPuzzle,
-    T: PrimInt + Unsigned + 'static,
     S: SolvedState,
-    u64: AsPrimitive<T>,
     Self: Distance,
 {
-    fn bound(&self, puzzle: &P) -> T {
+    fn bound(&self, puzzle: &P) -> u64 {
         let (w, h) = puzzle.size().into();
         let md = (0..w)
             .cartesian_product(0..h)
@@ -221,7 +217,7 @@ where
             .sum::<u64>();
 
         if Self::HAS_PARITY_CONSTRAINT {
-            md.as_()
+            md
         } else {
             // Make sure the parity is correct (some positions will give an even bound for a
             // position that takes an odd number of moves, etc.)
@@ -232,7 +228,7 @@ where
             let parity = (x.abs_diff(sx) + y.abs_diff(sy)) % 2;
 
             let adjusted_md = if md % 2 == parity { md } else { md + 1 };
-            adjusted_md.as_()
+            adjusted_md
         }
     }
 }
@@ -249,7 +245,7 @@ mod tests {
         let cases = [("1 2 3/4 5 6/7 8 0", 0), ("1 0 3/4 2 6/7 5 8", 3)];
         for (state, expected) in cases {
             let puzzle = Puzzle::from_str(state).unwrap();
-            let bound: u8 = ManhattanDistance(Trivial).bound(&puzzle);
+            let bound = ManhattanDistance(Trivial).bound(&puzzle);
             assert_eq!(bound, expected, "state {state}");
         }
     }

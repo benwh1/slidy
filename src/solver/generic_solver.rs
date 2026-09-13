@@ -60,7 +60,7 @@ impl<P, S, H> Solver<P> for GenericSolver<P, S, H, Stm>
 where
     P: SlidingPuzzle + Clone,
     S: SolvedState + Solvable,
-    H: Heuristic<P, u64, S, Stm>,
+    H: Heuristic<P, S, Stm>,
 {
     fn is_initialised(&self) -> bool {
         true
@@ -77,7 +77,7 @@ impl<P, S, H> Solver<P> for GenericSolver<P, S, H, Mtm>
 where
     P: SlidingPuzzle + Clone,
     S: SolvedState + Solvable,
-    H: Heuristic<P, u64, S, Mtm>,
+    H: Heuristic<P, S, Mtm>,
 {
     fn is_initialised(&self) -> bool {
         true
@@ -94,7 +94,7 @@ impl<P, S, H> GenericSolver<P, S, H, Stm>
 where
     P: SlidingPuzzle + Clone,
     S: SolvedState + Solvable,
-    H: Heuristic<P, u64, S, Stm>,
+    H: Heuristic<P, S, Stm>,
 {
     fn dfs(&mut self, puzzle: &mut P, depth: u64, last_dir: Option<Direction>) -> ControlFlow<()> {
         if depth == 0 {
@@ -216,7 +216,7 @@ impl<P, S, H> GenericSolver<P, S, H, Mtm>
 where
     P: SlidingPuzzle + Clone,
     S: SolvedState + Solvable,
-    H: Heuristic<P, u64, S, Mtm>,
+    H: Heuristic<P, S, Mtm>,
 {
     fn dfs(&mut self, puzzle: &mut P, depth: u64, last_dir: Option<Direction>) -> ControlFlow<()> {
         if depth == 0 {

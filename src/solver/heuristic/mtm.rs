@@ -1,8 +1,6 @@
 //! Defines the [`MtmHeuristic`] heuristic, which wraps an [`Stm`] [`Heuristic`] and turns it into
 //! an admissible [`Mtm`] heuristic.
 
-use num_traits::{AsPrimitive, PrimInt, Unsigned};
-
 use crate::{
     algorithm::metric::{Mtm, Stm},
     puzzle::sliding_puzzle::SlidingPuzzle,
@@ -14,18 +12,16 @@ use crate::{
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MtmHeuristic<H>(pub H);
 
-impl<P, T, S, H> Heuristic<P, T, S, Mtm> for MtmHeuristic<H>
+impl<P, S, H> Heuristic<P, S, Mtm> for MtmHeuristic<H>
 where
     P: SlidingPuzzle,
-    T: PrimInt + Unsigned + AsPrimitive<u64> + 'static,
-    H: Heuristic<P, T, S, Stm>,
-    u64: AsPrimitive<T>,
+    H: Heuristic<P, S, Stm>,
 {
-    fn bound(&self, puzzle: &P) -> T {
+    fn bound(&self, puzzle: &P) -> u64 {
         let (w, h) = puzzle.size().into();
         let k = w.max(h) - 1;
-        let h = self.0.bound(puzzle).as_();
-        h.div_ceil(k).as_()
+        let h = self.0.bound(puzzle);
+        h.div_ceil(k)
     }
 }
 
@@ -53,7 +49,7 @@ mod tests {
         ];
         for (state, expected) in cases {
             let puzzle = Puzzle::from_str(state).unwrap();
-            let bound: u8 = MtmHeuristic(ManhattanDistance(Trivial)).bound(&puzzle);
+            let bound = MtmHeuristic(ManhattanDistance(Trivial)).bound(&puzzle);
             assert_eq!(bound, expected, "state {state}");
         }
     }
@@ -67,7 +63,7 @@ mod tests {
         ];
         for (state, expected) in cases {
             let puzzle = Puzzle::from_str(state).unwrap();
-            let bound: u8 = MtmHeuristic(ManhattanDistance(RowGrids)).bound(&puzzle);
+            let bound = MtmHeuristic(ManhattanDistance(RowGrids)).bound(&puzzle);
             assert_eq!(bound, expected, "state {state}");
         }
     }
