@@ -22,5 +22,5 @@ pub struct PdbIterationStats {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SolverIterationStats {
     /// The depth of the search iteration that just finished.
-    pub depth: u8,
+    pub depth: u64,
 }

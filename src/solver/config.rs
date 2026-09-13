@@ -13,15 +13,15 @@ use crate::{
 /// [`Solver::solve_with_config`](crate::solver::solver::Solver::solve_with_config).
 pub struct SolverConfig {
     /// The minimum depth to begin iterative deepening from.
-    pub min: u8,
+    pub min: u64,
 
     /// The maximum depth to search to (inclusive).
-    pub max: u8,
+    pub max: u64,
 
     /// When set, the search stops once it has deepened at most this far past the depth of the
     /// first solution found. For example `Some(0)` finds only optimal solutions and `Some(2)`
     /// all solutions within two moves of optimal.
-    pub depth_beyond_optimal: Option<u8>,
+    pub depth_beyond_optimal: Option<u64>,
 
     /// The number of solutions to find.
     pub num_solutions: u64,
@@ -42,7 +42,7 @@ impl Default for SolverConfig {
     fn default() -> Self {
         Self {
             min: 0,
-            max: u8::MAX,
+            max: u64::MAX,
             depth_beyond_optimal: None,
             num_solutions: 1,
             end_of_iter_callback: None,

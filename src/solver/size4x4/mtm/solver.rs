@@ -113,7 +113,7 @@ impl Solver {
 
     fn dfs(
         &mut self,
-        depth: u8,
+        depth: u64,
         last_axis: Option<Axis>,
         mut puzzle: ReducedFourBitPuzzle,
         mut transposed_puzzle: ReducedFourBitPuzzle,
@@ -124,8 +124,7 @@ impl Solver {
 
         // SAFETY: We have a test which guarantees that every `ReducedFourBitPuzzle` encodes to an
         // index that is within bounds.
-        let heuristic = unsafe { self.pdb.get_unchecked(coord) };
-
+        let heuristic = unsafe { self.pdb.get_unchecked(coord) } as u64;
         if heuristic > depth {
             return ControlFlow::Continue(());
         }
@@ -135,8 +134,7 @@ impl Solver {
             .encode(transposed_puzzle.pieces, &self.base_5_table) as usize;
 
         // SAFETY: See above.
-        let heuristic = unsafe { self.pdb.get_unchecked(coord) };
-
+        let heuristic = unsafe { self.pdb.get_unchecked(coord) } as u64;
         if heuristic > depth {
             return ControlFlow::Continue(());
         }
@@ -231,7 +229,7 @@ impl Solver {
         let coord = self
             .indexing_table
             .encode(reduced_puzzle.pieces, &self.base_5_table);
-        let hval = self.pdb.get(coord as usize);
+        let hval = self.pdb.get(coord as usize) as u64;
         let mut depth = hval.max(min);
 
         if depth > max {

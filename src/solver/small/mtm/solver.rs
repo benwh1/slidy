@@ -39,7 +39,7 @@ where
 
     fn dfs(
         &mut self,
-        depth: u8,
+        depth: u64,
         last_axis: Option<Axis>,
         mut puzzle: Puzzle<W, H>,
     ) -> ControlFlow<()> {
@@ -47,8 +47,7 @@ where
 
         // SAFETY: `encode` produces integers from 0 to k-1 where k is the size of the PDB, so the
         // index is always in bounds.
-        let heuristic = unsafe { self.pdb.get_unchecked(coord as usize) };
-
+        let heuristic = unsafe { self.pdb.get_unchecked(coord as usize) } as u64;
         if heuristic > depth {
             return ControlFlow::Continue(());
         }
@@ -159,7 +158,7 @@ where
         self.config = Some(config);
 
         let coord = indexing::encode(puzzle.piece_array());
-        let hval = self.pdb.get(coord as usize);
+        let hval = self.pdb.get(coord as usize) as u64;
         let mut depth = hval.max(min);
 
         if depth > max {

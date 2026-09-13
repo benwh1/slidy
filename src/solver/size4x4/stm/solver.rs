@@ -54,7 +54,7 @@ impl Solver {
 
     fn dfs(
         &mut self,
-        depth: u8,
+        depth: u64,
         last_inverse: Option<Direction>,
         coords: [u32; 4],
     ) -> ControlFlow<()> {
@@ -64,12 +64,11 @@ impl Solver {
         //
         // Using `unsafe` here gives a small performance improvement.
         let heuristic = unsafe {
-            self.pdb4.pdb().get_unchecked(coords[0] as usize)
-                + self.pdb4.pdb().get_unchecked(coords[1] as usize)
-                + self.pdb4.pdb().get_unchecked(coords[2] as usize)
-                + self.pdb3.pdb().get_unchecked(coords[3] as usize)
+            *self.pdb4.pdb().get_unchecked(coords[0] as usize) as u64
+                + *self.pdb4.pdb().get_unchecked(coords[1] as usize) as u64
+                + *self.pdb4.pdb().get_unchecked(coords[2] as usize) as u64
+                + *self.pdb3.pdb().get_unchecked(coords[3] as usize) as u64
         };
-
         if heuristic > depth {
             return ControlFlow::Continue(());
         }
@@ -185,14 +184,10 @@ impl Solver {
         puzzle.reflect_up_down();
         coords[3] = puzzle.encode(self.pdb3.pattern()) as u32;
 
-        let entries = [
-            self.pdb4.pdb()[coords[0] as usize],
-            self.pdb4.pdb()[coords[1] as usize],
-            self.pdb4.pdb()[coords[2] as usize],
-            self.pdb3.pdb()[coords[3] as usize],
-        ];
-
-        let hval = entries.iter().copied().sum::<u8>();
+        let hval = self.pdb4.pdb()[coords[0] as usize] as u64
+            + self.pdb4.pdb()[coords[1] as usize] as u64
+            + self.pdb4.pdb()[coords[2] as usize] as u64
+            + self.pdb3.pdb()[coords[3] as usize] as u64;
         let min = if hval % 2 == min % 2 { min } else { min + 1 };
         let mut depth = hval.max(min);
 

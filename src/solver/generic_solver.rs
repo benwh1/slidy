@@ -60,7 +60,7 @@ impl<P, S, H> Solver<P> for GenericSolver<P, S, H, Stm>
 where
     P: SlidingPuzzle + Clone,
     S: SolvedState + Solvable,
-    H: Heuristic<P, u8, S, Stm>,
+    H: Heuristic<P, u64, S, Stm>,
 {
     fn is_initialised(&self) -> bool {
         true
@@ -77,7 +77,7 @@ impl<P, S, H> Solver<P> for GenericSolver<P, S, H, Mtm>
 where
     P: SlidingPuzzle + Clone,
     S: SolvedState + Solvable,
-    H: Heuristic<P, u8, S, Mtm>,
+    H: Heuristic<P, u64, S, Mtm>,
 {
     fn is_initialised(&self) -> bool {
         true
@@ -94,9 +94,9 @@ impl<P, S, H> GenericSolver<P, S, H, Stm>
 where
     P: SlidingPuzzle + Clone,
     S: SolvedState + Solvable,
-    H: Heuristic<P, u8, S, Stm>,
+    H: Heuristic<P, u64, S, Stm>,
 {
-    fn dfs(&mut self, puzzle: &mut P, depth: u8, last_dir: Option<Direction>) -> ControlFlow<()> {
+    fn dfs(&mut self, puzzle: &mut P, depth: u64, last_dir: Option<Direction>) -> ControlFlow<()> {
         if depth == 0 {
             if self.solved_state.is_solved(puzzle) {
                 self.solutions_found += 1;
@@ -216,9 +216,9 @@ impl<P, S, H> GenericSolver<P, S, H, Mtm>
 where
     P: SlidingPuzzle + Clone,
     S: SolvedState + Solvable,
-    H: Heuristic<P, u8, S, Mtm>,
+    H: Heuristic<P, u64, S, Mtm>,
 {
-    fn dfs(&mut self, puzzle: &mut P, depth: u8, last_dir: Option<Direction>) -> ControlFlow<()> {
+    fn dfs(&mut self, puzzle: &mut P, depth: u64, last_dir: Option<Direction>) -> ControlFlow<()> {
         if depth == 0 {
             if self.solved_state.is_solved(puzzle) {
                 self.solutions_found += 1;
@@ -484,7 +484,7 @@ mod tests {
         let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
         let config = SolverConfig {
             min: 0,
-            max: u8::MAX,
+            max: u64::MAX,
             // The true optimum (13) is verified against the complete projection solver in
             // `projection::mtm::solver::tests`.
             solution_callback: Some(Box::new(|s| {

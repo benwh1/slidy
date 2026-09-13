@@ -25,7 +25,7 @@ where
     fn dfs<const N: usize>(
         &mut self,
         puzzle: &P,
-        depth: u8,
+        depth: u64,
         last_axis: Option<Axis>,
         projected: ProjectedPuzzle<N>,
     ) -> ControlFlow<()> {
@@ -49,7 +49,7 @@ where
         }
 
         // SAFETY: `index` comes from encoding a projected puzzle, so is within bounds.
-        let heuristic = unsafe { self.pdb.get_unchecked(index) };
+        let heuristic = unsafe { self.pdb.get_unchecked(index) } as u64;
         if heuristic > depth {
             return ControlFlow::Continue(());
         }
@@ -116,7 +116,7 @@ where
         let projected = self.initial_projected::<N>(puzzle);
         let start_index = projected.encode(&self.tally) as usize;
         // SAFETY: `start_index` comes from encoding a projected puzzle, so is within bounds.
-        let hval = unsafe { self.pdb.get_unchecked(start_index) };
+        let hval = unsafe { self.pdb.get_unchecked(start_index) } as u64;
         let mut depth = hval.max(min);
 
         if depth > max {
