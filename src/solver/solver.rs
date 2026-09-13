@@ -12,10 +12,6 @@ use crate::{
 /// Error type for solvers.
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 pub enum SolverError {
-    /// Returned when the search finished without finding a solution.
-    #[error("NoSolutionFound: no solution was found within the range searched")]
-    NoSolutionFound,
-
     /// Returned when the solver was given a puzzle of a size that it is not compatible with.
     #[error("IncompatiblePuzzleSize: the puzzle size is incompatible with the solver")]
     IncompatiblePuzzleSize,
@@ -48,10 +44,6 @@ where
         puzzle: &P,
         num_solutions: u64,
     ) -> Result<Vec<Algorithm>, SolverError> {
-        if num_solutions == 0 {
-            return Ok(Vec::new());
-        }
-
         self.solve_collect(
             puzzle,
             SolverConfig {

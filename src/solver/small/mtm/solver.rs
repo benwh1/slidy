@@ -161,6 +161,7 @@ where
         let coord = indexing::encode(puzzle.piece_array());
         let hval = self.pdb.get(coord as usize);
         let mut depth = hval.max(min);
+
         if depth > max {
             return Ok(());
         }
@@ -205,11 +206,7 @@ where
             }
         }
 
-        if self.solutions_found > 0 {
-            Ok(())
-        } else {
-            Err(SolverError::NoSolutionFound)
-        }
+        Ok(())
     }
 }
 

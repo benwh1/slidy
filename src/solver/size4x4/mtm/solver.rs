@@ -233,6 +233,7 @@ impl Solver {
             .encode(reduced_puzzle.pieces, &self.base_5_table);
         let hval = self.pdb.get(coord as usize);
         let mut depth = hval.max(min);
+
         if depth > max {
             return Ok(());
         }
@@ -280,11 +281,7 @@ impl Solver {
             }
         }
 
-        if self.solutions_found > 0 {
-            Ok(())
-        } else {
-            Err(SolverError::NoSolutionFound)
-        }
+        Ok(())
     }
 
     /// Returns a reference to the inner [`Pdb`].

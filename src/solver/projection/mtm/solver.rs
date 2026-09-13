@@ -163,11 +163,7 @@ where
             }
         }
 
-        if self.solutions_found > 0 {
-            Ok(())
-        } else {
-            Err(SolverError::NoSolutionFound)
-        }
+        Ok(())
     }
 }
 

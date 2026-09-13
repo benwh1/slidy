@@ -208,11 +208,7 @@ where
             }
         }
 
-        if self.solutions_found > 0 {
-            Ok(())
-        } else {
-            Err(SolverError::NoSolutionFound)
-        }
+        Ok(())
     }
 }
 
@@ -339,11 +335,7 @@ where
             }
         }
 
-        if self.solutions_found > 0 {
-            Ok(())
-        } else {
-            Err(SolverError::NoSolutionFound)
-        }
+        Ok(())
     }
 }
 
@@ -405,7 +397,7 @@ mod tests {
             ..Default::default()
         };
         let result = solver.solve_with_config(&puzzle, config);
-        assert_eq!(result, Err(SolverError::NoSolutionFound));
+        assert_eq!(result, Ok(()));
     }
 
     #[test]
@@ -446,7 +438,7 @@ mod tests {
             ..Default::default()
         };
         let result = solver.solve_with_config(&puzzle, config);
-        assert_eq!(result, Err(SolverError::NoSolutionFound));
+        assert_eq!(result, Ok(()));
     }
 
     #[test]
