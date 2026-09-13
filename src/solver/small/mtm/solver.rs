@@ -161,6 +161,9 @@ where
         let coord = indexing::encode(puzzle.piece_array());
         let hval = self.pdb.get(coord as usize);
         let mut depth = hval.max(min);
+        if depth > max {
+            return Ok(());
+        }
 
         let mut first_solution_depth = None;
 

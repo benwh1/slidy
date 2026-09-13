@@ -164,6 +164,10 @@ where
         let min = if hval % 2 == min % 2 { min } else { min + 1 };
         let mut depth = hval.max(min);
 
+        if depth > max {
+            return Ok(());
+        }
+
         let mut first_solution_depth = None;
 
         loop {
@@ -290,6 +294,10 @@ where
 
         let hval = self.heuristic.bound(&puzzle);
         let mut depth = hval.max(min);
+
+        if depth > max {
+            return Ok(());
+        }
 
         let mut first_solution_depth = None;
 

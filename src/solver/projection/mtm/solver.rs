@@ -119,6 +119,10 @@ where
         let hval = unsafe { self.pdb.get_unchecked(start_index) };
         let mut depth = hval.max(min);
 
+        if depth > max {
+            return Ok(());
+        }
+
         let mut first_solution_depth = None;
 
         loop {

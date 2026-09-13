@@ -233,6 +233,9 @@ impl Solver {
             .encode(reduced_puzzle.pieces, &self.base_5_table);
         let hval = self.pdb.get(coord as usize);
         let mut depth = hval.max(min);
+        if depth > max {
+            return Ok(());
+        }
 
         let mut first_solution_depth = None;
 
