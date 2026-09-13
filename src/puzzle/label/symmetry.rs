@@ -28,10 +28,10 @@ define_sym!(
     RotateCcw,
     /// Rotation by 180 degrees.
     RotateHalf,
-    /// Reflection in a vertical line.
-    ReflectVertical,
-    /// Reflection in a horizontal line.
-    ReflectHorizontal,
+    /// Reflection through the vertical axis. Swaps left and right.
+    ReflectLeftRight,
+    /// Reflection through the horizontal axis. Swaps up and down.
+    ReflectUpDown,
     /// Reflection in the diagonal line from top left to bottom right.
     ReflectDiagonal,
     /// Reflection in the diagonal line from bottom left to top right.
@@ -81,9 +81,9 @@ impl<L: Label> Label for RotateHalf<L> {
     }
 }
 
-impl<L: Label> Label for ReflectVertical<L> {
+impl<L: Label> Label for ReflectLeftRight<L> {
     fn position_label(&self, size: Size, (x, y): (u64, u64)) -> u64 {
-        self.0.position_label(size, (x, size.height() - 1 - y))
+        self.0.position_label(size, (size.width() - 1 - x, y))
     }
 
     fn num_labels(&self, size: Size) -> u64 {
@@ -91,9 +91,9 @@ impl<L: Label> Label for ReflectVertical<L> {
     }
 }
 
-impl<L: Label> Label for ReflectHorizontal<L> {
+impl<L: Label> Label for ReflectUpDown<L> {
     fn position_label(&self, size: Size, (x, y): (u64, u64)) -> u64 {
-        self.0.position_label(size, (size.width() - 1 - x, y))
+        self.0.position_label(size, (x, size.height() - 1 - y))
     }
 
     fn num_labels(&self, size: Size) -> u64 {
@@ -127,8 +127,8 @@ impl<L: BijectiveLabel> BijectiveLabel for Id<L> {}
 impl<L: BijectiveLabel> BijectiveLabel for RotateCw<L> {}
 impl<L: BijectiveLabel> BijectiveLabel for RotateCcw<L> {}
 impl<L: BijectiveLabel> BijectiveLabel for RotateHalf<L> {}
-impl<L: BijectiveLabel> BijectiveLabel for ReflectVertical<L> {}
-impl<L: BijectiveLabel> BijectiveLabel for ReflectHorizontal<L> {}
+impl<L: BijectiveLabel> BijectiveLabel for ReflectLeftRight<L> {}
+impl<L: BijectiveLabel> BijectiveLabel for ReflectUpDown<L> {}
 impl<L: BijectiveLabel> BijectiveLabel for ReflectDiagonal<L> {}
 impl<L: BijectiveLabel> BijectiveLabel for ReflectAntidiagonal<L> {}
 
@@ -189,17 +189,17 @@ mod tests {
     );
 
     test_label!(
-        ReflectVertical,
-        4 x 4: [12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3],
-        4 x 6: [20, 21, 22, 23, 16, 17, 18, 19, 12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3],
-        6 x 4: [18, 19, 20, 21, 22, 23, 12, 13, 14, 15, 16, 17, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4, 5],
-    );
-
-    test_label!(
-        ReflectHorizontal,
+        ReflectLeftRight,
         4 x 4: [3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8, 15, 14, 13, 12],
         4 x 6: [3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8, 15, 14, 13, 12, 19, 18, 17, 16, 23, 22, 21, 20],
         6 x 4: [5, 4, 3, 2, 1, 0, 11, 10, 9, 8, 7, 6, 17, 16, 15, 14, 13, 12, 23, 22, 21, 20, 19, 18],
+    );
+
+    test_label!(
+        ReflectUpDown,
+        4 x 4: [12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3],
+        4 x 6: [20, 21, 22, 23, 16, 17, 18, 19, 12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3],
+        6 x 4: [18, 19, 20, 21, 22, 23, 12, 13, 14, 15, 16, 17, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4, 5],
     );
 
     test_label!(
