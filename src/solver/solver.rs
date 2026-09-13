@@ -1,6 +1,6 @@
 //! Defines the [`Solver`] trait for a unified solver interface.
 
-use std::{cell::RefCell, ops::ControlFlow, rc::Rc};
+use std::{ops::ControlFlow, sync::mpsc};
 
 use thiserror::Error;
 
@@ -75,13 +75,12 @@ where
         puzzle: &P,
         config: SolverConfig,
     ) -> Result<Vec<Algorithm>, SolverError> {
-        let solutions = Rc::new(RefCell::new(Vec::new()));
-        let c = solutions.clone();
+        let (sender, receiver) = mpsc::channel();
         let user_callback = config.solution_callback;
 
         let config = SolverConfig {
             solution_callback: Some(Box::new(move |s| {
-                c.borrow_mut().push(s.clone());
+                sender.send(s.clone()).unwrap();
                 if let Some(f) = &user_callback {
                     f(s)
                 } else {
@@ -93,8 +92,7 @@ where
 
         self.solve_with_config(puzzle, config)?;
 
-        let solutions = solutions.borrow().clone();
-        Ok(solutions)
+        Ok(receiver.try_iter().collect())
     }
 
     /// Solves `puzzle` using the given [`SolverConfig`].
