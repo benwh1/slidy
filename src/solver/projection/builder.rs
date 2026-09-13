@@ -76,6 +76,8 @@ impl<P, Target, PruneTarget, Metric> SolverBuilder<P, Target, PruneTarget, Metri
 
     #[must_use]
     /// Sets the [`SolvedState`] that the solver will solve the puzzle into.
+    ///
+    /// [`SolvedState`]: crate::puzzle::solved_state::SolvedState
     pub fn target(mut self, target: Target) -> Self {
         self.target = Some(target);
         self
@@ -83,6 +85,8 @@ impl<P, Target, PruneTarget, Metric> SolverBuilder<P, Target, PruneTarget, Metri
 
     #[must_use]
     /// Sets the [`SolvedState`] used for pruning the depth-first search.
+    ///
+    /// [`SolvedState`]: crate::puzzle::solved_state::SolvedState
     pub fn prune_target(mut self, prune_target: PruneTarget) -> Self {
         self.prune_target = Some(prune_target);
         self
