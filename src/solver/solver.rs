@@ -80,10 +80,11 @@ where
 
         let config = SolverConfig {
             solution_callback: Some(Box::new(move |s| {
-                sender.send(s.clone()).unwrap();
                 if let Some(f) = &user_callback {
+                    sender.send(s.clone()).unwrap();
                     f(s)
                 } else {
+                    sender.send(s).unwrap();
                     ControlFlow::Continue(())
                 }
             })),
