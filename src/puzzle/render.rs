@@ -13,22 +13,11 @@ use svg::{
     },
     Document,
 };
-use thiserror::Error;
 
 use crate::puzzle::{
     color_scheme::{Black, ColorScheme},
-    size::Size,
     sliding_puzzle::SlidingPuzzle,
 };
-
-/// Error type for [`Renderer`].
-#[derive(Clone, Debug, Error, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub enum RendererError {
-    /// Returned when the given puzzle size is incompatible with the label.
-    #[error("IncompatibleLabel: puzzle size ({0}) can not be used with the given label")]
-    IncompatibleLabel(Size),
-}
 
 /// A font that can be used with [`Renderer`].
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -412,7 +401,7 @@ impl<S: ColorScheme, U: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'_
     }
 
     /// Draws `puzzle` as an SVG image, wrapped in an SVG group element.
-    pub fn group<Puzzle>(&self, puzzle: &Puzzle) -> Result<Group, RendererError>
+    pub fn group<Puzzle>(&self, puzzle: &Puzzle) -> Group
     where
         Puzzle: SlidingPuzzle,
         Puzzle::Piece: Display,
@@ -432,7 +421,7 @@ impl<S: ColorScheme, U: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'_
             }
         }
 
-        Ok(group)
+        group
     }
 
     /// Draws the piece of `puzzle` at position `(x, y)` as an SVG image, wrapped in an SVG group
@@ -549,7 +538,7 @@ impl<S: ColorScheme, U: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'_
     }
 
     /// Draws `puzzle` as an SVG image.
-    pub fn render<Puzzle>(&self, puzzle: &Puzzle) -> Result<Document, RendererError>
+    pub fn render<Puzzle>(&self, puzzle: &Puzzle) -> Document
     where
         Puzzle: SlidingPuzzle,
         Puzzle::Piece: Display,
@@ -577,12 +566,10 @@ impl<S: ColorScheme, U: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'_
 
         let style_str = self.style_string();
 
-        let doc = Document::new()
+        Document::new()
             .add(Style::new(style_str))
-            .add(self.group(puzzle)?)
+            .add(self.group(puzzle))
             .set("width", image_w)
-            .set("height", image_h);
-
-        Ok(doc)
+            .set("height", image_h)
     }
 }
