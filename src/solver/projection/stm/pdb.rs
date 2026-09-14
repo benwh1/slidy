@@ -18,7 +18,8 @@ use crate::{
 };
 
 impl Pdb<Stm> {
-    pub(super) fn new<L>(label: &L, size: Size, config: &PdbConfig) -> Self
+    /// Creates and builds a new pattern database for the given [`Label`] and puzzle size.
+    pub fn new<L>(label: &L, size: Size, config: &PdbConfig) -> Self
     where
         L: Label,
     {

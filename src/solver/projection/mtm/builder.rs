@@ -29,7 +29,7 @@ where
         }
 
         let pdb = match self.pdb_action {
-            PdbAction::Build { config } => Pdb::new(&prune_target, size, &config),
+            PdbAction::Build { config } => Pdb::<Mtm>::new(&prune_target, size, &config),
             PdbAction::UseExisting { pdb } => pdb,
         };
 
