@@ -125,7 +125,7 @@
 //!
 //!     let puzzle = Puzzle::default();
 //!
-//!     let svg = renderer.render(&puzzle)?;
+//!     let svg = renderer.render(&puzzle);
 //!     svg::save("out.svg", &svg)?;
 //! #   std::fs::remove_file("out.svg").unwrap();
 //!
