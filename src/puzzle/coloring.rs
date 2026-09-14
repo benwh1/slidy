@@ -175,7 +175,7 @@ impl Coloring for Rainbow {
             // Interpolate between the min and max hues
             let frac = label as f32 / (num_labels - 1) as f32;
             let hue = self.min_hue + (self.max_hue - self.min_hue) * frac;
-            let hue = hue % 360.0;
+            let hue = hue.rem_euclid(360.0);
             let lum = 0.5
                 + (0.25 * f32::cos(std::f32::consts::TAU * (0.65 + hue / 720.0))
                     + 0.35 * f32::exp(-hue / 100.0))
