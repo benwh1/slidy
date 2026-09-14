@@ -22,7 +22,7 @@ use crate::{
 pub struct Solver {
     pdb4: Pdb,
     pdb3: Pdb,
-    stack: Stack<80>,
+    stack: Stack<128>,
     solutions_found: u64,
     config: Option<SolverConfig>,
 }
