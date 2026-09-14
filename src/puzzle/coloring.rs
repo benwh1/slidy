@@ -180,6 +180,7 @@ impl Coloring for Rainbow {
                 + (0.25 * f32::cos(std::f32::consts::TAU * (0.65 + hue / 720.0))
                     + 0.35 * f32::exp(-hue / 100.0))
                     * self.brightness;
+            let lum = lum.clamp(0.0, 1.0);
             Hsl::new(hue, 1.0, lum).into_color()
         }
     }
