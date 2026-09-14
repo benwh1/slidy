@@ -5,7 +5,7 @@
 
 pub mod builder;
 mod encoding;
-pub mod mtm;
+mod mtm;
 pub mod pdb;
 mod puzzle;
 pub mod solver;

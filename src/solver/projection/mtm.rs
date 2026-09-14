@@ -2,6 +2,6 @@
 //!
 //! [`Mtm`]: crate::algorithm::metric::Mtm
 
-pub mod builder;
-pub mod pdb;
+mod builder;
+mod pdb;
 mod solver;
