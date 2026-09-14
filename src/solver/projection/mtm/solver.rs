@@ -173,7 +173,7 @@ where
     Target: Label + SolvedState + Solvable + Default,
     PruneTarget: Label + SolvedState + Default,
 {
-    fn is_initialised(&self) -> bool {
+    fn is_initialized(&self) -> bool {
         true
     }
 

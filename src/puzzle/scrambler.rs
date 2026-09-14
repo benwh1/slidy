@@ -152,7 +152,7 @@ pub struct RandomMoves {
     /// be generated.
     pub allow_backtracking: bool,
     /// Are illegal moves counted? E.g. If the first generated move of the scramble is L (which
-    /// can not be applied to the puzzle), should this be counted towards the total move count? If
+    /// can not be applied to the puzzle), should this be counted toward the total move count? If
     /// this is false, the L move will not be counted and a different move will be generated.
     pub allow_illegal_moves: bool,
 }

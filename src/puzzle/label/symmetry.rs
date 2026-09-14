@@ -24,7 +24,7 @@ define_sym!(
     Id,
     /// Rotation clockwise by 90 degrees.
     RotateCw,
-    /// Rotation anticlockwise by 90 degrees.
+    /// Rotation counterclockwise by 90 degrees.
     RotateCcw,
     /// Rotation by 180 degrees.
     RotateHalf,

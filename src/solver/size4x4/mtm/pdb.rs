@@ -118,7 +118,7 @@ impl Pdb {
         Some(unsafe { Self::from_bytes_unchecked(bytes) })
     }
 
-    /// Initialises the [`Pdb`] with `bytes`.
+    /// Initializes the [`Pdb`] with `bytes`.
     ///
     /// # Safety
     ///

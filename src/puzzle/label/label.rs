@@ -285,7 +285,7 @@ define_label!(
     /// Assigns distinct labels in fringe order: left to right along the top row, then top to
     /// bottom down the first column, then left to right along the second row, etc.
     FringeGrids,
-    /// Assigns labels to each row or column, until the remaining unlabelled part of the puzzle is
+    /// Assigns labels to each row or column, until the remaining unlabeled part of the puzzle is
     /// a square, and then labels the rest with [`Fringe`].
     SquareFringe,
     /// Same as [`Fringe`], but the row and column parts of the fringe are given different labels.

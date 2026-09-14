@@ -216,7 +216,7 @@ where
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N], TransposedPuzzle = Puzzle<H, W>>,
     Puzzle<H, W>: SmallPuzzle<PieceArray = [u8; N], TransposedPuzzle = Puzzle<W, H>>,
 {
-    fn is_initialised(&self) -> bool {
+    fn is_initialized(&self) -> bool {
         true
     }
 

@@ -17,7 +17,7 @@ pub enum RectError {
     InvalidSize,
 }
 
-/// A rectangle on a grid of squares, with x increasing to the right and y increasing downwards.
+/// A rectangle on a grid of squares, with x increasing to the right and y increasing downward.
 /// The rectangle contains the top and left edges, but does not contain the bottom and right edges,
 /// so the width is `right - left` and the height is `bottom - top`.
 ///

@@ -294,7 +294,7 @@ where
     P: SlidingPuzzle,
     P::Piece: AsPrimitive<u8>,
 {
-    fn is_initialised(&self) -> bool {
+    fn is_initialized(&self) -> bool {
         true
     }
 

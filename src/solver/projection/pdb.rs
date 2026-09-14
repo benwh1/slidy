@@ -16,7 +16,7 @@ pub struct Pdb<Metric> {
 }
 
 impl<Metric> Pdb<Metric> {
-    /// Initialises the [`Pdb`] with `bytes`.
+    /// Initializes the [`Pdb`] with `bytes`.
     ///
     /// # Safety
     ///

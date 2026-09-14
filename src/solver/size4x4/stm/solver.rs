@@ -243,7 +243,7 @@ impl<P> SolverT<P> for Solver
 where
     P: SlidingPuzzle,
 {
-    fn is_initialised(&self) -> bool {
+    fn is_initialized(&self) -> bool {
         true
     }
 

@@ -26,10 +26,10 @@ pub trait Solver<P>
 where
     P: SlidingPuzzle,
 {
-    /// Returns whether the solver has been initialised.
-    fn is_initialised(&self) -> bool;
+    /// Returns whether the solver has been initialized.
+    fn is_initialized(&self) -> bool;
 
-    /// Initialises the solver. This may involve precomputing pattern databases or other
+    /// Initializes the solver. This may involve precomputing pattern databases or other
     /// expensive operations.
     fn init(&mut self);
 

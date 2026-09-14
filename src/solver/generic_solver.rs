@@ -62,7 +62,7 @@ where
     S: SolvedState + Solvable,
     H: Heuristic<P, S, Stm>,
 {
-    fn is_initialised(&self) -> bool {
+    fn is_initialized(&self) -> bool {
         true
     }
 
@@ -79,7 +79,7 @@ where
     S: SolvedState + Solvable,
     H: Heuristic<P, S, Mtm>,
 {
-    fn is_initialised(&self) -> bool {
+    fn is_initialized(&self) -> bool {
         true
     }
 
