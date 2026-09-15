@@ -152,9 +152,7 @@ where
             }
 
             // Check against `depth_beyond_optimal`.
-            if first_solution_depth.is_some_and(|first| {
-                depth_beyond_optimal.is_some_and(|extra| depth - first > extra)
-            }) {
+            if first_solution_depth.is_some_and(|first| depth - first > depth_beyond_optimal) {
                 break;
             }
         }
@@ -337,7 +335,7 @@ mod tests {
         let puzzle = Puzzle::from_str("5 6 2 9/13 15 14 7/8 1 11 12/4 3 10 0").unwrap();
         let optimal = solver.solve(&puzzle).unwrap().len_stm();
 
-        for (depth_beyond_optimal, max_len) in [(Some(0), optimal), (Some(2), optimal + 2)] {
+        for (depth_beyond_optimal, max_len) in [(0, optimal), (2, optimal + 2)] {
             let solutions = Arc::new(Mutex::new(Vec::new()));
             let sc = solutions.clone();
             let config = SolverConfig {

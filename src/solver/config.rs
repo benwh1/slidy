@@ -19,9 +19,9 @@ pub struct SolverConfig {
     pub max: u64,
 
     /// When set, the search stops once it has deepened at most this far past the depth of the
-    /// first solution found. For example `Some(0)` finds only optimal solutions and `Some(2)`
-    /// all solutions within two moves of optimal.
-    pub depth_beyond_optimal: Option<u64>,
+    /// first solution found. For example, 0 finds only optimal solutions and 2 finds all solutions
+    /// within two moves of optimal.
+    pub depth_beyond_optimal: u64,
 
     /// The number of solutions to find.
     pub num_solutions: u64,
@@ -43,7 +43,7 @@ impl Default for SolverConfig {
         Self {
             min: 0,
             max: u64::MAX,
-            depth_beyond_optimal: None,
+            depth_beyond_optimal: u64::MAX,
             num_solutions: 1,
             end_of_iter_callback: None,
             solution_callback: None,

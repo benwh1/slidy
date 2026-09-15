@@ -58,7 +58,7 @@ where
         self.solve_collect(
             puzzle,
             SolverConfig {
-                depth_beyond_optimal: Some(0),
+                depth_beyond_optimal: 0,
                 num_solutions: u64::MAX,
                 ..Default::default()
             },

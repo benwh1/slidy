@@ -228,9 +228,7 @@ impl Solver {
             }
 
             // Check against `depth_beyond_optimal`.
-            if first_solution_depth.is_some_and(|first| {
-                depth_beyond_optimal.is_some_and(|extra| depth - first > extra)
-            }) {
+            if first_solution_depth.is_some_and(|first| depth - first > depth_beyond_optimal) {
                 break;
             }
         }
