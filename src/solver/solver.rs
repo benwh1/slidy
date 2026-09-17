@@ -26,24 +26,50 @@ pub trait Solver<P>
 where
     P: SlidingPuzzle,
 {
+    /// Additional context passed to the solver methods.
+    type Context;
+
     /// Returns whether the solver has been initialized.
-    fn is_initialized(&self) -> bool;
+    ///
+    /// See [`Self::is_initialized_with_context`].
+    fn is_initialized(&self) -> bool
+    where
+        Self::Context: Default,
+    {
+        self.is_initialized_with_context(&Default::default())
+    }
+
+    /// Returns whether the solver has been initialized, using the given context.
+    fn is_initialized_with_context(&self, context: &Self::Context) -> bool;
 
     /// Initializes the solver. This may involve precomputing pattern databases or other
     /// expensive operations.
-    fn init(&mut self);
+    ///
+    /// See [`Self::init_with_context`].
+    fn init(&mut self)
+    where
+        Self::Context: Default,
+    {
+        self.init_with_context(&Default::default());
+    }
+
+    /// Initializes the solver using the given context. This may involve precomputing pattern
+    /// databases or other expensive operations.
+    fn init_with_context(&mut self, context: &Self::Context);
 
     /// Solves `puzzle`, returning an optimal solution.
-    fn solve(&mut self, puzzle: &P) -> Result<Algorithm, SolverError> {
+    fn solve(&mut self, puzzle: &P) -> Result<Algorithm, SolverError>
+    where
+        Self::Context: Default,
+    {
         self.solve_many(puzzle, 1).map(|mut v| v.pop().unwrap())
     }
 
     /// Solves `puzzle`, returning the `n` shortest solutions.
-    fn solve_many(
-        &mut self,
-        puzzle: &P,
-        num_solutions: u64,
-    ) -> Result<Vec<Algorithm>, SolverError> {
+    fn solve_many(&mut self, puzzle: &P, num_solutions: u64) -> Result<Vec<Algorithm>, SolverError>
+    where
+        Self::Context: Default,
+    {
         self.solve_collect(
             puzzle,
             SolverConfig {
@@ -54,7 +80,10 @@ where
     }
 
     /// Solves `puzzle`, returning all optimal solutions.
-    fn solve_all_optimal(&mut self, puzzle: &P) -> Result<Vec<Algorithm>, SolverError> {
+    fn solve_all_optimal(&mut self, puzzle: &P) -> Result<Vec<Algorithm>, SolverError>
+    where
+        Self::Context: Default,
+    {
         self.solve_collect(
             puzzle,
             SolverConfig {
@@ -70,7 +99,10 @@ where
         &mut self,
         puzzle: &P,
         config: SolverConfig,
-    ) -> Result<Vec<Algorithm>, SolverError> {
+    ) -> Result<Vec<Algorithm>, SolverError>
+    where
+        Self::Context: Default,
+    {
         let (sender, receiver) = mpsc::channel();
         let user_callback = config.solution_callback;
 
@@ -93,5 +125,20 @@ where
     }
 
     /// Solves `puzzle` using the given [`SolverConfig`].
-    fn solve_with_config(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>;
+    ///
+    /// See [`Self::solve_with_config_and_context`].
+    fn solve_with_config(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>
+    where
+        Self::Context: Default,
+    {
+        self.solve_with_config_and_context(puzzle, config, &Self::Context::default())
+    }
+
+    /// Solves `puzzle` using the given [`SolverConfig`] and context.
+    fn solve_with_config_and_context(
+        &mut self,
+        puzzle: &P,
+        config: SolverConfig,
+        context: &Self::Context,
+    ) -> Result<(), SolverError>;
 }

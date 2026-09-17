@@ -62,13 +62,20 @@ where
     S: SolvedState + Solvable,
     H: Heuristic<P, S, Stm>,
 {
-    fn is_initialized(&self) -> bool {
+    type Context = ();
+
+    fn is_initialized_with_context(&self, _context: &Self::Context) -> bool {
         true
     }
 
-    fn init(&mut self) {}
+    fn init_with_context(&mut self, _context: &Self::Context) {}
 
-    fn solve_with_config(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
+    fn solve_with_config_and_context(
+        &mut self,
+        puzzle: &P,
+        config: SolverConfig,
+        _context: &Self::Context,
+    ) -> Result<(), SolverError> {
         self.solve_impl(puzzle, config)
     }
 }
@@ -79,13 +86,20 @@ where
     S: SolvedState + Solvable,
     H: Heuristic<P, S, Mtm>,
 {
-    fn is_initialized(&self) -> bool {
+    type Context = ();
+
+    fn is_initialized_with_context(&self, _context: &Self::Context) -> bool {
         true
     }
 
-    fn init(&mut self) {}
+    fn init_with_context(&mut self, _context: &Self::Context) {}
 
-    fn solve_with_config(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
+    fn solve_with_config_and_context(
+        &mut self,
+        puzzle: &P,
+        config: SolverConfig,
+        _context: &Self::Context,
+    ) -> Result<(), SolverError> {
         self.solve_impl(puzzle, config)
     }
 }

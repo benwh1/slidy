@@ -214,13 +214,20 @@ where
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N], TransposedPuzzle = Puzzle<H, W>>,
     Puzzle<H, W>: SmallPuzzle<PieceArray = [u8; N], TransposedPuzzle = Puzzle<W, H>>,
 {
-    fn is_initialized(&self) -> bool {
+    type Context = ();
+
+    fn is_initialized_with_context(&self, _context: &Self::Context) -> bool {
         true
     }
 
-    fn init(&mut self) {}
+    fn init_with_context(&mut self, _context: &Self::Context) {}
 
-    fn solve_with_config(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
+    fn solve_with_config_and_context(
+        &mut self,
+        puzzle: &P,
+        config: SolverConfig,
+        _context: &Self::Context,
+    ) -> Result<(), SolverError> {
         self.solve_impl(puzzle, config)
     }
 }
