@@ -294,12 +294,6 @@ where
 {
     type Context = ();
 
-    fn is_initialized_with_context(&self, _context: &Self::Context) -> bool {
-        true
-    }
-
-    fn init_with_context(&mut self, _context: &Self::Context) {}
-
     fn solve_with_config_and_context(
         &mut self,
         puzzle: &P,

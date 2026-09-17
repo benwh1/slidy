@@ -29,34 +29,6 @@ where
     /// Additional context passed to the solver methods.
     type Context;
 
-    /// Returns whether the solver has been initialized.
-    ///
-    /// See [`Self::is_initialized_with_context`].
-    fn is_initialized(&self) -> bool
-    where
-        Self::Context: Default,
-    {
-        self.is_initialized_with_context(&Default::default())
-    }
-
-    /// Returns whether the solver has been initialized, using the given context.
-    fn is_initialized_with_context(&self, context: &Self::Context) -> bool;
-
-    /// Initializes the solver. This may involve precomputing pattern databases or other
-    /// expensive operations.
-    ///
-    /// See [`Self::init_with_context`].
-    fn init(&mut self)
-    where
-        Self::Context: Default,
-    {
-        self.init_with_context(&Default::default());
-    }
-
-    /// Initializes the solver using the given context. This may involve precomputing pattern
-    /// databases or other expensive operations.
-    fn init_with_context(&mut self, context: &Self::Context);
-
     /// Solves `puzzle`, returning an optimal solution.
     fn solve(&mut self, puzzle: &P) -> Result<Algorithm, SolverError>
     where
