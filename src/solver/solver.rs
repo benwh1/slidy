@@ -34,7 +34,17 @@ where
     where
         Self::Context: Default,
     {
-        self.solve_many(puzzle, 1).map(|mut v| v.pop().unwrap())
+        self.solve_with_context(puzzle, &Self::Context::default())
+    }
+
+    /// Solves `puzzle` using the given [`Self::Context`], returning an optimal solution.
+    fn solve_with_context(
+        &mut self,
+        puzzle: &P,
+        context: &Self::Context,
+    ) -> Result<Algorithm, SolverError> {
+        self.solve_many_with_context(puzzle, 1, context)
+            .map(|mut v| v.pop().unwrap())
     }
 
     /// Solves `puzzle`, returning the `n` shortest solutions.
@@ -42,12 +52,23 @@ where
     where
         Self::Context: Default,
     {
-        self.solve_collect(
+        self.solve_many_with_context(puzzle, num_solutions, &Self::Context::default())
+    }
+
+    /// Solves `puzzle` using the given [`Self::Context`], returning the `n` shortest solutions.
+    fn solve_many_with_context(
+        &mut self,
+        puzzle: &P,
+        num_solutions: u64,
+        context: &Self::Context,
+    ) -> Result<Vec<Algorithm>, SolverError> {
+        self.solve_collect_with_context(
             puzzle,
             SolverConfig {
                 num_solutions,
                 ..Default::default()
             },
+            context,
         )
     }
 
@@ -56,13 +77,23 @@ where
     where
         Self::Context: Default,
     {
-        self.solve_collect(
+        self.solve_all_optimal_with_context(puzzle, &Self::Context::default())
+    }
+
+    /// Solves `puzzle` using the given [`Self::Context`], returning all optimal solutions.
+    fn solve_all_optimal_with_context(
+        &mut self,
+        puzzle: &P,
+        context: &Self::Context,
+    ) -> Result<Vec<Algorithm>, SolverError> {
+        self.solve_collect_with_context(
             puzzle,
             SolverConfig {
                 depth_beyond_optimal: 0,
                 num_solutions: u64::MAX,
                 ..Default::default()
             },
+            context,
         )
     }
 
@@ -75,6 +106,17 @@ where
     where
         Self::Context: Default,
     {
+        self.solve_collect_with_context(puzzle, config, &Self::Context::default())
+    }
+
+    /// Solves `puzzle` using the given [`SolverConfig`] and [`Self::Context`], collecting the
+    /// solutions into a [`Vec`].
+    fn solve_collect_with_context(
+        &mut self,
+        puzzle: &P,
+        config: SolverConfig,
+        context: &Self::Context,
+    ) -> Result<Vec<Algorithm>, SolverError> {
         let (sender, receiver) = mpsc::channel();
         let user_callback = config.solution_callback;
 
@@ -91,14 +133,12 @@ where
             ..config
         };
 
-        self.solve_with_config(puzzle, config)?;
+        self.solve_with_config_and_context(puzzle, config, context)?;
 
         Ok(receiver.try_iter().collect())
     }
 
     /// Solves `puzzle` using the given [`SolverConfig`].
-    ///
-    /// See [`Self::solve_with_config_and_context`].
     fn solve_with_config(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError>
     where
         Self::Context: Default,
@@ -106,7 +146,7 @@ where
         self.solve_with_config_and_context(puzzle, config, &Self::Context::default())
     }
 
-    /// Solves `puzzle` using the given [`SolverConfig`] and context.
+    /// Solves `puzzle` using the given [`SolverConfig`] and [`Self::Context`].
     fn solve_with_config_and_context(
         &mut self,
         puzzle: &P,
