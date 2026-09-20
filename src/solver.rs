@@ -38,7 +38,7 @@ pub type Solver3x3Mtm = SmallSolver<3, 3, 9, Mtm>;
 pub type Solver4x2Stm = SmallSolver<4, 2, 8, Stm>;
 /// A solver for 4x2 and 2x4 puzzles in [`Mtm`].
 pub type Solver4x2Mtm = SmallSolver<4, 2, 8, Mtm>;
-/// A solver for 4x3 and 3x4puzzles in [`Stm`].
+/// A solver for 4x3 and 3x4 puzzles in [`Stm`].
 pub type Solver4x3Stm = SmallSolver<4, 3, 12, Stm>;
 /// A solver for 4x3 and 3x4 puzzles in [`Mtm`].
 pub type Solver4x3Mtm = SmallSolver<4, 3, 12, Mtm>;
