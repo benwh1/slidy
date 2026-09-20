@@ -20,22 +20,6 @@ pub struct Pdb<const W: usize, const H: usize, const N: usize, Metric> {
 pub type Pdb2x2Stm = Pdb<2, 2, 4, Stm>;
 /// [`Pdb`] specialized to the 2x2 size and [`Mtm`] metric.
 pub type Pdb2x2Mtm = Pdb<2, 2, 4, Mtm>;
-/// [`Pdb`] specialized to the 2x3 size and [`Stm`] metric.
-pub type Pdb2x3Stm = Pdb<2, 3, 6, Stm>;
-/// [`Pdb`] specialized to the 2x3 size and [`Mtm`] metric.
-pub type Pdb2x3Mtm = Pdb<2, 3, 6, Mtm>;
-/// [`Pdb`] specialized to the 2x4 size and [`Stm`] metric.
-pub type Pdb2x4Stm = Pdb<2, 4, 8, Stm>;
-/// [`Pdb`] specialized to the 2x4 size and [`Mtm`] metric.
-pub type Pdb2x4Mtm = Pdb<2, 4, 8, Mtm>;
-/// [`Pdb`] specialized to the 2x5 size and [`Stm`] metric.
-pub type Pdb2x5Stm = Pdb<2, 5, 10, Stm>;
-/// [`Pdb`] specialized to the 2x5 size and [`Mtm`] metric.
-pub type Pdb2x5Mtm = Pdb<2, 5, 10, Mtm>;
-/// [`Pdb`] specialized to the 2x6 size and [`Stm`] metric.
-pub type Pdb2x6Stm = Pdb<2, 6, 12, Stm>;
-/// [`Pdb`] specialized to the 2x6 size and [`Mtm`] metric.
-pub type Pdb2x6Mtm = Pdb<2, 6, 12, Mtm>;
 /// [`Pdb`] specialized to the 3x2 size and [`Stm`] metric.
 pub type Pdb3x2Stm = Pdb<3, 2, 6, Stm>;
 /// [`Pdb`] specialized to the 3x2 size and [`Mtm`] metric.
@@ -44,10 +28,6 @@ pub type Pdb3x2Mtm = Pdb<3, 2, 6, Mtm>;
 pub type Pdb3x3Stm = Pdb<3, 3, 9, Stm>;
 /// [`Pdb`] specialized to the 3x3 size and [`Mtm`] metric.
 pub type Pdb3x3Mtm = Pdb<3, 3, 9, Mtm>;
-/// [`Pdb`] specialized to the 3x4 size and [`Stm`] metric.
-pub type Pdb3x4Stm = Pdb<3, 4, 12, Stm>;
-/// [`Pdb`] specialized to the 3x4 size and [`Mtm`] metric.
-pub type Pdb3x4Mtm = Pdb<3, 4, 12, Mtm>;
 /// [`Pdb`] specialized to the 4x2 size and [`Stm`] metric.
 pub type Pdb4x2Stm = Pdb<4, 2, 8, Stm>;
 /// [`Pdb`] specialized to the 4x2 size and [`Mtm`] metric.
