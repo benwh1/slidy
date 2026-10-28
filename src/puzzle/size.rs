@@ -8,7 +8,6 @@ use std::{
     str::FromStr,
 };
 
-use num_traits::AsPrimitive as _;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -109,16 +108,17 @@ impl Size {
         self.width() == self.height()
     }
 
-    /// The number of solvable states of a puzzle of size `self`.
+    /// The number of solvable states of a puzzle of size `self`, or `None` if the number does not
+    /// fit in a [`u128`] (puzzles with an area greater than 34).
     #[must_use]
-    pub fn num_states(&self) -> u128 {
+    pub fn num_states(&self) -> Option<u128> {
         let (w, h) = (*self).into();
-        if w == 1 {
-            h as u128
-        } else if h == 1 {
-            w as u128
+        if w == 1 || h == 1 {
+            Some(u128::from(self.area()))
         } else {
-            (1..=self.area().as_()).product::<u128>() / 2
+            // `area! / 2`, computed as `3 * 4 * ... * area` so that the largest representable
+            // result doesn't overflow before the division.
+            (3..=u128::from(self.area())).try_fold(1, u128::checked_mul)
         }
     }
 }
@@ -267,19 +267,30 @@ mod tests {
 
     #[test]
     fn test_num_states() {
-        assert_eq!(size(1, 1).num_states(), 1);
-        assert_eq!(size(1, 5).num_states(), 5);
-        assert_eq!(size(5, 1).num_states(), 5);
-        assert_eq!(size(2, 2).num_states(), 12);
-        assert_eq!(size(2, 3).num_states(), 360);
-        assert_eq!(size(3, 2).num_states(), 360);
-        assert_eq!(size(3, 3).num_states(), 181440);
-        assert_eq!(size(4, 4).num_states(), 10461394944000);
-        assert_eq!(size(5, 5).num_states(), 7755605021665492992000000);
+        assert_eq!(size(1, 1).num_states(), Some(1));
+        assert_eq!(size(1, 5).num_states(), Some(5));
+        assert_eq!(size(5, 1).num_states(), Some(5));
+        assert_eq!(size(2, 2).num_states(), Some(12));
+        assert_eq!(size(2, 3).num_states(), Some(360));
+        assert_eq!(size(3, 2).num_states(), Some(360));
+        assert_eq!(size(3, 3).num_states(), Some(181440));
+        assert_eq!(size(4, 4).num_states(), Some(10461394944000));
+        assert_eq!(size(5, 5).num_states(), Some(7755605021665492992000000));
         assert_eq!(
             size(17, 2).num_states(),
-            147616399519802070423809304821760000000
+            Some(147616399519802070423809304821760000000)
         );
+    }
+
+    #[test]
+    fn test_num_states_overflow() {
+        // 35! / 2 is greater than `u128::MAX`.
+        assert_eq!(size(7, 5).num_states(), None);
+        assert_eq!(size(6, 6).num_states(), None);
+        assert_eq!(size(100, 100).num_states(), None);
+
+        // Puzzles with width or height 1 never overflow.
+        assert_eq!(size(1, u64::MAX).num_states(), Some(u128::from(u64::MAX)));
     }
 
     #[test]

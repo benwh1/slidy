@@ -96,7 +96,7 @@ mod tests {
 
                     type P = crate::puzzle::small::[< Puzzle $w x $h >];
 
-                    let states = Size::new($w, $h).unwrap().num_states() as u64;
+                    let states = Size::new($w, $h).unwrap().num_states().unwrap() as u64;
 
                     for i in 0..states {
                         let perm = indexing::decode::<W, N>(i);

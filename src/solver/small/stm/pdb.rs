@@ -49,7 +49,7 @@ where
     #[must_use]
     pub fn new(config: &PdbConfig) -> Self {
         let puzzle = Puzzle::<W, H>::new();
-        let num_states = puzzle.size().num_states().try_into().unwrap();
+        let num_states = puzzle.size().num_states().unwrap().try_into().unwrap();
 
         let mut pdb = vec![u8::MAX; num_states];
         let solved_encoded = indexing::encode_pieces::<N>(puzzle.pieces(), puzzle.gap());
@@ -139,7 +139,7 @@ where
     /// [`Solver`]: crate::solver::small::solver::Solver
     #[must_use]
     pub unsafe fn try_from_bytes(bytes: Box<[u8]>) -> Option<Self> {
-        if bytes.len() as u128 != Puzzle::<W, H>::new().size().num_states() {
+        if Some(bytes.len() as u128) != Puzzle::<W, H>::new().size().num_states() {
             return None;
         }
 
