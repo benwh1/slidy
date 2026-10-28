@@ -30,10 +30,20 @@ use crate::{
 /// - If `w` is the width of the puzzle, then position `w-1` is the top right corner and position
 ///   `w` is below position 0
 /// - Position `N` is the bottom right corner
-#[expect(
-    clippy::missing_safety_doc,
-    reason = "no actual unsafe code, only functions marked as unsafe"
-)]
+///
+/// # Safety of the `_unchecked` methods
+///
+/// Each `_unchecked` method is a version of a safe method that skips some checks. Callers must
+/// uphold the requirements in the method's `# Safety` section, and must also ensure that the puzzle
+/// is in a valid state: every integer from 0 to `N` appears exactly once.
+///
+/// The default implementations call the safe methods, so violating these requirements has the same
+/// effect as calling the safe method with invalid input. However, implementations may override the
+/// `_unchecked` methods with code that relies on the requirements to avoid undefined behavior (for
+/// example by using unchecked indexing, as [`Puzzle`] does), so callers must not rely on the
+/// defaults.
+///
+/// [`Puzzle`]: crate::puzzle::puzzle::Puzzle
 pub trait SlidingPuzzle
 where
     Self: Sized,
@@ -75,6 +85,11 @@ where
     }
 
     /// See [`SlidingPuzzle::piece_position`].
+    ///
+    /// # Safety
+    ///
+    /// `piece` must satisfy `0 <= piece < self.area()`. The puzzle must be in a valid state (see
+    /// [`SlidingPuzzle`]).
     #[must_use]
     unsafe fn piece_position_unchecked(&self, piece: Self::Piece) -> u64 {
         self.piece_position(piece)
@@ -96,6 +111,11 @@ where
     }
 
     /// See [`SlidingPuzzle::piece_position_xy`].
+    ///
+    /// # Safety
+    ///
+    /// `piece` must satisfy `0 <= piece < self.area()`. The puzzle must be in a valid state (see
+    /// [`SlidingPuzzle`]).
     #[must_use]
     unsafe fn piece_position_xy_unchecked(&self, piece: Self::Piece) -> (u64, u64) {
         let pos = self.piece_position_unchecked(piece);
@@ -118,6 +138,10 @@ where
     }
 
     /// See [`SlidingPuzzle::piece_position_unchecked`].
+    ///
+    /// # Safety
+    ///
+    /// The puzzle must be in a valid state (see [`SlidingPuzzle`]).
     #[must_use]
     unsafe fn gap_position_unchecked(&self) -> u64 {
         self.piece_position_unchecked(Self::Piece::zero())
@@ -138,6 +162,10 @@ where
     }
 
     /// See [`SlidingPuzzle::piece_position_xy_unchecked`].
+    ///
+    /// # Safety
+    ///
+    /// The puzzle must be in a valid state (see [`SlidingPuzzle`]).
     #[must_use]
     unsafe fn gap_position_xy_unchecked(&self) -> (u64, u64) {
         self.piece_position_xy_unchecked(Self::Piece::zero())
@@ -210,6 +238,11 @@ where
     }
 
     /// See [`SlidingPuzzle::set_state`].
+    ///
+    /// # Safety
+    ///
+    /// `self` and `other` must have the same size, and `other` must also be in a valid state. The
+    /// puzzle must be in a valid state (see [`SlidingPuzzle`]).
     unsafe fn set_state_unchecked<P>(&mut self, other: &P)
     where
         P: SlidingPuzzle,
@@ -262,6 +295,11 @@ where
     }
 
     /// See [`SlidingPuzzle::solved_pos`].
+    ///
+    /// # Safety
+    ///
+    /// `piece` must satisfy `0 <= piece < self.area()`. The puzzle must be in a valid state (see
+    /// [`SlidingPuzzle`]).
     #[must_use]
     unsafe fn solved_pos_unchecked(&self, piece: Self::Piece) -> u64 {
         self.solved_pos(piece)
@@ -290,6 +328,11 @@ where
     }
 
     /// See [`SlidingPuzzle::solved_pos_xy`].
+    ///
+    /// # Safety
+    ///
+    /// `piece` must satisfy `0 <= piece < self.area()`. The puzzle must be in a valid state (see
+    /// [`SlidingPuzzle`]).
     #[must_use]
     unsafe fn solved_pos_xy_unchecked(&self, piece: Self::Piece) -> (u64, u64) {
         let p = self.solved_pos_unchecked(piece);
@@ -313,6 +356,11 @@ where
     }
 
     /// See [`SlidingPuzzle::piece_at`].
+    ///
+    /// # Safety
+    ///
+    /// `idx` must satisfy `0 <= idx < self.area()`. The puzzle must be in a valid state (see
+    /// [`SlidingPuzzle`]).
     #[must_use]
     unsafe fn piece_at_unchecked(&self, idx: u64) -> Self::Piece {
         self.piece_at(idx)
@@ -337,6 +385,11 @@ where
     }
 
     /// See [`SlidingPuzzle::piece_at_xy`].
+    ///
+    /// # Safety
+    ///
+    /// `(x, y)` must be within bounds, i.e. `self.size().is_within_bounds((x, y))` must be true.
+    /// The puzzle must be in a valid state (see [`SlidingPuzzle`]).
     #[must_use]
     unsafe fn piece_at_xy_unchecked(&self, (x, y): (u64, u64)) -> Self::Piece {
         self.piece_at_unchecked(x + self.size().width() * y)
@@ -365,6 +418,11 @@ where
     }
 
     /// See [`SlidingPuzzle::swap_pieces`].
+    ///
+    /// # Safety
+    ///
+    /// `idx1` and `idx2` must both satisfy `0 <= idx < self.area()`. The puzzle must be in a valid
+    /// state (see [`SlidingPuzzle`]).
     unsafe fn swap_pieces_unchecked(&mut self, idx1: u64, idx2: u64) {
         self.swap_pieces(idx1, idx2);
     }
@@ -391,6 +449,11 @@ where
     }
 
     /// See [`SlidingPuzzle::swap_pieces_xy`].
+    ///
+    /// # Safety
+    ///
+    /// `(x1, y1)` and `(x2, y2)` must both be within bounds (see [`Size::is_within_bounds`]). The
+    /// puzzle must be in a valid state (see [`SlidingPuzzle`]).
     unsafe fn swap_pieces_xy_unchecked(&mut self, (x1, y1): (u64, u64), (x2, y2): (u64, u64)) {
         let w = self.size().width();
         self.swap_pieces_unchecked(x1 + w * y1, x2 + w * y2);
@@ -424,6 +487,11 @@ where
     }
 
     /// See [`SlidingPuzzle::swap_non_gap_pieces`].
+    ///
+    /// # Safety
+    ///
+    /// `idx1` and `idx2` must both satisfy `0 <= idx < self.area()`, and neither may be the
+    /// position of the gap. The puzzle must be in a valid state (see [`SlidingPuzzle`]).
     unsafe fn swap_non_gap_pieces_unchecked(&mut self, idx1: u64, idx2: u64) {
         self.swap_pieces_unchecked(idx1, idx2);
     }
@@ -446,6 +514,12 @@ where
     }
 
     /// See [`SlidingPuzzle::swap_non_gap_pieces_xy`].
+    ///
+    /// # Safety
+    ///
+    /// `(x1, y1)` and `(x2, y2)` must both be within bounds (see [`Size::is_within_bounds`]), and
+    /// neither may be the position of the gap. The puzzle must be in a valid state (see
+    /// [`SlidingPuzzle`]).
     unsafe fn swap_non_gap_pieces_xy_unchecked(
         &mut self,
         (x1, y1): (u64, u64),
@@ -471,6 +545,11 @@ where
     }
 
     /// See [`SlidingPuzzle::swap_piece_with_gap`].
+    ///
+    /// # Safety
+    ///
+    /// `idx` must satisfy `0 <= idx < self.area()`. The puzzle must be in a valid state (see
+    /// [`SlidingPuzzle`]).
     unsafe fn swap_piece_with_gap_unchecked(&mut self, idx: u64) {
         self.swap_pieces_unchecked(idx, self.gap_position());
     }
@@ -517,6 +596,11 @@ where
     }
 
     /// See [`SlidingPuzzle::move_dir`].
+    ///
+    /// # Safety
+    ///
+    /// `self.can_move_dir(dir)` must be true. The puzzle must be in a valid state (see
+    /// [`SlidingPuzzle`]).
     unsafe fn move_dir_unchecked(&mut self, dir: Direction) {
         let gap = self.gap_position_unchecked();
         let piece = match dir {
@@ -566,6 +650,11 @@ where
     }
 
     /// See [`SlidingPuzzle::apply_move`].
+    ///
+    /// # Safety
+    ///
+    /// `self.can_apply_move(mv)` must be true. The puzzle must be in a valid state (see
+    /// [`SlidingPuzzle`]).
     unsafe fn apply_move_unchecked(&mut self, mv: Move) {
         for _ in 0..mv.amount {
             self.move_dir_unchecked(mv.direction);
@@ -602,6 +691,11 @@ where
     }
 
     /// See [`SlidingPuzzle::move_position`].
+    ///
+    /// # Safety
+    ///
+    /// `self.can_move_position(idx)` must be true. The puzzle must be in a valid state (see
+    /// [`SlidingPuzzle`]).
     unsafe fn move_position_unchecked(&mut self, idx: u64) {
         self.move_position(idx);
     }
@@ -641,6 +735,11 @@ where
     }
 
     /// See [`SlidingPuzzle::move_position_xy`].
+    ///
+    /// # Safety
+    ///
+    /// `self.can_move_position_xy(pos)` must be true. The puzzle must be in a valid state (see
+    /// [`SlidingPuzzle`]).
     unsafe fn move_position_xy_unchecked(&mut self, pos: (u64, u64)) {
         self.move_position_xy(pos);
     }
@@ -674,6 +773,11 @@ where
     }
 
     /// See [`SlidingPuzzle::move_piece`].
+    ///
+    /// # Safety
+    ///
+    /// `self.can_move_piece(piece)` must be true. The puzzle must be in a valid state (see
+    /// [`SlidingPuzzle`]).
     unsafe fn move_piece_unchecked(&mut self, piece: Self::Piece) {
         self.move_piece(piece);
     }
@@ -740,6 +844,11 @@ where
     }
 
     /// See [`SlidingPuzzle::apply_alg`].
+    ///
+    /// # Safety
+    ///
+    /// `self.can_apply_alg(alg)` must be true. The puzzle must be in a valid state (see
+    /// [`SlidingPuzzle`]).
     unsafe fn apply_alg_unchecked<'a, Alg>(&mut self, alg: &'a Alg)
     where
         Alg: AsAlgorithmSlice<'a>,
@@ -819,6 +928,11 @@ where
     }
 
     /// See [`SlidingPuzzle::embed_into`].
+    ///
+    /// # Safety
+    ///
+    /// `self.can_embed_into(puzzle)` must be true, and `puzzle` must also be in a valid state. The
+    /// puzzle must be in a valid state (see [`SlidingPuzzle`]).
     unsafe fn embed_into_unchecked(&self, puzzle: &mut Self) {
         self.embed_into(puzzle);
     }
@@ -867,6 +981,11 @@ where
     }
 
     /// See [`SlidingPuzzle::invert`].
+    ///
+    /// # Safety
+    ///
+    /// `self.invertible()` must be true. The puzzle must be in a valid state (see
+    /// [`SlidingPuzzle`]).
     unsafe fn invert_unchecked(&mut self) {
         self.invert();
     }
