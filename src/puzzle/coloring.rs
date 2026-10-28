@@ -1,7 +1,5 @@
 //! Defines the [`Coloring`] trait and several implementations.
 
-use std::cmp::Ordering;
-
 use enterpolation::{
     linear::{Linear, LinearError},
     Curve, Identity, Sorted,
@@ -244,7 +242,7 @@ impl LinearGradient {
     where
         LinSrgba: FromColor<Color>,
     {
-        points.sort_by(|(a, _), (b, _)| a.partial_cmp(b).unwrap_or(Ordering::Less));
+        points.sort_by(|(a, _), (b, _)| a.total_cmp(b));
 
         let knots = points.iter().map(|&(x, _)| x).collect::<Vec<_>>();
         let colors = points
@@ -369,6 +367,24 @@ mod tests {
             Some(Hsl::new(330.0, 1.0, 0.5).into_color())
         );
         assert_eq!(a.try_color(5, 5), None);
+    }
+
+    #[test]
+    fn test_gradient_nan_knot() {
+        // A NaN knot should be rejected with an error. `sort_by` may panic when the comparator is
+        // not a total order, which is only detected on longer inputs.
+        for i in 0..40 {
+            let mut points = (0..40)
+                .map(|j| {
+                    (
+                        (j * 37 % 40) as f32 / 40.0,
+                        LinSrgba::new(1.0, 1.0, 1.0, 1.0),
+                    )
+                })
+                .collect::<Vec<_>>();
+            points[i].0 = f32::NAN;
+            assert!(Gradient::linear(points).is_err());
+        }
     }
 
     #[test]
