@@ -169,13 +169,11 @@ impl Algorithm {
     /// Appends a move to the end of the algorithm.
     ///
     /// If the previous move is in the same direction as the appended move, they are combined into
-    /// a single move.
+    /// a single move, unless the combined amount would overflow.
     pub fn push_combine(&mut self, m: Move) {
-        if let Some(other) = self
-            .moves
-            .last_mut()
-            .filter(|other| m.direction == other.direction)
-        {
+        if let Some(other) = self.moves.last_mut().filter(|other| {
+            m.direction == other.direction && other.amount.checked_add(m.amount).is_some()
+        }) {
             other.amount += m.amount;
         } else {
             self.moves.push(m);
@@ -185,11 +183,15 @@ impl Algorithm {
     /// Appends a move to the end of the algorithm.
     ///
     /// If the previous move is in the same or opposite direction as the appended move, they are
-    /// combined into a single move (or removed if the two moves cancel completely).
+    /// combined into a single move (or removed if the two moves cancel completely). Moves in the
+    /// same direction are not combined if the combined amount would overflow.
     pub fn push_simplify(&mut self, m: Move) {
         match self.moves.last_mut() {
             Some(other) if m.direction == other.direction => {
-                other.amount += m.amount;
+                match other.amount.checked_add(m.amount) {
+                    Some(amount) => other.amount = amount,
+                    None => self.moves.push(m),
+                }
             }
             Some(other) if m.direction == other.direction.inverse() => {
                 match m.amount.cmp(&other.amount) {
@@ -638,6 +640,38 @@ mod tests {
         a.push_simplify(Move::new(Direction::Left, 3));
         assert_eq!(a.moves.last(), Some(&Move::new(Direction::Right, 2)));
         assert_eq!(a.to_string(), "ULDR2");
+    }
+
+    #[test]
+    fn test_push_combine_overflow() {
+        let mut a = Algorithm::from_str("UR18446744073709551615").unwrap();
+        a.push_combine(Move::new(Direction::Right, 2));
+        assert_eq!(
+            a.moves,
+            vec![
+                Move::new(Direction::Up, 1),
+                Move::new(Direction::Right, u64::MAX),
+                Move::new(Direction::Right, 2),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_push_simplify_overflow() {
+        let mut a = Algorithm::from_str("UR18446744073709551615").unwrap();
+        a.push_simplify(Move::new(Direction::Right, 2));
+        assert_eq!(
+            a.moves,
+            vec![
+                Move::new(Direction::Up, 1),
+                Move::new(Direction::Right, u64::MAX),
+                Move::new(Direction::Right, 2),
+            ]
+        );
+
+        // Opposite directions can still be combined.
+        a.push_simplify(Move::new(Direction::Left, 3));
+        assert_eq!(a.to_string(), "UR18446744073709551615L");
     }
 
     #[test]
