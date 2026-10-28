@@ -59,10 +59,6 @@ impl AlgorithmSlice<'_> {
     /// that cancel completely. Returns the result as a new [`Algorithm`].
     #[must_use]
     pub fn simplified(&self) -> Algorithm {
-        if self.moves_mtm().count() < 2 {
-            return Algorithm::from(*self);
-        }
-
         // List of simplified moves
         let mut moves = Vec::new();
 

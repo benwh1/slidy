@@ -738,6 +738,15 @@ mod tests {
     }
 
     #[test]
+    fn test_simplify_zero_amount() {
+        for (alg, expected) in [("U0", ""), ("U0R0", ""), ("U0R", "R"), ("RU0", "R")] {
+            let mut a = Algorithm::from_str(alg).unwrap();
+            a.simplify();
+            assert_eq!(a, Algorithm::from_str(expected).unwrap(), "alg {alg}");
+        }
+    }
+
+    #[test]
     fn test_invert() {
         let mut a = Algorithm::from_str("ULDR").unwrap();
         let b = Algorithm::from_str("LURD").unwrap();
