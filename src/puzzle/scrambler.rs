@@ -191,8 +191,11 @@ impl Scrambler for RandomMoves {
                 d
             };
 
-            last_dir = Some(dir);
-            puzzle.try_move_dir(dir);
+            // An illegal move is counted but not applied, so it doesn't count as the last move for
+            // the backtracking check.
+            if puzzle.try_move_dir(dir) {
+                last_dir = Some(dir);
+            }
         }
     }
 }
@@ -299,6 +302,36 @@ mod tests {
                     RandomState.scramble_with_rng(&mut p, &mut rng);
                     assert!(RowGrids.is_solvable(&p));
                 }
+            }
+        }
+    }
+
+    mod random_moves {
+        use rand::SeedableRng as _;
+        use rand_xoshiro::Xoroshiro128StarStar;
+
+        use super::*;
+
+        const SEED: [u8; 16] = [
+            160, 108, 126, 255, 147, 210, 122, 252, 71, 77, 144, 13, 167, 11, 225, 93,
+        ];
+
+        #[test]
+        fn test_illegal_moves_do_not_reset_backtracking() {
+            let mut rng = Xoroshiro128StarStar::from_seed(SEED);
+            let mut p = Puzzle::new(Size::new(2, 1).unwrap());
+            let scrambler = RandomMoves {
+                moves: 50,
+                allow_backtracking: false,
+                allow_illegal_moves: true,
+            };
+
+            // The only legal move on the solved 2x1 puzzle is R, and after that the only legal move
+            // is L, which would be backtracking. So once R has been applied, the puzzle must stay
+            // in the state "0 1", even if illegal moves are generated in between.
+            for _ in 0..200 {
+                scrambler.scramble_with_rng(&mut p, &mut rng);
+                assert_eq!(p.to_string(), "0 1");
             }
         }
     }
