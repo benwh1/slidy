@@ -104,7 +104,7 @@ impl Display for Direction {
     }
 }
 
-/// Error type for [`TryFrom<char>`].
+/// Error type for [`TryFrom<char>`] and [`Direction::from_str`].
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ParseDirectionError {
@@ -115,6 +115,10 @@ pub enum ParseDirectionError {
     /// The string is empty.
     #[error("Empty: string is empty")]
     Empty,
+
+    /// The string contains more than one character.
+    #[error("MultipleCharacters: string must contain exactly one character")]
+    MultipleCharacters,
 }
 
 impl TryFrom<char> for Direction {
@@ -137,15 +141,11 @@ impl FromStr for Direction {
 
     /// Maps the single-character strings "U", "L", "D", "R" to directions.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "U" => Ok(Self::Up),
-            "L" => Ok(Self::Left),
-            "D" => Ok(Self::Down),
-            "R" => Ok(Self::Right),
-            _ => Err(s
-                .chars()
-                .next()
-                .map_or(Self::Err::Empty, Self::Err::InvalidCharacter)),
+        let mut chars = s.chars();
+        match (chars.next(), chars.next()) {
+            (None, _) => Err(Self::Err::Empty),
+            (Some(c), None) => c.try_into(),
+            (Some(_), Some(_)) => Err(Self::Err::MultipleCharacters),
         }
     }
 }
@@ -179,5 +179,37 @@ mod tests {
             Err(ParseDirectionError::InvalidCharacter('🥚'))
         );
         assert_eq!(Direction::from_str(""), Err(ParseDirectionError::Empty));
+    }
+
+    #[test]
+    fn test_from_str_all_directions() {
+        for d in [
+            Direction::Up,
+            Direction::Left,
+            Direction::Down,
+            Direction::Right,
+        ] {
+            assert_eq!(Direction::from_str(&d.to_string()), Ok(d));
+        }
+        assert_eq!(
+            Direction::from_str("u"),
+            Err(ParseDirectionError::InvalidCharacter('u'))
+        );
+    }
+
+    #[test]
+    fn test_from_str_multiple_characters() {
+        assert_eq!(
+            Direction::from_str("UD"),
+            Err(ParseDirectionError::MultipleCharacters)
+        );
+        assert_eq!(
+            Direction::from_str("U "),
+            Err(ParseDirectionError::MultipleCharacters)
+        );
+        assert_eq!(
+            Direction::from_str("xU"),
+            Err(ParseDirectionError::MultipleCharacters)
+        );
     }
 }
