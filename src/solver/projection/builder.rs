@@ -25,6 +25,11 @@ pub enum SolverBuilderError {
     /// target label.
     #[error("InvalidProjection: the pruning label is not a projection of the target label")]
     InvalidProjection,
+
+    /// Returned from [`SolverBuilder::build`] when the [`Pdb`] passed to [`SolverBuilder::pdb`]
+    /// does not have the number of entries required by the puzzle size and pruning label.
+    #[error("IncompatiblePdb: the pattern database does not match the puzzle size and label")]
+    IncompatiblePdb,
 }
 
 pub(super) enum PdbAction<Metric> {
@@ -111,6 +116,11 @@ impl<P, Target, PruneTarget, Metric> SolverBuilder<P, Target, PruneTarget, Metri
 
     #[must_use]
     /// Sets an existing [`Pdb`] to be used in the [`Solver`].
+    ///
+    /// The [`Pdb`] must have been built for the same puzzle size and pruning label. If it doesn't
+    /// have the number of entries required by them, building the [`Solver`] fails with
+    /// [`SolverBuilderError::IncompatiblePdb`]. A [`Pdb`] with the right number of entries but
+    /// built for a different label is not detected, and leads to incorrect solutions.
     ///
     /// Use [`Self::pdb_config`] to build the [`Pdb`] from scratch with a custom configuration.
     ///

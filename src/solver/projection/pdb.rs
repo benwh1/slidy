@@ -4,7 +4,10 @@
 
 use std::marker::PhantomData;
 
-use crate::puzzle::{label::label::Label, size::Size};
+use crate::{
+    puzzle::{label::label::Label, size::Size},
+    solver::indexing,
+};
 
 /// Pattern database used by [`Solver`].
 ///
@@ -74,6 +77,15 @@ where
     }
     state[n - 1] = 0;
     state
+}
+
+/// The number of entries in a [`Pdb`] built for `label` on a puzzle of the given size.
+pub(super) fn expected_len<L>(label: &L, size: Size) -> usize
+where
+    L: Label,
+{
+    let tally = compute_tally(&compute_solved_state(label, size));
+    indexing::multinomial(&tally) as usize
 }
 
 pub(super) fn compute_tally(solved_state: &[u8]) -> Vec<u8> {

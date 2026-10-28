@@ -195,7 +195,10 @@ mod tests {
             scrambler::{RandomState, Scrambler as _},
             size::Size,
         },
-        solver::config::PdbConfig,
+        solver::{
+            config::PdbConfig,
+            projection::{builder::SolverBuilderError, pdb::Pdb},
+        },
     };
 
     type Solver3x3MtmTrivial = Solver<Puzzle, Trivial, Trivial, Mtm>;
@@ -279,5 +282,48 @@ mod tests {
 
             assert_eq!(solutions.len(), 5, "failed on {puzzle}");
         }
+    }
+
+    #[test]
+    fn test_existing_pdb_wrong_size() {
+        let pdb = Pdb::<Mtm>::new(&Trivial, Size::new(2, 2).unwrap(), &PdbConfig::default());
+        let result = Solver::<Puzzle, Trivial, Trivial, Mtm>::builder()
+            .size(Size::new(3, 3).unwrap())
+            .pdb(pdb)
+            .build();
+
+        assert!(matches!(result, Err(SolverBuilderError::IncompatiblePdb)));
+    }
+
+    #[test]
+    fn test_existing_pdb_wrong_label() {
+        let size = Size::new(3, 3).unwrap();
+        let pdb = Pdb::<Mtm>::new(&Rows, size, &PdbConfig::default());
+        let result = Solver::<Puzzle, Trivial, Trivial, Mtm>::builder()
+            .size(size)
+            .pdb(pdb)
+            .build();
+
+        assert!(matches!(result, Err(SolverBuilderError::IncompatiblePdb)));
+    }
+
+    #[test]
+    fn test_existing_pdb_reused() {
+        let size = Size::new(3, 3).unwrap();
+        let mut solver = Solver::<Puzzle, Rows, Rows, Mtm>::builder()
+            .size(size)
+            .build()
+            .unwrap();
+        let puzzle = Puzzle::from_str("7 0 4/5 6 2/3 8 1").unwrap();
+        let expected = solver.solve(&puzzle).unwrap().len::<Mtm>();
+
+        let pdb = solver.pdb().clone();
+        let mut solver = Solver::<Puzzle, Rows, Rows, Mtm>::builder()
+            .size(size)
+            .pdb(pdb)
+            .build()
+            .unwrap();
+
+        assert_eq!(solver.solve(&puzzle).unwrap().len::<Mtm>(), expected);
     }
 }
