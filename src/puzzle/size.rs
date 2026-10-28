@@ -166,10 +166,10 @@ pub enum ParseSizeError {
     ParseWidthError(ParseIntError),
 
     /// The height could not be parsed as an integer.
-    #[error("ParseWidthError: {0}")]
+    #[error("ParseHeightError: {0}")]
     ParseHeightError(ParseIntError),
 
-    /// The width and height were both parsed as integers, but one of them was less than 2.
+    /// The width and height were both parsed as integers, but [`Size::new`] rejected them.
     #[error("SizeError: {0}")]
     SizeError(SizeError),
 }
