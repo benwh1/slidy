@@ -89,9 +89,7 @@ impl<L: Label> Label for Scaled<L> {
         );
         let (x, y) = (x / self.factor.0, y / self.factor.1);
 
-        Size::new(sw, sh)
-            .map(|size| self.label.position_label(size, (x, y)))
-            .unwrap_or_default()
+        Size::new(sw, sh).map_or_default(|size| self.label.position_label(size, (x, y)))
     }
 
     fn num_labels(&self, size: Size) -> u64 {
@@ -101,9 +99,7 @@ impl<L: Label> Label for Scaled<L> {
             height.div_ceil(self.factor.1),
         );
 
-        Size::new(sw, sh)
-            .map(|size| self.label.num_labels(size))
-            .unwrap_or_default()
+        Size::new(sw, sh).map_or_default(|size| self.label.num_labels(size))
     }
 }
 
