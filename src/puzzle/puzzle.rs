@@ -221,7 +221,11 @@ impl SlidingPuzzle for Puzzle {
         P: SlidingPuzzle,
     {
         for i in 0..other.area() {
-            self.pieces[i as usize] = other.piece_at_unchecked(i).as_();
+            let piece = other.piece_at_unchecked(i).as_();
+            self.pieces[i as usize] = piece;
+            if piece == 0 {
+                self.gap = i;
+            }
         }
     }
 
@@ -557,6 +561,23 @@ mod tests {
             assert_eq!(p1.pieces, p2.pieces);
             assert!(!p1.try_set_state(&p3));
             assert_eq!(p1.pieces, p2.pieces);
+        }
+
+        #[test]
+        fn test_set_state_unchecked() {
+            let mut p1 = Puzzle::from_str("1 2 3/4 5 6/7 8 0").unwrap();
+            let p2 = Puzzle::from_str("0 1 2/3 4 5/6 7 8").unwrap();
+
+            // SAFETY: `p1` and `p2` have the same size.
+            unsafe {
+                p1.set_state_unchecked(&p2);
+            }
+
+            assert_eq!(p1, p2);
+            assert_eq!(p1.gap_position(), 0);
+
+            p1.move_dir(Direction::Left);
+            assert_eq!(p1, Puzzle::from_str("1 0 2/3 4 5/6 7 8").unwrap());
         }
 
         #[test]
