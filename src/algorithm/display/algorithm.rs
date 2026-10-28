@@ -1,6 +1,6 @@
 //! Defines ways in which an [`Algorithm`] can be displayed.
 //!
-//! [`Algorithm`]: ../../algorithm.html
+//! [`Algorithm`]: crate::algorithm::algorithm::Algorithm
 
 use std::{
     fmt::{Display, Write as _},
@@ -11,7 +11,7 @@ use crate::algorithm::{
     as_slice::AsAlgorithmSlice, display::r#move::MoveDisplay, slice::AlgorithmSlice,
 };
 
-/// Marker trait for structs that are used to display algorithms.
+/// Trait for structs that are used to display algorithms.
 pub trait AlgorithmDisplay<'a> {
     /// Create a new [`AlgorithmDisplay`] for displaying `algorithm`.
     #[must_use]

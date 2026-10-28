@@ -141,7 +141,7 @@ impl Algorithm {
 
     /// The length of the algorithm in the [`Stm`] [`Metric`].
     ///
-    /// [`Stm`]: ../metric.html
+    /// [`Stm`]: crate::algorithm::metric::Stm
     #[must_use]
     pub fn len_stm(&self) -> u64 {
         self.as_slice().len_stm()
@@ -149,7 +149,7 @@ impl Algorithm {
 
     /// The length of the algorithm in the [`Mtm`] [`Metric`].
     ///
-    /// [`Mtm`]: ../metric.html
+    /// [`Mtm`]: crate::algorithm::metric::Mtm
     #[must_use]
     pub fn len_mtm(&self) -> u64 {
         self.as_slice().len_mtm()

@@ -1,7 +1,7 @@
 //! Contains the main definition of a sliding puzzle as the [`SlidingPuzzle`] trait, and defines
 //! many properties of sliding puzzles.
 //!
-//! [`SlidingPuzzle`]: sliding_puzzle/trait.SlidingPuzzle.html
+//! [`SlidingPuzzle`]: crate::puzzle::sliding_puzzle::SlidingPuzzle
 
 #[cfg(feature = "palette")]
 pub mod color_scheme;

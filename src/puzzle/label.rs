@@ -1,6 +1,6 @@
 //! Defines the [`Label`] trait and all implementations.
 //!
-//! [`Label`]: label/trait.Label.html
+//! [`Label`]: crate::puzzle::label::label::Label
 
 pub mod grid;
 pub mod label;

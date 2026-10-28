@@ -13,10 +13,10 @@ use crate::puzzle::{
 /// Scales a [`Label`] up by a horizontal factor and a vertical factor.
 ///
 /// For example, consider the [`crate::puzzle::label::label::RowGrids`] label on a 6x4 puzzle, with
-/// 36 distinct labels. If we scale it up by a factor of 3 horizontally, and a factor of 2
+/// 24 distinct labels. If we scale it up by a factor of 3 horizontally, and a factor of 2
 /// vertically, the top left 3x2 block will have the label 0, the top right 3x2 block will have the
-/// label 1, the left 3x2 block in the middle two rows will have the label 2, etc. for a total of 6
-/// distinct labels.
+/// label 1, the bottom left 3x2 block will have the label 2, and the bottom right 3x2 block will
+/// have the label 3, for a total of 4 distinct labels.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
     feature = "serde",

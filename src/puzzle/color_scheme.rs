@@ -215,7 +215,7 @@ impl<L: Label + Grids, C: Coloring> Grids for Scheme<L, C> {
 /// A [`ColorScheme`] that always outputs black. This is just to make using [`Renderer`] more
 /// convenient (because most of the time, we probably want black text and black borders).
 ///
-/// [`Renderer`]: ../renderer.html
+/// [`Renderer`]: crate::puzzle::render::Renderer
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Black;

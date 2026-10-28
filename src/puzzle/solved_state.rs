@@ -1,7 +1,7 @@
 //! Defines the [`SolvedState`] trait and implements it on some of the labels defined in
 //! [`slidy::label::label`].
 //!
-//! [`slidy::label::label`]: ../label/label/index.html
+//! [`slidy::label::label`]: crate::puzzle::label::label
 
 use itertools::Itertools as _;
 

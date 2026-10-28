@@ -364,7 +364,7 @@ impl Label for FringeGrids {
         // Which (non-split) fringe is (x, y) in?
         let fringe = x.min(y);
 
-        // Is it in the row part or the horizontal part?
+        // Is it in the row part or the column part?
         let vertical_part = x < y;
 
         // Sum w+h-1-2k, k=0..f-1 = f(w+h-f) = number of tiles in previous fringes
@@ -418,7 +418,7 @@ impl Label for SplitFringe {
         // Which (non-split) fringe is (x, y) in?
         let fringe = x.min(y);
 
-        // Is it in the row part or the horizontal part?
+        // Is it in the row part or the column part?
         let vertical_part = x < y;
 
         2 * fringe + u64::from(vertical_part)

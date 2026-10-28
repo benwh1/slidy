@@ -1,5 +1,5 @@
 //! Defines the [`ManhattanDistance`] heuristic, which is the sum of the manhattan distances of
-//! each piece from it's solved position.
+//! each piece from its solved position.
 
 use std::cmp::Ordering;
 

@@ -12,7 +12,8 @@ use crate::puzzle::{label::label::Label, size::Size};
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum RectError {
-    /// Returned when the width (`right - left`) or height (`bottom - top`) are negative.
+    /// Returned when the width (`right - left`) or height (`bottom - top`) is not positive, i.e.
+    /// when `right <= left` or `bottom <= top`.
     #[error("InvalidSize: width and height of the rectangle must be positive")]
     InvalidSize,
 }

@@ -1,7 +1,7 @@
 //! Defines the [`Solvable`] trait and implements it on some of the labels defined in
 //! [`slidy::label::label`].
 //!
-//! [`slidy::label::label`]: ../label/label/index.html
+//! [`slidy::label::label`]: crate::puzzle::label::label
 
 use num_traits::ToPrimitive as _;
 
@@ -16,7 +16,7 @@ use crate::puzzle::{
 /// Trait for defining whether a puzzle is solvable with respect to a [`Label`]. Any puzzle that
 /// has at least two pieces with the same label is always solvable.
 ///
-/// [`Label`]: ../label/label/trait.Label.html
+/// [`Label`]: crate::puzzle::label::label::Label
 pub trait Solvable {
     /// Checks if the puzzle is solvable.
     #[must_use]

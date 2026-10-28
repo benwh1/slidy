@@ -148,7 +148,7 @@ pub struct RandomMoves {
     /// Number of random moves to apply.
     pub moves: u64,
     /// Are backtracking moves allowed? E.g. If one move of the scramble is R, is the next move
-    /// allowed to be L? If this is false, the L move will not be allowed and a differentmove will
+    /// allowed to be L? If this is false, the L move will not be allowed and a different move will
     /// be generated.
     pub allow_backtracking: bool,
     /// Are illegal moves counted? E.g. If the first generated move of the scramble is L (which

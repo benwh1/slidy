@@ -680,7 +680,7 @@ where
 
     /// Checks if it is possible to apply the given [`Algorithm`].
     ///
-    /// [`Algorithm`]: ../../algorithm/algorithm.html
+    /// [`Algorithm`]: crate::algorithm::algorithm::Algorithm
     #[must_use]
     fn can_apply_alg<'a, Alg>(&self, alg: &'a Alg) -> bool
     where
@@ -714,7 +714,7 @@ where
     /// If `self.can_apply_alg(alg)` is false, the function may panic or the puzzle may be
     /// transformed in an invalid way.
     ///
-    /// [`Algorithm`]: ../../algorithm/algorithm.html
+    /// [`Algorithm`]: crate::algorithm::algorithm::Algorithm
     fn apply_alg<'a, Alg>(&mut self, alg: &'a Alg)
     where
         Alg: AsAlgorithmSlice<'a>,

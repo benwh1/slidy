@@ -1,6 +1,6 @@
 //! Defines a struct representing the size of a [`SlidingPuzzle`].
 //!
-//! [`SlidingPuzzle`]: ../sliding_puzzle.html
+//! [`SlidingPuzzle`]: crate::puzzle::sliding_puzzle::SlidingPuzzle
 
 use std::{
     fmt::{Display, Write as _},
@@ -14,7 +14,7 @@ use thiserror::Error;
 
 /// The size of a [`SlidingPuzzle`].
 ///
-/// [`SlidingPuzzle`]: ../sliding_puzzle.html
+/// [`SlidingPuzzle`]: crate::puzzle::sliding_puzzle::SlidingPuzzle
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(
     feature = "serde",

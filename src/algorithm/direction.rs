@@ -30,7 +30,7 @@ pub enum Direction {
 }
 
 impl Direction {
-    /// The opposite directon. Swaps `Up` with `Down` and `Left` with `Right`.
+    /// The opposite direction. Swaps `Up` with `Down` and `Left` with `Right`.
     #[must_use]
     pub fn inverse(&self) -> Self {
         match self {

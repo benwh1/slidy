@@ -15,8 +15,7 @@ use thiserror::Error;
 ///
 /// See also: [`crate::puzzle::label::label::Label`].
 pub trait Coloring {
-    /// Returns a color based on a label and the total number of labels, or `None` if `label` is
-    /// out of bounds (i.e. `label >= num_labels`).
+    /// Returns a color based on a label and the total number of labels.
     ///
     /// This function does not check that `label` is within bounds (i.e. `label < num_labels`).
     /// If it is not, the function may panic or return any other color.
@@ -105,7 +104,11 @@ pub struct Rainbow {
     pub brightness: f32,
 }
 
-/// Given a [`Coloring`] `T`, makes the colors brighter when `label` is even.
+/// Given a [`Coloring`] `C`, makes the colors brighter when `label` is even.
+///
+/// Each odd label `2k + 1` uses the color that `C` gives to the even label `2k`, without the
+/// added brightness. Pairs of consecutive labels therefore share a hue, with the even label of
+/// each pair brighter than the odd one.
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AlternatingBrightness<C: Coloring>(pub C);
