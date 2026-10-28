@@ -144,6 +144,10 @@ where
             return Err(SolverError::Unsolvable);
         }
 
+        if config.num_solutions == 0 {
+            return Ok(());
+        }
+
         let min = config.min;
         let max = config.max;
         let depth_beyond_optimal = config.depth_beyond_optimal;
@@ -230,7 +234,9 @@ mod tests {
     use crate::{
         puzzle::{puzzle::Puzzle, sliding_puzzle::SlidingPuzzle as _},
         solver::{
-            config::SolverConfig, solver::Solver as _, Solver2x2Stm, Solver3x3Stm, Solver4x2Stm,
+            config::SolverConfig,
+            solver::{Solver as _, SolverError},
+            Solver2x2Stm, Solver3x3Stm, Solver4x2Stm,
         },
     };
 
@@ -274,5 +280,26 @@ mod tests {
         assert_eq!(solution.len_stm(), 203);
         puzzle.apply_alg(solution);
         assert!(puzzle.is_solved());
+    }
+
+    #[test]
+    fn test_zero_solutions() {
+        let mut solver = Solver3x3Stm::default();
+        let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
+        let config = SolverConfig {
+            num_solutions: 0,
+            ..Default::default()
+        };
+        assert_eq!(solver.solve_collect(&puzzle, config), Ok(Vec::new()));
+
+        let unsolvable = Puzzle::from_str("2 1 3/4 5 6/7 8 0").unwrap();
+        let config = SolverConfig {
+            num_solutions: 0,
+            ..Default::default()
+        };
+        assert_eq!(
+            solver.solve_collect(&unsolvable, config),
+            Err(SolverError::Unsolvable)
+        );
     }
 }

@@ -216,6 +216,10 @@ impl Solver {
         let reduced_puzzle = four_bit_puzzle.reduced();
         let transposed_reduced_puzzle = four_bit_puzzle.conjugate_with_transpose().reduced();
 
+        if config.num_solutions == 0 {
+            return Ok(());
+        }
+
         let min = config.min;
         let max = config.max;
         let depth_beyond_optimal = config.depth_beyond_optimal;

@@ -158,6 +158,10 @@ impl Solver {
             return Err(SolverError::Unsolvable);
         }
 
+        if config.num_solutions == 0 {
+            return Ok(());
+        }
+
         let min = config.min;
         let max = config.max;
         let depth_beyond_optimal = config.depth_beyond_optimal;
@@ -259,7 +263,11 @@ mod tests {
 
     use crate::{
         puzzle::puzzle::Puzzle,
-        solver::{size4x4::stm::solver::Solver, solver::Solver as _},
+        solver::{
+            config::SolverConfig,
+            size4x4::stm::solver::Solver,
+            solver::{Solver as _, SolverError},
+        },
     };
 
     #[test]
@@ -300,5 +308,26 @@ mod tests {
         ];
 
         assert_eq!(solutions, expected);
+    }
+
+    #[test]
+    fn test_zero_solutions() {
+        let mut solver = Solver::default();
+        let puzzle = Puzzle::from_str("6 12 0 3/11 1 10 4/9 7 8 13/15 14 2 5").unwrap();
+        let config = SolverConfig {
+            num_solutions: 0,
+            ..Default::default()
+        };
+        assert_eq!(solver.solve_collect(&puzzle, config), Ok(Vec::new()));
+
+        let unsolvable = Puzzle::from_str("2 1 3 4/5 6 7 8/9 10 11 12/13 14 15 0").unwrap();
+        let config = SolverConfig {
+            num_solutions: 0,
+            ..Default::default()
+        };
+        assert_eq!(
+            solver.solve_collect(&unsolvable, config),
+            Err(SolverError::Unsolvable)
+        );
     }
 }

@@ -151,6 +151,10 @@ where
             return Err(SolverError::Unsolvable);
         }
 
+        if config.num_solutions == 0 {
+            return Ok(());
+        }
+
         let min = config.min;
         let max = config.max;
         let depth_beyond_optimal = config.depth_beyond_optimal;
@@ -275,6 +279,10 @@ where
     fn solve_impl(&mut self, puzzle: &P, config: SolverConfig) -> Result<(), SolverError> {
         if !self.solved_state.is_solvable(puzzle) {
             return Err(SolverError::Unsolvable);
+        }
+
+        if config.num_solutions == 0 {
+            return Ok(());
         }
 
         let min = config.min;
@@ -512,5 +520,48 @@ mod tests {
         assert_eq!(solution.len_stm(), 301);
         puzzle.apply_alg(solution);
         assert!(puzzle.is_solved());
+    }
+
+    #[test]
+    fn test_zero_solutions() {
+        let mut solver = GenericSolver::default();
+        let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
+        let config = SolverConfig {
+            num_solutions: 0,
+            ..Default::default()
+        };
+        assert_eq!(solver.solve_collect(&puzzle, config), Ok(Vec::new()));
+
+        let unsolvable = Puzzle::from_str("2 1 3/4 5 6/7 8 0").unwrap();
+        let config = SolverConfig {
+            num_solutions: 0,
+            ..Default::default()
+        };
+        assert_eq!(
+            solver.solve_collect(&unsolvable, config),
+            Err(SolverError::Unsolvable)
+        );
+    }
+
+    #[test]
+    fn test_zero_solutions_mtm() {
+        let mut solver =
+            GenericSolver::<_, _, _, Mtm>::new(MtmHeuristic(ManhattanDistance(RowGrids)), RowGrids);
+        let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
+        let config = SolverConfig {
+            num_solutions: 0,
+            ..Default::default()
+        };
+        assert_eq!(solver.solve_collect(&puzzle, config), Ok(Vec::new()));
+
+        let unsolvable = Puzzle::from_str("2 1 3/4 5 6/7 8 0").unwrap();
+        let config = SolverConfig {
+            num_solutions: 0,
+            ..Default::default()
+        };
+        assert_eq!(
+            solver.solve_collect(&unsolvable, config),
+            Err(SolverError::Unsolvable)
+        );
     }
 }

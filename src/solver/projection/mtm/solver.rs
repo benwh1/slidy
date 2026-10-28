@@ -105,6 +105,10 @@ where
             return Err(SolverError::Unsolvable);
         }
 
+        if config.num_solutions == 0 {
+            return Ok(());
+        }
+
         let min = config.min;
         let max = config.max;
         let depth_beyond_optimal = config.depth_beyond_optimal;
@@ -190,7 +194,7 @@ mod tests {
     use super::*;
     use crate::{
         puzzle::{
-            label::label::{Checkerboard, Rows, Trivial},
+            label::label::{Checkerboard, RowGrids, Rows, Trivial},
             puzzle::Puzzle,
             scrambler::{RandomState, Scrambler as _},
             size::Size,
@@ -325,5 +329,29 @@ mod tests {
             .unwrap();
 
         assert_eq!(solver.solve(&puzzle).unwrap().len::<Mtm>(), expected);
+    }
+
+    #[test]
+    fn test_zero_solutions() {
+        let mut solver = Solver::<Puzzle, RowGrids, Trivial, Mtm>::builder()
+            .size(Size::new(3, 3).unwrap())
+            .build()
+            .unwrap();
+        let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
+        let config = SolverConfig {
+            num_solutions: 0,
+            ..Default::default()
+        };
+        assert_eq!(solver.solve_collect(&puzzle, config), Ok(Vec::new()));
+
+        let unsolvable = Puzzle::from_str("2 1 3/4 5 6/7 8 0").unwrap();
+        let config = SolverConfig {
+            num_solutions: 0,
+            ..Default::default()
+        };
+        assert_eq!(
+            solver.solve_collect(&unsolvable, config),
+            Err(SolverError::Unsolvable)
+        );
     }
 }

@@ -23,7 +23,8 @@ pub struct SolverConfig {
     /// within two moves of optimal.
     pub depth_beyond_optimal: u64,
 
-    /// The number of solutions to find.
+    /// The number of solutions to find. If this is 0, the search ends immediately without finding
+    /// any solutions.
     pub num_solutions: u64,
 
     /// A callback that runs after each iteration of the depth-first search.
