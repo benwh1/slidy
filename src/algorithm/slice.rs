@@ -144,7 +144,7 @@ impl AlgorithmSlice<'_> {
             max_gy = max_gy.max(gy);
         }
 
-        Size::new(1 + max_gx, 1 + max_gy).ok()
+        Size::new(max_gx.checked_add(1)?, max_gy.checked_add(1)?).ok()
     }
 
     /// An iterator over the single-tile moves in the slice.
@@ -243,7 +243,13 @@ mod tests {
         assert_eq!(size("RDRDRDRDRDRDRDRDRD"), Size::new(10, 10).ok());
         assert_eq!(size("RDLD2R2U2RDL2U2LDRURDLUR2D2LU"), Size::new(4, 4).ok());
 
+        assert_eq!(size("D18446744073709551614"), Size::new(1, u64::MAX).ok());
+        assert_eq!(size("R18446744073709551614"), Size::new(u64::MAX, 1).ok());
+
         assert_eq!(size("L"), None);
+        assert_eq!(size("D18446744073709551615"), None);
+        assert_eq!(size("R18446744073709551615"), None);
+        assert_eq!(size("D18446744073709551614R"), None);
         assert_eq!(size("U"), None);
         assert_eq!(size("DRU2LDRD"), None);
         assert_eq!(size("R3DL4RURDLU"), None);
