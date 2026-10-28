@@ -197,12 +197,16 @@ impl Scrambler for RandomMoves {
     }
 }
 
-/// Scrambler that applies a single cycle of pieces to the puzzle. If `length` is even, the last
-/// two pieces in the puzzle will also be swapped to make it solvable.
+/// Scrambler that applies a single cycle of pieces to the puzzle. If the cycle length is even, the
+/// last two pieces in the puzzle will also be swapped to make it solvable.
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Cycle {
     /// Length of the cycle.
+    ///
+    /// If the cycle doesn't fit on the puzzle (including the two extra pieces needed when the
+    /// length is even), the length is reduced to the largest length that does fit. Lengths 0 and
+    /// 1 leave the puzzle solved.
     pub length: u64,
 }
 
@@ -220,15 +224,24 @@ impl Scrambler for Cycle {
         puzzle.reset();
 
         let n = puzzle.num_pieces();
-        let cycle_len = (self.length).min(if n.is_multiple_of(2) { n - 1 } else { n });
-        let max = if cycle_len % 2 == 0 { n - 2 } else { n };
+
+        // An even length cycle is an odd permutation, so it needs the last two pieces to be
+        // swapped as well, and the cycle must leave those two pieces alone. If there is no room
+        // for that, use the next shorter (odd) length instead.
+        let mut cycle_len = self.length.min(n);
+        if cycle_len.is_multiple_of(2) && cycle_len > n - 2 {
+            cycle_len -= 1;
+        }
+
+        let needs_swap = cycle_len >= 2 && cycle_len.is_multiple_of(2);
+        let max = if needs_swap { n - 2 } else { n };
         let pieces = rand::seq::index::sample(rng, max as usize, cycle_len as usize);
 
         for i in 1..cycle_len as usize {
             puzzle.try_swap_pieces(pieces.index(0) as u64, pieces.index(i) as u64);
         }
 
-        if self.length.is_multiple_of(2) {
+        if needs_swap {
             puzzle.try_swap_pieces(n - 2, n - 1);
         }
     }
@@ -285,6 +298,72 @@ mod tests {
                 for _ in 0..100 {
                     RandomState.scramble_with_rng(&mut p, &mut rng);
                     assert!(RowGrids.is_solvable(&p));
+                }
+            }
+        }
+    }
+
+    mod cycle {
+        use rand::SeedableRng as _;
+        use rand_xoshiro::Xoroshiro128StarStar;
+
+        use super::*;
+        use crate::puzzle::{label::label::RowGrids, solvable::Solvable as _};
+
+        const SEED: [u8; 16] = [
+            160, 108, 126, 255, 147, 210, 122, 252, 71, 77, 144, 13, 167, 11, 225, 93,
+        ];
+
+        fn num_unsolved_pieces(p: &Puzzle) -> u64 {
+            (0..p.num_pieces())
+                .filter(|&i| p.solved_pos(p.piece_at(i)) != i)
+                .count() as u64
+        }
+
+        #[test]
+        fn test_solvable() {
+            let mut rng = Xoroshiro128StarStar::from_seed(SEED);
+
+            for (w, h) in [(2, 2), (3, 2), (2, 3), (3, 3), (4, 3), (4, 4), (5, 5)] {
+                let mut p = Puzzle::new(Size::new(w, h).unwrap());
+                let n = p.num_pieces();
+
+                for length in 0..n + 5 {
+                    for _ in 0..20 {
+                        Cycle { length }.scramble_with_rng(&mut p, &mut rng);
+                        assert!(
+                            RowGrids.is_solvable(&p),
+                            "{w}x{h} puzzle, length {length}: {p} is unsolvable"
+                        );
+                        assert_eq!(p.gap_position(), n);
+                    }
+                }
+            }
+        }
+
+        #[test]
+        fn test_num_unsolved_pieces() {
+            let mut rng = Xoroshiro128StarStar::from_seed(SEED);
+            let mut p = Puzzle::new(Size::new(4, 4).unwrap());
+
+            // (length, number of pieces moved by the cycle and the extra swap)
+            let cases = [
+                (0, 0),
+                (1, 0),
+                (2, 4),
+                (3, 3),
+                (12, 14),
+                (13, 13),
+                (14, 13),
+                (15, 15),
+                (16, 15),
+                (100, 15),
+            ];
+
+            for (length, expected) in cases {
+                for _ in 0..20 {
+                    Cycle { length }.scramble_with_rng(&mut p, &mut rng);
+                    assert_eq!(num_unsolved_pieces(&p), expected, "length {length}: {p}");
                 }
             }
         }
