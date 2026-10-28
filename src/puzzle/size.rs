@@ -16,8 +16,25 @@ use thiserror::Error;
 ///
 /// [`SlidingPuzzle`]: ../sliding_puzzle.html
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(try_from = "SizeUnvalidated")
+)]
 pub struct Size(NonZeroU64, NonZeroU64);
+
+#[cfg_attr(feature = "serde", derive(Deserialize))]
+struct SizeUnvalidated(u64, u64);
+
+impl TryFrom<SizeUnvalidated> for Size {
+    type Error = SizeError;
+
+    fn try_from(value: SizeUnvalidated) -> Result<Self, Self::Error> {
+        let SizeUnvalidated(width, height) = value;
+
+        Self::new(width, height)
+    }
+}
 
 impl Default for Size {
     fn default() -> Self {
@@ -312,5 +329,30 @@ mod tests {
         assert_eq!(" 2 x3 ".parse::<Size>(), Ok(size(2, 3)));
         assert_eq!("2".parse::<Size>(), Ok(size(2, 2)));
         assert_eq!(" 2 ".parse::<Size>(), Ok(size(2, 2)));
+    }
+
+    #[cfg(feature = "serde")]
+    mod deserialize {
+        use serde::de::value::{Error, SeqDeserializer};
+
+        use super::*;
+
+        fn deserialize(width: u64, height: u64) -> Result<Size, Error> {
+            Size::deserialize(SeqDeserializer::<_, Error>::new(
+                [width, height].into_iter(),
+            ))
+        }
+
+        #[test]
+        fn test_deserialize() {
+            assert_eq!(deserialize(2, 3), Ok(size(2, 3)));
+        }
+
+        #[test]
+        fn test_deserialize_invalid() {
+            assert!(deserialize(0, 3).is_err());
+            assert!(deserialize(3, 0).is_err());
+            assert!(deserialize(u64::MAX, 2).is_err());
+        }
     }
 }
