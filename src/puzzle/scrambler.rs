@@ -177,6 +177,13 @@ impl Scrambler for RandomMoves {
         P: SlidingPuzzle,
         R: Rng,
     {
+        // On an invalid size, the loop below would run forever.
+        assert!(
+            self.is_valid_size(puzzle.size()),
+            "{self:?} can not scramble a puzzle of size {}",
+            puzzle.size(),
+        );
+
         puzzle.reset();
 
         let mut last_dir = None::<Direction>;
@@ -333,6 +340,33 @@ mod tests {
                 scrambler.scramble_with_rng(&mut p, &mut rng);
                 assert_eq!(p.to_string(), "0 1");
             }
+        }
+
+        #[test]
+        #[should_panic = "can not scramble a puzzle of size 3x1"]
+        fn test_invalid_size_panics() {
+            let mut rng = Xoroshiro128StarStar::from_seed(SEED);
+            let mut p = Puzzle::new(Size::new(3, 1).unwrap());
+            let scrambler = RandomMoves {
+                moves: 3,
+                allow_backtracking: false,
+                allow_illegal_moves: false,
+            };
+            assert!(!scrambler.is_valid_size(p.size()));
+            scrambler.scramble_with_rng(&mut p, &mut rng);
+        }
+
+        #[test]
+        fn test_largest_valid_size() {
+            let mut rng = Xoroshiro128StarStar::from_seed(SEED);
+            let mut p = Puzzle::new(Size::new(3, 1).unwrap());
+            let scrambler = RandomMoves {
+                moves: 2,
+                allow_backtracking: false,
+                allow_illegal_moves: false,
+            };
+            assert!(scrambler.try_scramble_with_rng(&mut p, &mut rng));
+            assert_eq!(p.to_string(), "0 1 2");
         }
     }
 
