@@ -12,7 +12,7 @@ use crate::{
         },
         metric::{Metric, Mtm, Stm},
         moves::Moves,
-        r#move::r#move::Move,
+        r#move::r#move::{Move, MoveAddError},
     },
     puzzle::size::Size,
 };
@@ -57,6 +57,10 @@ impl AlgorithmSlice<'_> {
 
     /// Combines all consecutive moves along the same axis into a single move, and removes any moves
     /// that cancel completely. Returns the result as a new [`Algorithm`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if the amount of a combined move overflows [`u64`].
     #[must_use]
     pub fn simplified(&self) -> Algorithm {
         // List of simplified moves
@@ -82,8 +86,9 @@ impl AlgorithmSlice<'_> {
                             Some(m)
                         };
                     }
+                    Err(MoveAddError::Overflow) => panic!("combined move amount overflowed"),
                     // Moves can't be added, there is no more simplification at this point.
-                    Err(_) => {
+                    Err(MoveAddError::InvalidDirections) => {
                         // Push mv and go to the next move.
                         moves.push(sum);
                         acc_move = Some(next);

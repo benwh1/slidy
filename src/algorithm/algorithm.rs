@@ -169,12 +169,21 @@ impl Algorithm {
     /// Appends a move to the end of the algorithm.
     ///
     /// If the previous move is in the same direction as the appended move, they are combined into
-    /// a single move, unless the combined amount would overflow.
+    /// a single move.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the moves are combined and the combined amount overflows [`u64`].
     pub fn push_combine(&mut self, m: Move) {
-        if let Some(other) = self.moves.last_mut().filter(|other| {
-            m.direction == other.direction && other.amount.checked_add(m.amount).is_some()
-        }) {
-            other.amount += m.amount;
+        if let Some(other) = self
+            .moves
+            .last_mut()
+            .filter(|other| m.direction == other.direction)
+        {
+            other.amount = other
+                .amount
+                .checked_add(m.amount)
+                .expect("combined move amount overflowed");
         } else {
             self.moves.push(m);
         }
@@ -183,15 +192,18 @@ impl Algorithm {
     /// Appends a move to the end of the algorithm.
     ///
     /// If the previous move is in the same or opposite direction as the appended move, they are
-    /// combined into a single move (or removed if the two moves cancel completely). Moves in the
-    /// same direction are not combined if the combined amount would overflow.
+    /// combined into a single move (or removed if the two moves cancel completely).
+    ///
+    /// # Panics
+    ///
+    /// Panics if the moves are in the same direction and the combined amount overflows [`u64`].
     pub fn push_simplify(&mut self, m: Move) {
         match self.moves.last_mut() {
             Some(other) if m.direction == other.direction => {
-                match other.amount.checked_add(m.amount) {
-                    Some(amount) => other.amount = amount,
-                    None => self.moves.push(m),
-                }
+                other.amount = other
+                    .amount
+                    .checked_add(m.amount)
+                    .expect("combined move amount overflowed");
             }
             Some(other) if m.direction == other.direction.inverse() => {
                 match m.amount.cmp(&other.amount) {
@@ -219,6 +231,10 @@ impl Algorithm {
 
     /// Combines all consecutive moves along the same axis into a single move, and removes any moves
     /// that cancel completely.
+    ///
+    /// # Panics
+    ///
+    /// See [`AlgorithmSlice::simplified`].
     #[must_use]
     pub fn simplified(&self) -> Self {
         self.as_slice().simplified()
@@ -227,6 +243,10 @@ impl Algorithm {
     /// Simplifies the algorithm.
     ///
     /// See also: [`Algorithm::simplified`].
+    ///
+    /// # Panics
+    ///
+    /// See [`AlgorithmSlice::simplified`].
     pub fn simplify(&mut self) {
         self.moves = self.simplified().moves;
     }
@@ -643,35 +663,46 @@ mod tests {
     }
 
     #[test]
+    #[should_panic = "combined move amount overflowed"]
     fn test_push_combine_overflow() {
         let mut a = Algorithm::from_str("UR18446744073709551615").unwrap();
         a.push_combine(Move::new(Direction::Right, 2));
-        assert_eq!(
-            a.moves,
-            vec![
-                Move::new(Direction::Up, 1),
-                Move::new(Direction::Right, u64::MAX),
-                Move::new(Direction::Right, 2),
-            ]
-        );
     }
 
     #[test]
+    fn test_push_combine_max() {
+        let mut a = Algorithm::from_str("UR18446744073709551613").unwrap();
+        a.push_combine(Move::new(Direction::Right, 2));
+        assert_eq!(a.to_string(), "UR18446744073709551615");
+    }
+
+    #[test]
+    #[should_panic = "combined move amount overflowed"]
     fn test_push_simplify_overflow() {
         let mut a = Algorithm::from_str("UR18446744073709551615").unwrap();
         a.push_simplify(Move::new(Direction::Right, 2));
-        assert_eq!(
-            a.moves,
-            vec![
-                Move::new(Direction::Up, 1),
-                Move::new(Direction::Right, u64::MAX),
-                Move::new(Direction::Right, 2),
-            ]
-        );
+    }
 
-        // Opposite directions can still be combined.
+    #[test]
+    fn test_push_simplify_max() {
+        let mut a = Algorithm::from_str("UR18446744073709551615").unwrap();
         a.push_simplify(Move::new(Direction::Left, 3));
-        assert_eq!(a.to_string(), "UR18446744073709551615L");
+        a.push_simplify(Move::new(Direction::Right, 3));
+        assert_eq!(a.to_string(), "UR18446744073709551615");
+    }
+
+    #[test]
+    #[should_panic = "combined move amount overflowed"]
+    fn test_simplify_overflow() {
+        let mut a = Algorithm::from_str("R18446744073709551615 L R2").unwrap();
+        a.simplify();
+    }
+
+    #[test]
+    fn test_simplify_max() {
+        let mut a = Algorithm::from_str("R18446744073709551615 L R").unwrap();
+        a.simplify();
+        assert_eq!(a.to_string(), "R18446744073709551615");
     }
 
     #[test]
