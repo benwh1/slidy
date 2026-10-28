@@ -170,20 +170,20 @@ impl Default for ColorList {
 
 impl Coloring for Rainbow {
     fn color(&self, label: u64, num_labels: u64) -> Rgba {
-        if num_labels <= 1 {
-            Hsl::new(0.0, 1.0, 0.5).into_color()
+        // Interpolate between the min and max hues. A single label uses the min hue.
+        let frac = if num_labels <= 1 {
+            0.0
         } else {
-            // Interpolate between the min and max hues
-            let frac = label as f32 / (num_labels - 1) as f32;
-            let hue = self.min_hue + (self.max_hue - self.min_hue) * frac;
-            let hue = hue.rem_euclid(360.0);
-            let lum = 0.5
-                + (0.25 * f32::cos(std::f32::consts::TAU * (0.65 + hue / 720.0))
-                    + 0.35 * f32::exp(-hue / 100.0))
-                    * self.brightness;
-            let lum = lum.clamp(0.0, 1.0);
-            Hsl::new(hue, 1.0, lum).into_color()
-        }
+            label as f32 / (num_labels - 1) as f32
+        };
+        let hue = self.min_hue + (self.max_hue - self.min_hue) * frac;
+        let hue = hue.rem_euclid(360.0);
+        let lum = 0.5
+            + (0.25 * f32::cos(std::f32::consts::TAU * (0.65 + hue / 720.0))
+                + 0.35 * f32::exp(-hue / 100.0))
+                * self.brightness;
+        let lum = lum.clamp(0.0, 1.0);
+        Hsl::new(hue, 1.0, lum).into_color()
     }
 }
 
@@ -367,6 +367,32 @@ mod tests {
             Some(Hsl::new(330.0, 1.0, 0.5).into_color())
         );
         assert_eq!(a.try_color(5, 5), None);
+    }
+
+    #[test]
+    fn test_rainbow_single_label() {
+        let a = Rainbow {
+            min_hue: 120.0,
+            max_hue: 330.0,
+            brightness: 0.0,
+        };
+        assert_eq!(
+            a.try_color(0, 1),
+            Some(Hsl::new(120.0, 1.0, 0.5).into_color())
+        );
+
+        // With one label, the color should match the first label's color with more labels,
+        // including the brightness adjustment.
+        let a = Rainbow {
+            min_hue: 120.0,
+            max_hue: 330.0,
+            brightness: 1.0,
+        };
+        assert_eq!(a.try_color(0, 1), a.try_color(0, 5));
+        assert_eq!(
+            Rainbow::default().try_color(0, 1),
+            Rainbow::default().try_color(0, 5)
+        );
     }
 
     #[test]
