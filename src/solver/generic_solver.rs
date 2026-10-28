@@ -345,7 +345,7 @@ mod tests {
     use crate::{
         algorithm::metric::{Mtm, Stm},
         puzzle::{label::label::Rows, puzzle::Puzzle},
-        solver::heuristic::mtm::MtmHeuristic,
+        solver::{config::SolverConfig, heuristic::mtm::MtmHeuristic},
     };
 
     #[test]
@@ -493,5 +493,24 @@ mod tests {
         };
         let result = solver.solve_with_config(&puzzle, config);
         assert_eq!(result, Ok(()));
+    }
+
+    #[test]
+    fn test_min_deeper_than_initial_stack_capacity() {
+        let mut solver = GenericSolver::default();
+        let mut puzzle = Puzzle::from_str("1 2/0 3").unwrap();
+        let config = SolverConfig {
+            min: 300,
+            ..Default::default()
+        };
+
+        let solutions = solver.solve_collect(&puzzle, config).unwrap();
+        assert_eq!(solutions.len(), 1);
+
+        // Solutions have length `1 + 12k` or `11 + 12k`, see the 2x2 small solver test.
+        let solution = &solutions[0];
+        assert_eq!(solution.len_stm(), 301);
+        puzzle.apply_alg(solution);
+        assert!(puzzle.is_solved());
     }
 }

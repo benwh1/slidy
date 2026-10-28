@@ -229,7 +229,9 @@ mod tests {
 
     use crate::{
         puzzle::{puzzle::Puzzle, sliding_puzzle::SlidingPuzzle as _},
-        solver::{solver::Solver as _, Solver3x3Stm, Solver4x2Stm},
+        solver::{
+            config::SolverConfig, solver::Solver as _, Solver2x2Stm, Solver3x3Stm, Solver4x2Stm,
+        },
     };
 
     #[test]
@@ -251,6 +253,26 @@ mod tests {
         let mut puzzle = Puzzle::from_str("4 6/2 5/0 1/7 3").unwrap();
         let solution = solver.solve(&puzzle).unwrap();
         puzzle.apply_alg(&solution);
+        assert!(puzzle.is_solved());
+    }
+
+    #[test]
+    fn test_min_deeper_than_initial_stack_capacity() {
+        let mut solver = Solver2x2Stm::default();
+        let mut puzzle = Puzzle::from_str("1 2/0 3").unwrap();
+        let config = SolverConfig {
+            min: 200,
+            ..Default::default()
+        };
+
+        let solutions = solver.solve_collect(&puzzle, config).unwrap();
+        assert_eq!(solutions.len(), 1);
+
+        // The shortest solutions are `L` and `URDLURDLURD`, and repeating the 12 move cycle
+        // around the 2x2 puzzle gives solutions of length `1 + 12k` and `11 + 12k`.
+        let solution = &solutions[0];
+        assert_eq!(solution.len_stm(), 203);
+        puzzle.apply_alg(solution);
         assert!(puzzle.is_solved());
     }
 }
