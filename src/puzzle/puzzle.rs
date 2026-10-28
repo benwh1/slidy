@@ -647,6 +647,25 @@ mod tests {
         }
 
         #[test]
+        fn test_try_swap_pieces_xy_out_of_bounds() {
+            let mut p = Puzzle::new(Size::new(3, 3).unwrap());
+            let p2 = p.clone();
+
+            // (3, 0) is out of bounds, even though 3 + 3 * 0 is a valid index.
+            assert!(!p.try_swap_pieces_xy((3, 0), (0, 0)));
+            assert!(!p.try_swap_pieces_xy((0, 0), (0, 3)));
+            assert!(!p.try_swap_pieces_xy((u64::MAX, u64::MAX), (0, 0)));
+            assert!(!p.try_swap_non_gap_pieces_xy((3, 0), (0, 0)));
+            assert!(!p.try_swap_non_gap_pieces_xy((0, 0), (1, 3)));
+            assert_eq!(p, p2);
+
+            assert!(p.try_swap_pieces_xy((2, 0), (0, 1)));
+            assert_eq!(p, Puzzle::from_str("1 2 4/3 5 6/7 8 0").unwrap());
+            assert!(p.try_swap_non_gap_pieces_xy((2, 0), (0, 1)));
+            assert_eq!(p, p2);
+        }
+
+        #[test]
         fn test_can_move_dir() {
             let mut p = Puzzle::new(Size::new(4, 4).unwrap());
             assert!(!p.can_move_dir(Direction::Up));

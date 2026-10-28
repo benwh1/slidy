@@ -380,9 +380,14 @@ where
     }
 
     /// See [`SlidingPuzzle::swap_pieces_xy`].
-    fn try_swap_pieces_xy(&mut self, (x1, y1): (u64, u64), (x2, y2): (u64, u64)) -> bool {
-        let w = self.size().width();
-        self.try_swap_pieces(x1 + w * y1, x2 + w * y2)
+    fn try_swap_pieces_xy(&mut self, pos1: (u64, u64), pos2: (u64, u64)) -> bool {
+        let size = self.size();
+        if size.is_within_bounds(pos1) && size.is_within_bounds(pos2) {
+            self.swap_pieces_xy(pos1, pos2);
+            true
+        } else {
+            false
+        }
     }
 
     /// See [`SlidingPuzzle::swap_pieces_xy`].
@@ -431,8 +436,13 @@ where
 
     /// See [`SlidingPuzzle::swap_non_gap_pieces_xy`].
     fn try_swap_non_gap_pieces_xy(&mut self, pos1: (u64, u64), pos2: (u64, u64)) -> bool {
-        let w = self.size().width();
-        self.try_swap_non_gap_pieces(pos1.0 + w * pos1.1, pos2.0 + w * pos2.1)
+        let size = self.size();
+        if size.is_within_bounds(pos1) && size.is_within_bounds(pos2) {
+            let w = size.width();
+            self.try_swap_non_gap_pieces(pos1.0 + w * pos1.1, pos2.0 + w * pos2.1)
+        } else {
+            false
+        }
     }
 
     /// See [`SlidingPuzzle::swap_non_gap_pieces_xy`].
