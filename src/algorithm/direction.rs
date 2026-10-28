@@ -20,13 +20,13 @@ use crate::algorithm::axis::Axis;
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Direction {
     /// Moving a piece below the gap upward.
-    Up,
+    Up = 0,
     /// Moving a piece right of the gap to the left.
-    Left,
+    Left = 1,
     /// Moving a piece above the gap downward.
-    Down,
+    Down = 2,
     /// Moving a piece left of the gap to the right.
-    Right,
+    Right = 3,
 }
 
 impl Direction {

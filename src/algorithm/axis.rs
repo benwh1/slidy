@@ -14,9 +14,9 @@ use crate::algorithm::direction::Direction;
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Axis {
     /// The up/down axis.
-    Vertical,
+    Vertical = 0,
     /// The left/right axis.
-    Horizontal,
+    Horizontal = 1,
 }
 
 impl Axis {
