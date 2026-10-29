@@ -60,12 +60,12 @@ impl<T: MoveDisplay + Display> Display for DisplaySpaced<'_, T> {
         let mut moves = self.algorithm.moves_mtm();
 
         if let Some(first) = moves.next() {
-            f.write_str(&T::new(first).to_string())?;
+            T::new(first).fmt(f)?;
         }
 
         for m in moves {
             f.write_char(' ')?;
-            f.write_str(&T::new(m).to_string())?;
+            T::new(m).fmt(f)?;
         }
 
         Ok(())
