@@ -535,19 +535,11 @@ impl AddAssign for Algorithm {
 
 impl From<AlgorithmSlice<'_>> for Algorithm {
     fn from(value: AlgorithmSlice<'_>) -> Self {
-        let mut alg = Self::new();
-
-        if let Some(m) = value.first {
-            alg.push(m);
-        }
-
-        alg += Self::with_moves(value.middle.to_vec());
-
-        if let Some(m) = value.last {
-            alg.push(m);
-        }
-
-        alg
+        let mut moves = Vec::with_capacity(value.moves_mtm().len());
+        moves.extend(value.first);
+        moves.extend_from_slice(value.middle);
+        moves.extend(value.last);
+        Self::with_moves(moves)
     }
 }
 
