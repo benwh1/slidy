@@ -240,6 +240,15 @@ impl SlidingPuzzle for Puzzle {
         }
     }
 
+    fn is_solved(&self) -> bool {
+        let n = self.num_pieces();
+        self.gap == n
+            && self.pieces[..n as usize]
+                .iter()
+                .zip(1..)
+                .all(|(&piece, solved)| piece == solved)
+    }
+
     fn solved_pos(&self, piece: u64) -> u64 {
         if piece == 0 {
             self.num_pieces()
@@ -517,9 +526,10 @@ mod tests {
         use crate::{
             algorithm::{algorithm::Algorithm, direction::Direction, r#move::r#move::Move},
             puzzle::{
-                label::label::FringeGrids,
+                label::label::{FringeGrids, RowGrids},
                 scrambler::{RandomInvertibleState, RandomState, Scrambler as _},
                 small::Puzzle4x4,
+                solved_state::SolvedState as _,
             },
         };
 
@@ -652,6 +662,39 @@ mod tests {
 
             p1.move_dir(Direction::Left);
             assert_eq!(p1, Puzzle::from_str("1 0 2/3 4 5/6 7 8").unwrap());
+        }
+
+        #[test]
+        fn test_is_solved() {
+            let mut rng = Xoroshiro128StarStar::seed_from_u64(0);
+
+            for (w, h) in [(1, 1), (1, 5), (5, 1), (2, 2), (3, 7), (10, 10)] {
+                let size = Size::new(w, h).unwrap();
+                let mut p = Puzzle::new(size);
+                assert!(p.is_solved());
+
+                // States one swap or one move away from solved.
+                let n = p.num_pieces();
+                for i in 0..n {
+                    for j in i + 1..n {
+                        p.swap_non_gap_pieces(i, j);
+                        assert!(!p.is_solved(), "{p}");
+                        p.swap_non_gap_pieces(i, j);
+                    }
+                }
+                for dir in [Direction::Down, Direction::Right] {
+                    if p.try_move_dir(dir) {
+                        assert!(!p.is_solved(), "{p}");
+                        p.reset();
+                    }
+                }
+
+                // Agrees with the generic `RowGrids` implementation.
+                for _ in 0..20 {
+                    RandomState.scramble_with_rng(&mut p, &mut rng);
+                    assert_eq!(p.is_solved(), RowGrids.is_solved(&p), "{p}");
+                }
+            }
         }
 
         #[test]
