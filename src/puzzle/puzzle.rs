@@ -160,6 +160,17 @@ impl SlidingPuzzle for Puzzle {
         self.size
     }
 
+    fn try_piece_position(&self, piece: u64) -> Option<u64> {
+        if piece == 0 {
+            Some(self.gap)
+        } else {
+            self.pieces
+                .iter()
+                .position(|&p| p == piece)
+                .map(|idx| idx as u64)
+        }
+    }
+
     fn gap_position(&self) -> u64 {
         self.gap
     }
@@ -523,6 +534,11 @@ mod tests {
             assert_eq!(p.piece_position_xy(3), (1, 2));
             assert_eq!(p.piece_position(4), 23);
             assert_eq!(p.piece_position_xy(4), (3, 5));
+            assert_eq!(p.piece_position(0), 12);
+            assert_eq!(p.piece_position_xy(0), (0, 3));
+            assert_eq!(p.try_piece_position(23), Some(11));
+            assert_eq!(p.try_piece_position(24), None);
+            assert_eq!(p.try_piece_position_xy(24), None);
         }
 
         #[test]
