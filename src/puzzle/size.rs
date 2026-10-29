@@ -3,7 +3,7 @@
 //! [`SlidingPuzzle`]: crate::puzzle::sliding_puzzle::SlidingPuzzle
 
 use std::{
-    fmt::{Display, Write as _},
+    fmt::Display,
     num::{NonZeroU64, ParseIntError},
     str::FromStr,
 };
@@ -148,9 +148,7 @@ impl From<Size> for (u64, u64) {
 
 impl Display for Size {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0.to_string())?;
-        f.write_char('x')?;
-        f.write_str(&self.1.to_string())
+        write!(f, "{}x{}", self.0, self.1)
     }
 }
 
