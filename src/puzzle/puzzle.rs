@@ -972,6 +972,24 @@ mod tests {
         }
 
         #[test]
+        fn test_invert_other_type() {
+            let mut rng = Xoroshiro128StarStar::seed_from_u64(0);
+            let mut p1 =
+                Puzzle4x4::try_from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0])
+                    .unwrap();
+            let mut p2 = Puzzle::new(Size::new(4, 4).unwrap());
+
+            for _ in 0..20 {
+                RandomInvertibleState.scramble_with_rng(&mut p2, &mut rng);
+                p1.set_state(&p2);
+
+                assert!(p1.try_invert());
+                assert!(p2.try_invert());
+                assert!(p1.equals(&p2));
+            }
+        }
+
+        #[test]
         fn test_invert_4() {
             let mut p = Puzzle::from_str("6 13 14 11/7 1 5 8/10 9 4 12/2 3 15 0").unwrap();
             let p2 = p.clone();

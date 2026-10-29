@@ -968,12 +968,9 @@ where
             inv[self.solved_pos(piece) as usize] = i;
         }
 
-        for i in 0..self.area() {
-            self.swap_pieces(
-                i,
-                self.piece_position(<Self::Piece as NumCast>::from(inv[i as usize]).unwrap()),
-            );
-        }
+        rearrange(self, |i| {
+            <Self::Piece as NumCast>::from(inv[i as usize]).unwrap()
+        });
 
         true
     }
