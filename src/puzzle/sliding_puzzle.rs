@@ -228,9 +228,7 @@ where
         Self::Piece: 'static,
     {
         if self.size() == other.size() {
-            for i in 0..other.area() {
-                self.swap_pieces(i, self.piece_position(other.piece_at(i).as_()));
-            }
+            rearrange(self, |i| other.piece_at(i).as_());
             true
         } else {
             false
@@ -1007,5 +1005,35 @@ where
         }
 
         true
+    }
+}
+
+/// Rearranges `puzzle` so that the piece at each position `i` is `target(i)`.
+///
+/// The target pieces must be a permutation of the pieces of `puzzle`. This takes O(n) time, by
+/// keeping track of the position of each piece instead of searching for it with
+/// [`SlidingPuzzle::piece_position`].
+fn rearrange<P, F>(puzzle: &mut P, mut target: F)
+where
+    P: SlidingPuzzle,
+    F: FnMut(u64) -> P::Piece,
+{
+    let index = |piece: P::Piece| piece.to_usize().unwrap();
+
+    let area = puzzle.area();
+    let mut positions = vec![0; area as usize];
+    for i in 0..area {
+        positions[index(puzzle.piece_at(i))] = i;
+    }
+
+    for i in 0..area {
+        let piece = target(i);
+        let j = positions[index(piece)];
+        if i != j {
+            let displaced = puzzle.piece_at(i);
+            puzzle.swap_pieces(i, j);
+            positions[index(displaced)] = j;
+            positions[index(piece)] = i;
+        }
     }
 }

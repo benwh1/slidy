@@ -499,12 +499,16 @@ mod tests {
     }
 
     mod sliding_puzzle {
+        use rand::SeedableRng as _;
+        use rand_xoshiro::Xoroshiro128StarStar;
+
         use super::*;
         use crate::{
             algorithm::{algorithm::Algorithm, direction::Direction, r#move::r#move::Move},
             puzzle::{
                 label::label::FringeGrids,
-                scrambler::{RandomInvertibleState, Scrambler as _},
+                scrambler::{RandomInvertibleState, RandomState, Scrambler as _},
+                small::Puzzle4x4,
             },
         };
 
@@ -561,6 +565,42 @@ mod tests {
             assert_eq!(p1.pieces, p2.pieces);
             assert!(!p1.try_set_state(&p3));
             assert_eq!(p1.pieces, p2.pieces);
+        }
+
+        #[test]
+        fn test_set_state_random() {
+            let mut rng = Xoroshiro128StarStar::seed_from_u64(0);
+
+            for (w, h) in [(1, 1), (1, 5), (5, 1), (2, 2), (3, 7), (10, 10)] {
+                let size = Size::new(w, h).unwrap();
+                let mut p1 = Puzzle::new(size);
+                let mut p2 = Puzzle::new(size);
+                for _ in 0..20 {
+                    RandomState.scramble_with_rng(&mut p1, &mut rng);
+                    RandomState.scramble_with_rng(&mut p2, &mut rng);
+                    p1.set_state(&p2);
+                    assert_eq!(p1, p2);
+                }
+            }
+        }
+
+        #[test]
+        fn test_set_state_other_type() {
+            let mut rng = Xoroshiro128StarStar::seed_from_u64(0);
+            let mut p1 =
+                Puzzle4x4::try_from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0])
+                    .unwrap();
+            let mut p2 = Puzzle::new(Size::new(4, 4).unwrap());
+
+            for _ in 0..20 {
+                RandomState.scramble_with_rng(&mut p2, &mut rng);
+                p1.set_state(&p2);
+                assert!(p1.equals(&p2));
+                assert_eq!(p1.gap_position(), p2.gap_position());
+
+                p2.set_state(&p1);
+                assert!(p2.equals(&p1));
+            }
         }
 
         #[test]
