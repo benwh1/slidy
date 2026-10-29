@@ -1,31 +1,30 @@
 //! Defines iterators over the moves of an [`AlgorithmSlice`].
 
+use std::{
+    iter::{Chain, Copied, FusedIterator},
+    option, slice,
+};
+
 use crate::algorithm::{r#move::r#move::Move, slice::AlgorithmSlice};
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-enum State {
-    #[default]
-    First,
-    Middle(usize),
-    Last,
-    Finished,
-}
+type Inner<'a> =
+    Chain<Chain<option::IntoIter<Move>, Copied<slice::Iter<'a, Move>>>, option::IntoIter<Move>>;
 
 /// Iterator over the moves of an [`AlgorithmSlice`].
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Moves<'a> {
-    slice: AlgorithmSlice<'a>,
-    iter_state: State,
-}
+#[derive(Clone, Debug)]
+pub struct Moves<'a>(Inner<'a>);
 
 impl<'a> Moves<'a> {
     /// Creates a new [`Moves`] iterator over the given [`AlgorithmSlice`].
     #[must_use]
     pub fn new(slice: AlgorithmSlice<'a>) -> Self {
-        Self {
-            slice,
-            iter_state: State::First,
-        }
+        Self(
+            slice
+                .first
+                .into_iter()
+                .chain(slice.middle.iter().copied())
+                .chain(slice.last),
+        )
     }
 }
 
@@ -33,49 +32,25 @@ impl Iterator for Moves<'_> {
     type Item = Move;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.iter_state {
-            State::First => {
-                self.iter_state = State::Middle(0);
-                self.slice.first.or_else(|| self.next())
-            }
-            State::Middle(n) => {
-                if self.slice.middle.is_empty() {
-                    self.iter_state = State::Last;
-                    self.next()
-                } else {
-                    self.iter_state = if n + 1 == self.slice.middle.len() {
-                        State::Last
-                    } else {
-                        State::Middle(n + 1)
-                    };
-                    Some(self.slice.middle[n])
-                }
-            }
-            State::Last => {
-                self.iter_state = State::Finished;
-                self.slice.last
-            }
-            State::Finished => None,
-        }
+        self.0.next()
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let f = self.slice.first.is_some() as usize;
-        let m = self.slice.middle.len();
-        let l = self.slice.last.is_some() as usize;
-
-        let len = match self.iter_state {
-            State::First => f + m + l,
-            State::Middle(n) => m - n + l,
-            State::Last => l,
-            State::Finished => 0,
-        };
-
-        (len, Some(len))
+        self.0.size_hint()
     }
 }
 
+impl DoubleEndedIterator for Moves<'_> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.0.next_back()
+    }
+}
+
+// The length is at most `middle.len() + 2`, which can't overflow because `middle` is a slice of
+// `Move`s, so the size hint is always exact.
 impl ExactSizeIterator for Moves<'_> {}
+
+impl FusedIterator for Moves<'_> {}
 
 #[cfg(test)]
 mod tests {
@@ -110,6 +85,31 @@ mod tests {
             assert_eq!(iter.len(), 6 - i);
             iter.next();
         }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_double_ended() -> Result<(), Box<dyn std::error::Error>> {
+        let alg = Algorithm::from_str("R3D2LDR5U12RD3LU4R")?;
+        let slice = alg.try_slice(4..19)?;
+
+        let forward = slice.moves_mtm().collect::<Vec<_>>();
+        let mut backward = slice.moves_mtm().rev().collect::<Vec<_>>();
+        backward.reverse();
+        assert_eq!(forward, backward);
+
+        // Take from both ends; the first and last moves are partial moves.
+        let mut moves = slice.moves_mtm();
+        assert_eq!(moves.next(), Some(Move::from_str("D")?));
+        assert_eq!(moves.next_back(), Some(Move::from_str("U7")?));
+        assert_eq!(moves.len(), 3);
+        assert_eq!(moves.next_back(), Some(Move::from_str("R5")?));
+        assert_eq!(moves.next(), Some(Move::from_str("L")?));
+        assert_eq!(moves.next(), Some(Move::from_str("D")?));
+        assert_eq!(moves.next(), None);
+        assert_eq!(moves.next_back(), None);
+        assert_eq!(moves.len(), 0);
 
         Ok(())
     }
