@@ -181,22 +181,18 @@ where
     where
         L: BijectiveLabel,
     {
-        let (w, h) = self.size().into();
-        let area = <Self::Piece as NumCast>::from(self.size().area()).unwrap();
-        for y in 0..h {
-            for x in 0..w {
-                let label = label.position_label(self.size(), (x, y));
-                let piece = {
-                    let a = <Self::Piece as NumCast>::from(label).unwrap() + Self::Piece::one();
-                    if a == area {
-                        Self::Piece::zero()
-                    } else {
-                        a
-                    }
-                };
-                self.swap_pieces_xy((x, y), self.piece_position_xy(piece));
+        let size = self.size();
+        let w = size.width();
+        let area = <Self::Piece as NumCast>::from(size.area()).unwrap();
+        rearrange(self, |i| {
+            let label = label.position_label(size, (i % w, i / w));
+            let a = <Self::Piece as NumCast>::from(label).unwrap() + Self::Piece::one();
+            if a == area {
+                Self::Piece::zero()
+            } else {
+                a
             }
-        }
+        });
     }
 
     /// Sets the state to `other`.

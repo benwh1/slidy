@@ -557,6 +557,24 @@ mod tests {
         }
 
         #[test]
+        fn test_reset_to_label_other_type() {
+            let mut rng = Xoroshiro128StarStar::seed_from_u64(0);
+            let mut p1 =
+                Puzzle4x4::try_from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0])
+                    .unwrap();
+            let mut p2 = Puzzle::new(Size::new(4, 4).unwrap());
+
+            // `Puzzle` overrides `reset_to_label`, but `Puzzle4x4` uses the default.
+            for _ in 0..20 {
+                RandomState.scramble_with_rng(&mut p1, &mut rng);
+                p1.reset_to_label(&FringeGrids);
+                p2.reset_to_label(&FringeGrids);
+                assert!(p1.equals(&p2));
+                assert_eq!(p1.gap_position(), p2.gap_position());
+            }
+        }
+
+        #[test]
         fn test_set_state() {
             let mut p1 = Puzzle::from_str("6 15 12 4/14 0 9 11/7 10 8 5/3 1 2 13").unwrap();
             let p2 = Puzzle::default();
