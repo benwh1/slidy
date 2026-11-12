@@ -12,10 +12,10 @@ use crate::{
     solver::{
         config::SolverConfig,
         projection::{
-            builder::SolverBuilder,
-            pdb::{compute_solved_state, compute_tally, Pdb},
-            puzzle::{project_puzzle, ProjectedPuzzle},
             LARGE,
+            builder::SolverBuilder,
+            pdb::{Pdb, compute_solved_state, compute_tally},
+            puzzle::{ProjectedPuzzle, project_puzzle},
         },
         stack::Stack,
     },

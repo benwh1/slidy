@@ -73,7 +73,8 @@ impl<const W: usize, const H: usize, const N: usize, Metric> Pdb<W, H, N, Metric
     /// `index` must be a valid index into the PDB.
     #[must_use]
     pub unsafe fn get_unchecked(&self, index: usize) -> u8 {
-        *self.pdb.get_unchecked(index)
+        // SAFETY: The caller guarantees that `index` is in bounds.
+        unsafe { *self.pdb.get_unchecked(index) }
     }
 }
 

@@ -6,7 +6,7 @@ use crate::{
     algorithm::{direction::Direction, metric::Mtm},
     puzzle::{
         sliding_puzzle::SlidingPuzzle as _,
-        small::{sealed::SmallPuzzle, Puzzle},
+        small::{Puzzle, sealed::SmallPuzzle},
     },
     solver::{
         config::PdbConfig,

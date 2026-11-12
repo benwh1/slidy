@@ -266,7 +266,7 @@ impl RectPartition {
         if let Some((key, value)) = height_map
             .data
             .iter()
-            .find(|(_, &v)| v != max_value)
+            .find(|&(_, &v)| v != max_value)
             .map(|(&k, &v)| (k, v))
         {
             Err(RectPartitionError::NotPartition { x: key, y: value })
@@ -338,14 +338,16 @@ mod tests {
 
         #[test]
         fn test_rect_partition() {
-            assert!(RectPartition::new(vec![
-                Rect::new((0, 0), (3, 2)).unwrap(),
-                Rect::new((3, 0), (5, 3)).unwrap(),
-                Rect::new((0, 2), (2, 5)).unwrap(),
-                Rect::new((2, 2), (3, 3)).unwrap(),
-                Rect::new((2, 3), (5, 5)).unwrap(),
-            ])
-            .is_ok());
+            assert!(
+                RectPartition::new(vec![
+                    Rect::new((0, 0), (3, 2)).unwrap(),
+                    Rect::new((3, 0), (5, 3)).unwrap(),
+                    Rect::new((0, 2), (2, 5)).unwrap(),
+                    Rect::new((2, 2), (3, 3)).unwrap(),
+                    Rect::new((2, 3), (5, 5)).unwrap(),
+                ])
+                .is_ok()
+            );
         }
 
         #[test]
@@ -355,19 +357,21 @@ mod tests {
 
         #[test]
         fn test_rect_partition_3() {
-            assert!(RectPartition::new(vec![
-                Rect::new((0, 0), (5, 1)).unwrap(),
-                Rect::new((0, 1), (1, 3)).unwrap(),
-                Rect::new((1, 1), (3, 2)).unwrap(),
-                Rect::new((2, 2), (4, 4)).unwrap(),
-                Rect::new((3, 1), (4, 2)).unwrap(),
-                Rect::new((4, 1), (5, 4)).unwrap(),
-                Rect::new((1, 2), (2, 5)).unwrap(),
-                Rect::new((0, 3), (1, 5)).unwrap(),
-                Rect::new((2, 4), (4, 5)).unwrap(),
-                Rect::new((4, 4), (5, 5)).unwrap(),
-            ])
-            .is_ok());
+            assert!(
+                RectPartition::new(vec![
+                    Rect::new((0, 0), (5, 1)).unwrap(),
+                    Rect::new((0, 1), (1, 3)).unwrap(),
+                    Rect::new((1, 1), (3, 2)).unwrap(),
+                    Rect::new((2, 2), (4, 4)).unwrap(),
+                    Rect::new((3, 1), (4, 2)).unwrap(),
+                    Rect::new((4, 1), (5, 4)).unwrap(),
+                    Rect::new((1, 2), (2, 5)).unwrap(),
+                    Rect::new((0, 3), (1, 5)).unwrap(),
+                    Rect::new((2, 4), (4, 5)).unwrap(),
+                    Rect::new((4, 4), (5, 5)).unwrap(),
+                ])
+                .is_ok()
+            );
         }
 
         #[test]
@@ -402,13 +406,15 @@ mod tests {
 
         #[test]
         fn test_rect_partition_7() {
-            assert!(RectPartition::new(vec![
-                Rect::new((4, 1), (6, 3)).unwrap(),
-                Rect::new((4, 3), (6, 5)).unwrap(),
-                Rect::new((6, 1), (8, 3)).unwrap(),
-                Rect::new((6, 3), (8, 5)).unwrap(),
-            ])
-            .is_ok());
+            assert!(
+                RectPartition::new(vec![
+                    Rect::new((4, 1), (6, 3)).unwrap(),
+                    Rect::new((4, 3), (6, 5)).unwrap(),
+                    Rect::new((6, 1), (8, 3)).unwrap(),
+                    Rect::new((6, 3), (8, 5)).unwrap(),
+                ])
+                .is_ok()
+            );
         }
     }
 }

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::puzzle::{
-    color_scheme::{multi_layer::MultiLayerColorScheme, ColorScheme},
+    color_scheme::{ColorScheme, multi_layer::MultiLayerColorScheme},
     size::Size,
 };
 

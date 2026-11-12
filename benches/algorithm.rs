@@ -1,6 +1,6 @@
 use std::{hint::black_box, str::FromStr as _};
 
-use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
+use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 use slidy::algorithm::algorithm::Algorithm;
 
 fn bench_from_str(c: &mut Criterion) {

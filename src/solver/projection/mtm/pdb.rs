@@ -9,9 +9,9 @@ use crate::{
         config::PdbConfig,
         indexing,
         projection::{
-            pdb::{compute_solved_state, compute_tally, Pdb},
-            puzzle::ProjectedPuzzle,
             LARGE, SMALL,
+            pdb::{Pdb, compute_solved_state, compute_tally},
+            puzzle::ProjectedPuzzle,
         },
         statistics::PdbIterationStats,
     },

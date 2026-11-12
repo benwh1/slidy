@@ -7,11 +7,11 @@ use palette::rgb::Rgba;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use svg::{
-    node::{
-        element::{Group, Rectangle, Style, Text as TextElement},
-        Text as TextNode,
-    },
     Document,
+    node::{
+        Text as TextNode,
+        element::{Group, Rectangle, Style, Text as TextElement},
+    },
 };
 
 use crate::puzzle::{

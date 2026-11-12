@@ -10,7 +10,7 @@ use crate::{
     },
     solver::{
         config::SolverConfig,
-        projection::{puzzle::ProjectedPuzzle, solver::Solver, LARGE, SMALL},
+        projection::{LARGE, SMALL, puzzle::ProjectedPuzzle, solver::Solver},
         solver::{Solver as SolverT, SolverError},
         statistics::SolverIterationStats,
     },
@@ -34,10 +34,10 @@ where
         if depth == 0 {
             if index == self.prune_target_solved_index && self.check_solution(puzzle) {
                 self.solutions_found += 1;
-                if let Some(f) = &self.config.as_ref().unwrap().solution_callback {
-                    if f(self.stack.to_alg()).is_break() {
-                        return ControlFlow::Break(());
-                    }
+                if let Some(f) = &self.config.as_ref().unwrap().solution_callback
+                    && f(self.stack.to_alg()).is_break()
+                {
+                    return ControlFlow::Break(());
                 }
 
                 if self.config.as_ref().unwrap().num_solutions == self.solutions_found {
@@ -142,10 +142,10 @@ where
             }
 
             // Run end of iteration callback and check return value.
-            if let Some(f) = &self.config.as_ref().unwrap().end_of_iter_callback {
-                if f(SolverIterationStats { depth }).is_break() {
-                    break;
-                }
+            if let Some(f) = &self.config.as_ref().unwrap().end_of_iter_callback
+                && f(SolverIterationStats { depth }).is_break()
+            {
+                break;
             }
 
             // Go to next depth.

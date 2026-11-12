@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::puzzle::{
     color_scheme::{
-        multi_layer::{Layer, MultiLayerColorScheme},
         ColorScheme,
+        multi_layer::{Layer, MultiLayerColorScheme},
     },
     coloring::Coloring,
     grids::Grids,

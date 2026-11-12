@@ -6,7 +6,7 @@ use crate::{
     algorithm::{direction::Direction, metric::Stm},
     puzzle::{
         sliding_puzzle::SlidingPuzzle,
-        small::{sealed::SmallPuzzle, Puzzle},
+        small::{Puzzle, sealed::SmallPuzzle},
     },
     solver::{
         config::{PdbConfig, SolverConfig},
@@ -54,10 +54,10 @@ where
 
         if depth == 0 {
             self.solutions_found += 1;
-            if let Some(f) = &self.config.as_ref().unwrap().solution_callback {
-                if f(self.stack.to_alg()).is_break() {
-                    return ControlFlow::Break(());
-                }
+            if let Some(f) = &self.config.as_ref().unwrap().solution_callback
+                && f(self.stack.to_alg()).is_break()
+            {
+                return ControlFlow::Break(());
             }
 
             if self.config.as_ref().unwrap().num_solutions == self.solutions_found {
@@ -181,10 +181,10 @@ where
             }
 
             // Run end of iteration callback and check return value.
-            if let Some(f) = &self.config.as_ref().unwrap().end_of_iter_callback {
-                if f(SolverIterationStats { depth }).is_break() {
-                    break;
-                }
+            if let Some(f) = &self.config.as_ref().unwrap().end_of_iter_callback
+                && f(SolverIterationStats { depth }).is_break()
+            {
+                break;
             }
 
             // Go to next depth.
@@ -234,9 +234,9 @@ mod tests {
     use crate::{
         puzzle::{puzzle::Puzzle, sliding_puzzle::SlidingPuzzle as _},
         solver::{
+            Solver2x2Stm, Solver3x3Stm, Solver4x2Stm,
             config::SolverConfig,
             solver::{Solver as _, SolverError},
-            Solver2x2Stm, Solver3x3Stm, Solver4x2Stm,
         },
     };
 

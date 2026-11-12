@@ -252,8 +252,7 @@ mod tests {
                                                                         );
 
                                                                         assert_eq!(
-                                                                            encoded,
-                                                                            index,
+                                                                            encoded, index,
                                                                             "puzzle {puzzle:x} encoded {encoded} index {index}"
                                                                         );
 

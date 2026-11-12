@@ -62,8 +62,8 @@ mod tests {
 
     use crate::{
         algorithm::r#move::{
-            position_move::{PositionMove, TryPositionMoveIntoMoveError},
             r#move::Move,
+            position_move::{PositionMove, TryPositionMoveIntoMoveError},
             try_into_move::TryIntoMove as _,
         },
         puzzle::puzzle::Puzzle,

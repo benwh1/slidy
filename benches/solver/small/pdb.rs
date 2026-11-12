@@ -1,6 +1,6 @@
 use std::hint::black_box;
 
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use slidy::solver::small::pdb::{Pdb5x2Mtm, Pdb5x2Stm};
 
 fn bench_pdb_5x2_stm(c: &mut Criterion) {

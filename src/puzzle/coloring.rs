@@ -1,10 +1,10 @@
 //! Defines the [`Coloring`] trait and several implementations.
 
 use enterpolation::{
-    linear::{Linear, LinearError},
     Curve, Identity, Sorted,
+    linear::{Linear, LinearError},
 };
-use palette::{rgb::Rgba, FromColor, Hsl, Hsla, IntoColor as _, LinSrgba};
+use palette::{FromColor, Hsl, Hsla, IntoColor as _, LinSrgba, rgb::Rgba};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use thiserror::Error;

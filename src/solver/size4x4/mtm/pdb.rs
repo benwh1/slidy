@@ -147,7 +147,8 @@ impl Pdb {
     /// `index` must be within bounds.
     #[must_use]
     pub unsafe fn get_unchecked(&self, index: usize) -> u8 {
-        *self.pdb.get_unchecked(index)
+        // SAFETY: The caller guarantees that `index` is in bounds.
+        unsafe { *self.pdb.get_unchecked(index) }
     }
 }
 

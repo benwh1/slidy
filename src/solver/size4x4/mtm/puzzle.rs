@@ -2,7 +2,7 @@ use crate::{
     algorithm::direction::Direction,
     puzzle::{
         sliding_puzzle::SlidingPuzzle as _,
-        small::{sealed::SmallPuzzle as _, Puzzle4x4},
+        small::{Puzzle4x4, sealed::SmallPuzzle as _},
     },
 };
 
@@ -27,7 +27,9 @@ impl FourBitPuzzle {
     #[allow(dead_code)]
     unsafe fn with_pieces_and_gap_unchecked(pieces: u64, gap: u8) -> Self {
         Self {
-            puzzle: Puzzle4x4::with_pieces_and_gap_unchecked(pieces, gap),
+            // SAFETY: The caller upholds the requirements of
+            // `Puzzle4x4::with_pieces_and_gap_unchecked`.
+            puzzle: unsafe { Puzzle4x4::with_pieces_and_gap_unchecked(pieces, gap) },
         }
     }
 

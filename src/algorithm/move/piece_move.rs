@@ -7,8 +7,8 @@ use thiserror::Error;
 
 use crate::{
     algorithm::r#move::{
-        position_move::{PositionMove, TryPositionMoveIntoMoveError},
         r#move::Move,
+        position_move::{PositionMove, TryPositionMoveIntoMoveError},
         try_into_move::TryIntoMove,
     },
     puzzle::sliding_puzzle::SlidingPuzzle,
@@ -50,8 +50,8 @@ mod tests {
 
     use crate::{
         algorithm::r#move::{
-            piece_move::{PieceMove, TryPieceMoveIntoMoveError},
             r#move::Move,
+            piece_move::{PieceMove, TryPieceMoveIntoMoveError},
             try_into_move::TryIntoMove as _,
         },
         puzzle::puzzle::Puzzle,

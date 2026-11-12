@@ -24,6 +24,7 @@ impl Base5Table {
     }
 
     pub(super) unsafe fn get_unchecked(&self, index: usize) -> u16 {
-        *self.table.get_unchecked(index)
+        // SAFETY: The caller guarantees that `index` is in bounds.
+        unsafe { *self.table.get_unchecked(index) }
     }
 }

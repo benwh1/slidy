@@ -476,11 +476,7 @@ impl Label for Diagonals {
 impl Label for LastTwoRows {
     fn position_label(&self, size: Size, (x, y): (u64, u64)) -> u64 {
         let h = size.height().saturating_sub(2);
-        if y < h {
-            y
-        } else {
-            h + x
-        }
+        if y < h { y } else { h + x }
     }
 
     fn num_labels(&self, size: Size) -> u64 {

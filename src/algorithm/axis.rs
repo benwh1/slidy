@@ -1,8 +1,8 @@
 //! Defines the [`Axis`] type.
 
 use rand::{
-    distr::{Distribution, StandardUniform},
     Rng, RngExt as _,
+    distr::{Distribution, StandardUniform},
 };
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};

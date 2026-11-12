@@ -7,7 +7,7 @@ use crate::{
     algorithm::{
         as_slice::AsAlgorithmSlice,
         direction::Direction,
-        r#move::{position_move::PositionMove, r#move::Move, try_into_move::TryIntoMove as _},
+        r#move::{r#move::Move, position_move::PositionMove, try_into_move::TryIntoMove as _},
     },
     puzzle::{
         label::label::{BijectiveLabel, RowGrids},
@@ -118,7 +118,9 @@ where
     /// [`SlidingPuzzle`]).
     #[must_use]
     unsafe fn piece_position_xy_unchecked(&self, piece: Self::Piece) -> (u64, u64) {
-        let pos = self.piece_position_unchecked(piece);
+        // SAFETY: The caller upholds the requirements of `piece_position_unchecked`, which are
+        // the same as ours.
+        let pos = unsafe { self.piece_position_unchecked(piece) };
         let w = self.size().width();
         (pos % w, pos / w)
     }
@@ -144,7 +146,9 @@ where
     /// The puzzle must be in a valid state (see [`SlidingPuzzle`]).
     #[must_use]
     unsafe fn gap_position_unchecked(&self) -> u64 {
-        self.piece_position_unchecked(Self::Piece::zero())
+        // SAFETY: 0 is always in range, and the caller guarantees that the puzzle is in a valid
+        // state.
+        unsafe { self.piece_position_unchecked(Self::Piece::zero()) }
     }
 
     /// Position of the empty space as (x, y) coordinates.
@@ -168,7 +172,9 @@ where
     /// The puzzle must be in a valid state (see [`SlidingPuzzle`]).
     #[must_use]
     unsafe fn gap_position_xy_unchecked(&self) -> (u64, u64) {
-        self.piece_position_xy_unchecked(Self::Piece::zero())
+        // SAFETY: 0 is always in range, and the caller guarantees that the puzzle is in a valid
+        // state.
+        unsafe { self.piece_position_xy_unchecked(Self::Piece::zero()) }
     }
 
     /// Reset the puzzle to the default state.
@@ -187,11 +193,7 @@ where
         rearrange(self, |i| {
             let label = label.position_label(size, (i % w, i / w));
             let a = <Self::Piece as NumCast>::from(label).unwrap() + Self::Piece::one();
-            if a == area {
-                Self::Piece::zero()
-            } else {
-                a
-            }
+            if a == area { Self::Piece::zero() } else { a }
         });
     }
 
@@ -244,10 +246,15 @@ where
         Self::Piece: 'static,
     {
         for i in 0..other.area() {
-            self.swap_pieces_unchecked(
-                i,
-                self.piece_position_unchecked(other.piece_at_unchecked(i).as_()),
-            );
+            // SAFETY: `i < other.area() == self.area()`. `other` is in a valid state, so the piece
+            // at `i` is in range for `other`, and therefore also for `self`. Swapping two pieces
+            // keeps `self` in a valid state.
+            unsafe {
+                self.swap_pieces_unchecked(
+                    i,
+                    self.piece_position_unchecked(other.piece_at_unchecked(i).as_()),
+                );
+            }
         }
     }
 
@@ -329,7 +336,9 @@ where
     /// [`SlidingPuzzle`]).
     #[must_use]
     unsafe fn solved_pos_xy_unchecked(&self, piece: Self::Piece) -> (u64, u64) {
-        let p = self.solved_pos_unchecked(piece);
+        // SAFETY: The caller upholds the requirements of `solved_pos_unchecked`, which are the
+        // same as ours.
+        let p = unsafe { self.solved_pos_unchecked(piece) };
         let w = self.size().width();
         (p % w, p / w)
     }
@@ -386,7 +395,9 @@ where
     /// The puzzle must be in a valid state (see [`SlidingPuzzle`]).
     #[must_use]
     unsafe fn piece_at_xy_unchecked(&self, (x, y): (u64, u64)) -> Self::Piece {
-        self.piece_at_unchecked(x + self.size().width() * y)
+        // SAFETY: `(x, y)` is within bounds, so `x + width * y < self.area()`, and the caller
+        // guarantees that the puzzle is in a valid state.
+        unsafe { self.piece_at_unchecked(x + self.size().width() * y) }
     }
 
     /// Swaps the pieces at positions `idx1` and `idx2`.
@@ -450,7 +461,11 @@ where
     /// puzzle must be in a valid state (see [`SlidingPuzzle`]).
     unsafe fn swap_pieces_xy_unchecked(&mut self, (x1, y1): (u64, u64), (x2, y2): (u64, u64)) {
         let w = self.size().width();
-        self.swap_pieces_unchecked(x1 + w * y1, x2 + w * y2);
+        // SAFETY: Both positions are within bounds, so both indices are less than `self.area()`,
+        // and the caller guarantees that the puzzle is in a valid state.
+        unsafe {
+            self.swap_pieces_unchecked(x1 + w * y1, x2 + w * y2);
+        }
     }
 
     /// See [`SlidingPuzzle::swap_pieces`].
@@ -487,7 +502,10 @@ where
     /// `idx1` and `idx2` must both satisfy `0 <= idx < self.area()`, and neither may be the
     /// position of the gap. The puzzle must be in a valid state (see [`SlidingPuzzle`]).
     unsafe fn swap_non_gap_pieces_unchecked(&mut self, idx1: u64, idx2: u64) {
-        self.swap_pieces_unchecked(idx1, idx2);
+        // SAFETY: The requirements of `swap_pieces_unchecked` are a subset of ours.
+        unsafe {
+            self.swap_pieces_unchecked(idx1, idx2);
+        }
     }
 
     /// See [`SlidingPuzzle::swap_non_gap_pieces`] and [`SlidingPuzzle::swap_pieces_xy`].
@@ -520,7 +538,11 @@ where
         (x2, y2): (u64, u64),
     ) {
         let w = self.size().width();
-        self.swap_non_gap_pieces_unchecked(x1 + w * y1, x2 + w * y2);
+        // SAFETY: Both positions are within bounds, so both indices are less than `self.area()`.
+        // The caller guarantees that neither is the gap, and that the puzzle is in a valid state.
+        unsafe {
+            self.swap_non_gap_pieces_unchecked(x1 + w * y1, x2 + w * y2);
+        }
     }
 
     /// Swaps piece in position `idx` with the gap.
@@ -545,7 +567,11 @@ where
     /// `idx` must satisfy `0 <= idx < self.area()`. The puzzle must be in a valid state (see
     /// [`SlidingPuzzle`]).
     unsafe fn swap_piece_with_gap_unchecked(&mut self, idx: u64) {
-        self.swap_pieces_unchecked(idx, self.gap_position());
+        // SAFETY: The caller guarantees that `idx < self.area()` and that the puzzle is in a valid
+        // state, and the gap position is always less than `self.area()`.
+        unsafe {
+            self.swap_pieces_unchecked(idx, self.gap_position());
+        }
     }
 
     /// Checks if it is possible to move a piece in the given [`Direction`].
@@ -596,14 +622,19 @@ where
     /// `self.can_move_dir(dir)` must be true. The puzzle must be in a valid state (see
     /// [`SlidingPuzzle`]).
     unsafe fn move_dir_unchecked(&mut self, dir: Direction) {
-        let gap = self.gap_position_unchecked();
+        // SAFETY: The caller guarantees that the puzzle is in a valid state.
+        let gap = unsafe { self.gap_position_unchecked() };
         let piece = match dir {
             Direction::Up => gap + self.size().width(),
             Direction::Left => gap + 1,
             Direction::Down => gap - self.size().width(),
             Direction::Right => gap - 1,
         };
-        self.swap_piece_with_gap_unchecked(piece);
+        // SAFETY: `self.can_move_dir(dir)` is true, so `piece` is a position next to the gap and
+        // is within bounds.
+        unsafe {
+            self.swap_piece_with_gap_unchecked(piece);
+        }
     }
 
     /// Checks if it is possible to apply the given [`Move`].
@@ -651,7 +682,11 @@ where
     /// [`SlidingPuzzle`]).
     unsafe fn apply_move_unchecked(&mut self, mv: Move) {
         for _ in 0..mv.amount {
-            self.move_dir_unchecked(mv.direction);
+            // SAFETY: `self.can_apply_move(mv)` is true, so `mv.direction` can be moved in
+            // `mv.amount` times in a row.
+            unsafe {
+                self.move_dir_unchecked(mv.direction);
+            }
         }
     }
 
@@ -848,7 +883,11 @@ where
         Alg: AsAlgorithmSlice<'a>,
     {
         for m in alg.as_slice().moves_mtm() {
-            self.apply_move_unchecked(m);
+            // SAFETY: `self.can_apply_alg(alg)` is true, so each move can be applied after the
+            // ones before it.
+            unsafe {
+                self.apply_move_unchecked(m);
+            }
         }
     }
 

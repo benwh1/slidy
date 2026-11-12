@@ -260,11 +260,7 @@ macro_rules! impl_puzzle {
                         let (sx, sy) = self.solved_pos_xy(piece);
                         let transposed_piece = {
                             let p = 1 + sy + Self::H as u64 * sx;
-                            if p == Self::N as u64 {
-                                0
-                            } else {
-                                p as u8
-                            }
+                            if p == Self::N as u64 { 0 } else { p as u8 }
                         };
                         transposed_pieces[y + Self::H * x] = transposed_piece;
                     }

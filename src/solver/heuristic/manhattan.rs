@@ -208,11 +208,7 @@ where
                 let solved_pos = puzzle.solved_pos_xy(piece);
                 let md = self.dist(pos, solved_pos, puzzle.size());
 
-                if piece == P::Piece::zero() {
-                    0
-                } else {
-                    md
-                }
+                if piece == P::Piece::zero() { 0 } else { md }
             })
             .sum::<u64>();
 
@@ -227,11 +223,7 @@ where
             // Actual Manhattan distance, not `dist`
             let parity = (x.abs_diff(sx) + y.abs_diff(sy)) % 2;
 
-            if md % 2 == parity {
-                md
-            } else {
-                md + 1
-            }
+            if md % 2 == parity { md } else { md + 1 }
         }
     }
 }

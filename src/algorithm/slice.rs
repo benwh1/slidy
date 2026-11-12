@@ -11,8 +11,8 @@ use crate::{
             r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
         },
         metric::{Metric, Mtm, Stm},
-        moves::Moves,
         r#move::r#move::{Move, MoveAddError},
+        moves::Moves,
     },
     puzzle::size::Size,
 };
@@ -98,10 +98,10 @@ impl AlgorithmSlice<'_> {
             }
         }
 
-        if let Some(m) = acc_move {
-            if m.amount != 0 {
-                moves.push(m);
-            }
+        if let Some(m) = acc_move
+            && m.amount != 0
+        {
+            moves.push(m);
         }
 
         Algorithm::with_moves(moves)

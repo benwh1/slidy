@@ -232,7 +232,9 @@ impl SlidingPuzzle for Puzzle {
         P: SlidingPuzzle,
     {
         for i in 0..other.area() {
-            let piece = other.piece_at_unchecked(i).as_();
+            // SAFETY: `i < other.area()`, and the caller guarantees that `other` is in a valid
+            // state.
+            let piece = unsafe { other.piece_at_unchecked(i) }.as_();
             self.pieces[i as usize] = piece;
             if piece == 0 {
                 self.gap = i;
@@ -262,7 +264,8 @@ impl SlidingPuzzle for Puzzle {
     }
 
     unsafe fn piece_at_unchecked(&self, idx: u64) -> u64 {
-        *self.pieces.get_unchecked(idx as usize)
+        // SAFETY: The caller guarantees that `idx < self.area() == self.pieces.len()`.
+        unsafe { *self.pieces.get_unchecked(idx as usize) }
     }
 
     fn swap_pieces(&mut self, idx1: u64, idx2: u64) {
@@ -276,10 +279,14 @@ impl SlidingPuzzle for Puzzle {
 
     unsafe fn swap_pieces_unchecked(&mut self, idx1: u64, idx2: u64) {
         self.pieces.swap(idx1 as usize, idx2 as usize);
-        if self.piece_at_unchecked(idx1) == 0 {
-            self.gap = idx1;
-        } else if self.piece_at_unchecked(idx2) == 0 {
-            self.gap = idx2;
+        // SAFETY: The caller guarantees that both indices are less than `self.area()`, and
+        // swapping two pieces keeps the puzzle in a valid state.
+        unsafe {
+            if self.piece_at_unchecked(idx1) == 0 {
+                self.gap = idx1;
+            } else if self.piece_at_unchecked(idx2) == 0 {
+                self.gap = idx2;
+            }
         }
     }
 
@@ -298,8 +305,12 @@ impl SlidingPuzzle for Puzzle {
     }
 
     unsafe fn swap_piece_with_gap_unchecked(&mut self, idx: u64) {
-        *self.pieces.get_unchecked_mut(self.gap as usize) = self.piece_at_unchecked(idx);
-        *self.pieces.get_unchecked_mut(idx as usize) = 0;
+        // SAFETY: The caller guarantees that `idx < self.area() == self.pieces.len()`, and the
+        // puzzle is in a valid state, so `self.gap` is also in bounds.
+        unsafe {
+            *self.pieces.get_unchecked_mut(self.gap as usize) = self.piece_at_unchecked(idx);
+            *self.pieces.get_unchecked_mut(idx as usize) = 0;
+        }
         self.gap = idx;
     }
 }

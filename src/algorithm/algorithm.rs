@@ -22,8 +22,8 @@ use crate::{
             r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
         },
         metric::Metric,
-        moves::Moves,
         r#move::r#move::Move,
+        moves::Moves,
         slice::AlgorithmSlice,
     },
     puzzle::sliding_puzzle::SlidingPuzzle,
@@ -809,27 +809,15 @@ mod tests {
         use super::*;
 
         macro_rules! slice {
-            ($first:literal, $middle:literal, $last:literal) => {{
-                let first = if $first.is_empty() {
-                    None
-                } else {
-                    Some(Move::from_str($first).unwrap())
-                };
-
-                let mut middle = Algorithm::from_str($middle).unwrap();
-
-                let last = if $last.is_empty() {
-                    None
-                } else {
-                    Some(Move::from_str($last).unwrap())
-                };
-
+            // This is a single expression rather than a block, so that the borrowed `Algorithm`
+            // lives until the end of the enclosing statement.
+            ($first:literal, $middle:literal, $last:literal) => {
                 Ok(AlgorithmSlice {
-                    first,
-                    middle: &std::mem::take(&mut middle.moves),
-                    last,
+                    first: (!$first.is_empty()).then(|| Move::from_str($first).unwrap()),
+                    middle: &Algorithm::from_str($middle).unwrap().moves,
+                    last: (!$last.is_empty()).then(|| Move::from_str($last).unwrap()),
                 })
-            }};
+            };
         }
 
         #[test]
