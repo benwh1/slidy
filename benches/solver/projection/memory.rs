@@ -27,7 +27,7 @@ type PdbSolverMtm = Solver<Puzzle, Checkerboard, Checkerboard, Mtm>;
 fn peak_memory_bytes_during(build: impl FnOnce()) -> u64 {
     let peak = AtomicU64::new(0);
     let done = AtomicBool::new(false);
-    let mut sys = System::new_all();
+    let mut sys = System::new_all().expect("failed to initialize `System`");
     let pid = sysinfo::get_current_pid().unwrap();
 
     thread::scope(|scope| {
