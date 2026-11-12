@@ -22,12 +22,14 @@ use crate::puzzle::{
 )]
 pub struct SchemeList<S: ColorScheme, List: AsRef<[S]>> {
     schemes: List,
+    #[cfg_attr(feature = "serde", serde(skip))]
     phantom_s: PhantomData<S>,
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 struct SchemeListUnvalidated<S: ColorScheme, List: AsRef<[S]>> {
     schemes: List,
+    #[cfg_attr(feature = "serde", serde(skip))]
     phantom_s: PhantomData<S>,
 }
 
