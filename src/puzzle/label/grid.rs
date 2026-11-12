@@ -12,10 +12,28 @@ use crate::puzzle::{
 /// A [`Label`] that divides the puzzle into a grid of rectangles at the given `x` and `y`
 /// coordinates.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(from = "GridUnvalidated")
+)]
 pub struct Grid {
     xs: Vec<u64>,
     ys: Vec<u64>,
+}
+
+#[cfg_attr(feature = "serde", derive(Deserialize))]
+struct GridUnvalidated {
+    xs: Vec<u64>,
+    ys: Vec<u64>,
+}
+
+impl From<GridUnvalidated> for Grid {
+    fn from(value: GridUnvalidated) -> Self {
+        let GridUnvalidated { xs, ys } = value;
+
+        Self::new(xs, ys)
+    }
 }
 
 impl Grid {
