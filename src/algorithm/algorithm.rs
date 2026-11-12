@@ -131,6 +131,10 @@ impl Algorithm {
     }
 
     /// The length of the algorithm in the [`Metric`] `M`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the length overflows [`u64`].
     #[must_use]
     pub fn len<M>(&self) -> u64
     where
@@ -140,6 +144,10 @@ impl Algorithm {
     }
 
     /// The length of the algorithm in the [`Stm`] [`Metric`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if the length overflows [`u64`].
     ///
     /// [`Stm`]: crate::algorithm::metric::Stm
     #[must_use]
@@ -284,6 +292,12 @@ impl Algorithm {
     }
 
     /// Returns an [`AlgorithmSlice`] containing the (single-tile) moves in the range `range`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the [`Stm`] length of the algorithm overflows [`u64`].
+    ///
+    /// [`Stm`]: crate::algorithm::metric::Stm
     pub fn try_slice(&self, range: Range<u64>) -> Result<AlgorithmSlice<'_>, SliceError> {
         if range.start > range.end {
             return Err(SliceError::UnorderedRange(range));
@@ -574,6 +588,36 @@ mod tests {
         let a = Algorithm::from_str("UUU3").unwrap();
         assert_eq!(a.len_stm(), 5);
         assert_eq!(a.len_mtm(), 3);
+    }
+
+    #[test]
+    #[should_panic = "algorithm length overflowed `u64`"]
+    fn test_len_stm_overflow() {
+        let a = Algorithm::with_moves(vec![
+            Move::new(Direction::Up, u64::MAX),
+            Move::new(Direction::Up, 1),
+        ]);
+        let _ = a.len_stm();
+    }
+
+    #[test]
+    #[should_panic = "algorithm length overflowed `u64`"]
+    fn test_try_slice_overflow() {
+        let a = Algorithm::with_moves(vec![
+            Move::new(Direction::Up, u64::MAX),
+            Move::new(Direction::Left, 1),
+        ]);
+        let _ = a.try_slice(0..1);
+    }
+
+    #[test]
+    fn test_len_stm_max() {
+        let a = Algorithm::with_moves(vec![
+            Move::new(Direction::Up, u64::MAX - 1),
+            Move::new(Direction::Up, 1),
+        ]);
+        assert_eq!(a.len_stm(), u64::MAX);
+        assert_eq!(a.len_mtm(), 2);
     }
 
     #[test]

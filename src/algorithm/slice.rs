@@ -29,15 +29,25 @@ pub struct AlgorithmSlice<'a> {
 
 impl AlgorithmSlice<'_> {
     /// The length of the slice in the [`Metric`] `M`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the length overflows [`u64`].
     #[must_use]
     pub fn len<M>(&self) -> u64
     where
         M: Metric,
     {
-        self.moves_mtm().map(M::len).sum()
+        self.moves_mtm()
+            .try_fold(0u64, |total, m| total.checked_add(M::len(m)))
+            .expect("algorithm length overflowed `u64`")
     }
 
     /// The length of the slice in the [`Stm`] [`Metric`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if the length overflows [`u64`].
     #[must_use]
     pub fn len_stm(&self) -> u64 {
         self.len::<Stm>()
