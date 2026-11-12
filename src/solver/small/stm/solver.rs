@@ -211,6 +211,19 @@ mod tests {
     }
 
     #[test]
+    fn test_max_min_with_other_parity() {
+        // The solution has even length, but `u64::MAX` is odd, so there are no depths to search.
+        let mut solver = Solver2x2Stm::default();
+        let puzzle = Puzzle::from_str("1 2/3 0").unwrap();
+        let config = SolverConfig {
+            min: u64::MAX,
+            ..Default::default()
+        };
+        let solutions = solver.solve_collect(&puzzle, config).unwrap();
+        assert!(solutions.is_empty());
+    }
+
+    #[test]
     fn test_zero_solutions() {
         let mut solver = Solver3x3Stm::default();
         let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();

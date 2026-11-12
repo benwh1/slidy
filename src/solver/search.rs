@@ -80,8 +80,11 @@ pub(super) fn iterative_deepening<M, S, const N: usize>(
     let (min, step) = if M::HAS_MOVECOUNT_PARITY {
         let min = if lower_bound % 2 == min % 2 {
             min
+        } else if let Some(min) = min.checked_add(1) {
+            min
         } else {
-            min + 1
+            // No depth of at least `min` has the right parity.
+            return;
         };
         (min, 2)
     } else {
