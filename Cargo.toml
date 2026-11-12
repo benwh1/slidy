@@ -9,6 +9,9 @@ keywords = ["puzzle", "15-puzzle"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[package.metadata.docs.rs]
+all-features = true
+
 [dependencies]
 enterpolation = { version = "^0.3", optional = true }
 itertools = "^0.15"
