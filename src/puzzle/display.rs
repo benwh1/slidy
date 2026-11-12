@@ -78,7 +78,8 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         let max_number = self.puzzle.num_pieces();
-        let num_digits = max_number.ilog10() as usize + 1;
+        // A 1x1 puzzle has no pieces, so `max_number` can be 0.
+        let num_digits = max_number.checked_ilog10().unwrap_or(0) as usize + 1;
         let (w, h) = self.puzzle.size().into();
         for y in 0..h {
             for x in 0..w {
@@ -131,6 +132,12 @@ mod tests {
         let s2 = p.display_grid().to_string();
         assert_eq!(s1, " 1  2  3  4\n 5  6  7  8\n 9 10 11 12\n13 14 15  0");
         assert_eq!(s1, s2);
+    }
+
+    #[test]
+    fn test_display_grid_1x1() {
+        let p = Puzzle::new(Size::new(1, 1).unwrap());
+        assert_eq!(p.display_grid().to_string(), "0");
     }
 
     #[test]
