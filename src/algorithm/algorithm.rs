@@ -248,7 +248,7 @@ impl Algorithm {
     ///
     /// See [`AlgorithmSlice::simplified`].
     pub fn simplify(&mut self) {
-        self.moves = self.simplified().moves;
+        *self = self.simplified();
     }
 
     /// Returns the algorithm `a` such that concatenating `a` with `self` (in either order), the
@@ -264,7 +264,7 @@ impl Algorithm {
     ///
     /// See also: [`Algorithm::inverse`].
     pub fn invert(&mut self) {
-        self.moves = self.inverse().moves;
+        *self = self.inverse();
     }
 
     /// Returns the algorithm obtained by reflecting the algorithm through the main diagonal.
@@ -366,10 +366,9 @@ impl Algorithm {
     #[must_use]
     pub fn is_solution_of<Puzzle>(&self, mut puzzle: Puzzle) -> bool
     where
-        Puzzle: SlidingPuzzle + Clone,
+        Puzzle: SlidingPuzzle,
     {
-        let b = puzzle.try_apply_alg(self);
-        b && puzzle.is_solved()
+        puzzle.try_apply_alg(self) && puzzle.is_solved()
     }
 
     /// Helper function for creating a [`DisplaySpaced<DisplayLongSpaced>`] around `self`.
@@ -452,16 +451,13 @@ impl FromStr for Algorithm {
                 }
 
                 // Append the next digit to the number
-                if let Some(a) = amount {
-                    amount = Some(
-                        a.checked_mul(10)
-                            .ok_or(ParseAlgorithmError::Overflow)?
-                            .checked_add(d)
-                            .ok_or(ParseAlgorithmError::Overflow)?,
-                    );
-                } else {
-                    amount = Some(d);
-                }
+                amount = Some(
+                    amount
+                        .unwrap_or(0)
+                        .checked_mul(10)
+                        .and_then(|a| a.checked_add(d))
+                        .ok_or(ParseAlgorithmError::Overflow)?,
+                );
             }
             // A whitespace character signals the end of a move
             else if c.is_whitespace() {
@@ -495,8 +491,7 @@ impl serde::Serialize for Algorithm {
     where
         S: serde::Serializer,
     {
-        let str = self.to_string();
-        serializer.serialize_str(&str)
+        serializer.collect_str(self)
     }
 }
 
@@ -515,11 +510,9 @@ impl Add for Algorithm {
     type Output = Self;
 
     /// Concatenates the algorithms.
-    fn add(self, rhs: Self) -> Self::Output {
-        let mut moves = self.moves;
-        let mut moves2 = rhs.moves;
-        moves.append(&mut moves2);
-        Self { moves }
+    fn add(mut self, rhs: Self) -> Self::Output {
+        self += rhs;
+        self
     }
 }
 

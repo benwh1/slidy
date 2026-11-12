@@ -1,18 +1,7 @@
-use std::marker::PhantomData;
-
-use xxhash_rust::xxh3;
-
 use crate::{
-    algorithm::{direction::Direction, metric::Stm},
-    puzzle::{
-        sliding_puzzle::SlidingPuzzle as _,
-        small::{Puzzle, sealed::SmallPuzzle},
-    },
-    solver::{
-        config::PdbConfig,
-        small::{indexing, pdb::Pdb},
-        statistics::PdbIterationStats,
-    },
+    algorithm::metric::Stm,
+    puzzle::small::{Puzzle, sealed::SmallPuzzle},
+    solver::{config::PdbConfig, small::pdb::Pdb},
 };
 
 const HASHES: [(usize, usize, u64); 12] = [
@@ -48,78 +37,7 @@ where
     /// Depending on the size of the puzzle, this may take several minutes to run.
     #[must_use]
     pub fn new(config: &PdbConfig) -> Self {
-        let puzzle = Puzzle::<W, H>::new();
-        let num_states = puzzle.size().num_states().unwrap().try_into().unwrap();
-
-        let mut pdb = vec![u8::MAX; num_states];
-        let solved_encoded = indexing::encode_pieces::<N>(puzzle.pieces(), puzzle.gap());
-        pdb[solved_encoded as usize] = 0;
-
-        let mut current = vec![puzzle];
-        let mut current_index = vec![solved_encoded];
-
-        let mut depth = 0;
-        let mut new = 1;
-        let mut total = 1;
-
-        if let Some(f) = &config.end_of_iter_callback {
-            f(PdbIterationStats { depth, new, total });
-        }
-
-        while !current.is_empty() {
-            let mut next = Vec::with_capacity(current.len() * 2);
-            let mut next_index = Vec::with_capacity(current.len() * 2);
-
-            for (state, parent_index) in current.into_iter().zip(current_index) {
-                let parent_gap = state.gap();
-                for dir in [
-                    Direction::Up,
-                    Direction::Left,
-                    Direction::Down,
-                    Direction::Right,
-                ] {
-                    let mut puzzle = state;
-
-                    if puzzle.try_move_dir(dir) {
-                        let new_gap = puzzle.gap();
-                        let child_index = if new_gap.abs_diff(parent_gap) == 1 {
-                            if new_gap > parent_gap {
-                                parent_index + 1
-                            } else {
-                                parent_index - 1
-                            }
-                        } else {
-                            indexing::encode_pieces::<N>(puzzle.pieces(), new_gap)
-                        };
-
-                        let idx = child_index as usize;
-                        if pdb[idx] == u8::MAX {
-                            pdb[idx] = depth + 1;
-                            next.push(puzzle);
-                            next_index.push(child_index);
-                        }
-                    }
-                }
-            }
-
-            new = next.len() as u64;
-            total += new;
-            depth += 1;
-
-            current = next;
-            current_index = next_index;
-
-            if let Some(f) = &config.end_of_iter_callback {
-                f(PdbIterationStats { depth, new, total });
-            }
-        }
-
-        let pdb = pdb.into_boxed_slice();
-
-        Self {
-            pdb,
-            phantom_metric: PhantomData,
-        }
+        Self::build::<false>(config)
     }
 
     /// Initializes a [`Pdb`] from a boxed byte slice containing the pre-computed data.
@@ -137,26 +55,18 @@ where
     /// behavior.
     ///
     /// [`Solver`]: crate::solver::small::solver::Solver
+    /// [`xxh3`]: xxhash_rust::xxh3
     #[must_use]
     pub unsafe fn try_from_bytes(bytes: Box<[u8]>) -> Option<Self> {
-        if Some(bytes.len() as u128) != Puzzle::<W, H>::new().size().num_states() {
-            return None;
-        }
-
-        let expected_hash = HASHES.iter().find(|(w, h, _)| *w == W && *h == H)?.2;
-        let actual_hash = xxh3::xxh3_64(&bytes);
-
-        if actual_hash != expected_hash {
-            return None;
-        }
-
-        // SAFETY: We checked above that the data is (almost certainly) correct.
-        Some(unsafe { Self::from_bytes_unchecked(bytes) })
+        // SAFETY: The caller's requirements are the same.
+        unsafe { Self::try_from_bytes_with_hashes(bytes, &HASHES) }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use xxhash_rust::xxh3;
+
     use super::*;
     use crate::solver::small::pdb::Pdb5x2Stm;
 

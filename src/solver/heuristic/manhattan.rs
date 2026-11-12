@@ -79,47 +79,8 @@ impl Distance for ManhattanDistance<Fringe> {
 impl Distance for ManhattanDistance<SquareFringe> {
     const HAS_PARITY_CONSTRAINT: bool = false;
 
-    fn dist(&self, (x, y): (u64, u64), (sx, sy): (u64, u64), size: Size) -> u64 {
-        let (w, h) = size.into();
-        match w.cmp(&h) {
-            Ordering::Less => {
-                if sy < h.saturating_sub(w) {
-                    // Solved position is above the square part. Distance is the vertical distance
-                    // from the current row to the target row.
-                    y.abs_diff(sy)
-                } else {
-                    // Solved position is within the square part. Distance is the number of rows
-                    // we need to move down to reach the square part (or 0 if we are already in the
-                    // square part), plus the distance within the square part.
-                    let size_diff = h - w;
-                    let vertical_distance = size_diff.saturating_sub(y);
-                    let square_distance = ManhattanDistance(Fringe).dist(
-                        (x, y.saturating_sub(size_diff)),
-                        (sx, sy - size_diff),
-                        size.shrink_to_square(),
-                    );
-
-                    vertical_distance + square_distance
-                }
-            }
-            Ordering::Equal => ManhattanDistance(Fringe).dist((x, y), (sx, sy), size),
-            Ordering::Greater => {
-                // Same as above, but for the horizontal direction.
-                if sx < w.saturating_sub(h) {
-                    x.abs_diff(sx)
-                } else {
-                    let size_diff = w - h;
-                    let horizontal_distance = size_diff.saturating_sub(x);
-                    let square_distance = ManhattanDistance(Fringe).dist(
-                        (x.saturating_sub(size_diff), y),
-                        (sx - size_diff, sy),
-                        size.shrink_to_square(),
-                    );
-
-                    horizontal_distance + square_distance
-                }
-            }
-        }
+    fn dist(&self, pos: (u64, u64), solved_pos: (u64, u64), size: Size) -> u64 {
+        square_fringe_dist(&ManhattanDistance(Fringe), pos, solved_pos, size)
     }
 }
 
@@ -138,42 +99,8 @@ impl Distance for ManhattanDistance<SplitFringe> {
 impl Distance for ManhattanDistance<SplitSquareFringe> {
     const HAS_PARITY_CONSTRAINT: bool = false;
 
-    fn dist(&self, (x, y): (u64, u64), (sx, sy): (u64, u64), size: Size) -> u64 {
-        // Same as for `SplitFringe` above, but using `SplitFringe` for the square part.
-        let (w, h) = size.into();
-        match w.cmp(&h) {
-            Ordering::Less => {
-                if sy < h.saturating_sub(w) {
-                    y.abs_diff(sy)
-                } else {
-                    let size_diff = h - w;
-                    let vertical_distance = size_diff.saturating_sub(y);
-                    let square_distance = ManhattanDistance(SplitFringe).dist(
-                        (x, y.saturating_sub(size_diff)),
-                        (sx, sy - size_diff),
-                        size.shrink_to_square(),
-                    );
-
-                    vertical_distance + square_distance
-                }
-            }
-            Ordering::Equal => ManhattanDistance(SplitFringe).dist((x, y), (sx, sy), size),
-            Ordering::Greater => {
-                if sx < w.saturating_sub(h) {
-                    x.abs_diff(sx)
-                } else {
-                    let size_diff = w - h;
-                    let horizontal_distance = size_diff.saturating_sub(x);
-                    let square_distance = ManhattanDistance(SplitFringe).dist(
-                        (x.saturating_sub(size_diff), y),
-                        (sx - size_diff, sy),
-                        size.shrink_to_square(),
-                    );
-
-                    horizontal_distance + square_distance
-                }
-            }
-        }
+    fn dist(&self, pos: (u64, u64), solved_pos: (u64, u64), size: Size) -> u64 {
+        square_fringe_dist(&ManhattanDistance(SplitFringe), pos, solved_pos, size)
     }
 }
 
@@ -190,6 +117,55 @@ impl Distance for ManhattanDistance<Checkerboard> {
 
     fn dist(&self, (x, y): (u64, u64), (sx, sy): (u64, u64), _size: Size) -> u64 {
         u64::from((x + y) % 2 != (sx + sy) % 2)
+    }
+}
+
+/// The distance for a label that is like `inner` in the largest square in the bottom right of
+/// the puzzle, and labels each row or column outside the square separately. Used for
+/// [`SquareFringe`] (with [`Fringe`]) and [`SplitSquareFringe`] (with [`SplitFringe`]).
+fn square_fringe_dist<D>(inner: &D, (x, y): (u64, u64), (sx, sy): (u64, u64), size: Size) -> u64
+where
+    D: Distance,
+{
+    let (w, h) = size.into();
+    match w.cmp(&h) {
+        Ordering::Less => {
+            if sy < h.saturating_sub(w) {
+                // Solved position is above the square part. Distance is the vertical distance
+                // from the current row to the target row.
+                y.abs_diff(sy)
+            } else {
+                // Solved position is within the square part. Distance is the number of rows
+                // we need to move down to reach the square part (or 0 if we are already in the
+                // square part), plus the distance within the square part.
+                let size_diff = h - w;
+                let vertical_distance = size_diff.saturating_sub(y);
+                let square_distance = inner.dist(
+                    (x, y.saturating_sub(size_diff)),
+                    (sx, sy - size_diff),
+                    size.shrink_to_square(),
+                );
+
+                vertical_distance + square_distance
+            }
+        }
+        Ordering::Equal => inner.dist((x, y), (sx, sy), size),
+        Ordering::Greater => {
+            // Same as above, but for the horizontal direction.
+            if sx < w.saturating_sub(h) {
+                x.abs_diff(sx)
+            } else {
+                let size_diff = w - h;
+                let horizontal_distance = size_diff.saturating_sub(x);
+                let square_distance = inner.dist(
+                    (x.saturating_sub(size_diff), y),
+                    (sx - size_diff, sy),
+                    size.shrink_to_square(),
+                );
+
+                horizontal_distance + square_distance
+            }
+        }
     }
 }
 

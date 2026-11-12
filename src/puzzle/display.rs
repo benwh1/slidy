@@ -83,8 +83,7 @@ where
         for y in 0..h {
             for x in 0..w {
                 let n = self.puzzle.piece_at_xy((x, y));
-                let a = format!("{n: >num_digits$}");
-                f.write_str(&a)?;
+                write!(f, "{n: >num_digits$}")?;
                 if x != w - 1 {
                     f.write_char(' ')?;
                 }
@@ -107,7 +106,7 @@ where
         for y in 0..h {
             for x in 0..w {
                 let n = self.puzzle.piece_at_xy((x, y));
-                f.write_str(&n.to_string())?;
+                write!(f, "{n}")?;
                 if x != w - 1 {
                     f.write_char(' ')?;
                 }

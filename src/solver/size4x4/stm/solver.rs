@@ -5,26 +5,23 @@ use std::ops::ControlFlow;
 use num_traits::ToPrimitive as _;
 
 use crate::{
-    algorithm::direction::Direction,
+    algorithm::{direction::Direction, metric::Stm},
     puzzle::{size::Size, sliding_puzzle::SlidingPuzzle},
     solver::{
         config::{PdbConfig, SolverConfig},
+        search::{Search, iterative_deepening},
         size4x4::stm::{pattern::Pattern, pdb::Pdb, puzzle::Puzzle as Puzzle4},
         solver::{Solver as SolverT, SolverError},
-        stack::Stack,
-        statistics::SolverIterationStats,
     },
 };
 
 /// An optimal solver for 4x4 puzzles in [`Stm`].
 ///
-/// [`Stm`]: crate::algorithm::metric::Stm
+/// [`Stm`]: Stm
 pub struct Solver {
     pdb4: Pdb,
     pdb3: Pdb,
-    stack: Stack<128>,
-    solutions_found: u64,
-    config: Option<SolverConfig>,
+    search: Search<128>,
 }
 
 impl Default for Solver {
@@ -46,9 +43,7 @@ impl Solver {
         Self {
             pdb4,
             pdb3,
-            stack: Stack::new(),
-            solutions_found: 0,
-            config: None,
+            search: Search::new(),
         }
     }
 
@@ -74,18 +69,7 @@ impl Solver {
         }
 
         if depth == 0 {
-            self.solutions_found += 1;
-            if let Some(f) = &self.config.as_ref().unwrap().solution_callback
-                && f(self.stack.to_alg()).is_break()
-            {
-                return ControlFlow::Break(());
-            }
-
-            if self.config.as_ref().unwrap().num_solutions == self.solutions_found {
-                return ControlFlow::Break(());
-            }
-
-            return ControlFlow::Continue(());
+            return self.search.record_solution();
         }
 
         // SAFETY: See above.
@@ -131,7 +115,7 @@ impl Solver {
                 mt4[dir as usize],
             ];
 
-            self.stack.push(dir);
+            self.search.stack.push(dir);
 
             if self
                 .dfs(depth - 1, Some(dir.inverse()), new_coords)
@@ -140,7 +124,7 @@ impl Solver {
                 return ControlFlow::Break(());
             }
 
-            self.stack.pop();
+            self.search.stack.pop();
         }
 
         ControlFlow::Continue(())
@@ -157,19 +141,6 @@ impl Solver {
         if !puzzle.is_solvable() {
             return Err(SolverError::Unsolvable);
         }
-
-        if config.num_solutions == 0 {
-            return Ok(());
-        }
-
-        let min = config.min;
-        let max = config.max;
-        let depth_beyond_optimal = config.depth_beyond_optimal;
-
-        // Reset state
-        self.stack.clear();
-        self.solutions_found = 0;
-        self.config = Some(config);
 
         let mut pieces = [0; 16];
         for (i, piece) in pieces.iter_mut().enumerate() {
@@ -192,50 +163,14 @@ impl Solver {
             + self.pdb4.pdb()[coords[1] as usize] as u64
             + self.pdb4.pdb()[coords[2] as usize] as u64
             + self.pdb3.pdb()[coords[3] as usize] as u64;
-        let min = if hval % 2 == min % 2 { min } else { min + 1 };
-        let mut depth = hval.max(min);
 
-        if depth > max {
-            return Ok(());
-        }
-
-        let mut first_solution_depth = None;
-
-        loop {
-            // Run DFS. This checks against `num_solutions` and the return value of the solution
-            // callback.
-            if self.dfs(depth, None, coords).is_break() {
-                break;
-            }
-
-            // Set first solution depth.
-            if first_solution_depth.is_none() && self.solutions_found > 0 {
-                first_solution_depth = Some(depth);
-            }
-
-            // Run end of iteration callback and check return value.
-            if let Some(f) = &self.config.as_ref().unwrap().end_of_iter_callback
-                && f(SolverIterationStats { depth }).is_break()
-            {
-                break;
-            }
-
-            // Go to next depth.
-            depth = match depth.checked_add(2) {
-                Some(d) => d,
-                None => break,
-            };
-
-            // Check against `max`.
-            if depth > max {
-                break;
-            }
-
-            // Check against `depth_beyond_optimal`.
-            if first_solution_depth.is_some_and(|first| depth - first > depth_beyond_optimal) {
-                break;
-            }
-        }
+        iterative_deepening::<Stm, _, _>(
+            self,
+            |s| &mut s.search,
+            config,
+            hval,
+            |s, depth| s.dfs(depth, None, coords),
+        );
 
         Ok(())
     }

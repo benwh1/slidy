@@ -24,7 +24,7 @@ impl FourBitPuzzle {
         }
     }
 
-    #[allow(dead_code)]
+    #[cfg(test)]
     unsafe fn with_pieces_and_gap_unchecked(pieces: u64, gap: u8) -> Self {
         Self {
             // SAFETY: The caller upholds the requirements of
@@ -37,24 +37,13 @@ impl FourBitPuzzle {
         self.puzzle.pieces()
     }
 
-    #[allow(dead_code)]
+    #[cfg(test)]
     fn gap(&self) -> u8 {
         self.puzzle.gap()
     }
 
-    fn piece_array(&self) -> [u8; 16] {
-        let raw_pieces = self.puzzle.pieces();
-        let mut pieces = [0; 16];
-
-        for (i, piece) in pieces.iter_mut().enumerate() {
-            *piece = ((raw_pieces >> (4 * i)) & 0xF) as u8;
-        }
-
-        pieces
-    }
-
     pub(super) fn conjugate_with_transpose(&self) -> Self {
-        let pieces = self.piece_array();
+        let pieces = self.puzzle.piece_array();
         let pos = |i| pieces.iter().position(|&x| x == i).unwrap() as u64;
 
         let mut new = self.puzzle;

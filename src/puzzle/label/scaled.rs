@@ -7,7 +7,7 @@ use thiserror::Error;
 use crate::puzzle::{
     grids::Grids,
     label::{label::Label, rect_partition::Rect},
-    size::Size,
+    size::{Size, SizeError},
 };
 
 /// Scales a [`Label`] up by a horizontal factor and a vertical factor.
@@ -78,28 +78,27 @@ impl<L: Label> Scaled<L> {
     pub fn scale(&self) -> (u64, u64) {
         self.factor
     }
+
+    /// The size of the puzzle that the inner label is applied to.
+    fn scaled_size(&self, size: Size) -> Result<Size, SizeError> {
+        let (width, height) = size.into();
+        Size::new(
+            width.div_ceil(self.factor.0),
+            height.div_ceil(self.factor.1),
+        )
+    }
 }
 
 impl<L: Label> Label for Scaled<L> {
     fn position_label(&self, size: Size, (x, y): (u64, u64)) -> u64 {
-        let (width, height) = size.into();
-        let (sw, sh) = (
-            width.div_ceil(self.factor.0),
-            height.div_ceil(self.factor.1),
-        );
-        let (x, y) = (x / self.factor.0, y / self.factor.1);
-
-        Size::new(sw, sh).map_or_default(|size| self.label.position_label(size, (x, y)))
+        let pos = (x / self.factor.0, y / self.factor.1);
+        self.scaled_size(size)
+            .map_or_default(|size| self.label.position_label(size, pos))
     }
 
     fn num_labels(&self, size: Size) -> u64 {
-        let (width, height) = size.into();
-        let (sw, sh) = (
-            width.div_ceil(self.factor.0),
-            height.div_ceil(self.factor.1),
-        );
-
-        Size::new(sw, sh).map_or_default(|size| self.label.num_labels(size))
+        self.scaled_size(size)
+            .map_or_default(|size| self.label.num_labels(size))
     }
 }
 

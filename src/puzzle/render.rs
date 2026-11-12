@@ -162,34 +162,30 @@ impl<'a, S: ColorScheme> Text<'a, S> {
     /// Write the formatting options into a CSS string.
     #[must_use]
     pub fn style_string(&self) -> String {
-        if let Font::Family(f) = self.font {
-            format!(
-                "text {{ font-family: {f}; font-size: {fs}px; }}",
-                fs = self.font_size
-            )
-        } else {
-            let src = match self.font {
-                Font::Family(_) => unreachable!(),
-                Font::Url { path, format } => {
-                    format!(r#"url({path}) format("{format}")"#)
-                }
-                Font::Base64 { data, format } => {
-                    format!(r#"url(data:font/ttf;base64,{data}) format("{format}")"#)
-                }
-            };
+        let src = match self.font {
+            Font::Family(f) => {
+                return format!(
+                    "text {{ font-family: {f}; font-size: {fs}px; }}",
+                    fs = self.font_size
+                );
+            }
+            Font::Url { path, format } => format!(r#"url({path}) format("{format}")"#),
+            Font::Base64 { data, format } => {
+                format!(r#"url(data:font/ttf;base64,{data}) format("{format}")"#)
+            }
+        };
 
-            format!(
-                "@font-face {{ \
-                    font-family: f; \
-                    src: {src}; \
-                }} \
-                text {{ \
-                    font-family: f; \
-                    font-size: {fs}px; \
-                }}",
-                fs = self.font_size
-            )
-        }
+        format!(
+            "@font-face {{ \
+                font-family: f; \
+                src: {src}; \
+            }} \
+            text {{ \
+                font-family: f; \
+                font-size: {fs}px; \
+            }}",
+            fs = self.font_size
+        )
     }
 }
 
@@ -355,24 +351,16 @@ impl<'a, S: ColorScheme, U: ColorScheme, T: ColorScheme, B: ColorScheme>
 }
 
 impl<S: ColorScheme, U: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'_, S, U, T, B> {
+    /// The thickness of the borders, or 0 if there are none.
+    fn border_thickness(&self) -> f32 {
+        self.borders.as_ref().map_or(0.0, |b| b.thickness)
+    }
+
     /// Returns the CSS string used to style the image.
     pub fn style_string(&self) -> String {
-        let font = self
-            .text
-            .as_ref()
-            .map(|a| a.style_string())
-            .unwrap_or_default();
-
-        let bg = {
-            let color: Rgba<_, u8> = self.background_color.into_format();
-            format!("#{color:x}")
-        };
-
-        let border_thickness = self
-            .borders
-            .as_ref()
-            .map(|a| a.thickness)
-            .unwrap_or_default();
+        let font = self.text.as_ref().map_or_default(Text::style_string);
+        let bg = hex_color(self.background_color);
+        let border_thickness = self.border_thickness();
 
         format!(
             "svg {{ background-color: {bg}; }} \
@@ -432,26 +420,18 @@ impl<S: ColorScheme, U: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'_
         Puzzle::Piece: Display,
     {
         let size = puzzle.size();
-
-        let border_thickness = self
-            .borders
-            .as_ref()
-            .map(|a| a.thickness)
-            .unwrap_or_default();
+        let border_thickness = self.border_thickness();
 
         let piece = puzzle.piece_at_xy((x, y));
         let solved_pos = puzzle.solved_pos_xy(piece);
 
-        let (x, y) = (x as f32, y as f32);
-
-        let rect_pos = (
+        // Position of the top left corner of the `i`th tile in a row or column.
+        let offset = |i: u64| {
             self.padding
                 + border_thickness / 2.0
-                + (self.tile_size + self.tile_gap + border_thickness) * x,
-            self.padding
-                + border_thickness / 2.0
-                + (self.tile_size + self.tile_gap + border_thickness) * y,
-        );
+                + (self.tile_size + self.tile_gap + border_thickness) * i as f32
+        };
+        let rect_pos = (offset(x), offset(y));
 
         let subscheme_color = self
             .subscheme
@@ -470,17 +450,12 @@ impl<S: ColorScheme, U: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'_
                     .filter(|_| self.subscheme_style == Some($subscheme))
                     .unwrap_or_else(|| $scheme.color(size, solved_pos));
 
-                // Format as hex string
-                let color: Rgba<_, u8> = color.into_format();
-                format!("#{color:x}")
+                hex_color(color)
             }};
         }
 
         let rect = {
-            let fill = {
-                let color: Rgba<_, u8> = self.scheme.color(size, solved_pos).into_format();
-                format!("#{color:x}")
-            };
+            let fill = hex_color(self.scheme.color(size, solved_pos));
 
             let mut r = Rectangle::new()
                 .set("x", rect_pos.0)
@@ -510,18 +485,13 @@ impl<S: ColorScheme, U: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'_
         let subscheme_render = subscheme_color
             .filter(|_| self.subscheme_style == Some(SubschemeStyle::Rectangle))
             .map(|subcolor| {
-                let fill = {
-                    let color: Rgba<_, u8> = subcolor.into_format();
-                    format!("#{color:x}")
-                };
-
                 let subrect_pos = (0.15, 0.8);
 
                 Rectangle::new()
                     .set("x", rect_pos.0 + self.tile_size * subrect_pos.0)
                     .set("y", rect_pos.1 + self.tile_size * subrect_pos.1)
                     .set("class", "sub")
-                    .set("fill", fill)
+                    .set("fill", hex_color(subcolor))
             });
 
         let mut group = Group::new().add(rect);
@@ -543,26 +513,18 @@ impl<S: ColorScheme, U: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'_
         Puzzle: SlidingPuzzle,
         Puzzle::Piece: Display,
     {
-        let size = puzzle.size();
-        let (width, height) = size.into();
+        let (width, height) = puzzle.size().into();
+        let border_thickness = self.border_thickness();
 
-        let border_thickness = self
-            .borders
-            .as_ref()
-            .map(|a| a.thickness)
-            .unwrap_or_default();
-
-        let (w, h) = (width as f32, height as f32);
-        let (image_w, image_h) = (
-            w * self.tile_size
-                + (w - 1.0) * self.tile_gap
-                + w * border_thickness
-                + 2.0 * self.padding,
-            h * self.tile_size
-                + (h - 1.0) * self.tile_gap
-                + h * border_thickness
-                + 2.0 * self.padding,
-        );
+        // Length of the image along a row or column of `n` tiles.
+        let image_length = |n: u64| {
+            let n = n as f32;
+            n * self.tile_size
+                + (n - 1.0) * self.tile_gap
+                + n * border_thickness
+                + 2.0 * self.padding
+        };
+        let (image_w, image_h) = (image_length(width), image_length(height));
 
         let style_str = self.style_string();
 
@@ -572,4 +534,10 @@ impl<S: ColorScheme, U: ColorScheme, T: ColorScheme, B: ColorScheme> Renderer<'_
             .set("width", image_w)
             .set("height", image_h)
     }
+}
+
+/// Formats `color` as a hex string, e.g. `#ff0000ff`.
+fn hex_color(color: Rgba) -> String {
+    let color: Rgba<_, u8> = color.into_format();
+    format!("#{color:x}")
 }

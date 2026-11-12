@@ -92,12 +92,8 @@ pub trait Label {
                 let other_label = other.position_label(size, pos) as usize;
                 let label = self.position_label(size, pos);
 
-                if let Some(prev) = labels[other_label] {
-                    if prev != label {
-                        return false;
-                    }
-                } else {
-                    labels[other_label] = Some(label);
+                if *labels[other_label].get_or_insert(label) != label {
+                    return false;
                 }
             }
         }

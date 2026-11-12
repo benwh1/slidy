@@ -62,7 +62,7 @@ impl TryFrom<RectUnvalidated> for Rect {
 impl Rect {
     /// Creates a new [`Rect`] given the coordinates of the top left and bottom right points.
     pub fn new(top_left: (u64, u64), bottom_right: (u64, u64)) -> Result<Self, RectError> {
-        let (top, left, bottom, right) = (top_left.1, top_left.0, bottom_right.1, bottom_right.0);
+        let ((left, top), (right, bottom)) = (top_left, bottom_right);
         if bottom > top && right > left {
             Ok(Self {
                 left,
@@ -122,7 +122,7 @@ impl Rect {
     /// Size of the rectangle in the form `(width, height)`.
     #[must_use]
     pub fn size(&self) -> (u64, u64) {
-        (self.right - self.left, self.bottom - self.top)
+        (self.width(), self.height())
     }
 }
 
@@ -248,28 +248,21 @@ impl RectPartition {
 
         let mut height_map = PiecewiseConstant::new(left..right, top);
 
-        for slice in rects.chunk_by(|a, b| a.top == b.top) {
-            for rect in slice {
-                let height = height_map.range_value(rect.left..rect.right);
-                if height == Some(rect.top) {
-                    height_map.set_range_value(rect.left..rect.right, rect.bottom);
-                } else {
-                    return Err(RectPartitionError::NotPartition {
-                        x: rect.left,
-                        y: rect.top,
-                    });
-                }
+        for rect in &rects {
+            let height = height_map.range_value(rect.left..rect.right);
+            if height == Some(rect.top) {
+                height_map.set_range_value(rect.left..rect.right, rect.bottom);
+            } else {
+                return Err(RectPartitionError::NotPartition {
+                    x: rect.left,
+                    y: rect.top,
+                });
             }
         }
 
-        let max_value = height_map.data.values().max().unwrap().to_owned();
-        if let Some((key, value)) = height_map
-            .data
-            .iter()
-            .find(|&(_, &v)| v != max_value)
-            .map(|(&k, &v)| (k, v))
-        {
-            Err(RectPartitionError::NotPartition { x: key, y: value })
+        let max_value = *height_map.data.values().max().unwrap();
+        if let Some((&x, &y)) = height_map.data.iter().find(|&(_, &v)| v != max_value) {
+            Err(RectPartitionError::NotPartition { x, y })
         } else {
             Ok(Self { rects })
         }

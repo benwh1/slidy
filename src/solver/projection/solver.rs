@@ -10,14 +10,13 @@ use crate::{
         label::label::Label, size::Size, sliding_puzzle::SlidingPuzzle, solved_state::SolvedState,
     },
     solver::{
-        config::SolverConfig,
         projection::{
             LARGE,
             builder::SolverBuilder,
             pdb::{Pdb, compute_solved_state, compute_tally},
             puzzle::{ProjectedPuzzle, project_puzzle},
         },
-        stack::Stack,
+        search::Search,
     },
 };
 
@@ -29,10 +28,8 @@ use crate::{
 pub struct Solver<P, Target, PruneTarget, Metric> {
     pub(super) pdb: Pdb<Metric>,
     pub(super) tally: Box<[u8]>,
-    pub(super) stack: Stack<128>,
+    pub(super) search: Search<128>,
     pub(super) size: Size,
-    pub(super) solutions_found: u64,
-    pub(super) config: Option<SolverConfig>,
     pub(super) target: Target,
     prune_target: PruneTarget,
     pub(super) prune_target_solved_index: usize,
@@ -70,11 +67,9 @@ where
         Self {
             pdb,
             tally,
-            stack: Stack::new(),
+            search: Search::new(),
             size,
             prune_target_solved_index,
-            solutions_found: 0,
-            config: None,
             target,
             prune_target,
             phantom_p: PhantomData,
@@ -93,7 +88,7 @@ where
 
     pub(super) fn check_solution(&self, puzzle: &P) -> bool {
         let mut p = puzzle.clone();
-        for dir in self.stack.iter() {
+        for dir in self.search.stack.iter() {
             p.try_move_dir(dir);
         }
         self.target.is_solved(&p)

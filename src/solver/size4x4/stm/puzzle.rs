@@ -14,19 +14,11 @@ pub(super) struct Puzzle {
 impl From<[u8; 16]> for Puzzle {
     fn from(pieces: [u8; 16]) -> Self {
         let mut seen = [false; 16];
-        for i in 0..16 {
-            assert!(
-                !seen[pieces[i] as usize],
-                "duplicate piece {} in puzzle",
-                pieces[i],
-            );
-            seen[pieces[i] as usize] = true;
-        }
-
         let mut inverse = [0; 16];
-
-        for i in 0..16 {
-            inverse[pieces[i] as usize] = i as u8;
+        for (i, &piece) in pieces.iter().enumerate() {
+            assert!(!seen[piece as usize], "duplicate piece {piece} in puzzle");
+            seen[piece as usize] = true;
+            inverse[piece as usize] = i as u8;
         }
 
         Self { pieces, inverse }

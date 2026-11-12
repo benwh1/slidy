@@ -110,16 +110,8 @@ impl Grids for Grid {
 
         let (w, h) = size.into();
 
-        let right = self
-            .xs
-            .get(x as usize)
-            .copied()
-            .map_or(w, |right| right.min(w));
-        let bottom = self
-            .ys
-            .get(y as usize)
-            .copied()
-            .map_or(h, |bottom| bottom.min(h));
+        let right = self.xs.get(x as usize).map_or(w, |&right| right.min(w));
+        let bottom = self.ys.get(y as usize).map_or(h, |&bottom| bottom.min(h));
 
         Rect::new((left, top), (right, bottom)).unwrap()
     }

@@ -34,7 +34,7 @@ impl AlgorithmSlice<'_> {
     where
         M: Metric,
     {
-        self.moves_mtm().map(|m| M::len(m)).sum()
+        self.moves_mtm().map(M::len).sum()
     }
 
     /// The length of the slice in the [`Stm`] [`Metric`].
@@ -111,14 +111,13 @@ impl AlgorithmSlice<'_> {
     /// [`Algorithm`].
     #[must_use]
     pub fn transpose(&self) -> Algorithm {
-        Algorithm::with_moves(self.moves_mtm().map(|m| m.transpose()).collect())
+        self.moves_mtm().map(|m| m.transpose()).collect()
     }
 
     /// Concatenates `n` copies of `self` and returns the result as a new [`Algorithm`].
     #[must_use]
     pub fn repeat(&self, n: usize) -> Algorithm {
-        let len = self.moves_mtm().len();
-        Algorithm::with_moves(self.moves_mtm().cycle().take(len * n).collect::<Vec<_>>())
+        iter::repeat_n(self.moves_mtm(), n).flatten().collect()
     }
 
     /// Returns `Some(size)` if `self` can be applied to a solved puzzle (with the gap in the
@@ -133,7 +132,7 @@ impl AlgorithmSlice<'_> {
         for mv in self.moves_mtm() {
             let n = mv.amount;
 
-            // Update the gap position occurs and return `None` if overflow/underflow occurs
+            // Update the gap position, and return `None` if it overflows or underflows
             match mv.direction {
                 Direction::Up => gy = gy.checked_sub(n)?,
                 Direction::Left => gx = gx.checked_sub(n)?,

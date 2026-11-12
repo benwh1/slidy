@@ -171,11 +171,7 @@ impl Default for ColorList {
 impl Coloring for Rainbow {
     fn color(&self, label: u64, num_labels: u64) -> Rgba {
         // Interpolate between the min and max hues. A single label uses the min hue.
-        let frac = if num_labels <= 1 {
-            0.0
-        } else {
-            label as f32 / (num_labels - 1) as f32
-        };
+        let frac = label_fraction(label, num_labels);
         let hue = self.min_hue + (self.max_hue - self.min_hue) * frac;
         let hue = hue.rem_euclid(360.0);
         let lum = 0.5
@@ -202,10 +198,7 @@ impl<C: Coloring> Coloring for AlternatingBrightness<C> {
         let l = (label / 2) * 2;
         let color = self.0.color(l, num_labels);
         if label == l {
-            let color: Hsla = color.into_color();
-            let (h, s, l, a) = color.into_components();
-            let l = 1.0 - (1.0 - l) / 2.0;
-            Hsla::new(h, s, l, a).into_color()
+            map_lightness(color, |l| 1.0 - (1.0 - l) / 2.0)
         } else {
             color
         }
@@ -227,11 +220,7 @@ impl<C: Coloring> Coloring for AddLightness<C> {
     /// The lightness is clamped to the interval `[0.0, 1.0]`.
     fn color(&self, label: u64, num_labels: u64) -> Rgba {
         let color = self.coloring.color(label, num_labels);
-        let color: Hsla = color.into_color();
-        let (h, s, l, a) = color.into_components();
-        let l = (l + self.lightness).clamp(0.0, 1.0);
-
-        Hsla::new(h, s, l, a).into_color()
+        map_lightness(color, |l| (l + self.lightness).clamp(0.0, 1.0))
     }
 }
 
@@ -244,12 +233,10 @@ impl LinearGradient {
     {
         points.sort_by(|(a, _), (b, _)| a.total_cmp(b));
 
-        let knots = points.iter().map(|&(x, _)| x).collect::<Vec<_>>();
-        let colors = points
+        let (knots, colors): (Vec<_>, Vec<_>) = points
             .into_iter()
-            .map(|(_, c)| c)
-            .map(LinSrgba::from_color)
-            .collect::<Vec<_>>();
+            .map(|(x, c)| (x, LinSrgba::from_color(c)))
+            .unzip();
 
         let gradient = Linear::builder().elements(colors).knots(knots).build()?;
         Ok(Self { gradient })
@@ -258,14 +245,25 @@ impl LinearGradient {
 
 impl<C: Curve<f32, Output = LinSrgba>> Coloring for Gradient<C> {
     fn color(&self, label: u64, num_labels: u64) -> Rgba {
-        let point = if num_labels < 2 {
-            0.0
-        } else {
-            label as f32 / (num_labels - 1) as f32
-        };
-
-        self.gradient.eval(point).into_color()
+        self.gradient
+            .eval(label_fraction(label, num_labels))
+            .into_color()
     }
+}
+
+/// Where `label` lies between the first and last labels, from 0 to 1. A single label gives 0.
+fn label_fraction(label: u64, num_labels: u64) -> f32 {
+    if num_labels <= 1 {
+        0.0
+    } else {
+        label as f32 / (num_labels - 1) as f32
+    }
+}
+
+/// Applies `f` to the HSL lightness of `color`.
+fn map_lightness(color: Rgba, f: impl FnOnce(f32) -> f32) -> Rgba {
+    let (h, s, l, a) = Hsla::from_color(color).into_components();
+    Hsla::new(h, s, f(l), a).into_color()
 }
 
 #[cfg(test)]

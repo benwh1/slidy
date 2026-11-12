@@ -5,10 +5,11 @@ use std::ops::ControlFlow;
 use num_traits::AsPrimitive;
 
 use crate::{
-    algorithm::{axis::Axis, direction::Direction},
+    algorithm::{axis::Axis, direction::Direction, metric::Mtm},
     puzzle::{sliding_puzzle::SlidingPuzzle, small::Puzzle4x4},
     solver::{
         config::{PdbConfig, SolverConfig},
+        search::{Search, iterative_deepening},
         size4x4::mtm::{
             base_5_table::Base5Table,
             indexing_table::IndexingTable,
@@ -16,22 +17,18 @@ use crate::{
             puzzle::{FourBitPuzzle, ReducedFourBitPuzzle},
         },
         solver::{Solver as SolverT, SolverError},
-        stack::Stack,
-        statistics::SolverIterationStats,
     },
 };
 
 /// An optimal solver for 4x4 puzzles in [`Mtm`].
 ///
-/// [`Mtm`]: crate::algorithm::metric::Mtm
+/// [`Mtm`]: Mtm
 pub struct Solver {
     indexing_table: IndexingTable,
     base_5_table: Base5Table,
     pdb: Pdb,
-    stack: Stack<128>,
+    search: Search<128>,
     puzzle: FourBitPuzzle,
-    solutions_found: u64,
-    config: Option<SolverConfig>,
 }
 
 impl Default for Solver {
@@ -50,11 +47,13 @@ impl Solver {
             indexing_table,
             base_5_table,
             pdb,
-            stack: Stack::new(),
+            search: Search::new(),
             puzzle: FourBitPuzzle::new(),
-            solutions_found: 0,
-            config: None,
         }
+    }
+
+    fn with_pdb(pdb: Pdb) -> Self {
+        Self::with_tables_and_pdb(IndexingTable::new(), Base5Table::new(), pdb)
     }
 
     /// Creates a new [`Solver`] and builds the pattern database.
@@ -84,14 +83,11 @@ impl Solver {
     /// [`xxh3`]: xxhash_rust::xxh3
     #[must_use]
     pub unsafe fn try_with_pdb_bytes(bytes: Box<[u8]>) -> Option<Self> {
-        let indexing_table = IndexingTable::new();
-        let base_5_table = Base5Table::new();
-
         // SAFETY: Checks are performed in `Pdb::try_from_bytes` which almost certainly detects
         // invalid data, but ultimately the caller is responsible.
         let pdb = unsafe { Pdb::try_from_bytes(bytes) }?;
 
-        Some(Self::with_tables_and_pdb(indexing_table, base_5_table, pdb))
+        Some(Self::with_pdb(pdb))
     }
 
     /// See [`Self::try_with_pdb_bytes`].
@@ -102,13 +98,8 @@ impl Solver {
     /// correctness checks are performed.
     #[must_use]
     pub unsafe fn with_pdb_bytes_unchecked(bytes: Box<[u8]>) -> Self {
-        let indexing_table = IndexingTable::new();
-        let base_5_table = Base5Table::new();
-
         // SAFETY: Responsibility of the caller.
-        let pdb = unsafe { Pdb::from_bytes_unchecked(bytes) };
-
-        Self::with_tables_and_pdb(indexing_table, base_5_table, pdb)
+        Self::with_pdb(unsafe { Pdb::from_bytes_unchecked(bytes) })
     }
 
     fn dfs(
@@ -141,21 +132,12 @@ impl Solver {
 
         if depth == 0 {
             let mut p = self.puzzle;
-            for dir in self.stack.iter() {
+            for dir in self.search.stack.iter() {
                 p.do_move(dir);
             }
 
             if p.pieces() == Puzzle4x4::SOLVED {
-                self.solutions_found += 1;
-                if let Some(f) = &self.config.as_ref().unwrap().solution_callback
-                    && f(self.stack.to_alg()).is_break()
-                {
-                    return ControlFlow::Break(());
-                }
-
-                if self.config.as_ref().unwrap().num_solutions == self.solutions_found {
-                    return ControlFlow::Break(());
-                }
+                return self.search.record_solution();
             }
 
             return ControlFlow::Continue(());
@@ -183,7 +165,7 @@ impl Solver {
                 transposed_puzzle.do_move(transposed_dir);
                 count += 1;
 
-                self.stack.push(dir);
+                self.search.stack.push(dir);
 
                 if self
                     .dfs(depth - 1, Some(dir.into()), puzzle, transposed_puzzle)
@@ -193,7 +175,7 @@ impl Solver {
                 }
             }
 
-            self.stack.remove_n(count);
+            self.search.stack.remove_n(count);
         }
 
         ControlFlow::Continue(())
@@ -216,70 +198,20 @@ impl Solver {
         let reduced_puzzle = four_bit_puzzle.reduced();
         let transposed_reduced_puzzle = four_bit_puzzle.conjugate_with_transpose().reduced();
 
-        if config.num_solutions == 0 {
-            return Ok(());
-        }
-
-        let min = config.min;
-        let max = config.max;
-        let depth_beyond_optimal = config.depth_beyond_optimal;
-
-        // Reset state
-        self.stack.clear();
         self.puzzle = four_bit_puzzle;
-        self.solutions_found = 0;
-        self.config = Some(config);
 
         let coord = self
             .indexing_table
             .encode(reduced_puzzle.pieces, &self.base_5_table);
         let hval = self.pdb.get(coord as usize) as u64;
-        let mut depth = hval.max(min);
 
-        if depth > max {
-            return Ok(());
-        }
-
-        let mut first_solution_depth = None;
-
-        loop {
-            // Run DFS. This checks against `num_solutions` and the return value of the solution
-            // callback.
-            if self
-                .dfs(depth, None, reduced_puzzle, transposed_reduced_puzzle)
-                .is_break()
-            {
-                break;
-            }
-
-            // Set first solution depth.
-            if first_solution_depth.is_none() && self.solutions_found > 0 {
-                first_solution_depth = Some(depth);
-            }
-
-            // Run end of iteration callback and check return value.
-            if let Some(f) = &self.config.as_ref().unwrap().end_of_iter_callback
-                && f(SolverIterationStats { depth }).is_break()
-            {
-                break;
-            }
-
-            // Go to next depth.
-            depth = match depth.checked_add(1) {
-                Some(d) => d,
-                None => break,
-            };
-
-            // Check against `max`.
-            if depth > max {
-                break;
-            }
-
-            // Check against `depth_beyond_optimal`.
-            if first_solution_depth.is_some_and(|first| depth - first > depth_beyond_optimal) {
-                break;
-            }
-        }
+        iterative_deepening::<Mtm, _, _>(
+            self,
+            |s| &mut s.search,
+            config,
+            hval,
+            |s, depth| s.dfs(depth, None, reduced_puzzle, transposed_reduced_puzzle),
+        );
 
         Ok(())
     }

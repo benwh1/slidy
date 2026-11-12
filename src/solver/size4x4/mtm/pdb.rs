@@ -103,14 +103,7 @@ impl Pdb {
     /// [`Solver`]: crate::solver::size4x4::mtm::solver::Solver
     #[must_use]
     pub unsafe fn try_from_bytes(bytes: Box<[u8]>) -> Option<Self> {
-        if bytes.len() != SIZE {
-            return None;
-        }
-
-        let expected_hash = HASH;
-        let actual_hash = xxh3::xxh3_64(&bytes);
-
-        if actual_hash != expected_hash {
+        if bytes.len() != SIZE || xxh3::xxh3_64(&bytes) != HASH {
             return None;
         }
 

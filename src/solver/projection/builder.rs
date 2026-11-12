@@ -65,9 +65,7 @@ impl<P, Target, PruneTarget, Metric> SolverBuilder<P, Target, PruneTarget, Metri
             size: None,
             target: None,
             prune_target: None,
-            pdb_action: PdbAction::Build {
-                config: PdbConfig::default(),
-            },
+            pdb_action: PdbAction::default(),
             phantom_p: PhantomData,
         }
     }

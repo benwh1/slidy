@@ -62,8 +62,7 @@ impl<C: ColorScheme> ColorScheme for Tiled<C> {
         );
 
         Size::new(tile_grid_w, tile_grid_h)
-            .map(|size| self.color_scheme.color(size, (tx, ty)))
-            .unwrap_or_default()
+            .map_or_default(|size| self.color_scheme.color(size, (tx, ty)))
     }
 }
 
@@ -100,33 +99,17 @@ impl<C: ColorScheme> RecursiveTiled<C> {
             let (width, height) = size.into();
             let (grid_width, grid_height) = grid_size.into();
 
-            if x < (width / grid_width) * grid_width {
-                if y < (height / grid_height) * grid_height {
-                    // Top left region
-                    self.color_helper(grid_size, (x % grid_width, y % grid_height), start_idx + 1)
-                } else {
-                    // Bottom left region
-                    self.color_helper(
-                        Size::new(grid_width, height % grid_height).unwrap(),
-                        (x % grid_width, y % grid_height),
-                        start_idx + 1,
-                    )
-                }
-            } else if y < (height / grid_height) * grid_height {
-                // Top right region
-                self.color_helper(
-                    Size::new(width % grid_width, grid_height).unwrap(),
-                    (x % grid_width, y % grid_height),
-                    start_idx + 1,
-                )
-            } else {
-                // Bottom right region
-                self.color_helper(
-                    Size::new(width % grid_width, height % grid_height).unwrap(),
-                    (x % grid_width, y % grid_height),
-                    start_idx + 1,
-                )
-            }
+            let subgrid_size = Size::new(
+                subgrid_length(x, width, grid_width),
+                subgrid_length(y, height, grid_height),
+            )
+            .unwrap();
+
+            self.color_helper(
+                subgrid_size,
+                (x % grid_width, y % grid_height),
+                start_idx + 1,
+            )
         } else {
             self.color_scheme.color(size, (x, y))
         }
@@ -147,28 +130,28 @@ impl<C: ColorScheme> RecursiveTiled<C> {
                 let grid_x = x / grid_width;
                 let grid_y = y / grid_height;
 
-                let subgrid_width = if x < (width / grid_width) * grid_width {
-                    grid_width
-                } else {
-                    width % grid_width
-                };
-
-                let subgrid_height = if y < (height / grid_height) * grid_height {
-                    grid_height
-                } else {
-                    height % grid_height
-                };
-
-                let (x, y) = (x % grid_width, y % grid_height);
-
                 self.grid_containing_pos_helper(
-                    (x, y),
-                    (subgrid_width, subgrid_height),
+                    (x % grid_width, y % grid_height),
+                    (
+                        subgrid_length(x, width, grid_width),
+                        subgrid_length(y, height, grid_height),
+                    ),
                     (left + grid_x * grid_width, top + grid_y * grid_height),
                     start_idx + 1,
                 )
             },
         )
+    }
+}
+
+/// The length of the subgrid containing coordinate `x`, when a puzzle of length `length` is
+/// divided into subgrids of length `grid_length`. The last subgrid is shorter if `grid_length`
+/// doesn't divide `length`.
+fn subgrid_length(x: u64, length: u64, grid_length: u64) -> u64 {
+    if x < (length / grid_length) * grid_length {
+        grid_length
+    } else {
+        length % grid_length
     }
 }
 

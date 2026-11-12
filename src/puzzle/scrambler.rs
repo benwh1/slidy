@@ -117,17 +117,15 @@ impl Scrambler for RandomState {
     {
         let (w, h) = puzzle.size().into();
 
-        if w == 1 {
+        // On a 1xn or nx1 puzzle, the only possible states are the positions of the gap.
+        if w == 1 || h == 1 {
             puzzle.reset();
-            let d = rng.random_range(0..h);
-            puzzle.apply_move(Move::new(Direction::Down, d));
-            return;
-        }
-
-        if h == 1 {
-            puzzle.reset();
-            let r = rng.random_range(0..w);
-            puzzle.apply_move(Move::new(Direction::Right, r));
+            let (dir, len) = if w == 1 {
+                (Direction::Down, h)
+            } else {
+                (Direction::Right, w)
+            };
+            puzzle.apply_move(Move::new(dir, rng.random_range(0..len)));
             return;
         }
 
@@ -188,15 +186,12 @@ impl Scrambler for RandomMoves {
 
         let mut last_dir = None::<Direction>;
         for _ in 0..self.moves {
-            let dir = {
-                let mut d = rng.random::<Direction>();
-                while (!self.allow_backtracking && last_dir == Some(d.inverse()))
-                    || (!self.allow_illegal_moves && !puzzle.can_move_dir(d))
-                {
-                    d = rng.random();
-                }
-                d
-            };
+            let mut dir = rng.random::<Direction>();
+            while (!self.allow_backtracking && last_dir == Some(dir.inverse()))
+                || (!self.allow_illegal_moves && !puzzle.can_move_dir(dir))
+            {
+                dir = rng.random();
+            }
 
             // An illegal move is counted but not applied, so it doesn't count as the last move for
             // the backtracking check.

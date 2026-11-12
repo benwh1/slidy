@@ -64,11 +64,7 @@ impl Puzzle {
     #[must_use]
     pub fn new(size: Size) -> Self {
         Self {
-            pieces: {
-                let mut v = (1..size.area()).collect::<Vec<_>>();
-                v.push(0);
-                v
-            },
+            pieces: (1..size.area()).chain([0]).collect(),
             size,
             gap: size.num_pieces(),
         }
@@ -118,11 +114,7 @@ impl Puzzle {
 
     /// Create a new [`Puzzle`] from a 2D grid of numbers.
     pub fn new_from_grid(grid: Vec<Vec<u64>>) -> Result<Self, PuzzleError> {
-        if grid.is_empty() {
-            return Err(PuzzleError::Empty);
-        }
-
-        if grid[0].is_empty() {
+        if grid.first().is_none_or(Vec::is_empty) {
             return Err(PuzzleError::Empty);
         }
 
@@ -197,10 +189,9 @@ impl SlidingPuzzle for Puzzle {
     }
 
     fn reset(&mut self) {
-        self.pieces
-            .iter_mut()
-            .enumerate()
-            .for_each(|(i, p)| *p = (i + 1) as u64);
+        for (p, i) in self.pieces.iter_mut().zip(1..) {
+            *p = i;
+        }
         self.gap = self.size().num_pieces();
         self.pieces[self.gap as usize] = 0;
     }
@@ -354,14 +345,30 @@ impl FromStr for Puzzle {
         let mut current_row_length = 0;
         let mut current_number = None;
 
-        for c in s.chars() {
-            if c == '/' || c == '\n' {
-                if let Some(n) = current_number {
-                    pieces.push(n);
-                    current_row_length += 1;
-                    current_number = None;
-                }
+        // The end of the string is also the end of the last row.
+        for c in s.chars().chain(['/']) {
+            if let Some(n) = c.to_digit(10) {
+                current_number = Some(
+                    current_number
+                        .unwrap_or(0u64)
+                        .checked_mul(10)
+                        .and_then(|a| a.checked_add(n as u64))
+                        .ok_or(ParsePuzzleError::Overflow)?,
+                );
+                continue;
+            }
 
+            let end_of_row = c == '/' || c == '\n';
+            if !end_of_row && !c.is_whitespace() {
+                return Err(ParsePuzzleError::InvalidCharacter(c));
+            }
+
+            if let Some(n) = current_number.take() {
+                pieces.push(n);
+                current_row_length += 1;
+            }
+
+            if end_of_row {
                 if row_length.is_some_and(|l| l != current_row_length) {
                     return Err(ParsePuzzleError::PuzzleError(
                         PuzzleError::UnequalRowLengths,
@@ -371,39 +378,8 @@ impl FromStr for Puzzle {
                 row_length = Some(current_row_length);
                 current_row_length = 0;
                 num_rows += 1;
-            } else if c.is_whitespace() {
-                if let Some(n) = current_number {
-                    pieces.push(n);
-                    current_row_length += 1;
-                    current_number = None;
-                }
-            } else if let Some(n) = c.to_digit(10) {
-                current_number = Some(
-                    current_number
-                        .unwrap_or(0u64)
-                        .checked_mul(10)
-                        .ok_or(ParsePuzzleError::Overflow)?
-                        .checked_add(n as u64)
-                        .ok_or(ParsePuzzleError::Overflow)?,
-                );
-            } else {
-                return Err(ParsePuzzleError::InvalidCharacter(c));
             }
         }
-
-        if let Some(n) = current_number {
-            pieces.push(n);
-            current_row_length += 1;
-        }
-
-        if row_length.is_some_and(|l| l != current_row_length) {
-            return Err(ParsePuzzleError::PuzzleError(
-                PuzzleError::UnequalRowLengths,
-            ));
-        }
-
-        row_length = Some(current_row_length);
-        num_rows += 1;
 
         let size = Size::new(row_length.unwrap_or_default(), num_rows)
             .map_err(|s| ParsePuzzleError::PuzzleError(PuzzleError::InvalidSize(s)))?;
@@ -418,8 +394,7 @@ impl serde::Serialize for Puzzle {
     where
         S: serde::Serializer,
     {
-        let str = self.to_string();
-        serializer.serialize_str(&str)
+        serializer.collect_str(self)
     }
 }
 

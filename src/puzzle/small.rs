@@ -335,15 +335,6 @@ macro_rules! impl_puzzle {
                 self.gap = idx as u8;
             }
 
-            fn try_swap_piece_with_gap(&mut self, idx: u64) -> bool {
-                if idx < self.area() {
-                    self.swap_piece_with_gap(idx);
-                    true
-                } else {
-                    false
-                }
-            }
-
             unsafe fn swap_piece_with_gap_unchecked(&mut self, idx: u64) {
                 self.swap_piece_with_gap(idx);
             }
@@ -381,11 +372,8 @@ macro_rules! impl_puzzle {
             type Error = PuzzleError;
 
             fn try_from(value: [u8; $w * $h]) -> Result<Self, Self::Error> {
-                let mut pieces = 0;
-                let mut gap = 0;
-
                 let mut seen = [false; $w * $h];
-                for (i, &piece) in value.iter().enumerate() {
+                for &piece in &value {
                     if piece >= $w * $h {
                         return Err(PuzzleError::PieceOutOfRange(piece as u64));
                     }
@@ -395,16 +383,11 @@ macro_rules! impl_puzzle {
                     }
 
                     seen[piece as usize] = true;
-
-                    pieces |= (piece as u64) << (4 * i);
-                    if piece == 0 {
-                        gap = i as u8;
-                    }
                 }
 
-                // SAFETY: We checked that all the pieces are distinct and within range, and set the
-                // gap piece correctly.
-                unsafe { Ok(Self::with_pieces_and_gap_unchecked(pieces, gap)) }
+                // SAFETY: We checked that all the pieces are distinct and within range, so `value`
+                // contains the values 0 to `W * H - 1` once each.
+                unsafe { Ok(Self::from_piece_array_unchecked(value)) }
             }
         }
     };

@@ -83,9 +83,11 @@ impl<S: ColorScheme, List: AsRef<[S]>> MultiLayerColorScheme for SchemeList<S, L
     }
 }
 
-#[allow(clippy::fallible_impl_from)]
 impl<S: ColorScheme> From<S> for SchemeList<S, Vec<S>> {
     fn from(scheme: S) -> Self {
-        Self::new(vec![scheme]).unwrap()
+        Self {
+            schemes: vec![scheme],
+            phantom_s: PhantomData,
+        }
     }
 }

@@ -10,9 +10,9 @@ use crate::{
     },
     solver::{
         config::{PdbConfig, SolverConfig},
+        search::iterative_deepening,
         small::{indexing, pdb::Pdb, solver::Solver},
         solver::{Solver as SolverT, SolverError},
-        statistics::SolverIterationStats,
     },
 };
 
@@ -53,18 +53,7 @@ where
         }
 
         if depth == 0 {
-            self.solutions_found += 1;
-            if let Some(f) = &self.config.as_ref().unwrap().solution_callback
-                && f(self.stack.to_alg()).is_break()
-            {
-                return ControlFlow::Break(());
-            }
-
-            if self.config.as_ref().unwrap().num_solutions == self.solutions_found {
-                return ControlFlow::Break(());
-            }
-
-            return ControlFlow::Continue(());
+            return self.search.record_solution();
         }
 
         let original_puzzle = puzzle;
@@ -82,13 +71,13 @@ where
             puzzle = original_puzzle;
 
             if puzzle.try_move_dir(dir) {
-                self.stack.push(dir);
+                self.search.stack.push(dir);
 
                 if self.dfs(depth - 1, Some(dir.inverse()), puzzle).is_break() {
                     return ControlFlow::Break(());
                 }
 
-                self.stack.pop();
+                self.search.stack.pop();
             }
         }
 
@@ -107,26 +96,14 @@ where
 
         let mut p = Puzzle::<H, W>::new();
         if p.try_set_state(puzzle) {
-            let SolverConfig {
-                min,
-                max,
-                depth_beyond_optimal,
-                num_solutions,
-                end_of_iter_callback,
-                solution_callback,
-            } = config;
-
+            let solution_callback = config.solution_callback;
             let transpose_config = SolverConfig {
-                min,
-                max,
-                depth_beyond_optimal,
-                num_solutions,
-                end_of_iter_callback,
                 solution_callback: Some(Box::new(move |s| {
                     solution_callback
                         .as_ref()
                         .map_or(ControlFlow::Continue(()), |f| f(s.transpose()))
                 })),
+                ..config
             };
 
             return self.solve_small_puzzle_impl(p.conjugate_with_transpose(), transpose_config);
@@ -144,65 +121,16 @@ where
             return Err(SolverError::Unsolvable);
         }
 
-        if config.num_solutions == 0 {
-            return Ok(());
-        }
-
-        let min = config.min;
-        let max = config.max;
-        let depth_beyond_optimal = config.depth_beyond_optimal;
-
-        // Reset state
-        self.stack.clear();
-        self.solutions_found = 0;
-        self.config = Some(config);
-
         let coord = indexing::encode(puzzle.piece_array());
         let hval = self.pdb.get(coord as usize) as u64;
-        let min = if hval % 2 == min % 2 { min } else { min + 1 };
-        let mut depth = hval.max(min);
 
-        if depth > max {
-            return Ok(());
-        }
-
-        let mut first_solution_depth = None;
-
-        loop {
-            // Run DFS. This checks against `num_solutions` and the return value of the solution
-            // callback.
-            if self.dfs(depth, None, puzzle).is_break() {
-                break;
-            }
-
-            // Set first solution depth.
-            if first_solution_depth.is_none() && self.solutions_found > 0 {
-                first_solution_depth = Some(depth);
-            }
-
-            // Run end of iteration callback and check return value.
-            if let Some(f) = &self.config.as_ref().unwrap().end_of_iter_callback
-                && f(SolverIterationStats { depth }).is_break()
-            {
-                break;
-            }
-
-            // Go to next depth.
-            depth = match depth.checked_add(2) {
-                Some(d) => d,
-                None => break,
-            };
-
-            // Check against `max`.
-            if depth > max {
-                break;
-            }
-
-            // Check against `depth_beyond_optimal`.
-            if first_solution_depth.is_some_and(|first| depth - first > depth_beyond_optimal) {
-                break;
-            }
-        }
+        iterative_deepening::<Stm, _, _>(
+            self,
+            |s| &mut s.search,
+            config,
+            hval,
+            |s, depth| s.dfs(depth, None, puzzle),
+        );
 
         Ok(())
     }

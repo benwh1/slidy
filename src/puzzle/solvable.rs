@@ -34,26 +34,16 @@ where
     // 1. Ignore the gap piece
     // 2. Enumerate the pieces
     // 3. Check if, for each pair (idx, piece), we have label(idx+1) == label(piece)
-    let (w, h) = puzzle.size().into();
-    if w == 1 {
-        (0..h)
-            .map(|i| puzzle.piece_at(i).to_u64().unwrap())
-            .filter(|&p| p != 0)
-            .enumerate()
-            .all(|(i, p)| {
-                label.position_label(puzzle.size(), (0, i as u64))
-                    == label.position_label(puzzle.size(), (0, p - 1))
-            })
-    } else {
-        (0..w)
-            .map(|i| puzzle.piece_at(i).to_u64().unwrap())
-            .filter(|&p| p != 0)
-            .enumerate()
-            .all(|(i, p)| {
-                label.position_label(puzzle.size(), (i as u64, 0))
-                    == label.position_label(puzzle.size(), (p - 1, 0))
-            })
-    }
+    let size = puzzle.size();
+    let w = size.width();
+    let pos = |i: u64| (i % w, i / w);
+    (0..size.area())
+        .map(|i| puzzle.piece_at(i).to_u64().unwrap())
+        .filter(|&p| p != 0)
+        .enumerate()
+        .all(|(i, p)| {
+            label.position_label(size, pos(i as u64)) == label.position_label(size, pos(p - 1))
+        })
 }
 
 impl Solvable for RowGrids {

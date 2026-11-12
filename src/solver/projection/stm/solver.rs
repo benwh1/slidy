@@ -11,8 +11,8 @@ use crate::{
     solver::{
         config::SolverConfig,
         projection::{LARGE, SMALL, puzzle::ProjectedPuzzle, solver::Solver},
+        search::iterative_deepening,
         solver::{Solver as SolverT, SolverError},
-        statistics::SolverIterationStats,
     },
 };
 
@@ -33,16 +33,7 @@ where
 
         if depth == 0 {
             if index == self.prune_target_solved_index && self.check_solution(puzzle) {
-                self.solutions_found += 1;
-                if let Some(f) = &self.config.as_ref().unwrap().solution_callback
-                    && f(self.stack.to_alg()).is_break()
-                {
-                    return ControlFlow::Break(());
-                }
-
-                if self.config.as_ref().unwrap().num_solutions == self.solutions_found {
-                    return ControlFlow::Break(());
-                }
+                return self.search.record_solution();
             }
 
             return ControlFlow::Continue(());
@@ -68,11 +59,11 @@ where
 
             let mut proj = original;
             if proj.do_move(dir) {
-                self.stack.push(dir);
+                self.search.stack.push(dir);
                 if self.dfs(puzzle, depth - 1, Some(dir), proj).is_break() {
                     return ControlFlow::Break(());
                 }
-                self.stack.pop();
+                self.search.stack.pop();
             }
         }
 
@@ -100,66 +91,18 @@ where
             return Err(SolverError::Unsolvable);
         }
 
-        if config.num_solutions == 0 {
-            return Ok(());
-        }
-
-        let min = config.min;
-        let max = config.max;
-        let depth_beyond_optimal = config.depth_beyond_optimal;
-
-        self.stack.clear();
-        self.solutions_found = 0;
-        self.config = Some(config);
-
         let projected = self.initial_projected::<N>(puzzle);
         let start_index = projected.encode(&self.tally) as usize;
         // SAFETY: `start_index` comes from encoding a projected puzzle, so is within bounds.
         let hval = unsafe { self.pdb.get_unchecked(start_index) } as u64;
-        let min = if hval % 2 == min % 2 { min } else { min + 1 };
-        let mut depth = hval.max(min);
 
-        if depth > max {
-            return Ok(());
-        }
-
-        let mut first_solution_depth = None;
-
-        loop {
-            // Run DFS. This checks against `num_solutions` and the return value of the solution
-            // callback.
-            if self.dfs::<N>(puzzle, depth, None, projected).is_break() {
-                break;
-            }
-
-            // Set first solution depth.
-            if first_solution_depth.is_none() && self.solutions_found > 0 {
-                first_solution_depth = Some(depth);
-            }
-
-            // Run end of iteration callback and check return value.
-            if let Some(f) = &self.config.as_ref().unwrap().end_of_iter_callback
-                && f(SolverIterationStats { depth }).is_break()
-            {
-                break;
-            }
-
-            // Go to next depth.
-            depth = match depth.checked_add(2) {
-                Some(d) => d,
-                None => break,
-            };
-
-            // Check against `max`.
-            if depth > max {
-                break;
-            }
-
-            // Check against `depth_beyond_optimal`.
-            if first_solution_depth.is_some_and(|first| depth - first > depth_beyond_optimal) {
-                break;
-            }
-        }
+        iterative_deepening::<Stm, _, _>(
+            self,
+            |s| &mut s.search,
+            config,
+            hval,
+            |s, depth| s.dfs::<N>(puzzle, depth, None, projected),
+        );
 
         Ok(())
     }

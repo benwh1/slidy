@@ -321,11 +321,8 @@ where
     /// See [`SlidingPuzzle::solved_pos_xy`].
     #[must_use]
     fn try_solved_pos_xy(&self, piece: Self::Piece) -> Option<(u64, u64)> {
-        let n = self.num_pieces();
-        match piece.to_u64() {
-            Some(p) if p <= n => Some(self.solved_pos_xy(piece)),
-            _ => None,
-        }
+        let w = self.size().width();
+        self.try_solved_pos(piece).map(|p| (p % w, p / w))
     }
 
     /// See [`SlidingPuzzle::solved_pos_xy`].
@@ -593,13 +590,7 @@ where
     /// If `self.can_move_dir(dir)` is false, the function may panic or the puzzle may be
     /// transformed in an invalid way.
     fn move_dir(&mut self, dir: Direction) {
-        let gap = self.gap_position();
-        let piece = match dir {
-            Direction::Up => gap + self.size().width(),
-            Direction::Left => gap + 1,
-            Direction::Down => gap - self.size().width(),
-            Direction::Right => gap - 1,
-        };
+        let piece = position_moving_into_gap(self.gap_position(), self.size().width(), dir);
         self.swap_piece_with_gap(piece);
     }
 
@@ -624,12 +615,7 @@ where
     unsafe fn move_dir_unchecked(&mut self, dir: Direction) {
         // SAFETY: The caller guarantees that the puzzle is in a valid state.
         let gap = unsafe { self.gap_position_unchecked() };
-        let piece = match dir {
-            Direction::Up => gap + self.size().width(),
-            Direction::Left => gap + 1,
-            Direction::Down => gap - self.size().width(),
-            Direction::Right => gap - 1,
-        };
+        let piece = position_moving_into_gap(gap, self.size().width(), dir);
         // SAFETY: `self.can_move_dir(dir)` is true, so `piece` is a position next to the gap and
         // is within bounds.
         unsafe {
@@ -923,37 +909,27 @@ where
             return false;
         };
 
-        let mut seen = vec![false; self.area() as usize];
+        let area = self.area();
+        let mut seen = vec![false; area as usize];
 
-        for y in 0..h {
-            for x in 0..w {
-                let i = (x + y * w) as usize;
-                if seen[i] {
-                    continue;
-                }
+        for i in 0..area {
+            if seen[i as usize] {
+                continue;
+            }
 
-                // Find the cycle starting at `i`
-                let mut cycle = Vec::new();
-                let mut index = i;
-                while !seen[index] {
-                    seen[index] = true;
-                    cycle.push(index);
-                    index = self.solved_pos(self.piece_at(index as u64)) as usize;
-                }
+            // Find the cycle starting at `i`
+            let mut cycle = Vec::new();
+            let mut index = i;
+            while !seen[index as usize] {
+                seen[index as usize] = true;
+                cycle.push(index);
+                index = self.solved_pos(self.piece_at(index));
+            }
 
-                // Apply the cycle to `puzzle`
-                let mut index = cycle[0];
-                for &next in cycle.iter().skip(1) {
-                    let idx = index as u64;
-                    let nxt = next as u64;
-
-                    let (ix, iy) = (idx % w, idx / w);
-                    let (nx, ny) = (nxt % w, nxt / w);
-
-                    puzzle.swap_pieces_xy((ix + left, iy + top), (nx + left, ny + top));
-
-                    index = next;
-                }
+            // Apply the cycle to `puzzle`
+            let to_puzzle_pos = |idx: u64| (idx % w + left, idx / w + top);
+            for &[a, b] in cycle.array_windows() {
+                puzzle.swap_pieces_xy(to_puzzle_pos(a), to_puzzle_pos(b));
             }
         }
 
@@ -1026,17 +1002,19 @@ where
         P: SlidingPuzzle,
         P::Piece: AsPrimitive<Self::Piece>,
     {
-        if self.size() != other.size() {
-            return false;
-        }
+        self.size() == other.size()
+            && (0..self.area()).all(|i| self.piece_at(i) == other.piece_at(i).as_())
+    }
+}
 
-        for i in 0..self.area() {
-            if self.piece_at(i) != other.piece_at(i).as_() {
-                return false;
-            }
-        }
-
-        true
+/// The position of the piece that moves into the gap when moving in direction `dir`, on a puzzle
+/// of width `width` with the gap at position `gap`.
+fn position_moving_into_gap(gap: u64, width: u64, dir: Direction) -> u64 {
+    match dir {
+        Direction::Up => gap + width,
+        Direction::Left => gap + 1,
+        Direction::Down => gap - width,
+        Direction::Right => gap - 1,
     }
 }
 

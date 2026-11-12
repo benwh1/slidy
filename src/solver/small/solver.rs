@@ -5,14 +5,12 @@
 
 use std::marker::PhantomData;
 
-use crate::solver::{config::SolverConfig, small::pdb::Pdb, stack::Stack};
+use crate::solver::{search::Search, small::pdb::Pdb};
 
 /// An optimal solver for `WxH` and `HxW` puzzles.
 pub struct Solver<const W: usize, const H: usize, const N: usize, Metric> {
     pub(super) pdb: Pdb<W, H, N, Metric>,
-    pub(super) stack: Stack<128>,
-    pub(super) solutions_found: u64,
-    pub(super) config: Option<SolverConfig>,
+    pub(super) search: Search<128>,
     pub(super) phantom_metric: PhantomData<Metric>,
 }
 
@@ -22,9 +20,7 @@ impl<const W: usize, const H: usize, const N: usize, Metric> Solver<W, H, N, Met
     pub fn with_pdb(pdb: Pdb<W, H, N, Metric>) -> Self {
         Self {
             pdb,
-            stack: Stack::new(),
-            solutions_found: 0,
-            config: None,
+            search: Search::new(),
             phantom_metric: PhantomData,
         }
     }
