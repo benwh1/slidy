@@ -137,6 +137,9 @@ mod tests {
         },
     };
 
+    use rand::SeedableRng as _;
+    use rand_xoshiro::Xoroshiro128StarStar;
+
     use super::*;
     use crate::{
         puzzle::{
@@ -260,10 +263,11 @@ mod tests {
             .build()
             .unwrap();
 
+        let mut rng = Xoroshiro128StarStar::seed_from_u64(0);
         let mut puzzle = Puzzle::new(size);
 
         for _ in 0..100 {
-            RandomState.scramble(&mut puzzle);
+            RandomState.scramble_with_rng(&mut puzzle, &mut rng);
 
             let mut solutions = solver.solve_many(&puzzle, 5).unwrap();
             solutions.sort_by_cached_key(|s| s.to_string());

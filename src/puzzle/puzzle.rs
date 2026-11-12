@@ -1038,10 +1038,11 @@ mod tests {
 
         #[test]
         fn test_invert_3() {
+            let mut rng = Xoroshiro128StarStar::seed_from_u64(0);
             let mut p = Puzzle::new(Size::new(20, 20).unwrap());
 
             for _ in 0..100 {
-                RandomInvertibleState.scramble(&mut p);
+                RandomInvertibleState.scramble_with_rng(&mut p, &mut rng);
 
                 let p2 = p.clone();
 
