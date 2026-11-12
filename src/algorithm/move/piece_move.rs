@@ -36,7 +36,9 @@ impl<Piece: PrimInt, Puzzle: SlidingPuzzle<Piece = Piece>> TryIntoMove<Puzzle>
     type Error = TryPieceMoveIntoMoveError<Piece>;
 
     fn try_into_move(&self, puzzle: &Puzzle) -> Result<Move, Self::Error> {
-        let (x, y) = puzzle.piece_position_xy(self.0);
+        let (x, y) = puzzle
+            .try_piece_position_xy(self.0)
+            .ok_or(Self::Error::InvalidMove(self.0))?;
 
         PositionMove(x, y).try_into_move(puzzle).map_err(
             |TryPositionMoveIntoMoveError::InvalidMove(_, _)| Self::Error::InvalidMove(self.0),
@@ -79,6 +81,19 @@ mod tests {
         assert_eq!(
             PieceMove(7).try_into_move(&p),
             Err(TryPieceMoveIntoMoveError::InvalidMove(7))
+        );
+    }
+
+    #[test]
+    fn test_try_into_move_out_of_range() {
+        let p = Puzzle::from_str("1 2 3/4 5 6/7 8 0").unwrap();
+        assert_eq!(
+            PieceMove(9).try_into_move(&p),
+            Err(TryPieceMoveIntoMoveError::InvalidMove(9))
+        );
+        assert_eq!(
+            PieceMove(100).try_into_move(&p),
+            Err(TryPieceMoveIntoMoveError::InvalidMove(100))
         );
     }
 }
