@@ -3,6 +3,8 @@
 
 use std::{marker::PhantomData, ops::ControlFlow};
 
+use num_traits::Zero as _;
+
 use crate::{
     algorithm::{
         direction::Direction,
@@ -140,11 +142,19 @@ where
         let mut puzzle = puzzle.clone();
         let hval = self.heuristic.bound(&puzzle);
 
+        // The search only tries depths with the same parity as the lower bound. Every move moves
+        // the gap by one step, so every solution has the parity of the gap's distance from its
+        // solved position, but the heuristic's bound might not. Round it up to that parity.
+        let (gx, gy) = puzzle.gap_position_xy();
+        let (sx, sy) = puzzle.solved_pos_xy(P::Piece::zero());
+        let parity = (gx.abs_diff(sx) + gy.abs_diff(sy)) % 2;
+        let lower_bound = if hval % 2 == parity { hval } else { hval + 1 };
+
         iterative_deepening::<Stm, _, _>(
             self,
             |s| &mut s.search,
             config,
-            hval,
+            lower_bound,
             |s, depth| s.dfs(&mut puzzle, depth, None),
         );
 
@@ -229,10 +239,30 @@ mod tests {
 
     use super::*;
     use crate::{
-        algorithm::metric::{Mtm, Stm},
-        puzzle::{label::label::Rows, puzzle::Puzzle},
+        algorithm::{
+            algorithm::Algorithm,
+            metric::{Mtm, Stm},
+        },
+        puzzle::{label::label::Rows, puzzle::Puzzle, size::Size},
         solver::{config::SolverConfig, heuristic::mtm::MtmHeuristic},
     };
+
+    #[test]
+    fn test_trivial_heuristic_stm_odd_solution() {
+        // The `()` heuristic always gives an even bound, but this puzzle needs an odd number of
+        // moves.
+        let mut solver: GenericSolver<_, _, _, Stm> = GenericSolver::new((), RowGrids);
+        let puzzle = Puzzle::from_str("1 2 3/4 5 6/7 0 8").unwrap();
+
+        let solution = solver.solve(&puzzle).unwrap();
+        assert_eq!(solution, Algorithm::from_str("L").unwrap());
+
+        let mut puzzle = Puzzle::new(Size::new(3, 3).unwrap());
+        puzzle.apply_alg(&Algorithm::from_str("DRD").unwrap());
+        let solution = solver.solve(&puzzle).unwrap();
+        assert_eq!(solution.len_stm(), 3);
+        assert!(solution.is_solution_of(puzzle));
+    }
 
     #[test]
     fn test_row_grids_manhattan_stm() {
