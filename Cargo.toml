@@ -86,7 +86,7 @@ harness = false
 [features]
 default = ["thread_rng"]
 palette = ["dep:palette", "dep:svg", "dep:enterpolation"]
-serde = ["enterpolation/serde", "palette/serializing", "dep:serde"]
+serde = ["enterpolation?/serde", "palette?/serializing", "dep:serde"]
 thread_rng = ["rand/thread_rng"]
 
 [lints.clippy]
