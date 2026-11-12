@@ -52,6 +52,9 @@ pub struct BalancedSplitScheme<S, C> {
 
 impl<S: ColorScheme, C: Coloring> BalancedSplitScheme<S, C> {
     /// Creates a new [`BalancedSplitScheme`].
+    ///
+    /// A grid of width or height 1 can't be split, so a minimum splitting width or height less
+    /// than 2 is treated as 2.
     pub fn new(
         small_scheme: S,
         grid_coloring: C,
@@ -86,10 +89,16 @@ impl<S: ColorScheme, C: Coloring> BalancedSplitScheme<S, C> {
         self.splitting
     }
 
+    /// The minimum splitting size, with each length at least 2.
+    fn effective_minimum_splitting_size(&self) -> (u64, u64) {
+        let (min_width, min_height) = self.minimum_splitting_size;
+        (min_width.max(2), min_height.max(2))
+    }
+
     /// Whether a grid of the given size is split horizontally (into left and right halves) and
     /// vertically (into top and bottom halves).
     fn split_directions(&self, width: u64, height: u64) -> (bool, bool) {
-        let (min_split_width, min_split_height) = self.minimum_splitting_size;
+        let (min_split_width, min_split_height) = self.effective_minimum_splitting_size();
         let can_split_width = width >= min_split_width;
         let can_split_height = height >= min_split_height;
 
@@ -112,15 +121,16 @@ impl<S: ColorScheme, C: Coloring> BalancedSplitScheme<S, C> {
 impl<S: ColorScheme, C: Coloring> MultiLayerColorScheme for BalancedSplitScheme<S, C> {
     fn num_layers(&self, size: Size) -> u32 {
         let (mut width, mut height) = size.into();
+        let (min_split_width, min_split_height) = self.effective_minimum_splitting_size();
         let mut w_layers = 1;
         let mut h_layers = 1;
 
-        while width >= self.minimum_splitting_size.0 {
+        while width >= min_split_width {
             width = width.div_ceil(2);
             w_layers += 1;
         }
 
-        while height >= self.minimum_splitting_size.1 {
+        while height >= min_split_height {
             height = height.div_ceil(2);
             h_layers += 1;
         }
@@ -228,6 +238,13 @@ mod tests {
     use crate::puzzle::{color_scheme::Scheme, coloring::ColorList, label::label::Rows};
 
     fn scheme(splitting: Splitting) -> BalancedSplitScheme<Scheme<Rows, ColorList>, ColorList> {
+        scheme_with_min(splitting, (8, 8))
+    }
+
+    fn scheme_with_min(
+        splitting: Splitting,
+        minimum_splitting_size: (u64, u64),
+    ) -> BalancedSplitScheme<Scheme<Rows, ColorList>, ColorList> {
         let small_colors = (0..16)
             .map(|i| Rgba::new(i as f32 / 16.0, 0.0, 0.0, 1.0))
             .collect();
@@ -238,7 +255,12 @@ mod tests {
             .collect();
         let grid_coloring = ColorList::new(grid_colors).unwrap();
 
-        BalancedSplitScheme::new(small_scheme, grid_coloring, (8, 8), splitting)
+        BalancedSplitScheme::new(
+            small_scheme,
+            grid_coloring,
+            minimum_splitting_size,
+            splitting,
+        )
     }
 
     fn scheme1() -> BalancedSplitScheme<Scheme<Rows, ColorList>, ColorList> {
@@ -465,6 +487,35 @@ mod tests {
             assert_eq!(rect(5), Some(Rect::new((19, 15), (25, 19)).unwrap()));
             assert_eq!(rect(6), Some(Rect::new((19, 15), (25, 19)).unwrap()));
             assert_eq!(rect(7), None);
+        }
+    }
+
+    #[test]
+    fn test_small_minimum_splitting_size() {
+        // A minimum splitting size below 2 behaves like 2, instead of `num_layers` looping
+        // forever.
+        for min in [0, 1] {
+            for splitting in [
+                Splitting::UpDown {
+                    cutoff_fraction: 0.75,
+                },
+                Splitting::Quarters,
+            ] {
+                let small = scheme_with_min(splitting, (min, min));
+                let two = scheme_with_min(splitting, (2, 2));
+                let size = s(5, 3);
+                assert_eq!(small.num_layers(size), two.num_layers(size));
+                for layer in 0..two.num_layers(size) {
+                    for y in 0..3 {
+                        for x in 0..5 {
+                            assert_eq!(
+                                small.color(size, (x, y), layer),
+                                two.color(size, (x, y), layer)
+                            );
+                        }
+                    }
+                }
+            }
         }
     }
 }
