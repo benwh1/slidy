@@ -67,6 +67,11 @@ impl<Metric> Pdb<Metric> {
     /// from the solved state. If `MULTI_TILE` is true, a single move can move any number of pieces
     /// in one direction ([`Mtm`]); otherwise it moves one piece ([`Stm`]).
     ///
+    /// # Panics
+    ///
+    /// Panics if some state is 255 or more moves from the solved state, because depths are stored
+    /// as a `u8` with `u8::MAX` meaning "not reached yet".
+    ///
     /// [`Mtm`]: crate::algorithm::metric::Mtm
     /// [`Stm`]: crate::algorithm::metric::Stm
     pub(super) fn build<const MULTI_TILE: bool, L>(
@@ -116,6 +121,9 @@ impl<Metric> Pdb<Metric> {
         while !current.is_empty() {
             let mut next = Vec::with_capacity(current.len() * 4);
 
+            // `u8::MAX` marks states that haven't been reached, so it can't be used as a depth.
+            let next_depth = depth.checked_add(1).filter(|&d| d < u8::MAX);
+
             for state in &current {
                 for dir in [
                     Direction::Up,
@@ -127,7 +135,7 @@ impl<Metric> Pdb<Metric> {
                     while puzzle.do_move(dir) {
                         let idx = puzzle.encode(&tally) as usize;
                         if pdb[idx] == u8::MAX {
-                            pdb[idx] = depth + 1;
+                            pdb[idx] = next_depth.expect("pattern database depth overflowed `u8`");
                             next.push(puzzle);
                         }
 
