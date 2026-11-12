@@ -629,8 +629,12 @@ where
         let (gx, gy) = self.gap_position_xy();
         let amount = mv.amount;
         match mv.direction {
-            Direction::Up => gy + amount < self.size().height(),
-            Direction::Left => gx + amount < self.size().width(),
+            Direction::Up => gy
+                .checked_add(amount)
+                .is_some_and(|y| y < self.size().height()),
+            Direction::Left => gx
+                .checked_add(amount)
+                .is_some_and(|x| x < self.size().width()),
             Direction::Down => gy >= amount,
             Direction::Right => gx >= amount,
         }

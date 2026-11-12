@@ -827,6 +827,23 @@ mod tests {
         }
 
         #[test]
+        fn test_can_apply_move_overflow() {
+            let mut p = Puzzle::new(Size::new(4, 4).unwrap());
+            p.apply_move(Move::new(Direction::Down, 2));
+            p.apply_move(Move::new(Direction::Right, 2));
+            for dir in [
+                Direction::Up,
+                Direction::Left,
+                Direction::Down,
+                Direction::Right,
+            ] {
+                let mv = Move::new(dir, u64::MAX);
+                assert!(!p.can_apply_move(mv));
+                assert!(!p.try_apply_move(mv));
+            }
+        }
+
+        #[test]
         fn test_apply_move() {
             let mut p = Puzzle::new(Size::new(4, 4).unwrap());
             assert!(p.try_apply_move(Move::new(Direction::Down, 2)));
