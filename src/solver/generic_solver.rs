@@ -124,12 +124,13 @@ where
     S: SolvedState + Solvable,
     H: Heuristic<P, S, Stm>,
 {
-    /// Finds solutions of length `depth` of `puzzle`, which has the gap at `gap`, and was
-    /// reached by moving in direction `last_dir`.
+    /// Finds solutions of length `depth` of `puzzle`, which has the gap at `gap` and heuristic
+    /// bound `bound`, and was reached by moving in direction `last_dir`.
     fn dfs(
         &mut self,
         puzzle: &mut P,
         depth: u64,
+        bound: u64,
         gap: (u64, u64),
         last_dir: Option<Direction>,
     ) -> ControlFlow<()> {
@@ -152,12 +153,17 @@ where
 
             puzzle.move_dir(dir);
 
-            let next_bound = self.heuristic.bound(puzzle);
+            let next_bound = self
+                .heuristic
+                .bound_after_move(puzzle, bound, next_gap, gap);
             // Children at depth 0 are only checked for being solved, not against the bound.
             if depth == 1 || next_bound < depth {
                 self.search.stack.push(dir);
 
-                if self.dfs(puzzle, depth - 1, next_gap, Some(dir)).is_break() {
+                if self
+                    .dfs(puzzle, depth - 1, next_bound, next_gap, Some(dir))
+                    .is_break()
+                {
                     return ControlFlow::Break(());
                 }
 
@@ -191,7 +197,7 @@ where
             |s| &mut s.search,
             config,
             lower_bound,
-            |s, depth| s.dfs(&mut puzzle, depth, (gx, gy), None),
+            |s, depth| s.dfs(&mut puzzle, depth, hval, (gx, gy), None),
         );
 
         Ok(())

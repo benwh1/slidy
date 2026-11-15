@@ -201,6 +201,17 @@ where
             if md % 2 == parity { md } else { md + 1 }
         }
     }
+
+    fn bound_after_move(&self, puzzle: &P, bound: u64, from: (u64, u64), to: (u64, u64)) -> u64 {
+        if Self::HAS_PARITY_CONSTRAINT {
+            // The bound is the sum of the distances, and only the moved piece's has changed.
+            let size = puzzle.size();
+            let solved_pos = puzzle.solved_pos_xy(puzzle.piece_at_xy(to));
+            bound + self.dist(to, solved_pos, size) - self.dist(from, solved_pos, size)
+        } else {
+            self.bound(puzzle)
+        }
+    }
 }
 
 #[cfg(test)]
@@ -209,6 +220,44 @@ mod tests {
 
     use super::*;
     use crate::puzzle::puzzle::Puzzle;
+
+    fn check_bound_after_move<S>(heuristic: &ManhattanDistance<S>)
+    where
+        S: SolvedState,
+        ManhattanDistance<S>: Distance,
+    {
+        use rand::{RngExt as _, SeedableRng as _};
+        use rand_xoshiro::Xoshiro256StarStar;
+
+        use crate::algorithm::direction::Direction;
+
+        let mut rng = Xoshiro256StarStar::seed_from_u64(3);
+        for (w, h) in [(3, 3), (4, 4), (5, 3), (2, 6)] {
+            let mut puzzle = Puzzle::new(Size::new(w, h).unwrap());
+            let mut bound = heuristic.bound(&puzzle);
+            for _ in 0..2000 {
+                let dir = [
+                    Direction::Up,
+                    Direction::Left,
+                    Direction::Down,
+                    Direction::Right,
+                ][rng.random_range(0..4)];
+                let to = puzzle.gap_position_xy();
+                if puzzle.try_move_dir(dir) {
+                    let from = puzzle.gap_position_xy();
+                    bound = heuristic.bound_after_move(&puzzle, bound, from, to);
+                    assert_eq!(bound, heuristic.bound(&puzzle));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_bound_after_move() {
+        check_bound_after_move(&ManhattanDistance(RowGrids));
+        check_bound_after_move(&ManhattanDistance(Rows));
+        check_bound_after_move(&ManhattanDistance(Fringe));
+    }
 
     #[test]
     fn test_trivial_stm_bound() {
