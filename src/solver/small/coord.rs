@@ -237,11 +237,17 @@ impl<const W: usize, const H: usize, const S: usize> Coord<W, H, S> {
     }
 }
 
-/// Decodes blocks (see [`Coord::decode_block`]) incrementally: decoding a block close after the
-/// previous one only redoes the digits that changed.
+/// Decodes blocks (see [`Coord::decode_block`]) incrementally.
+///
+/// The last digits of a block, those of pieces `N - K..=N - 3` (where `K` is [`Self::K`]), only
+/// choose how the last `K` pieces fill the `K` ranks not taken by the other pieces. So a block is
+/// split into a prefix, the digits of pieces `1..N - K`, and a suffix. The prefix changes rarely
+/// when decoding blocks in order, and only the digits that changed are redone. The suffix is
+/// applied with a small table.
 pub(super) struct BlockDecoder<const W: usize, const H: usize> {
     block: u64,
-    /// `digits[p]` is the digit of piece `p`.
+    prefix: u64,
+    /// `digits[p]` is the digit of piece `p`, for the pieces in the prefix.
     digits: [u64; MAX_N],
     /// `free[p]` is the ranks not taken by pieces less than `p`, 4 bits each.
     free: [u64; MAX_N],
@@ -249,38 +255,119 @@ pub(super) struct BlockDecoder<const W: usize, const H: usize> {
     ranked: [u64; MAX_N],
     /// `parity[p]` is the parity of the digits of pieces less than `p`.
     parity: [u64; MAX_N],
+    /// The pieces in the prefix at their ranks, 4 bits each.
+    prefix_ranked: u64,
+    /// The parity of the digits of the pieces in the prefix.
+    prefix_parity: u64,
+    /// `terms[j][k]` is piece `N - 4 + j` at the `k`th rank not taken by the prefix, or 0 if
+    /// that piece is in the prefix.
+    terms: [[u64; 4]; 4],
     decoded: [u64; 2],
 }
 
 impl<const W: usize, const H: usize> BlockDecoder<W, H> {
     const N: usize = Padded::<W, H>::N;
 
-    /// How far ahead a block can be to step to it digit by digit instead of decoding it from
+    /// The number of pieces not in the prefix.
+    const K: usize = if Self::N >= 5 { 4 } else { 3 };
+
+    /// The number of pieces in the prefix, which are pieces `1..=P`.
+    const P: usize = Self::N - 1 - Self::K;
+
+    /// The number of suffixes, `K! / 2`.
+    const SUFFIXES: u64 = factorial(Self::K) / 2;
+
+    /// For each suffix: the slots (indices into the ranks not taken by the prefix) of pieces
+    /// `N - 4` (0 if that piece is in the prefix) and `N - 3`, the two remaining slots in
+    /// increasing order, and the parity of the digits of the suffix.
+    const SUFFIX: [[u8; 5]; 12] = {
+        let mut out = [[0; 5]; 12];
+        let mut suffix = 0;
+        while suffix < Self::SUFFIXES as usize {
+            let (d4, d3) = if Self::K == 4 {
+                (suffix / 3, suffix % 3)
+            } else {
+                (0, suffix)
+            };
+
+            // The slots not taken yet, in increasing order.
+            let mut slots = [0, 1, 2, 3];
+            let mut len = Self::K;
+
+            let s4 = if Self::K == 4 {
+                let s = slots[d4];
+                let mut i = d4;
+                while i + 1 < len {
+                    slots[i] = slots[i + 1];
+                    i += 1;
+                }
+                len -= 1;
+                s
+            } else {
+                0
+            };
+
+            let s3 = slots[d3];
+            let mut i = d3;
+            while i + 1 < len {
+                slots[i] = slots[i + 1];
+                i += 1;
+            }
+
+            out[suffix] = [
+                s4 as u8,
+                s3 as u8,
+                slots[0] as u8,
+                slots[1] as u8,
+                ((d4 + d3) % 2) as u8,
+            ];
+            suffix += 1;
+        }
+        out
+    };
+
+    /// `PREFIX_WEIGHT[p]` is the weight of the digit of piece `p` in the prefix.
+    const PREFIX_WEIGHT: [u64; MAX_N] = {
+        let mut out = [0; MAX_N];
+        let mut p = 1;
+        while p <= Self::P {
+            out[p] = Padded::<W, H>::RADIX_WEIGHT[p] / Self::SUFFIXES;
+            p += 1;
+        }
+        out
+    };
+
+    /// How far ahead a prefix can be to step to it digit by digit instead of decoding it from
     /// scratch.
     const MAX_STEP: u64 = 64;
 
     pub(super) fn new() -> Self {
         let mut out = Self {
             block: 0,
+            prefix: 0,
             digits: [0; MAX_N],
             free: [0; MAX_N],
             ranked: [0; MAX_N],
             parity: [0; MAX_N],
+            prefix_ranked: 0,
+            prefix_parity: 0,
+            terms: [[0; 4]; 4],
             decoded: [0; 2],
         };
         out.free[1] = 0xFEDC_BA98_7654_3210;
         out.redo_from(1);
+        out.decode_suffix(0);
         out
     }
 
-    /// Recomputes the decoding from the digit of piece `from` onwards.
+    /// Recomputes the decoding of the prefix from the digit of piece `from` onwards.
     #[inline(always)]
     fn redo_from(&mut self, from: usize) {
         let mut free = self.free[from];
         let mut ranked = self.ranked[from];
         let mut parity = self.parity[from];
 
-        for p in from..Self::N - 2 {
+        for p in from..=Self::P {
             self.free[p] = free;
             self.ranked[p] = ranked;
             self.parity[p] = parity;
@@ -294,12 +381,51 @@ impl<const W: usize, const H: usize> BlockDecoder<W, H> {
             ranked |= (p as u64) << (4 * rank);
         }
 
-        let (r0, r1) = (free & 0xF, (free >> 4) & 0xF);
-        let n = Self::N as u64;
-        let a = ranked | ((n - 2) << (4 * r0)) | ((n - 1) << (4 * r1));
-        let b = ranked | ((n - 1) << (4 * r0)) | ((n - 2) << (4 * r1));
+        self.prefix_ranked = ranked;
+        self.prefix_parity = parity;
+        for (j, row) in self.terms.iter_mut().enumerate().skip(4 - Self::K) {
+            let piece = (Self::N - 4 + j) as u64;
+            for (k, term) in row.iter_mut().enumerate().take(Self::K) {
+                *term = piece << (4 * ((free >> (4 * k)) & 0xF));
+            }
+        }
+    }
 
-        self.decoded = if parity & 1 == 0 { [a, b] } else { [b, a] };
+    /// Decodes the block with the current prefix and suffix `suffix`.
+    #[inline(always)]
+    fn decode_suffix(&mut self, suffix: u64) {
+        let [s4, s3, u, v, parity] = Self::SUFFIX[suffix as usize].map(usize::from);
+        let t = &self.terms;
+        let base = self.prefix_ranked | t[0][s4] | t[1][s3];
+        let a = base | t[2][u] | t[3][v];
+        let b = base | t[2][v] | t[3][u];
+        self.decoded = if (self.prefix_parity ^ parity as u64) & 1 == 0 {
+            [a, b]
+        } else {
+            [b, a]
+        };
+    }
+
+    /// Sets the digits of the prefix to those of `prefix`, returning the first piece whose digit
+    /// changed.
+    ///
+    /// This is rarely needed, so it's kept out of line to stop the compiler from computing it
+    /// speculatively.
+    #[cold]
+    #[inline(never)]
+    fn set_prefix_digits(&mut self, prefix: u64) -> usize {
+        let mut rest = prefix;
+        let mut from = 0;
+        for (p, d) in self.digits.iter_mut().enumerate().take(Self::P + 1).skip(1) {
+            let w = Self::PREFIX_WEIGHT[p];
+            let digit = rest / w;
+            rest %= w;
+            if from == 0 && digit != *d {
+                from = p;
+            }
+            *d = digit;
+        }
+        from
     }
 
     /// Decodes `block`, after which [`Self::ranked`] returns the pieces of its states.
@@ -308,38 +434,35 @@ impl<const W: usize, const H: usize> BlockDecoder<W, H> {
         if block == self.block {
             return;
         }
-
-        let from = if block > self.block && block - self.block <= Self::MAX_STEP {
-            // Add the difference to the least significant digit and carry.
-            let mut p = Self::N - 3;
-            let mut carry = block - self.block;
-            loop {
-                let sum = self.digits[p] + carry;
-                let radix = Padded::<W, H>::radix(p);
-                self.digits[p] = sum % radix;
-                carry = sum / radix;
-                if carry == 0 {
-                    break p;
-                }
-                p -= 1;
-            }
-        } else {
-            let mut rest = block;
-            let mut from = 0;
-            for (p, d) in self.digits.iter_mut().enumerate().take(Self::N - 2).skip(1) {
-                let w = Padded::<W, H>::RADIX_WEIGHT[p];
-                let digit = rest / w;
-                rest %= w;
-                if from == 0 && digit != *d {
-                    from = p;
-                }
-                *d = digit;
-            }
-            from
-        };
-
         self.block = block;
-        self.redo_from(from);
+
+        let prefix = block / Self::SUFFIXES;
+        let suffix = block % Self::SUFFIXES;
+
+        if prefix != self.prefix {
+            let from = if prefix > self.prefix && prefix - self.prefix <= Self::MAX_STEP {
+                // Add the difference to the least significant digit and carry.
+                let mut p = Self::P;
+                let mut carry = prefix - self.prefix;
+                loop {
+                    let sum = self.digits[p] + carry;
+                    let radix = Padded::<W, H>::radix(p);
+                    self.digits[p] = sum % radix;
+                    carry = sum / radix;
+                    if carry == 0 {
+                        break p;
+                    }
+                    p -= 1;
+                }
+            } else {
+                self.set_prefix_digits(prefix)
+            };
+
+            self.prefix = prefix;
+            self.redo_from(from);
+        }
+
+        self.decode_suffix(suffix);
     }
 
     /// Returns the pieces of the states in the last decoded block, in reading order skipping the
