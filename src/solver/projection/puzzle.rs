@@ -52,8 +52,10 @@ impl<const N: usize> ProjectedPuzzle<N> {
 /// state.
 pub(super) struct Moves {
     /// For each cell of the gap, the cells that it moves to in each of the [`DIRECTIONS`] (0 for
-    /// moves that aren't possible), and the set of possible moves.
-    table: Box<[([u8; 4], u8)]>,
+    /// moves that aren't possible), and the set of possible moves. Cells past the last have no
+    /// possible moves. The length is a power of two so that indexing with a cell masked to it
+    /// needs no bounds check.
+    table: [([u8; 4], u8); LARGE],
     /// The [`encoding::weights`] of the tally.
     weights: [u64; LARGE],
     width: usize,
@@ -63,21 +65,18 @@ impl Moves {
     /// Creates the [`Moves`] for puzzles of size `size` with the given tally of values.
     pub(super) fn new(size: Size, tally: &[u8]) -> Self {
         let (w, h) = (size.width() as usize, size.height() as usize);
-        let table = (0..w * h)
-            .map(|gap| {
-                let (x, y) = (gap % w, gap / w);
-                let possible = [y + 1 < h, x + 1 < w, y > 0, x > 0];
-                let cells = [gap + w, gap + 1, gap.wrapping_sub(w), gap.wrapping_sub(1)];
-                let mut out = ([0; 4], 0);
-                for d in 0..4 {
-                    if possible[d] {
-                        out.0[d] = cells[d] as u8;
-                        out.1 |= 1 << d;
-                    }
+        let mut table = [([0; 4], 0); LARGE];
+        for (gap, out) in table.iter_mut().enumerate().take(w * h) {
+            let (x, y) = (gap % w, gap / w);
+            let possible = [y + 1 < h, x + 1 < w, y > 0, x > 0];
+            let cells = [gap + w, gap + 1, gap.wrapping_sub(w), gap.wrapping_sub(1)];
+            for d in 0..4 {
+                if possible[d] {
+                    out.0[d] = cells[d] as u8;
+                    out.1 |= 1 << d;
                 }
-                out
-            })
-            .collect();
+            }
+        }
 
         Self {
             table,
@@ -89,7 +88,7 @@ impl Moves {
     /// Returns the set of possible moves with the gap at `gap`.
     #[inline(always)]
     pub(super) fn possible(&self, gap: u8) -> u8 {
-        self.table[gap as usize].1
+        self.table[gap as usize % LARGE].1
     }
 
     /// Returns the state reached by moving in direction `dir` from `state`. The move must be
@@ -117,9 +116,11 @@ impl Moves {
         d: u32,
     ) -> (ProjectedPuzzle<N>, u64) {
         let gap = state.gap;
-        let cell = self.table[gap as usize].0[d as usize];
+        // Cells are less than `N` and `LARGE`, which are powers of two, and `d < 4`, so the masks
+        // don't change the indices.
+        let cell = self.table[gap as usize % LARGE].0[d as usize % 4];
         let mut child = *state;
-        child.pieces.swap(gap as usize, cell as usize);
+        child.pieces.swap(gap as usize % N, cell as usize % N);
         child.gap = cell;
 
         let child_index = match d {

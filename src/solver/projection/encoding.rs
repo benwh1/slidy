@@ -99,9 +99,11 @@ pub(super) fn vertical_delta<const N: usize>(
     width: usize,
     weights: &[u64; LARGE],
 ) -> u64 {
+    // Cells are less than `N` and values are less than `LARGE`, which are powers of two, so the
+    // masks don't change the indices.
     let below = cell + width;
-    let x = pieces[below];
-    let wx = weights[x as usize];
+    let x = pieces[below % N];
+    let wx = weights[x as usize % LARGE];
 
     // The gap is the only cell with value 0, so its term is its position.
     let mut delta = weights[0].wrapping_mul(width as u64);
@@ -119,7 +121,7 @@ pub(super) fn vertical_delta<const N: usize>(
     // they have one fewer smaller value before them. Cells between with value `x` also have the
     // moved piece moved to before them.
     for c in cell + 1..below {
-        let u = pieces[c];
+        let u = pieces[c % N];
         if u == x {
             let pos = c - less_x;
             let new = indexing::BINOMIAL[pos + 1][equal_x + 2];
@@ -131,7 +133,8 @@ pub(super) fn vertical_delta<const N: usize>(
             let pos = c - less;
             let new = indexing::BINOMIAL[pos + 1][equal + 1];
             let old = indexing::BINOMIAL[pos][equal + 1];
-            delta = delta.wrapping_add(weights[u as usize].wrapping_mul(new.wrapping_sub(old)));
+            delta =
+                delta.wrapping_add(weights[u as usize % LARGE].wrapping_mul(new.wrapping_sub(old)));
             less_x += 1;
         }
     }
