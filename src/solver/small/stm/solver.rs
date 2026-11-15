@@ -11,7 +11,7 @@ use crate::{
     solver::{
         config::{PdbConfig, SolverConfig},
         search::iterative_deepening,
-        small::{coord::Coord, pdb::Pdb, solver::Solver},
+        small::{coord::Dense, pdb::Pdb, solver::Solver},
         solver::{Solver as SolverT, SolverError},
     },
 };
@@ -61,11 +61,10 @@ where
         let g = gap as usize;
         match dir {
             Direction::Up => (g + W < N)
-                .then(|| index.wrapping_add(Coord::<W, H>::delta_down(puzzle.pieces(), gap))),
+                .then(|| index.wrapping_add(Dense::<W, H, N>::delta_down(puzzle.pieces(), gap))),
             Direction::Left => (g % W + 1 < W).then_some(index + 1),
-            Direction::Down => {
-                (g >= W).then(|| index.wrapping_add(Coord::<W, H>::delta_up(puzzle.pieces(), gap)))
-            }
+            Direction::Down => (g >= W)
+                .then(|| index.wrapping_add(Dense::<W, H, N>::delta_up(puzzle.pieces(), gap))),
             Direction::Right => (!g.is_multiple_of(W)).then(|| index - 1),
         }
     }
@@ -195,7 +194,7 @@ where
             return Err(SolverError::Unsolvable);
         }
 
-        let index = Coord::<W, H>::index(puzzle.pieces(), puzzle.gap());
+        let index = Dense::<W, H, N>::index(puzzle.pieces(), puzzle.gap());
         let distance = self.distance(puzzle, index);
 
         iterative_deepening::<Stm, _, _>(
