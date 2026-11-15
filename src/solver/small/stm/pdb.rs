@@ -174,6 +174,7 @@ impl<const W: usize, const H: usize> Builder<W, H> {
 
     /// Expands all states at depth `depth`, returning the number of new states at depth
     /// `depth + 1`.
+    #[inline(always)]
     fn push(&mut self, depth: u8) -> u64 {
         let mut new = 0;
         let mut decoder = BlockDecoder::<W, H>::new();
@@ -213,6 +214,7 @@ impl<const W: usize, const H: usize> Builder<W, H> {
     ///
     /// A neighbour of a state not yet reached has been reached if and only if it is at depth
     /// `depth`, because otherwise the state would have been reached already.
+    #[inline(always)]
     fn pull(&mut self, depth: u8) -> u64 {
         let mut new = 0;
         let mut decoder = BlockDecoder::<W, H>::new();
@@ -251,7 +253,33 @@ impl<const W: usize, const H: usize> Builder<W, H> {
     }
 
     /// Builds the table, one bit per state packed into bytes, with [`Dense`] indices.
-    fn build(mut self, config: &PdbConfig) -> Box<[u8]> {
+    fn build(self, config: &PdbConfig) -> Box<[u8]> {
+        #[cfg(target_arch = "x86_64")]
+        if is_x86_feature_detected!("popcnt")
+            && is_x86_feature_detected!("bmi1")
+            && is_x86_feature_detected!("bmi2")
+        {
+            // SAFETY: The target features are available.
+            return unsafe { self.build_bmi2(config) };
+        }
+
+        self.build_impl(config)
+    }
+
+    /// [`Self::build`], compiled with instructions that make the bit manipulation cheaper:
+    /// `popcnt`, and shifts by a variable amount that are a single instruction.
+    ///
+    /// # Safety
+    ///
+    /// The CPU must support the `popcnt`, `bmi1`, and `bmi2` target features.
+    #[cfg(target_arch = "x86_64")]
+    #[target_feature(enable = "popcnt,bmi1,bmi2")]
+    unsafe fn build_bmi2(self, config: &PdbConfig) -> Box<[u8]> {
+        self.build_impl(config)
+    }
+
+    #[inline(always)]
+    fn build_impl(mut self, config: &PdbConfig) -> Box<[u8]> {
         // The solved state has the gap in the last cell and the pieces in order, so all digits
         // except the gap's are 0.
         self.claim(Self::N as u64 - 1);
