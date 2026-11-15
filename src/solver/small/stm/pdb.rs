@@ -120,7 +120,9 @@ impl<const W: usize, const H: usize> Builder<W, H> {
     #[inline(always)]
     fn claim(&mut self, index: u64) -> bool {
         let (word, mask) = ((index / 64) as usize, 1 << (index % 64));
-        let v = &mut self.visited[word];
+        debug_assert!(word < self.visited.len());
+        // SAFETY: `index` is the index of a state, so it's in bounds.
+        let v = unsafe { self.visited.get_unchecked_mut(word) };
         let new = *v & mask == 0;
         *v |= mask;
         new
@@ -129,7 +131,11 @@ impl<const W: usize, const H: usize> Builder<W, H> {
     /// Whether the state at `index` has been reached.
     #[inline(always)]
     fn is_visited(&self, index: u64) -> bool {
-        (self.visited[(index / 64) as usize] >> (index % 64)) & 1 == 1
+        let word = (index / 64) as usize;
+        debug_assert!(word < self.visited.len());
+        // SAFETY: `index` is the index of a state, so it's in bounds.
+        let v = unsafe { self.visited.get_unchecked(word) };
+        (v >> (index % 64)) & 1 == 1
     }
 
     /// Returns the states in word `i` at depth `depth`, and marks them as expanded.
@@ -252,6 +258,49 @@ impl<const W: usize, const H: usize> Builder<W, H> {
         new
     }
 
+    /// Expands the states in `queue`, which are at depth `depth`, returning the new states at
+    /// depth `depth + 1`.
+    ///
+    /// This is used while the frontier is small, instead of scanning the whole bitmap. The states
+    /// are `(index, pieces, gap)`.
+    fn push_queue(&mut self, depth: u8, queue: &[(u64, u64, u8)]) -> Vec<(u64, u64, u8)> {
+        let mut next = Vec::new();
+
+        for &(index, pieces, gap) in queue {
+            let (word, mask) = ((index / 64) as usize, 1 << (index % 64));
+            self.done[word] |= mask;
+            if (depth >> 1) & 1 == 1 {
+                self.bits[word] |= mask;
+            }
+
+            let g = gap as usize;
+            let mut visit = |s: &mut Self, child: u64, cell: usize| {
+                if s.claim(child) {
+                    let piece = (pieces >> (4 * cell)) & 0xF;
+                    let child_pieces = pieces ^ (piece << (4 * g)) ^ (piece << (4 * cell));
+                    next.push((child, child_pieces, cell as u8));
+                }
+            };
+
+            if g >= W {
+                let delta = Padded::<W, H>::delta_up(pieces, gap);
+                visit(self, index.wrapping_add(delta), g - W);
+            }
+            if g + W < Self::N {
+                let delta = Padded::<W, H>::delta_down(pieces, gap);
+                visit(self, index.wrapping_add(delta), g + W);
+            }
+            if !g.is_multiple_of(W) {
+                visit(self, index - 1, g - 1);
+            }
+            if g % W + 1 < W {
+                visit(self, index + 1, g + 1);
+            }
+        }
+
+        next
+    }
+
     /// Builds the table, one bit per state packed into bytes, with [`Dense`] indices.
     fn build(self, config: &PdbConfig) -> Box<[u8]> {
         #[cfg(target_arch = "x86_64")]
@@ -300,6 +349,23 @@ impl<const W: usize, const H: usize> Builder<W, H> {
             remaining[dist % 2] += Padded::<W, H>::BLOCKS;
         }
         remaining[0] -= 1;
+
+        // While the frontier is small, keep it in a queue rather than scanning the bitmaps for it.
+        let solved = (1..Self::N as u64).fold(0, |pieces, p| pieces | (p << (4 * (p - 1))));
+        let mut queue = vec![(Self::N as u64 - 1, solved, Self::N as u8 - 1)];
+        let max_queue = self.visited.len() / 32;
+
+        while !queue.is_empty() && queue.len() <= max_queue {
+            queue = self.push_queue(depth, &queue);
+            new = queue.len() as u64;
+            remaining[usize::from(depth % 2 == 0)] -= new;
+            total += new;
+            depth += 1;
+
+            if let Some(f) = &config.end_of_iter_callback {
+                f(PdbIterationStats { depth, new, total });
+            }
+        }
 
         while new != 0 {
             // Expand the frontier while it's small compared to the number of states that could be

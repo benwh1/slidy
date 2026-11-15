@@ -176,10 +176,25 @@ impl<const W: usize, const H: usize, const S: usize> Coord<W, H, S> {
 
     /// Whether the permutation of the pieces (in reading order, skipping the gap) of a solvable
     /// state with the gap at `gap` is odd.
+    #[inline(always)]
     pub(super) const fn is_odd(gap: u8) -> bool {
-        let rows_from_bottom = H - 1 - gap as usize / W;
-        (W - 1) * rows_from_bottom % 2 == 1
+        (Self::ODD_GAPS >> gap) & 1 == 1
     }
+
+    /// Bit `g` is set if the permutation of the pieces of a solvable state with the gap at `g` is
+    /// odd (see [`Self::is_odd`]).
+    const ODD_GAPS: u16 = {
+        let mut out = 0;
+        let mut gap = 0;
+        while gap < Self::N {
+            let rows_from_bottom = H - 1 - gap / W;
+            if (W - 1) * rows_from_bottom % 2 == 1 {
+                out |= 1 << gap;
+            }
+            gap += 1;
+        }
+        out
+    };
 
     /// Decodes `block = index / S` into the pieces of the state in reading order, skipping the
     /// gap (4 bits each).
