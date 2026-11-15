@@ -2,78 +2,39 @@ use num_traits::Zero as _;
 
 use crate::{
     algorithm::direction::Direction,
-    puzzle::{label::label::Label, sliding_puzzle::SlidingPuzzle},
-    solver::projection::encoding,
+    puzzle::{label::label::Label, size::Size, sliding_puzzle::SlidingPuzzle},
+    solver::projection::{
+        LARGE,
+        encoding::{self, vertical_delta},
+    },
 };
 
+/// The directions to search, in order. Bit `d` of a set of moves is `DIRECTIONS[d]`, and the
+/// inverse of `DIRECTIONS[d]` is `DIRECTIONS[d ^ 2]`.
+pub(super) const DIRECTIONS: [Direction; 4] = [
+    Direction::Up,
+    Direction::Left,
+    Direction::Down,
+    Direction::Right,
+];
+
+/// A projected puzzle state. `N` is the length of the `pieces` buffer (16 for projections of up
+/// to 16 cells, 32 otherwise).
 #[derive(Clone, Copy, Debug)]
 pub(super) struct ProjectedPuzzle<const N: usize> {
+    /// The value in each cell, with 0 for the gap and the cells after the last.
     pieces: [u8; N],
+    /// The cell of the gap.
     gap: u8,
-    width: u8,
-    height: u8,
-    gx: u8,
-    gy: u8,
 }
 
 impl<const N: usize> ProjectedPuzzle<N> {
-    pub(super) fn new(pieces: &[u8], gap: u8, width: u8) -> Self {
+    pub(super) fn new(pieces: &[u8], gap: u8) -> Self {
         let len = pieces.len();
         assert!(len <= N);
-        let height = (len / width as usize) as u8;
         let mut buf = [0u8; N];
         buf[..len].copy_from_slice(pieces);
-        Self {
-            pieces: buf,
-            gap,
-            width,
-            height,
-            gx: gap % width,
-            gy: gap / width,
-        }
-    }
-
-    pub(super) fn do_move(&mut self, dir: Direction) -> bool {
-        let (new_gap, next_gx, next_gy) = match dir {
-            Direction::Up => {
-                if self.gy + 1 < self.height {
-                    (self.gap + self.width, self.gx, self.gy + 1)
-                } else {
-                    return false;
-                }
-            }
-            Direction::Left => {
-                if self.gx + 1 < self.width {
-                    (self.gap + 1, self.gx + 1, self.gy)
-                } else {
-                    return false;
-                }
-            }
-            Direction::Down => {
-                if self.gy > 0 {
-                    (self.gap - self.width, self.gx, self.gy - 1)
-                } else {
-                    return false;
-                }
-            }
-            Direction::Right => {
-                if self.gx > 0 {
-                    (self.gap - 1, self.gx - 1, self.gy)
-                } else {
-                    return false;
-                }
-            }
-        };
-        self.pieces.swap(self.gap as usize, new_gap as usize);
-        self.gap = new_gap;
-        self.gx = next_gx;
-        self.gy = next_gy;
-        true
-    }
-
-    /// Returns the value in each cell, with 0 for the gap and the cells after the last.
-    pub(super) const fn pieces(&self) -> [u8; N] {
-        self.pieces
+        Self { pieces: buf, gap }
     }
 
     /// Returns the cell of the gap.
@@ -81,10 +42,89 @@ impl<const N: usize> ProjectedPuzzle<N> {
         self.gap
     }
 
-    /// Ranks the projected state to the multiset index used for the PDB arrays. `N` is the width
-    /// of the scratch `pieces` buffer (16 for projections of up to 16 cells, 32 otherwise).
+    /// Ranks the projected state to the multiset index used for the PDB arrays.
     pub(super) fn encode(&self, tally: &[u8]) -> u64 {
         encoding::encode::<N>(&self.pieces, tally)
+    }
+}
+
+/// The moves of the gap on a puzzle of one size, and how they change the index of a projected
+/// state.
+pub(super) struct Moves {
+    /// For each cell of the gap, the cells that it moves to in each of the [`DIRECTIONS`] (0 for
+    /// moves that aren't possible), and the set of possible moves.
+    table: Box<[([u8; 4], u8)]>,
+    /// The [`encoding::weights`] of the tally.
+    weights: [u64; LARGE],
+    width: usize,
+}
+
+impl Moves {
+    /// Creates the [`Moves`] for puzzles of size `size` with the given tally of values.
+    pub(super) fn new(size: Size, tally: &[u8]) -> Self {
+        let (w, h) = (size.width() as usize, size.height() as usize);
+        let table = (0..w * h)
+            .map(|gap| {
+                let (x, y) = (gap % w, gap / w);
+                let possible = [y + 1 < h, x + 1 < w, y > 0, x > 0];
+                let cells = [gap + w, gap + 1, gap.wrapping_sub(w), gap.wrapping_sub(1)];
+                let mut out = ([0; 4], 0);
+                for d in 0..4 {
+                    if possible[d] {
+                        out.0[d] = cells[d] as u8;
+                        out.1 |= 1 << d;
+                    }
+                }
+                out
+            })
+            .collect();
+
+        Self {
+            table,
+            weights: encoding::weights(tally),
+            width: w,
+        }
+    }
+
+    /// Returns the set of possible moves with the gap at `gap`.
+    #[inline(always)]
+    pub(super) fn possible(&self, gap: u8) -> u8 {
+        self.table[gap as usize].1
+    }
+
+    /// Returns the state reached by moving in direction `DIRECTIONS[d]` from `state`, which has
+    /// index `index`, and its index. The move must be possible.
+    #[inline(always)]
+    pub(super) fn apply<const N: usize>(
+        &self,
+        state: &ProjectedPuzzle<N>,
+        index: u64,
+        d: u32,
+    ) -> (ProjectedPuzzle<N>, u64) {
+        let gap = state.gap;
+        let cell = self.table[gap as usize].0[d as usize];
+        let mut child = *state;
+        child.pieces.swap(gap as usize, cell as usize);
+        child.gap = cell;
+
+        let child_index = match d {
+            0 => index.wrapping_add(vertical_delta(
+                &state.pieces,
+                gap as usize,
+                self.width,
+                &self.weights,
+            )),
+            1 => index + self.weights[0],
+            2 => index.wrapping_sub(vertical_delta(
+                &child.pieces,
+                cell as usize,
+                self.width,
+                &self.weights,
+            )),
+            _ => index - self.weights[0],
+        };
+
+        (child, child_index)
     }
 }
 
@@ -104,5 +144,5 @@ where
             pieces.push(label.position_label(size, solved_pos) as u8 + 1);
         }
     }
-    ProjectedPuzzle::new(&pieces, puzzle.gap_position() as u8, size.width() as u8)
+    ProjectedPuzzle::new(&pieces, puzzle.gap_position() as u8)
 }

@@ -5,12 +5,14 @@
 use std::marker::PhantomData;
 
 use crate::{
-    algorithm::direction::Direction,
     puzzle::{label::label::Label, size::Size},
     solver::{
         config::PdbConfig,
         indexing,
-        projection::{LARGE, SMALL, puzzle::ProjectedPuzzle},
+        projection::{
+            LARGE, SMALL,
+            puzzle::{Moves, ProjectedPuzzle},
+        },
         statistics::PdbIterationStats,
     },
 };
@@ -100,8 +102,8 @@ impl<Metric> Pdb<Metric> {
         let solved_state = compute_solved_state(label, size);
         let tally = compute_tally(&solved_state);
         let gap = size.num_pieces() as u8;
-        let width = size.width() as u8;
-        let solved = ProjectedPuzzle::<N>::new(&solved_state, gap, width);
+        let solved = ProjectedPuzzle::<N>::new(&solved_state, gap);
+        let moves = Moves::new(size, &tally);
         let pdb_size = indexing::multinomial(&tally) as usize;
 
         let mut pdb = vec![u8::MAX; pdb_size];
@@ -125,21 +127,22 @@ impl<Metric> Pdb<Metric> {
             let next_depth = depth.checked_add(1).filter(|&d| d < u8::MAX);
 
             for state in &current {
-                for dir in [
-                    Direction::Up,
-                    Direction::Left,
-                    Direction::Down,
-                    Direction::Right,
-                ] {
-                    let mut puzzle = *state;
-                    while puzzle.do_move(dir) {
-                        let idx = puzzle.encode(&tally) as usize;
-                        if pdb[idx] == u8::MAX {
-                            pdb[idx] = next_depth.expect("pattern database depth overflowed `u8`");
+                let index = state.encode(&tally);
+                let mut rest = moves.possible(state.gap());
+                while rest != 0 {
+                    let d = rest.trailing_zeros();
+                    rest &= rest - 1;
+
+                    let (mut puzzle, mut idx) = (*state, index);
+                    loop {
+                        (puzzle, idx) = moves.apply(&puzzle, idx, d);
+                        let entry = &mut pdb[idx as usize];
+                        if *entry == u8::MAX {
+                            *entry = next_depth.expect("pattern database depth overflowed `u8`");
                             next.push(puzzle);
                         }
 
-                        if !MULTI_TILE {
+                        if !MULTI_TILE || moves.possible(puzzle.gap()) & (1 << d) == 0 {
                             break;
                         }
                     }

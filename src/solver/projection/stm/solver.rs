@@ -12,7 +12,8 @@ use crate::{
         config::SolverConfig,
         projection::{
             LARGE, SMALL,
-            solver::{DIRECTIONS, Solver},
+            puzzle::{DIRECTIONS, ProjectedPuzzle},
+            solver::Solver,
         },
         search::iterative_deepening,
         solver::{Solver as SolverT, SolverError},
@@ -25,27 +26,22 @@ where
     Target: Label + SolvedState + Solvable + Default,
     PruneTarget: Label + SolvedState + Default,
 {
-    /// Finds solutions of length `depth` of the state with the given pieces, gap, and index,
+    /// Finds solutions of length `depth` of `state`, which has index `index`,
     /// where `moves` is the set of moves to try. `depth` must be at least 1.
     fn dfs<const N: usize>(
         &mut self,
         puzzle: &P,
         depth: u64,
-        pieces: [u8; N],
-        gap: u8,
+        state: ProjectedPuzzle<N>,
         index: u64,
         moves: u8,
     ) -> ControlFlow<()> {
-        let cells = self.moves[gap as usize].0;
         let mut rest = moves;
         while rest != 0 {
             let d = rest.trailing_zeros();
             rest &= rest - 1;
 
-            let cell = cells[d as usize];
-            let mut child_pieces = pieces;
-            child_pieces.swap(gap as usize, cell as usize);
-            let child = self.child_index(&pieces, &child_pieces, gap, cell, index, d);
+            let (child_state, child) = self.moves.apply(&state, index, d);
 
             // Children at depth 0 are only checked for being solved, not against the bound.
             if depth == 1 {
@@ -63,10 +59,10 @@ where
                 continue;
             }
 
-            let child_moves = self.moves[cell as usize].1 & !(1 << (d ^ 2));
+            let child_moves = self.moves.possible(child_state.gap()) & !(1 << (d ^ 2));
             self.search.stack.push(DIRECTIONS[d as usize]);
             if self
-                .dfs(puzzle, depth - 1, child_pieces, cell, child, child_moves)
+                .dfs(puzzle, depth - 1, child_state, child, child_moves)
                 .is_break()
             {
                 return ControlFlow::Break(());
@@ -100,8 +96,7 @@ where
 
         let projected = self.initial_projected::<N>(puzzle);
         let index = projected.encode(&self.tally);
-        let (pieces, gap) = (projected.pieces(), projected.gap());
-        let moves = self.moves[gap as usize].1;
+        let moves = self.moves.possible(projected.gap());
         let hval = self.bound(index);
 
         iterative_deepening::<Stm, _, _>(
@@ -116,7 +111,7 @@ where
                     }
                     return ControlFlow::Continue(());
                 }
-                s.dfs::<N>(puzzle, depth, pieces, gap, index, moves)
+                s.dfs::<N>(puzzle, depth, projected, index, moves)
             },
         );
 
