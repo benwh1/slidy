@@ -1,10 +1,6 @@
 //! Defines the [`InversionCount`] heuristic, which is a lower bound computed from the inversions
 //! of the pieces in reading order and in column order.
 
-use std::cmp::Ordering;
-
-use num_traits::ToPrimitive as _;
-
 use crate::{
     algorithm::metric::Stm,
     puzzle::{label::label::RowGrids, sliding_puzzle::SlidingPuzzle},
@@ -30,50 +26,40 @@ pub struct InversionCount;
 /// The number of inversions `n` in one direction, where each move in that direction changes `n`
 /// by at most `d`. Stored as `ceil(n / d)` and `ceil(n / d) * d - n`, so that it can be updated
 /// without dividing.
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 struct Inversions {
     /// The lower bound on the number of moves in this direction, `ceil(n / d)`.
     moves: u64,
-    /// `ceil(n / d) * d - n`, which is less than `d`.
-    slack: u64,
+    /// `ceil(n / d) * d - n`, which is in `0..d`.
+    slack: i64,
+    /// The maximum change in `n` from one move, `d`.
+    divisor: i64,
 }
 
 impl Inversions {
     /// Creates [`Inversions`] for `n` inversions, where each move changes the number of
-    /// inversions by at most `d`. If `d` is 0, the bound is 0.
+    /// inversions by at most `d`.
+    ///
+    /// If `d` is 0, moves never change the number of inversions, so `n` must be 0 if the puzzle is
+    /// solvable. In that case, `d` is replaced by 1, which gives a bound of 0 as long as `n` is 0.
     fn new(n: u64, d: u64) -> Self {
-        if d == 0 {
-            Self { moves: 0, slack: 0 }
-        } else {
-            let moves = n.div_ceil(d);
-            Self {
-                moves,
-                slack: moves * d - n,
-            }
+        let d = d.max(1);
+        let moves = n.div_ceil(d);
+        Self {
+            moves,
+            slack: (moves * d - n) as i64,
+            divisor: d as i64,
         }
     }
 
     /// Adds `delta` to the number of inversions, where `|delta| <= d`.
-    fn add(&mut self, delta: i64, d: u64) {
-        let change = delta.unsigned_abs();
-        match delta.cmp(&0) {
-            Ordering::Greater => {
-                if self.slack >= change {
-                    self.slack -= change;
-                } else {
-                    self.slack = self.slack + d - change;
-                    self.moves += 1;
-                }
-            }
-            Ordering::Less => {
-                self.slack += change;
-                if self.slack >= d {
-                    self.slack -= d;
-                    self.moves -= 1;
-                }
-            }
-            Ordering::Equal => {}
-        }
+    #[inline]
+    fn add(&mut self, delta: i64) {
+        // The new slack is in `-d..2 * d`, so at most one carry is needed to get it into `0..d`.
+        let slack = self.slack - delta;
+        let carry = i64::from(slack < 0) - i64::from(slack >= self.divisor);
+        self.moves = self.moves.wrapping_add_signed(carry);
+        self.slack = slack + carry * self.divisor;
     }
 }
 
@@ -82,17 +68,64 @@ impl Inversions {
 pub struct InversionState {
     width: u64,
     height: u64,
-    /// `column_rank[p]` is the index of the solved position of piece `p` in column order.
-    column_rank: Vec<u64>,
-    /// The inversions in reading order.
-    vertical: Inversions,
-    /// The inversions in column order.
-    horizontal: Inversions,
+    /// The solved positions in reading order of the pieces in each cell, in reading order. This
+    /// includes the gap, but the gap is never compared with anything.
+    rows: Vec<u64>,
+    /// The solved positions in column order of the pieces in each cell, in column order.
+    columns: Vec<u64>,
+    /// The inversions in reading order, then the inversions in column order.
+    inversions: [Inversions; 2],
+    /// The values of `inversions` before each move that hasn't been undone yet.
+    history: Vec<[Inversions; 2]>,
 }
 
 impl InversionState {
+    #[inline]
     fn bound(&self) -> u64 {
-        self.vertical.moves + self.horizontal.moves
+        self.inversions[0].moves + self.inversions[1].moves
+    }
+
+    /// Swaps the cells at `a` and `b` in `rows` and `columns`, and returns the indices of `a` and
+    /// `b` in reading order and in column order.
+    #[inline]
+    fn swap(&mut self, a: (u64, u64), b: (u64, u64)) -> ((usize, usize), (usize, usize)) {
+        let (w, h) = (self.width, self.height);
+        let rows = ((a.0 + a.1 * w) as usize, (b.0 + b.1 * w) as usize);
+        let columns = ((a.0 * h + a.1) as usize, (b.0 * h + b.1) as usize);
+        self.rows.swap(rows.0, rows.1);
+        self.columns.swap(columns.0, columns.1);
+        (rows, columns)
+    }
+
+    /// Updates the state after the piece at `to` has moved there from `from`.
+    #[inline]
+    fn make_move(&mut self, from: (u64, u64), to: (u64, u64)) {
+        self.history.push(self.inversions);
+        let ((row_from, row_to), (col_from, col_to)) = self.swap(from, to);
+
+        // A vertical move moves the piece past the `w - 1` pieces between `from` and `to` in
+        // reading order, and doesn't change the column order. Similarly for horizontal moves.
+        let (order, from, to, axis) = if from.0 == to.0 {
+            (&self.rows, row_from, row_to, 0)
+        } else {
+            (&self.columns, col_from, col_to, 1)
+        };
+
+        let moved = order[to];
+        let passed = &order[from.min(to) + 1..from.max(to)];
+        let smaller = passed.iter().filter(|&&other| other < moved).count();
+
+        // If the piece moved earlier in the order, it is now before the pieces it moved past, so
+        // there is one more inversion for each smaller piece and one fewer for each larger piece.
+        let delta = 2 * smaller as i64 - passed.len() as i64;
+        self.inversions[axis].add(if to < from { delta } else { -delta });
+    }
+
+    /// Undoes [`InversionState::make_move`] with the same `from` and `to`.
+    #[inline]
+    fn undo_move(&mut self, from: (u64, u64), to: (u64, u64)) {
+        self.swap(from, to);
+        self.inversions = self.history.pop().unwrap();
     }
 }
 
@@ -103,69 +136,6 @@ fn count_inversions(values: &[u64]) -> u64 {
         .enumerate()
         .map(|(i, &a)| values[i + 1..].iter().filter(|&&b| a > b).count() as u64)
         .sum()
-}
-
-/// Returns 1, 0, or -1 if `a` is greater than, equal to, or less than `b`.
-fn sign<T>(a: T, b: T) -> i64
-where
-    T: Ord + Copy,
-{
-    match a.cmp(&b) {
-        Ordering::Less => -1,
-        Ordering::Equal => 0,
-        Ordering::Greater => 1,
-    }
-}
-
-impl InversionCount {
-    /// Updates `state` after the piece at `to` in `puzzle` has moved there from `from`.
-    fn update<P>(state: &mut InversionState, puzzle: &P, from: (u64, u64), to: (u64, u64))
-    where
-        P: SlidingPuzzle,
-    {
-        let (w, h) = (state.width, state.height);
-        let piece = puzzle.piece_at_xy(to);
-
-        if from.0 == to.0 {
-            // Vertical move. In reading order, the piece moved past the `w - 1` pieces between
-            // `from` and `to`, which are to the right of the upper cell and to the left of the
-            // lower cell.
-            let x = to.0;
-            let (upper, lower) = (from.1.min(to.1), from.1.max(to.1));
-            let mut delta = 0;
-            for bx in x + 1..w {
-                delta += sign(piece, puzzle.piece_at_xy((bx, upper)));
-            }
-            for bx in 0..x {
-                delta += sign(piece, puzzle.piece_at_xy((bx, lower)));
-            }
-
-            // `delta` is the change if the piece moved up, so it is now before the pieces it
-            // moved past.
-            if to.1 > from.1 {
-                delta = -delta;
-            }
-            state.vertical.add(delta, w - 1);
-        } else {
-            // Horizontal move. Same as above, but in column order.
-            let y = to.1;
-            let (left, right) = (from.0.min(to.0), from.0.max(to.0));
-            let rank = |p: P::Piece| state.column_rank[p.to_usize().unwrap()];
-            let piece_rank = rank(piece);
-            let mut delta = 0;
-            for by in y + 1..h {
-                delta += sign(piece_rank, rank(puzzle.piece_at_xy((left, by))));
-            }
-            for by in 0..y {
-                delta += sign(piece_rank, rank(puzzle.piece_at_xy((right, by))));
-            }
-
-            if to.0 > from.0 {
-                delta = -delta;
-            }
-            state.horizontal.add(delta, h - 1);
-        }
-    }
 }
 
 impl<P> Heuristic<P, RowGrids, Stm> for InversionCount
@@ -180,49 +150,59 @@ where
 
     fn init(&self, puzzle: &P) -> InversionState {
         let (w, h) = puzzle.size().into();
-
-        let mut column_rank = vec![0; puzzle.area() as usize];
-        for p in 0..puzzle.area() {
-            let piece = puzzle.piece_at(p);
-            let (sx, sy) = puzzle.solved_pos_xy(piece);
-            column_rank[piece.to_usize().unwrap()] = sx * h + sy;
-        }
-
-        let gap = puzzle.gap_position_xy();
-        let reading_order = (0..h)
+        let solved = |(x, y)| puzzle.solved_pos_xy(puzzle.piece_at_xy((x, y)));
+        let rows = (0..h)
             .flat_map(|y| (0..w).map(move |x| (x, y)))
-            .filter(|&pos| pos != gap)
-            .map(|pos| puzzle.piece_at_xy(pos).to_u64().unwrap())
+            .map(|pos| {
+                let (sx, sy) = solved(pos);
+                sx + sy * w
+            })
             .collect::<Vec<_>>();
-        let column_order = (0..w)
+        let columns = (0..w)
             .flat_map(|x| (0..h).map(move |y| (x, y)))
-            .filter(|&pos| pos != gap)
-            .map(|pos| column_rank[puzzle.piece_at_xy(pos).to_usize().unwrap()])
+            .map(|pos| {
+                let (sx, sy) = solved(pos);
+                sx * h + sy
+            })
             .collect::<Vec<_>>();
+
+        // The solved position of the gap is the last cell in both orders.
+        let gap = puzzle.num_pieces();
+        let without_gap = |order: &[u64]| {
+            order
+                .iter()
+                .copied()
+                .filter(|&p| p != gap)
+                .collect::<Vec<_>>()
+        };
+        let inversions = [
+            Inversions::new(count_inversions(&without_gap(&rows)), w - 1),
+            Inversions::new(count_inversions(&without_gap(&columns)), h - 1),
+        ];
 
         InversionState {
             width: w,
             height: h,
-            column_rank,
-            vertical: Inversions::new(count_inversions(&reading_order), w - 1),
-            horizontal: Inversions::new(count_inversions(&column_order), h - 1),
+            rows,
+            columns,
+            inversions,
+            history: Vec::new(),
         }
     }
 
     fn bound_after_move(
         &self,
         state: &mut InversionState,
-        puzzle: &P,
+        _: &P,
         from: (u64, u64),
         to: (u64, u64),
     ) -> u64 {
-        Self::update(state, puzzle, from, to);
+        state.make_move(from, to);
         state.bound()
     }
 
-    fn undo_move(&self, state: &mut InversionState, puzzle: &P, from: (u64, u64), to: (u64, u64)) {
-        // The piece is back at `from`, having moved there from `to`.
-        Self::update(state, puzzle, to, from);
+    fn undo_move(&self, state: &mut InversionState, _: &P, from: (u64, u64), to: (u64, u64)) {
+        state.undo_move(from, to);
     }
 }
 
@@ -249,7 +229,7 @@ mod tests {
                         continue;
                     };
                     let mut inversions = Inversions::new(n, d);
-                    inversions.add(delta, d);
+                    inversions.add(delta);
                     let expected = Inversions::new(m, d);
                     assert_eq!(
                         (inversions.moves, inversions.slack),
