@@ -22,7 +22,7 @@ fn bench_solve_stm(c: &mut Criterion) {
         .build()
         .unwrap();
 
-    c.bench_function("solve", move |b| {
+    c.bench_function("solver/projection/solve_stm", move |b| {
         b.iter(|| {
             let solution = solver.solve(black_box(&puzzle)).unwrap();
             black_box(solution.len_stm());
@@ -39,7 +39,7 @@ fn bench_solve_mtm(c: &mut Criterion) {
         .build()
         .unwrap();
 
-    c.bench_function("solve", move |b| {
+    c.bench_function("solver/projection/solve_mtm", move |b| {
         b.iter(|| {
             let solution = solver.solve(black_box(&puzzle)).unwrap();
             black_box(solution.len_mtm());
