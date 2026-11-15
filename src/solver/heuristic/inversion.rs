@@ -25,7 +25,35 @@ use crate::{
 /// `ceil(v / (w - 1))` and `dy` and has the same parity as `dy`. The same applies to horizontal
 /// moves, using the distance of the gap from its solved column.
 ///
-/// The bound is the sum of these lower bounds on the numbers of vertical and horizontal moves.
+/// The bound is the sum of these lower bounds on the numbers of vertical and horizontal moves:
+///
+/// ```text
+/// f(ceil(v / (w - 1)), dy) + f(ceil(c / (h - 1)), dx)
+/// ```
+///
+/// where `f(m, d)` is the smallest number that is at least `m` and `d` and has the same parity as
+/// `d`. If `w` is 1, vertical moves don't change the reading order, so `v` is 0 for every
+/// solvable puzzle and `ceil(v / (w - 1))` is taken to be 0. Similarly if `h` is 1.
+///
+/// # Example
+///
+/// ```
+/// use std::str::FromStr as _;
+///
+/// use slidy::{
+///     algorithm::metric::Stm,
+///     puzzle::{label::label::RowGrids, puzzle::Puzzle},
+///     solver::heuristic::{Heuristic, inversion::InversionCount},
+/// };
+///
+/// // There are no inversions in reading order, but the gap is 3 rows from its solved row, so at
+/// // least 3 vertical moves are needed. There are 36 inversions in column order, which need at
+/// // least 12 horizontal moves, but the gap is 3 columns from its solved column, so an odd number
+/// // of horizontal moves is needed.
+/// let puzzle = Puzzle::from_str("0 1 2 3/4 5 6 7/8 9 10 11/12 13 14 15").unwrap();
+/// let bound = Heuristic::<_, RowGrids, Stm>::bound(&InversionCount, &puzzle);
+/// assert_eq!(bound, 3 + 13);
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct InversionCount;
 
