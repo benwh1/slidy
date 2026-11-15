@@ -1,6 +1,9 @@
 use crate::{
     algorithm::metric::Mtm,
-    puzzle::small::{Puzzle, sealed::SmallPuzzle},
+    puzzle::{
+        sliding_puzzle::SlidingPuzzle as _,
+        small::{Puzzle, sealed::SmallPuzzle},
+    },
     solver::{config::PdbConfig, small::pdb::Pdb},
 };
 
@@ -37,7 +40,24 @@ where
     /// Depending on the size of the puzzle, this may take several minutes to run.
     #[must_use]
     pub fn new(config: &PdbConfig) -> Self {
-        Self::build::<true>(config)
+        Self::build_mtm(config)
+    }
+
+    /// Returns the optimal solution length of the state at `index`.
+    #[must_use]
+    pub fn get(&self, index: usize) -> u8 {
+        self.pdb[index]
+    }
+
+    /// Returns the optimal solution length of the state at `index`, without bounds checking.
+    ///
+    /// # Safety
+    ///
+    /// `index` must be a valid index into the PDB.
+    #[must_use]
+    pub unsafe fn get_unchecked(&self, index: usize) -> u8 {
+        // SAFETY: The caller guarantees that `index` is in bounds.
+        unsafe { *self.pdb.get_unchecked(index) }
     }
 
     /// Initializes a [`Pdb`] from a boxed byte slice containing the pre-computed data.
@@ -58,8 +78,13 @@ where
     /// [`xxh3`]: xxhash_rust::xxh3
     #[must_use]
     pub unsafe fn try_from_bytes(bytes: Box<[u8]>) -> Option<Self> {
+        let len = Puzzle::<W, H>::new()
+            .size()
+            .num_states()
+            .and_then(|n| n.try_into().ok())?;
+
         // SAFETY: The caller's requirements are the same.
-        unsafe { Self::try_from_bytes_with_hashes(bytes, &HASHES) }
+        unsafe { Self::try_from_bytes_with_hashes(bytes, len, &HASHES) }
     }
 }
 

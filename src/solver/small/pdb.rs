@@ -1,5 +1,13 @@
-//! Defines the [`Pdb`] struct, which is a pattern database containing the optimal solution length
-//! of every state of a small `WxH` puzzle.
+//! Defines the [`Pdb`] struct, which is a pattern database containing enough information to find
+//! the optimal solution length of every state of a small `WxH` puzzle.
+//!
+//! In [`Stm`], each state has one bit, `(d >> 1) & 1` where `d` is its optimal solution length.
+//! The parity of `d` is the parity of the distance of the gap from the bottom right corner, so
+//! together these give `d mod 4`. Every move changes `d` by exactly 1, so the bit is enough to
+//! tell whether a move gets closer to the solved state or further away, and the exact length can
+//! be found by following moves that get closer until the puzzle is solved.
+//!
+//! In [`Mtm`], each state has one byte containing `d`.
 //!
 //! This is used by [`Solver`] to efficiently find optimal solutions.
 //!
@@ -71,33 +79,15 @@ impl<const W: usize, const H: usize, const N: usize, Metric> Pdb<W, H, N, Metric
             phantom_metric: PhantomData,
         }
     }
-
-    /// Returns the entry for the state at `index`.
-    #[must_use]
-    pub fn get(&self, index: usize) -> u8 {
-        self.pdb[index]
-    }
-
-    /// Returns the entry for the state at `index`, without bounds checking.
-    ///
-    /// # Safety
-    ///
-    /// `index` must be a valid index into the PDB.
-    #[must_use]
-    pub unsafe fn get_unchecked(&self, index: usize) -> u8 {
-        // SAFETY: The caller guarantees that `index` is in bounds.
-        unsafe { *self.pdb.get_unchecked(index) }
-    }
 }
 
 impl<const W: usize, const H: usize, const N: usize, Metric> Pdb<W, H, N, Metric>
 where
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
-    /// Builds a pattern database by breadth first search from the solved state. If `MULTI_TILE`
-    /// is true, a single move can move any number of pieces in one direction ([`Mtm`]);
-    /// otherwise it moves one piece ([`Stm`]).
-    pub(super) fn build<const MULTI_TILE: bool>(config: &PdbConfig) -> Self {
+    /// Builds a pattern database of the optimal solution lengths in [`Mtm`], one byte per state,
+    /// by breadth first search from the solved state.
+    pub(super) fn build_mtm(config: &PdbConfig) -> Self {
         let puzzle = Puzzle::<W, H>::new();
         let num_states = puzzle.size().num_states().unwrap().try_into().unwrap();
 
@@ -151,10 +141,6 @@ where
                             next.push(puzzle);
                             next_index.push(run_index);
                         }
-
-                        if !MULTI_TILE {
-                            break;
-                        }
                     }
                 }
             }
@@ -179,17 +165,18 @@ where
         }
     }
 
-    /// Checks that `bytes` has the expected length, and that its hash is the one given for this
-    /// size in `hashes`.
+    /// Checks that `bytes` has length `len`, and that its hash is the one given for this size in
+    /// `hashes`.
     ///
     /// # Safety
     ///
     /// See [`Pdb::try_from_bytes`].
     pub(super) unsafe fn try_from_bytes_with_hashes(
         bytes: Box<[u8]>,
+        len: usize,
         hashes: &[(usize, usize, u64)],
     ) -> Option<Self> {
-        if Some(bytes.len() as u128) != Puzzle::<W, H>::new().size().num_states() {
+        if bytes.len() != len {
             return None;
         }
 

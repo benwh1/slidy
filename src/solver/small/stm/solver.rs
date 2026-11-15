@@ -11,10 +11,18 @@ use crate::{
     solver::{
         config::{PdbConfig, SolverConfig},
         search::iterative_deepening,
-        small::{indexing, pdb::Pdb, solver::Solver},
+        small::{coord::Coord, pdb::Pdb, solver::Solver},
         solver::{Solver as SolverT, SolverError},
     },
 };
+
+/// The directions to search, in order.
+const DIRECTIONS: [Direction; 4] = [
+    Direction::Up,
+    Direction::Left,
+    Direction::Down,
+    Direction::Right,
+];
 
 impl<const W: usize, const H: usize, const N: usize> Default for Solver<W, H, N, Stm>
 where
@@ -37,48 +45,114 @@ where
         Self::with_pdb(Pdb::<_, _, _, Stm>::new(config))
     }
 
+    /// Returns `(d >> 1) & 1`, where `d` is the optimal solution length of the state at `index`.
+    #[inline(always)]
+    fn bit(&self, index: u64) -> u8 {
+        // SAFETY: `index` is always the index of a solvable state, computed by `Coord`, so it is
+        // less than `N! / 2`.
+        unsafe { self.pdb.bit_unchecked(index) }
+    }
+
+    /// Returns the index of the state reached by moving in direction `dir` from the state with
+    /// index `index`, or `None` if the move is not possible.
+    #[inline(always)]
+    fn child_index(puzzle: &Puzzle<W, H>, index: u64, dir: Direction) -> Option<u64> {
+        let gap = puzzle.gap();
+        let g = gap as usize;
+        match dir {
+            Direction::Up => (g + W < N)
+                .then(|| index.wrapping_add(Coord::<W, H>::delta_down(puzzle.pieces(), gap))),
+            Direction::Left => (g % W + 1 < W).then_some(index + 1),
+            Direction::Down => {
+                (g >= W).then(|| index.wrapping_add(Coord::<W, H>::delta_up(puzzle.pieces(), gap)))
+            }
+            Direction::Right => (!g.is_multiple_of(W)).then(|| index - 1),
+        }
+    }
+
+    /// Returns the optimal solution length of `puzzle`, which has index `index`.
+    fn distance(&self, mut puzzle: Puzzle<W, H>, mut index: u64) -> u64 {
+        // The solution length mod 4: the parity is the parity of the distance of the gap from the
+        // bottom right corner, and the second bit is in the PDB.
+        let (gx, gy) = puzzle.gap_position_xy();
+        let mut d4 = ((W as u64 - 1 - gx) + (H as u64 - 1 - gy)) % 2 + 2 * self.bit(index) as u64;
+        let mut distance = 0;
+
+        while index != N as u64 - 1 {
+            // Exactly the neighbours closer to solved have this bit.
+            let closer = (d4.wrapping_sub(1) >> 1) as u8 & 1;
+
+            for dir in DIRECTIONS {
+                if let Some(child) = Self::child_index(&puzzle, index, dir)
+                    && self.bit(child) == closer
+                {
+                    puzzle.move_dir(dir);
+                    index = child;
+                    break;
+                }
+            }
+
+            d4 = (d4 + 3) % 4;
+            distance += 1;
+        }
+
+        distance
+    }
+
+    /// Finds solutions of length `depth` of `puzzle`, which has index `index` and optimal solution
+    /// length `distance`.
     fn dfs(
         &mut self,
         depth: u64,
+        distance: u64,
+        index: u64,
         inverse_last_move: Option<Direction>,
-        mut puzzle: Puzzle<W, H>,
+        puzzle: Puzzle<W, H>,
     ) -> ControlFlow<()> {
-        let coord = indexing::encode(puzzle.piece_array());
-
-        // SAFETY: `encode` produces integers from 0 to k-1 where k is the size of the PDB, so the
-        // index is always in bounds.
-        let heuristic = unsafe { self.pdb.get_unchecked(coord as usize) } as u64;
-        if heuristic > depth {
-            return ControlFlow::Continue(());
-        }
-
         if depth == 0 {
             return self.search.record_solution();
         }
 
-        let original_puzzle = puzzle;
+        // The bit of the children that are closer to solved.
+        let closer = (distance.wrapping_sub(1) >> 1) as u8 & 1;
 
-        for dir in [
-            Direction::Up,
-            Direction::Left,
-            Direction::Down,
-            Direction::Right,
-        ] {
+        for dir in DIRECTIONS {
             if inverse_last_move == Some(dir) {
                 continue;
             }
 
-            puzzle = original_puzzle;
+            let Some(child) = Self::child_index(&puzzle, index, dir) else {
+                continue;
+            };
 
-            if puzzle.try_move_dir(dir) {
-                self.search.stack.push(dir);
-
-                if self.dfs(depth - 1, Some(dir.inverse()), puzzle).is_break() {
-                    return ControlFlow::Break(());
-                }
-
-                self.search.stack.pop();
+            let child_distance = if distance > 0 && self.bit(child) == closer {
+                distance - 1
+            } else {
+                distance + 1
+            };
+            if child_distance > depth - 1 {
+                continue;
             }
+
+            let mut child_puzzle = puzzle;
+            child_puzzle.move_dir(dir);
+
+            self.search.stack.push(dir);
+
+            if self
+                .dfs(
+                    depth - 1,
+                    child_distance,
+                    child,
+                    Some(dir.inverse()),
+                    child_puzzle,
+                )
+                .is_break()
+            {
+                return ControlFlow::Break(());
+            }
+
+            self.search.stack.pop();
         }
 
         ControlFlow::Continue(())
@@ -121,15 +195,20 @@ where
             return Err(SolverError::Unsolvable);
         }
 
-        let coord = indexing::encode(puzzle.piece_array());
-        let hval = self.pdb.get(coord as usize) as u64;
+        let index = Coord::<W, H>::index(puzzle.pieces(), puzzle.gap());
+        let distance = self.distance(puzzle, index);
 
         iterative_deepening::<Stm, _, _>(
             self,
             |s| &mut s.search,
             config,
-            hval,
-            |s, depth| s.dfs(depth, None, puzzle),
+            distance,
+            |s, depth| {
+                if distance > depth {
+                    return ControlFlow::Continue(());
+                }
+                s.dfs(depth, distance, index, None, puzzle)
+            },
         );
 
         Ok(())
