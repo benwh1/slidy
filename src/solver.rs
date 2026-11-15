@@ -14,6 +14,8 @@ pub mod small;
 pub mod solver;
 mod stack;
 pub mod statistics;
+#[cfg(test)]
+mod test_util;
 
 use crate::{
     algorithm::metric::{Mtm, Stm},

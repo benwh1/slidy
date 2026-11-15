@@ -141,7 +141,10 @@ mod tests {
     use super::*;
     use crate::{
         puzzle::{
-            label::label::{Checkerboard, RowGrids, Rows, Trivial},
+            label::label::{
+                Checkerboard, ConcentricRectangles, Diagonals, Fringe, LastTwoRows, RowGrids, Rows,
+                SplitFringe, SplitLastTwoRows, SplitSquareFringe, SquareFringe, Trivial,
+            },
             puzzle::Puzzle,
             scrambler::{RandomState, Scrambler as _},
             size::Size,
@@ -149,6 +152,7 @@ mod tests {
         solver::{
             config::PdbConfig,
             projection::{builder::SolverBuilderError, pdb::Pdb},
+            test_util::{self, PerSize},
         },
     };
 
@@ -301,5 +305,82 @@ mod tests {
             solver.solve_collect(&unsolvable, config),
             Err(SolverError::Unsolvable)
         );
+    }
+
+    /// Checks the lengths in [`OPTIMAL`] for `target`, which has index `label`, pruning with
+    /// `target` and with [`Trivial`].
+    ///
+    /// [`OPTIMAL`]: test_util::OPTIMAL
+    fn check_optimal<T>(target: T, label: usize)
+    where
+        T: Label + SolvedState + Solvable + Default + Copy,
+    {
+        let mut solvers = PerSize::new(|size| {
+            Solver::<Puzzle, T, T, Mtm>::builder()
+                .size(size)
+                .target(target)
+                .prune_target(target)
+                .build()
+                .unwrap()
+        });
+        test_util::check_optimal::<Mtm, _>(&mut solvers, &target, label);
+
+        let mut solvers = PerSize::new(|size| {
+            Solver::<Puzzle, T, Trivial, Mtm>::builder()
+                .size(size)
+                .target(target)
+                .build()
+                .unwrap()
+        });
+        test_util::check_optimal::<Mtm, _>(&mut solvers, &target, label);
+    }
+
+    #[test]
+    fn test_optimal() {
+        check_optimal(Trivial, test_util::TRIVIAL);
+        check_optimal(RowGrids, test_util::ROW_GRIDS);
+        check_optimal(Rows, test_util::ROWS);
+        check_optimal(Fringe, test_util::FRINGE);
+        check_optimal(SquareFringe, test_util::SQUARE_FRINGE);
+        check_optimal(SplitFringe, test_util::SPLIT_FRINGE);
+        check_optimal(SplitSquareFringe, test_util::SPLIT_SQUARE_FRINGE);
+        check_optimal(Diagonals, test_util::DIAGONALS);
+        check_optimal(LastTwoRows, test_util::LAST_TWO_ROWS);
+        check_optimal(SplitLastTwoRows, test_util::SPLIT_LAST_TWO_ROWS);
+        check_optimal(ConcentricRectangles, test_util::CONCENTRIC_RECTANGLES);
+        check_optimal(Checkerboard, test_util::CHECKERBOARD);
+    }
+
+    /// Checks [`test_util::check_configs`] for `target` with the solutions in `table`, pruning
+    /// with `target`, and with [`Trivial`] for solutions of length at most 19.
+    fn check_configs<T>(target: T, table: test_util::Solutions)
+    where
+        T: Label + SolvedState + Solvable + Default + Copy,
+    {
+        let mut solvers = PerSize::new(|size| {
+            Solver::<Puzzle, T, T, Mtm>::builder()
+                .size(size)
+                .target(target)
+                .prune_target(target)
+                .build()
+                .unwrap()
+        });
+        test_util::check_configs::<Mtm>(&mut solvers, table, u64::MAX);
+
+        let mut solvers = PerSize::new(|size| {
+            Solver::<Puzzle, T, Trivial, Mtm>::builder()
+                .size(size)
+                .target(target)
+                .build()
+                .unwrap()
+        });
+        test_util::check_configs::<Mtm>(&mut solvers, table, 19);
+    }
+
+    #[test]
+    fn test_configs() {
+        check_configs(RowGrids, test_util::ROW_GRIDS_MTM);
+        check_configs(Rows, test_util::ROWS_MTM);
+        check_configs(Trivial, test_util::TRIVIAL_MTM);
     }
 }
