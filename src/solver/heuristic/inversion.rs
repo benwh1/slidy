@@ -19,7 +19,13 @@ use crate::{
 /// comparing them by their solved positions in column order, at least `ceil(c / (h - 1))`
 /// horizontal moves are needed, where `c` is the number of inversions in column order.
 ///
-/// The bound is the sum of these two numbers of moves.
+/// Each vertical move moves the gap up or down by one row, so the number of vertical moves is
+/// also at least the distance `dy` of the gap from its solved row, and has the same parity as
+/// `dy`. So the number of vertical moves is at least the smallest number that is at least
+/// `ceil(v / (w - 1))` and `dy` and has the same parity as `dy`. The same applies to horizontal
+/// moves, using the distance of the gap from its solved column.
+///
+/// The bound is the sum of these lower bounds on the numbers of vertical and horizontal moves.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct InversionCount;
 
@@ -80,9 +86,20 @@ pub struct InversionState {
 }
 
 impl InversionState {
+    /// Returns the bound when the gap is at `(gx, gy)`.
     #[inline]
-    fn bound(&self) -> u64 {
-        self.inversions[0].moves + self.inversions[1].moves
+    fn bound(&self, (gx, gy): (u64, u64)) -> u64 {
+        /// The smallest number that is at least `moves` and `gap_distance`, and has the same
+        /// parity as `gap_distance`.
+        fn moves_with_gap_distance(moves: u64, gap_distance: u64) -> u64 {
+            let moves = moves.max(gap_distance);
+            moves + ((moves ^ gap_distance) & 1)
+        }
+
+        // The gap is solved in the bottom right corner.
+        let vertical = moves_with_gap_distance(self.inversions[0].moves, self.height - 1 - gy);
+        let horizontal = moves_with_gap_distance(self.inversions[1].moves, self.width - 1 - gx);
+        vertical + horizontal
     }
 
     /// Swaps the cells at `a` and `b` in `rows` and `columns`, and returns the indices of `a` and
@@ -145,7 +162,7 @@ where
     type State = InversionState;
 
     fn bound(&self, puzzle: &P) -> u64 {
-        Heuristic::<P, RowGrids, Stm>::init(self, puzzle).bound()
+        Heuristic::<P, RowGrids, Stm>::init(self, puzzle).bound(puzzle.gap_position_xy())
     }
 
     fn init(&self, puzzle: &P) -> InversionState {
@@ -198,7 +215,7 @@ where
         to: (u64, u64),
     ) -> u64 {
         state.make_move(from, to);
-        state.bound()
+        state.bound(from)
     }
 
     fn undo_move(&self, state: &mut InversionState, _: &P, from: (u64, u64), to: (u64, u64)) {
@@ -251,7 +268,17 @@ mod tests {
             ("1 2 3/0 5 6/4 7 8", 3),
             // 24 inversions in reading order and 22 in column order.
             ("8 6 7/2 5 4/3 0 1", 23),
+            // 0 inversions in reading order, but the gap needs 2 vertical moves. 12 inversions in
+            // column order.
+            ("0 1 2/3 4 5/6 7 8", 8),
             ("1 2 3 4/5 6 7 8/9 10 11 12/13 14 15 0", 0),
+            // 0 inversions in reading order, but the gap needs 3 vertical moves. 36 inversions in
+            // column order, which need 12 horizontal moves, but the gap needs an odd number.
+            ("0 1 2 3/4 5 6 7/8 9 10 11/12 13 14 15", 16),
+            // 3 inversions in reading order, which need 1 vertical move, but the gap needs an even
+            // number. 18 inversions in column order, which need 6 horizontal moves, but the gap
+            // needs an odd number.
+            ("1 2 3 4/5 6 7 8/9 10 11 12/0 15 14 13", 9),
         ];
         for (state, expected) in cases {
             let puzzle = Puzzle::from_str(state).unwrap();
@@ -262,13 +289,19 @@ mod tests {
     #[test]
     fn test_rotated_square() {
         // Rotating the solved state of an `n x n` puzzle by 180 degrees reverses the pieces, so
-        // there are `(n^2 - 1)(n^2 - 2) / 2` inversions in each direction.
+        // there are `(n^2 - 1)(n^2 - 2) / 2` inversions in each direction, which need at least
+        // `(n + 1)(n^2 - 2) / 2` moves in each direction. The gap needs to move `n - 1` rows and
+        // columns, so the number of moves in each direction has the same parity as `n - 1`. This
+        // adds 1 in each direction when `n % 4 == 1`.
         for n in 2..=10 {
             let size = Size::new(n, n).unwrap();
             let pieces = (0..n * n).rev().map(|i| (i + 1) % (n * n)).collect();
             let puzzle = Puzzle::with_pieces(pieces, size).unwrap();
             assert_eq!(puzzle.gap_position_xy(), (0, 0));
-            assert_eq!(bound(&puzzle), n * n * n + n * n - 2 * n - 2, "n = {n}");
+
+            let base = n * n * n + n * n - 2 * n - 2;
+            let expected = if n % 4 == 1 { base + 2 } else { base };
+            assert_eq!(bound(&puzzle), expected, "n = {n}");
         }
     }
 

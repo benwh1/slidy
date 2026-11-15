@@ -23,13 +23,13 @@ use crate::solver::heuristic::Heuristic;
 ///
 /// let heuristic = Max((ManhattanDistance(RowGrids), InversionCount));
 ///
-/// // Manhattan distance 24, inversion count 12.
+/// // Manhattan distance 24, inversion count 16.
 /// let puzzle = Puzzle::from_str("0 1 2 3/4 5 6 7/8 9 10 11/12 13 14 15").unwrap();
 /// assert_eq!(heuristic.bound(&puzzle), 24);
 ///
-/// // Manhattan distance 5, inversion count 7.
+/// // Manhattan distance 5, inversion count 9.
 /// let puzzle = Puzzle::from_str("1 2 3 4/5 6 7 8/9 10 11 12/0 15 14 13").unwrap();
-/// assert_eq!(heuristic.bound(&puzzle), 7);
+/// assert_eq!(heuristic.bound(&puzzle), 9);
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Max<H>(pub H);
