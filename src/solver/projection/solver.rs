@@ -34,6 +34,10 @@ pub struct Solver<P, Target, PruneTarget, Metric> {
     prune_target: PruneTarget,
     pub(super) prune_target_solved_index: u64,
     pub(super) moves: Moves,
+    /// The solved state projected onto `target`.
+    target_solved: ProjectedPuzzle<LARGE>,
+    /// The puzzle being solved projected onto `target`.
+    target_start: ProjectedPuzzle<LARGE>,
     phantom_p: PhantomData<P>,
     phantom_metric: PhantomData<Metric>,
 }
@@ -61,6 +65,10 @@ where
         let solved_projected =
             ProjectedPuzzle::<LARGE>::new(&prune_target_solved_state, size.num_pieces() as u8);
         let prune_target_solved_index = solved_projected.encode(&tally);
+        let target_solved = ProjectedPuzzle::new(
+            &compute_solved_state(&target, size),
+            size.num_pieces() as u8,
+        );
 
         Self {
             pdb,
@@ -69,6 +77,8 @@ where
             search: Search::new(),
             size,
             prune_target_solved_index,
+            target_solved,
+            target_start: target_solved,
             target,
             prune_target,
             phantom_p: PhantomData,
@@ -81,7 +91,10 @@ where
         &self.pdb
     }
 
-    pub(super) fn initial_projected<const N: usize>(&self, puzzle: &P) -> ProjectedPuzzle<N> {
+    /// Returns `puzzle` projected onto `prune_target`, and remembers it projected onto `target`
+    /// for [`Self::check_solution`].
+    pub(super) fn initial_projected<const N: usize>(&mut self, puzzle: &P) -> ProjectedPuzzle<N> {
+        self.target_start = project_puzzle::<LARGE, P, Target>(puzzle, &self.target);
         project_puzzle::<N, P, PruneTarget>(puzzle, &self.prune_target)
     }
 
@@ -93,11 +106,14 @@ where
         u64::from(unsafe { self.pdb.get_unchecked(index as usize) })
     }
 
-    pub(super) fn check_solution(&self, puzzle: &P) -> bool {
-        let mut p = puzzle.clone();
+    /// Returns whether the moves on the stack solve the puzzle passed to
+    /// [`Self::initial_projected`] into `target`.
+    pub(super) fn check_solution(&self) -> bool {
+        // `target` is solved exactly when the pieces in each cell have the labels of the cell.
+        let mut state = self.target_start;
         for dir in self.search.stack.iter() {
-            p.try_move_dir(dir);
+            state = self.moves.apply_dir(&state, dir);
         }
-        self.target.is_solved(&p)
+        state == self.target_solved
     }
 }

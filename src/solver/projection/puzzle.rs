@@ -20,7 +20,7 @@ pub(super) const DIRECTIONS: [Direction; 4] = [
 
 /// A projected puzzle state. `N` is the length of the `pieces` buffer (16 for projections of up
 /// to 16 cells, 32 otherwise).
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct ProjectedPuzzle<const N: usize> {
     /// The value in each cell, with 0 for the gap and the cells after the last.
     pieces: [u8; N],
@@ -90,6 +90,21 @@ impl Moves {
     #[inline(always)]
     pub(super) fn possible(&self, gap: u8) -> u8 {
         self.table[gap as usize].1
+    }
+
+    /// Returns the state reached by moving in direction `dir` from `state`. The move must be
+    /// possible.
+    pub(super) fn apply_dir<const N: usize>(
+        &self,
+        state: &ProjectedPuzzle<N>,
+        dir: Direction,
+    ) -> ProjectedPuzzle<N> {
+        let d = DIRECTIONS.iter().position(|&x| x == dir).unwrap();
+        let cell = self.table[state.gap as usize].0[d];
+        let mut child = *state;
+        child.pieces.swap(state.gap as usize, cell as usize);
+        child.gap = cell;
+        child
     }
 
     /// Returns the state reached by moving in direction `DIRECTIONS[d]` from `state`, which has

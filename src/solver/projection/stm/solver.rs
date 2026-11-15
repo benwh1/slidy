@@ -30,7 +30,6 @@ where
     /// where `moves` is the set of moves to try. `depth` must be at least 1.
     fn dfs<const N: usize>(
         &mut self,
-        puzzle: &P,
         depth: u64,
         state: ProjectedPuzzle<N>,
         index: u64,
@@ -47,7 +46,7 @@ where
             if depth == 1 {
                 if child == self.prune_target_solved_index {
                     self.search.stack.push(DIRECTIONS[d as usize]);
-                    if self.check_solution(puzzle) && self.search.record_solution().is_break() {
+                    if self.check_solution() && self.search.record_solution().is_break() {
                         return ControlFlow::Break(());
                     }
                     self.search.stack.pop();
@@ -62,7 +61,7 @@ where
             let child_moves = self.moves.possible(child_state.gap()) & !(1 << (d ^ 2));
             self.search.stack.push(DIRECTIONS[d as usize]);
             if self
-                .dfs(puzzle, depth - 1, child_state, child, child_moves)
+                .dfs(depth - 1, child_state, child, child_moves)
                 .is_break()
             {
                 return ControlFlow::Break(());
@@ -106,12 +105,12 @@ where
             hval,
             |s, depth| {
                 if depth == 0 {
-                    if index == s.prune_target_solved_index && s.check_solution(puzzle) {
+                    if index == s.prune_target_solved_index && s.check_solution() {
                         return s.search.record_solution();
                     }
                     return ControlFlow::Continue(());
                 }
-                s.dfs::<N>(puzzle, depth, projected, index, moves)
+                s.dfs::<N>(depth, projected, index, moves)
             },
         );
 
