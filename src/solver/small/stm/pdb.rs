@@ -57,10 +57,8 @@ struct Reached {
 /// Masks of the states in each word of the bitmaps with certain properties, which depend only on
 /// the gap.
 struct Masks {
-    /// The states (with gap less than `N`).
-    valid: u64,
-    /// The states with odd depth.
-    odd: u64,
+    /// `parity[k]` is the states whose depth has parity `k`.
+    parity: [u64; 2],
     /// The states where the gap can move left (decreasing the index by 1).
     left: u64,
     /// The states where the gap can move right (increasing the index by 1).
@@ -83,8 +81,7 @@ impl<const W: usize, const H: usize> Builder<W, H> {
         let words = Padded::<W, H>::BLOCKS.div_ceil(Self::LANES) as usize;
 
         let mut masks = Masks {
-            valid: 0,
-            odd: 0,
+            parity: [0; 2],
             left: 0,
             right: 0,
             up: 0,
@@ -95,11 +92,7 @@ impl<const W: usize, const H: usize> Builder<W, H> {
             for gap in 0..Self::N {
                 let bit = 1 << (16 * lane + gap as u64);
                 let (x, y) = (gap % W, gap / W);
-                let dist = (W - 1 - x) + (H - 1 - y);
-                masks.valid |= bit;
-                if dist % 2 == 1 {
-                    masks.odd |= bit;
-                }
+                masks.parity[((W - 1 - x) + (H - 1 - y)) % 2] |= bit;
                 if x > 0 {
                     masks.left |= bit;
                 }
@@ -118,76 +111,77 @@ impl<const W: usize, const H: usize> Builder<W, H> {
             }
         }
 
-        Self {
+        let mut out = Self {
             reached: vec![Reached::default(); words],
             done: vec![0; words],
             bits: vec![0; words],
             masks,
-        }
-    }
-
-    /// The mask of states in word `i` with the parity of depth `depth`.
-    #[inline(always)]
-    fn parity_mask(&self, i: usize, depth: u8) -> u64 {
-        let masks = &self.masks;
-        let parity = if depth % 2 == 1 {
-            masks.odd
-        } else {
-            masks.valid & !masks.odd
         };
 
-        // Lanes past the last block are unused.
-        let lanes = Padded::<W, H>::BLOCKS - i as u64 * Self::LANES;
-        if lanes < Self::LANES {
-            parity & ((1 << (16 * lanes)) - 1)
-        } else {
-            parity
+        // Mark the lanes past the last block as reached and expanded, so that they're never
+        // treated as states.
+        let lanes = Padded::<W, H>::BLOCKS % Self::LANES;
+        if lanes != 0 {
+            let unused = u64::MAX << (16 * lanes);
+            out.reached[words - 1].any = unused;
+            out.done[words - 1] = unused;
         }
+
+        out
+    }
+
+    /// Returns the word of [`Self::reached`] containing the state at `index`, and the state's bit
+    /// in it.
+    #[inline(always)]
+    fn reached_bit(&mut self, index: u64) -> (&mut Reached, u64) {
+        let word = (index / 64) as usize;
+        debug_assert!(word < self.reached.len());
+        // SAFETY: `index` is the index of a state, so it's in bounds.
+        let r = unsafe { self.reached.get_unchecked_mut(word) };
+        (r, 1 << (index % 64))
     }
 
     /// Marks the state at `index` as reached, returning whether it was not already reached.
     #[inline(always)]
     fn claim(&mut self, index: u64) -> bool {
-        let (word, mask) = ((index / 64) as usize, 1 << (index % 64));
-        debug_assert!(word < self.reached.len());
-        // SAFETY: `index` is the index of a state, so it's in bounds.
-        let r = unsafe { self.reached.get_unchecked_mut(word) };
-        let new = r.any & mask == 0;
-        r.any |= mask;
+        let (r, bit) = self.reached_bit(index);
+        let new = r.any & bit == 0;
+        r.any |= bit;
         new
     }
 
     /// Like [`Self::claim`], for a state reached by a vertical move.
     #[inline(always)]
     fn claim_vertically(&mut self, index: u64) -> bool {
-        let (word, mask) = ((index / 64) as usize, 1 << (index % 64));
-        debug_assert!(word < self.reached.len());
-        // SAFETY: `index` is the index of a state, so it's in bounds.
-        let r = unsafe { self.reached.get_unchecked_mut(word) };
-        let new = r.any & mask == 0;
-        r.vertically |= mask & !r.any;
-        r.any |= mask;
+        let (r, bit) = self.reached_bit(index);
+        r.vertically |= bit & !r.any;
+        let new = r.any & bit == 0;
+        r.any |= bit;
         new
     }
 
     /// Whether the state at `index` has been reached.
     #[inline(always)]
-    fn is_visited(&self, index: u64) -> bool {
-        let word = (index / 64) as usize;
-        debug_assert!(word < self.reached.len());
-        // SAFETY: `index` is the index of a state, so it's in bounds.
-        let r = unsafe { self.reached.get_unchecked(word) };
-        (r.any >> (index % 64)) & 1 == 1
+    fn is_visited(&mut self, index: u64) -> bool {
+        let (r, bit) = self.reached_bit(index);
+        r.any & bit != 0
+    }
+
+    /// Marks `states` in word `i`, which are at depth `depth`, as expanded.
+    #[inline(always)]
+    fn mark_expanded(&mut self, i: usize, states: u64, depth: u8) {
+        self.done[i] |= states;
+        if (depth >> 1) & 1 == 1 {
+            self.bits[i] |= states;
+        }
     }
 
     /// Returns the states in word `i` at depth `depth`, and marks them as expanded.
     #[inline(always)]
     fn take_frontier(&mut self, i: usize, depth: u8) -> u64 {
-        let frontier = self.reached[i].any & !self.done[i] & self.parity_mask(i, depth);
-        self.done[i] |= frontier;
-        if (depth >> 1) & 1 == 1 {
-            self.bits[i] |= frontier;
-        }
+        let parity = self.masks.parity[usize::from(depth % 2)];
+        let frontier = self.reached[i].any & !self.done[i] & parity;
+        self.mark_expanded(i, frontier, depth);
         frontier
     }
 
@@ -279,7 +273,7 @@ impl<const W: usize, const H: usize> Builder<W, H> {
         for i in 0..self.reached.len() {
             self.take_frontier(i, depth);
 
-            let candidates = !self.reached[i].any & self.parity_mask(i, depth + 1);
+            let candidates = !self.reached[i].any & self.masks.parity[usize::from(depth % 2) ^ 1];
             if candidates == 0 {
                 continue;
             }
@@ -321,11 +315,7 @@ impl<const W: usize, const H: usize> Builder<W, H> {
         let mut next = Vec::new();
 
         for &(index, pieces, gap) in queue {
-            let (word, mask) = ((index / 64) as usize, 1 << (index % 64));
-            self.done[word] |= mask;
-            if (depth >> 1) & 1 == 1 {
-                self.bits[word] |= mask;
-            }
+            self.mark_expanded((index / 64) as usize, 1 << (index % 64), depth);
 
             let g = gap as usize;
             let mut visit = |s: &mut Self, child: u64, cell: usize| {
@@ -390,17 +380,11 @@ impl<const W: usize, const H: usize> Builder<W, H> {
         let mut new = 1;
         let mut total = 1;
 
-        if let Some(f) = &config.end_of_iter_callback {
-            f(PdbIterationStats { depth, new, total });
-        }
-
         // The number of states not yet reached with each parity of depth.
-        let mut remaining = [0; 2];
-        for gap in 0..Self::N {
-            let (x, y) = (gap % W, gap / W);
-            let dist = (W - 1 - x) + (H - 1 - y);
-            remaining[dist % 2] += Padded::<W, H>::BLOCKS;
-        }
+        let mut remaining = self
+            .masks
+            .parity
+            .map(|m| u64::from((m & 0xFFFF).count_ones()) * Padded::<W, H>::BLOCKS);
         remaining[0] -= 1;
 
         // While the frontier is small, keep it in a queue rather than scanning the bitmaps for it.
@@ -408,34 +392,32 @@ impl<const W: usize, const H: usize> Builder<W, H> {
         let mut queue = vec![(Self::N as u64 - 1, solved, Self::N as u8 - 1)];
         let max_queue = self.reached.len() / 32;
 
-        while !queue.is_empty() && queue.len() <= max_queue {
-            queue = self.push_queue(depth, &queue);
-            new = queue.len() as u64;
-            remaining[usize::from(depth % 2 == 0)] -= new;
-            total += new;
-            depth += 1;
-
+        loop {
             if let Some(f) = &config.end_of_iter_callback {
                 f(PdbIterationStats { depth, new, total });
             }
-        }
+            if new == 0 {
+                break;
+            }
 
-        while new != 0 {
-            // Expand the frontier while it's small compared to the number of states that could be
-            // in the next layer, then switch to checking those states instead.
-            let next = &mut remaining[usize::from(depth % 2 == 0)];
-            new = if new * 3 < *next * 2 {
-                self.push(depth)
+            let next = &mut remaining[usize::from(depth % 2) ^ 1];
+            new = if !queue.is_empty() && queue.len() <= max_queue {
+                queue = self.push_queue(depth, &queue);
+                queue.len() as u64
             } else {
-                self.pull(depth)
+                queue.clear();
+
+                // Expand the frontier while it's small compared to the number of states that
+                // could be in the next layer, then switch to checking those states instead.
+                if new * 3 < *next * 2 {
+                    self.push(depth)
+                } else {
+                    self.pull(depth)
+                }
             };
             *next -= new;
             total += new;
             depth += 1;
-
-            if let Some(f) = &config.end_of_iter_callback {
-                f(PdbIterationStats { depth, new, total });
-            }
         }
 
         self.dense_bytes()
@@ -443,31 +425,27 @@ impl<const W: usize, const H: usize> Builder<W, H> {
 
     /// Returns `bits` with [`Dense`] indices, packed into bytes.
     fn dense_bytes(&self) -> Box<[u8]> {
-        let n = Self::N as u64;
-        let lane_mask = (1 << n) - 1;
-
-        let mut out = Vec::with_capacity(Padded::<W, H>::SIZE.div_ceil(64) as usize);
-        let mut acc = 0u64;
+        let n = Self::N as u32;
+        let len = Padded::<W, H>::SIZE.div_ceil(8) as usize;
+        let mut out = Vec::with_capacity(len + 16);
+        let mut acc = 0u128;
         let mut filled = 0;
 
         for block in 0..Padded::<W, H>::BLOCKS {
             let word = self.bits[(block / Self::LANES) as usize];
-            let lane = (word >> (16 * (block % Self::LANES))) & lane_mask;
-
-            acc |= lane << filled;
+            let lane = (word >> (16 * (block % Self::LANES))) & ((1 << n) - 1);
+            acc |= u128::from(lane) << filled;
             filled += n;
             if filled >= 64 {
-                out.push(acc);
+                out.extend_from_slice(&(acc as u64).to_le_bytes());
+                acc >>= 64;
                 filled -= 64;
-                acc = if filled == 0 { 0 } else { lane >> (n - filled) };
             }
         }
-        if filled > 0 {
-            out.push(acc);
-        }
+        out.extend_from_slice(&(acc as u64).to_le_bytes());
 
-        let len = Padded::<W, H>::SIZE.div_ceil(8) as usize;
-        out.iter().flat_map(|w| w.to_le_bytes()).take(len).collect()
+        out.truncate(len);
+        out.into_boxed_slice()
     }
 }
 
