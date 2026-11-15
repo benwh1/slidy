@@ -23,6 +23,35 @@ use crate::{
     },
 };
 
+/// The directions to search, in order.
+const DIRECTIONS: [Direction; 4] = [
+    Direction::Up,
+    Direction::Left,
+    Direction::Down,
+    Direction::Right,
+];
+
+/// Returns the position of the gap after moving `count` pieces in direction `dir`, where the gap
+/// is at `gap`, or `None` if the move isn't possible.
+fn gap_after_move<P>(
+    puzzle: &P,
+    (gx, gy): (u64, u64),
+    dir: Direction,
+    count: u64,
+) -> Option<(u64, u64)>
+where
+    P: SlidingPuzzle,
+{
+    let (w, h) = puzzle.size().into();
+    // The gap moves in the opposite direction to the pieces.
+    match dir {
+        Direction::Up => Some((gx, gy + count)).filter(|&(_, y)| y < h),
+        Direction::Left => Some((gx + count, gy)).filter(|&(x, _)| x < w),
+        Direction::Down => Some((gx, gy.checked_sub(count)?)),
+        Direction::Right => Some((gx.checked_sub(count)?, gy)),
+    }
+}
+
 /// An optimal puzzle solver using a [`Heuristic`] `H` to speed up the search.
 pub struct GenericSolver<P, S, H, M> {
     search: Search<256>,
@@ -95,7 +124,15 @@ where
     S: SolvedState + Solvable,
     H: Heuristic<P, S, Stm>,
 {
-    fn dfs(&mut self, puzzle: &mut P, depth: u64, last_dir: Option<Direction>) -> ControlFlow<()> {
+    /// Finds solutions of length `depth` of `puzzle`, which has the gap at `gap`, and was
+    /// reached by moving in direction `last_dir`.
+    fn dfs(
+        &mut self,
+        puzzle: &mut P,
+        depth: u64,
+        gap: (u64, u64),
+        last_dir: Option<Direction>,
+    ) -> ControlFlow<()> {
         if depth == 0 {
             if self.solved_state.is_solved(puzzle) {
                 return self.search.record_solution();
@@ -104,33 +141,32 @@ where
             return ControlFlow::Continue(());
         }
 
-        if self.heuristic.bound(puzzle) > depth {
-            return ControlFlow::Continue(());
-        }
-
-        for dir in [
-            Direction::Up,
-            Direction::Left,
-            Direction::Down,
-            Direction::Right,
-        ] {
+        for dir in DIRECTIONS {
             if last_dir == Some(dir.inverse()) {
                 continue;
             }
 
-            if !puzzle.try_move_dir(dir) {
+            let Some(next_gap) = gap_after_move(puzzle, gap, dir, 1) else {
                 continue;
+            };
+
+            puzzle.move_dir(dir);
+
+            let next_bound = self.heuristic.bound(puzzle);
+            // Children at depth 0 are only checked for being solved, not against the bound.
+            if depth == 1 || next_bound < depth {
+                self.search.stack.push(dir);
+
+                if self.dfs(puzzle, depth - 1, next_gap, Some(dir)).is_break() {
+                    return ControlFlow::Break(());
+                }
+
+                self.search.stack.pop();
             }
 
-            self.search.stack.push(dir);
-
-            if self.dfs(puzzle, depth - 1, Some(dir)).is_break() {
-                return ControlFlow::Break(());
-            }
-
-            self.search.stack.pop();
-            puzzle.try_move_dir(dir.inverse());
+            puzzle.move_dir(dir.inverse());
         }
+
         ControlFlow::Continue(())
     }
 
@@ -155,7 +191,7 @@ where
             |s| &mut s.search,
             config,
             lower_bound,
-            |s, depth| s.dfs(&mut puzzle, depth, None),
+            |s, depth| s.dfs(&mut puzzle, depth, (gx, gy), None),
         );
 
         Ok(())
@@ -168,7 +204,15 @@ where
     S: SolvedState + Solvable,
     H: Heuristic<P, S, Mtm>,
 {
-    fn dfs(&mut self, puzzle: &mut P, depth: u64, last_dir: Option<Direction>) -> ControlFlow<()> {
+    /// Finds solutions of length `depth` of `puzzle`, which has the gap at `gap`, and was
+    /// reached by moving in direction `last_dir`.
+    fn dfs(
+        &mut self,
+        puzzle: &mut P,
+        depth: u64,
+        gap: (u64, u64),
+        last_dir: Option<Direction>,
+    ) -> ControlFlow<()> {
         if depth == 0 {
             if self.solved_state.is_solved(puzzle) {
                 return self.search.record_solution();
@@ -177,29 +221,20 @@ where
             return ControlFlow::Continue(());
         }
 
-        if self.heuristic.bound(puzzle) > depth {
-            return ControlFlow::Continue(());
-        }
-
-        for dir in [
-            Direction::Up,
-            Direction::Left,
-            Direction::Down,
-            Direction::Right,
-        ] {
+        for dir in DIRECTIONS {
             if last_dir.is_some_and(|ld| dir.axis() == ld.axis()) {
                 continue;
             }
 
             let mut count = 0;
-
-            while puzzle.can_move_dir(dir) {
+            while let Some(next_gap) = gap_after_move(puzzle, gap, dir, count + 1) {
                 puzzle.move_dir(dir);
                 count += 1;
-
                 self.search.stack.push(dir);
 
-                if self.dfs(puzzle, depth - 1, Some(dir)).is_break() {
+                if (depth == 1 || self.heuristic.bound(puzzle) < depth)
+                    && self.dfs(puzzle, depth - 1, next_gap, Some(dir)).is_break()
+                {
                     return ControlFlow::Break(());
                 }
             }
@@ -220,13 +255,14 @@ where
 
         let mut puzzle = puzzle.clone();
         let hval = self.heuristic.bound(&puzzle);
+        let gap = puzzle.gap_position_xy();
 
         iterative_deepening::<Mtm, _, _>(
             self,
             |s| &mut s.search,
             config,
             hval,
-            |s, depth| s.dfs(&mut puzzle, depth, None),
+            |s, depth| s.dfs(&mut puzzle, depth, gap, None),
         );
 
         Ok(())
