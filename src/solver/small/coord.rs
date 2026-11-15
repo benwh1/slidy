@@ -159,6 +159,21 @@ impl<const W: usize, const H: usize, const S: usize> Coord<W, H, S> {
         Self::vertical_delta(m, window >> 4).wrapping_neg()
     }
 
+    /// Whether the state with the given pieces (4 bits per cell) and gap is solvable.
+    pub(super) fn is_solvable(pieces: u64, gap: u8) -> bool {
+        // Count the inversions of the pieces in reading order, including the gap as piece 0. The
+        // gap is inverted with each of the `gap` pieces before it, so subtracting those gives the
+        // parity of the pieces skipping the gap.
+        let mut seen = 0u32;
+        let mut inversions = u32::from(gap);
+        for cell in 0..Self::N {
+            let piece = (pieces >> (4 * cell)) & 0xF;
+            inversions += (seen >> piece).count_ones();
+            seen |= 1 << piece;
+        }
+        (inversions & 1 == 1) == Self::is_odd(gap)
+    }
+
     /// Whether the permutation of the pieces (in reading order, skipping the gap) of a solvable
     /// state with the gap at `gap` is odd.
     pub(super) const fn is_odd(gap: u8) -> bool {
@@ -375,6 +390,17 @@ mod tests {
             // SAFETY: `decode` returns a valid state.
             let puzzle = unsafe { Puzzle::<W, H>::with_pieces_and_gap_unchecked(pieces, gap) };
             assert!(puzzle.is_solvable());
+            assert!(Coord::<W, H, S>::is_solvable(pieces, gap));
+
+            // Swapping two pieces makes it unsolvable.
+            let (a, b) = if gap < 2 { (2, 3) } else { (0, 1) };
+            let mut swapped = puzzle;
+            swapped.swap_pieces(a, b);
+            assert!(!swapped.is_solvable());
+            assert!(!Coord::<W, H, S>::is_solvable(
+                swapped.pieces(),
+                swapped.gap()
+            ));
 
             let g = gap as usize;
             if g < W {

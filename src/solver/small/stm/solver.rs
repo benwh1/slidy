@@ -16,7 +16,8 @@ use crate::{
     },
 };
 
-/// The directions to search, in order.
+/// The directions to search, in order. Bit `d` of a set of moves is `DIRECTIONS[d]`, and the
+/// inverse of `DIRECTIONS[d]` is `DIRECTIONS[d ^ 2]`.
 const DIRECTIONS: [Direction; 4] = [
     Direction::Up,
     Direction::Left,
@@ -45,6 +46,28 @@ where
         Self::with_pdb(Pdb::<_, _, _, Stm>::new(config))
     }
 
+    /// For each cell of the gap, the cells that it moves to in each direction (ignoring moves
+    /// that aren't possible), and the set of possible moves.
+    const MOVES: [([u8; 4], u8); N] = {
+        let mut out = [([0; 4], 0); N];
+        let mut gap = 0;
+        while gap < N {
+            let (x, y) = (gap % W, gap / W);
+            let possible = [y + 1 < H, x + 1 < W, y > 0, x > 0];
+            let cells = [gap + W, gap + 1, gap.wrapping_sub(W), gap.wrapping_sub(1)];
+            let mut d = 0;
+            while d < 4 {
+                if possible[d] {
+                    out[gap].0[d] = cells[d] as u8;
+                    out[gap].1 |= 1 << d;
+                }
+                d += 1;
+            }
+            gap += 1;
+        }
+        out
+    };
+
     /// Returns `(d >> 1) & 1`, where `d` is the optimal solution length of the state at `index`.
     #[inline(always)]
     fn bit(&self, index: u64) -> u8 {
@@ -53,39 +76,46 @@ where
         unsafe { self.pdb.bit_unchecked(index) }
     }
 
-    /// Returns the index of the state reached by moving in direction `dir` from the state with
-    /// index `index`, or `None` if the move is not possible.
+    /// Returns the index of the state reached by moving in direction `DIRECTIONS[d]` from the
+    /// state with the given pieces, gap, and index. The move must be possible.
     #[inline(always)]
-    fn child_index(puzzle: &Puzzle<W, H>, index: u64, dir: Direction) -> Option<u64> {
-        let gap = puzzle.gap();
-        let g = gap as usize;
-        match dir {
-            Direction::Up => (g + W < N)
-                .then(|| index.wrapping_add(Dense::<W, H, N>::delta_down(puzzle.pieces(), gap))),
-            Direction::Left => (g % W + 1 < W).then_some(index + 1),
-            Direction::Down => (g >= W)
-                .then(|| index.wrapping_add(Dense::<W, H, N>::delta_up(puzzle.pieces(), gap))),
-            Direction::Right => (!g.is_multiple_of(W)).then(|| index - 1),
+    fn child_index(pieces: u64, gap: u8, index: u64, d: u32) -> u64 {
+        match d {
+            0 => index.wrapping_add(Dense::<W, H, N>::delta_down(pieces, gap)),
+            1 => index + 1,
+            2 => index.wrapping_add(Dense::<W, H, N>::delta_up(pieces, gap)),
+            _ => index - 1,
         }
     }
 
-    /// Returns the optimal solution length of `puzzle`, which has index `index`.
-    fn distance(&self, mut puzzle: Puzzle<W, H>, mut index: u64) -> u64 {
+    /// Returns the pieces after moving the gap from `gap` to `cell`.
+    #[inline(always)]
+    fn child_pieces(pieces: u64, gap: u8, cell: u8) -> u64 {
+        let piece = (pieces >> (4 * cell)) & 0xF;
+        pieces ^ (piece << (4 * gap)) ^ (piece << (4 * cell))
+    }
+
+    /// Returns the optimal solution length of the state with the given pieces, gap, and index.
+    fn distance(&self, mut pieces: u64, mut gap: u8, mut index: u64) -> u64 {
         // The solution length mod 4: the parity is the parity of the distance of the gap from the
         // bottom right corner, and the second bit is in the PDB.
-        let (gx, gy) = puzzle.gap_position_xy();
-        let mut d4 = ((W as u64 - 1 - gx) + (H as u64 - 1 - gy)) % 2 + 2 * self.bit(index) as u64;
+        let (gx, gy) = (gap as usize % W, gap as usize / W);
+        let mut d4 = (((W - 1 - gx) + (H - 1 - gy)) % 2) as u64 + 2 * u64::from(self.bit(index));
         let mut distance = 0;
 
         while index != N as u64 - 1 {
             // Exactly the neighbours closer to solved have this bit.
             let closer = (d4.wrapping_sub(1) >> 1) as u8 & 1;
 
-            for dir in DIRECTIONS {
-                if let Some(child) = Self::child_index(&puzzle, index, dir)
-                    && self.bit(child) == closer
-                {
-                    puzzle.move_dir(dir);
+            let (cells, mut moves) = Self::MOVES[gap as usize];
+            loop {
+                let d = moves.trailing_zeros();
+                moves &= moves - 1;
+                let child = Self::child_index(pieces, gap, index, d);
+                if self.bit(child) == closer {
+                    let cell = cells[d as usize];
+                    pieces = Self::child_pieces(pieces, gap, cell);
+                    gap = cell;
                     index = child;
                     break;
                 }
@@ -98,32 +128,31 @@ where
         distance
     }
 
-    /// Finds solutions of length `depth` of `puzzle`, which has index `index` and optimal solution
-    /// length `distance`.
+    /// Finds solutions of length `depth` of the state with the given pieces, gap, index, and
+    /// optimal solution length `distance`, where `moves` is the set of moves to try.
     fn dfs(
         &mut self,
         depth: u64,
         distance: u64,
+        pieces: u64,
+        gap: u8,
         index: u64,
-        inverse_last_move: Option<Direction>,
-        puzzle: Puzzle<W, H>,
+        moves: u8,
     ) -> ControlFlow<()> {
         if depth == 0 {
             return self.search.record_solution();
         }
 
-        // The bit of the children that are closer to solved.
+        // Exactly the children closer to solved have this bit.
         let closer = (distance.wrapping_sub(1) >> 1) as u8 & 1;
 
-        for dir in DIRECTIONS {
-            if inverse_last_move == Some(dir) {
-                continue;
-            }
+        let cells = Self::MOVES[gap as usize].0;
+        let mut rest = moves;
+        while rest != 0 {
+            let d = rest.trailing_zeros();
+            rest &= rest - 1;
 
-            let Some(child) = Self::child_index(&puzzle, index, dir) else {
-                continue;
-            };
-
+            let child = Self::child_index(pieces, gap, index, d);
             let child_distance = if distance > 0 && self.bit(child) == closer {
                 distance - 1
             } else {
@@ -133,18 +162,20 @@ where
                 continue;
             }
 
-            let mut child_puzzle = puzzle;
-            child_puzzle.move_dir(dir);
+            let cell = cells[d as usize];
+            let child_pieces = Self::child_pieces(pieces, gap, cell);
+            let child_moves = Self::MOVES[cell as usize].1 & !(1 << (d ^ 2));
 
-            self.search.stack.push(dir);
+            self.search.stack.push(DIRECTIONS[d as usize]);
 
             if self
                 .dfs(
                     depth - 1,
                     child_distance,
+                    child_pieces,
+                    cell,
                     child,
-                    Some(dir.inverse()),
-                    child_puzzle,
+                    child_moves,
                 )
                 .is_break()
             {
@@ -190,12 +221,14 @@ where
         puzzle: Puzzle<W, H>,
         config: SolverConfig,
     ) -> Result<(), SolverError> {
-        if !puzzle.is_solvable() {
+        let (pieces, gap) = (puzzle.pieces(), puzzle.gap());
+        if !Dense::<W, H, N>::is_solvable(pieces, gap) {
             return Err(SolverError::Unsolvable);
         }
 
-        let index = Dense::<W, H, N>::index(puzzle.pieces(), puzzle.gap());
-        let distance = self.distance(puzzle, index);
+        let index = Dense::<W, H, N>::index(pieces, gap);
+        let distance = self.distance(pieces, gap, index);
+        let moves = Self::MOVES[gap as usize].1;
 
         iterative_deepening::<Stm, _, _>(
             self,
@@ -206,7 +239,7 @@ where
                 if distance > depth {
                     return ControlFlow::Continue(());
                 }
-                s.dfs(depth, distance, index, None, puzzle)
+                s.dfs(depth, distance, pieces, gap, index, moves)
             },
         );
 
