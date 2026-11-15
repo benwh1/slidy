@@ -303,7 +303,14 @@ mod tests {
             algorithm::Algorithm,
             metric::{Mtm, Stm},
         },
-        puzzle::{label::label::Rows, puzzle::Puzzle, size::Size},
+        puzzle::{
+            label::label::{
+                Checkerboard, ConcentricRectangles, Diagonals, Fringe, LastTwoRows, Rows,
+                SplitFringe, SplitLastTwoRows, SplitSquareFringe, SquareFringe, Trivial,
+            },
+            puzzle::Puzzle,
+            size::Size,
+        },
         solver::{
             config::SolverConfig,
             heuristic::{inversion::InversionCount, max::Max, mtm::MtmHeuristic},
@@ -567,5 +574,198 @@ mod tests {
             solver.solve_collect(&unsolvable, config),
             Err(SolverError::Unsolvable)
         );
+    }
+
+    /// Indices of solved states in [`OPTIMAL`].
+    const TRIVIAL: usize = 0;
+    const ROW_GRIDS: usize = 1;
+    const ROWS: usize = 2;
+    const FRINGE: usize = 3;
+    const SQUARE_FRINGE: usize = 4;
+    const SPLIT_FRINGE: usize = 5;
+    const SPLIT_SQUARE_FRINGE: usize = 6;
+    const DIAGONALS: usize = 7;
+    const LAST_TWO_ROWS: usize = 8;
+    const SPLIT_LAST_TWO_ROWS: usize = 9;
+    const CONCENTRIC_RECTANGLES: usize = 10;
+    const CHECKERBOARD: usize = 11;
+
+    /// Optimal solution lengths of random puzzles, in [`Stm`] and then [`Mtm`], for each solved
+    /// state in the order of the indices above.
+    ///
+    /// The puzzles were generated with `slidy generate -s WxH -n N --seed 1` for sizes 4x1, 1x4,
+    /// 2x2, 3x2, 2x3, 4x2, 2x4 and 3x3, and the lengths were found by a brute-force breadth-first
+    /// search from all solved states.
+    #[rustfmt::skip]
+    const OPTIMAL: &[(&str, [[u64; 12]; 2])] = &[
+        ("0 1 2 3",           [[ 3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3], [ 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1]]),
+        ("1 0 2 3",           [[ 2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2], [ 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1]]),
+        ("1 2 3 0",           [[ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0], [ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0]]),
+        ("0/1/2/3",           [[ 3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3], [ 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1]]),
+        ("1/0/2/3",           [[ 2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2], [ 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1]]),
+        ("1/2/3/0",           [[ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0], [ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0]]),
+        ("3 0/2 1",           [[ 1,  5,  5,  1,  1,  5,  5,  5,  5,  5,  1,  5], [ 1,  5,  5,  1,  1,  5,  5,  5,  5,  5,  1,  5]]),
+        ("3 1/0 2",           [[ 1,  3,  3,  1,  1,  3,  3,  3,  3,  3,  1,  3], [ 1,  3,  3,  1,  1,  3,  3,  3,  3,  3,  1,  3]]),
+        ("1 0/3 2",           [[ 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1], [ 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1]]),
+        ("5 4 0/2 1 3",       [[ 1, 13,  9,  7, 13,  9, 13, 13, 13, 13,  1,  1], [ 1, 11,  9,  6, 10,  9, 10, 11, 11, 11,  1,  1]]),
+        ("3 5 4/2 1 0",       [[ 0, 12, 10,  4, 12, 10, 12, 12, 12, 12,  0,  4], [ 0,  8,  8,  4,  8,  8,  8,  8,  8,  8,  0,  4]]),
+        ("5 3 2/4 1 0",       [[ 0, 18,  6,  8,  6, 14,  8, 12,  6,  6,  0,  4], [ 0, 16,  4,  7,  4, 12,  7,  8,  4,  4,  0,  4]]),
+        ("1 0 4/3 5 2",       [[ 2, 14,  8,  2,  8,  8,  8, 14, 12, 12,  2, 10], [ 2, 13,  7,  2,  6,  7,  7, 11, 10, 10,  2, 10]]),
+        ("2 5 3/4 1 0",       [[ 0, 14,  4,  4,  6,  4, 10,  8,  8,  8,  0,  6], [ 0, 12,  4,  4,  4,  4,  8,  8,  7,  7,  0,  5]]),
+        ("0 4 2/1 3 5",       [[ 3, 17,  7,  3,  3,  7,  3,  9,  7,  7,  3,  7], [ 2, 14,  6,  2,  2,  6,  3,  7,  6,  6,  2,  6]]),
+        ("5 0/3 4/1 2",       [[ 2, 20, 14,  4, 14, 16, 14, 10, 16,  4,  2, 10], [ 1, 20,  9,  3,  9, 12,  9,  7, 12,  3,  1,  7]]),
+        ("3 5/4 2/1 0",       [[ 0, 16, 16,  4, 12, 12, 16, 10, 12,  4,  0,  6], [ 0, 16, 12,  4,  8,  8, 12,  8,  8,  4,  0,  4]]),
+        ("5 3/2 0/1 4",       [[ 1, 15, 15,  1, 11, 15, 15, 13, 15,  1,  1,  1], [ 1, 12, 12,  1,  8, 12, 12, 12, 12,  1,  1,  1]]),
+        ("0 1/2 4/5 3",       [[ 3, 17,  3,  3,  3,  3,  3,  9,  3,  3,  3,  9], [ 2, 14,  3,  2,  2,  2,  3,  7,  2,  2,  2,  6]]),
+        ("2 5/3 0/1 4",       [[ 1, 13, 13,  1,  9, 13, 13, 11, 13,  1,  1,  5], [ 1, 11, 11,  1,  7, 11, 11,  9, 11,  1,  1,  4]]),
+        ("4 2/0 5/3 1",       [[ 2, 16,  8,  6,  8, 10,  8, 14, 10,  6,  2,  2], [ 2, 14,  6,  6,  6,  9,  6, 10,  9,  6,  2,  2]]),
+        ("0 6 1 3/5 7 4 2",   [[ 4, 24, 10, 12, 16, 12, 16, 24, 16, 16,  4,  8], [ 2, 18,  6,  9, 11,  9, 11, 15, 11, 11,  2,  6]]),
+        ("4 2 3 7/6 1 0 5",   [[ 1, 25,  7, 11, 15, 17, 15, 19, 19, 19,  1,  7], [ 1, 16,  5,  8,  9, 12,  9, 16, 13, 13,  1,  5]]),
+        ("1 2 0 5/7 4 6 3",   [[ 2, 22,  8,  8, 20, 16, 22, 22, 20, 20,  2,  8], [ 2, 14,  7,  6, 14, 11, 14, 14, 14, 14,  2,  7]]),
+        ("6 2 5 4/0 1 7 3",   [[ 3, 23,  7,  9, 11, 15, 13, 13, 11, 11,  3, 13], [ 1, 17,  7,  7,  9, 12,  9, 11,  9,  9,  1,  8]]),
+        ("0 5 6 1/4 7 3 2",   [[ 4, 26, 10,  8, 22, 14, 22, 24, 26, 26,  4, 14], [ 2, 18,  9,  6, 14, 11, 15, 17, 18, 18,  2, 10]]),
+        ("6 1/0 3/5 2/4 7",   [[ 3, 21, 17, 11, 17, 19, 17, 11, 17, 13,  3,  9], [ 2, 17, 14, 10, 13, 13, 14, 10, 13, 10,  2,  6]]),
+        ("4 2/3 7/6 1/5 0",   [[ 0, 22, 16, 10, 12, 16, 16, 20, 16, 10,  0, 10], [ 0, 19, 12,  8,  8, 12, 12, 12, 12,  8,  0,  8]]),
+        ("1 2/5 0/7 3/6 4",   [[ 2,  8,  8,  8,  8,  8,  8,  8,  8,  8,  2,  8], [ 1,  5,  5,  5,  5,  5,  5,  5,  5,  5,  1,  5]]),
+        ("6 2/5 4/1 7/0 3",   [[ 1, 23, 21, 11, 21, 19, 21, 23, 21,  9,  1,  9], [ 1, 14, 14,  9, 14, 14, 14, 14, 14,  7,  1,  6]]),
+        ("5 6/0 1/4 2/3 7",   [[ 3, 23, 19, 11, 19, 17, 19, 23, 21, 11,  3,  7], [ 2, 15, 15,  9, 14, 14, 15, 15, 15,  9,  2,  6]]),
+        ("7 0 1/2 5 3/6 8 4", [[ 3, 21, 13, 11, 11, 21, 21, 19, 19, 15,  3, 11], [ 2, 18, 10,  6,  6, 15, 15, 14, 14, 10,  2,  9]]),
+        ("1 2 8/5 4 7/3 6 0", [[ 0, 24, 16, 10, 10, 18, 18, 16, 14, 12,  6, 10], [ 0, 16, 12,  8,  8, 12, 12, 12, 12,  8,  4,  8]]),
+        ("5 1 8/7 6 3/4 0 2", [[ 1, 25, 17, 15, 15, 19, 19, 17, 17, 15,  9,  7], [ 1, 19, 12, 11, 11, 13, 13, 13, 13, 11,  7,  6]]),
+        ("2 6 4/8 0 7/5 1 3", [[ 2, 22, 18, 14, 14, 22, 22, 18, 22, 16,  6, 16], [ 2, 19, 14, 10, 10, 16, 16, 16, 16, 13,  6, 12]]),
+        ("0 5 6/1 4 8/2 7 3", [[ 4, 24, 18, 16, 16, 18, 18, 10, 18, 16,  6, 10], [ 2, 18, 13, 10, 10, 13, 13,  6, 13, 10,  5,  6]]),
+        ("4 5 2/8 7 0/6 1 3", [[ 1, 23, 17, 15, 15, 17, 17, 19, 17, 15,  5, 15], [ 1, 16, 11, 11, 11, 11, 11, 14, 11, 11,  4,  9]]),
+    ];
+
+    /// A metric to test the solver in.
+    trait TestMetric {
+        /// The index of the metric's lengths in [`OPTIMAL`].
+        const INDEX: usize;
+
+        /// Returns the length of `alg` in the metric.
+        fn len(alg: &Algorithm) -> u64;
+    }
+
+    impl TestMetric for Stm {
+        const INDEX: usize = 0;
+
+        fn len(alg: &Algorithm) -> u64 {
+            alg.len_stm()
+        }
+    }
+
+    impl TestMetric for Mtm {
+        const INDEX: usize = 1;
+
+        fn len(alg: &Algorithm) -> u64 {
+            alg.len_mtm()
+        }
+    }
+
+    /// Checks that a solver using `heuristic` finds solutions of the lengths in [`OPTIMAL`] for
+    /// `solved_state`, which has index `label`.
+    fn check_optimal<S, H, M>(solved_state: S, heuristic: H, label: usize)
+    where
+        S: SolvedState,
+        M: TestMetric,
+        GenericSolver<Puzzle, S, H, M>: Solver<Puzzle, Context = ()>,
+    {
+        let mut solver = GenericSolver::<Puzzle, S, H, M>::new(heuristic, solved_state);
+        for (state, lengths) in OPTIMAL {
+            let expected = lengths[M::INDEX][label];
+            let mut puzzle = Puzzle::from_str(state).unwrap();
+            let solution = solver.solve(&puzzle).unwrap();
+            assert_eq!(M::len(&solution), expected, "state {state}");
+            puzzle.apply_alg(&solution);
+            assert!(solver.solved_state.is_solved(&puzzle), "state {state}");
+        }
+    }
+
+    /// Checks [`check_optimal`] for `solved_state` with no heuristic in both metrics.
+    fn check_optimal_no_heuristic<S>(solved_state: S, label: usize)
+    where
+        S: SolvedState + Solvable + Clone,
+    {
+        check_optimal::<_, _, Stm>(solved_state.clone(), (), label);
+        check_optimal::<_, _, Mtm>(solved_state, (), label);
+    }
+
+    /// Checks [`check_optimal`] for `solved_state` with its Manhattan distance and with no
+    /// heuristic, in both metrics.
+    fn check_optimal_manhattan<S>(solved_state: S, label: usize)
+    where
+        S: SolvedState + Solvable + Clone,
+        ManhattanDistance<S>: Heuristic<Puzzle, S, Stm>,
+    {
+        let md = ManhattanDistance(solved_state.clone());
+        check_optimal::<_, _, Stm>(solved_state.clone(), md.clone(), label);
+        check_optimal::<_, _, Mtm>(solved_state.clone(), MtmHeuristic(md), label);
+        check_optimal_no_heuristic(solved_state, label);
+    }
+
+    #[test]
+    fn test_optimal_trivial() {
+        check_optimal_manhattan(Trivial, TRIVIAL);
+    }
+
+    #[test]
+    fn test_optimal_row_grids() {
+        check_optimal_manhattan(RowGrids, ROW_GRIDS);
+
+        let max = Max((ManhattanDistance(RowGrids), InversionCount));
+        check_optimal::<_, _, Stm>(RowGrids, InversionCount, ROW_GRIDS);
+        check_optimal::<_, _, Stm>(RowGrids, max.clone(), ROW_GRIDS);
+        check_optimal::<_, _, Mtm>(RowGrids, MtmHeuristic(InversionCount), ROW_GRIDS);
+        check_optimal::<_, _, Mtm>(RowGrids, MtmHeuristic(max), ROW_GRIDS);
+    }
+
+    #[test]
+    fn test_optimal_rows() {
+        check_optimal_manhattan(Rows, ROWS);
+    }
+
+    #[test]
+    fn test_optimal_fringe() {
+        check_optimal_manhattan(Fringe, FRINGE);
+    }
+
+    #[test]
+    fn test_optimal_square_fringe() {
+        check_optimal_manhattan(SquareFringe, SQUARE_FRINGE);
+    }
+
+    #[test]
+    fn test_optimal_split_fringe() {
+        check_optimal_manhattan(SplitFringe, SPLIT_FRINGE);
+    }
+
+    #[test]
+    fn test_optimal_split_square_fringe() {
+        check_optimal_manhattan(SplitSquareFringe, SPLIT_SQUARE_FRINGE);
+    }
+
+    #[test]
+    fn test_optimal_diagonals() {
+        check_optimal_manhattan(Diagonals, DIAGONALS);
+    }
+
+    #[test]
+    fn test_optimal_last_two_rows() {
+        check_optimal_no_heuristic(LastTwoRows, LAST_TWO_ROWS);
+    }
+
+    #[test]
+    fn test_optimal_split_last_two_rows() {
+        check_optimal_no_heuristic(SplitLastTwoRows, SPLIT_LAST_TWO_ROWS);
+    }
+
+    #[test]
+    fn test_optimal_concentric_rectangles() {
+        check_optimal_no_heuristic(ConcentricRectangles, CONCENTRIC_RECTANGLES);
+    }
+
+    #[test]
+    fn test_optimal_checkerboard() {
+        check_optimal_manhattan(Checkerboard, CHECKERBOARD);
     }
 }
