@@ -9,7 +9,6 @@ use crate::{
     algorithm::{
         direction::Direction,
         metric::{Mtm, Stm},
-        r#move::r#move::Move,
     },
     puzzle::{
         label::label::RowGrids, sliding_puzzle::SlidingPuzzle, solvable::Solvable,
@@ -125,12 +124,12 @@ where
     H: Heuristic<P, S, Stm>,
 {
     /// Finds solutions of length `depth` of `puzzle`, which has the gap at `gap` and heuristic
-    /// bound `bound`, and was reached by moving in direction `last_dir`.
+    /// state `state`, and was reached by moving in direction `last_dir`.
     fn dfs(
         &mut self,
         puzzle: &mut P,
+        state: &mut H::State,
         depth: u64,
-        bound: u64,
         gap: (u64, u64),
         last_dir: Option<Direction>,
     ) -> ControlFlow<()> {
@@ -155,13 +154,13 @@ where
 
             let next_bound = self
                 .heuristic
-                .bound_after_move(puzzle, bound, next_gap, gap);
+                .bound_after_move(state, puzzle, next_gap, gap);
             // Children at depth 0 are only checked for being solved, not against the bound.
             if depth == 1 || next_bound < depth {
                 self.search.stack.push(dir);
 
                 if self
-                    .dfs(puzzle, depth - 1, next_bound, next_gap, Some(dir))
+                    .dfs(puzzle, state, depth - 1, next_gap, Some(dir))
                     .is_break()
                 {
                     return ControlFlow::Break(());
@@ -171,6 +170,7 @@ where
             }
 
             puzzle.move_dir(dir.inverse());
+            self.heuristic.undo_move(state, puzzle, next_gap, gap);
         }
 
         ControlFlow::Continue(())
@@ -192,12 +192,13 @@ where
         let parity = (gx.abs_diff(sx) + gy.abs_diff(sy)) % 2;
         let lower_bound = if hval % 2 == parity { hval } else { hval + 1 };
 
+        let mut state = self.heuristic.init(&puzzle);
         iterative_deepening::<Stm, _, _>(
             self,
             |s| &mut s.search,
             config,
             lower_bound,
-            |s, depth| s.dfs(&mut puzzle, depth, hval, (gx, gy), None),
+            |s, depth| s.dfs(&mut puzzle, &mut state, depth, (gx, gy), None),
         );
 
         Ok(())
@@ -210,11 +211,12 @@ where
     S: SolvedState + Solvable,
     H: Heuristic<P, S, Mtm>,
 {
-    /// Finds solutions of length `depth` of `puzzle`, which has the gap at `gap`, and was
-    /// reached by moving in direction `last_dir`.
+    /// Finds solutions of length `depth` of `puzzle`, which has the gap at `gap` and heuristic
+    /// state `state`, and was reached by moving in direction `last_dir`.
     fn dfs(
         &mut self,
         puzzle: &mut P,
+        state: &mut H::State,
         depth: u64,
         gap: (u64, u64),
         last_dir: Option<Direction>,
@@ -232,23 +234,38 @@ where
                 continue;
             }
 
+            // Move one more piece at a time, so that each move of `count` pieces is reached from
+            // the move of `count - 1`.
             let mut count = 0;
+            let mut prev_gap = gap;
             while let Some(next_gap) = gap_after_move(puzzle, gap, dir, count + 1) {
                 puzzle.move_dir(dir);
                 count += 1;
                 self.search.stack.push(dir);
 
-                if (depth == 1 || self.heuristic.bound(puzzle) < depth)
-                    && self.dfs(puzzle, depth - 1, next_gap, Some(dir)).is_break()
+                let next_bound = self
+                    .heuristic
+                    .bound_after_move(state, puzzle, next_gap, prev_gap);
+                // Children at depth 0 are only checked for being solved, not against the bound.
+                if (depth == 1 || next_bound < depth)
+                    && self
+                        .dfs(puzzle, state, depth - 1, next_gap, Some(dir))
+                        .is_break()
                 {
                     return ControlFlow::Break(());
                 }
+
+                prev_gap = next_gap;
             }
 
-            if count > 0 {
-                puzzle.apply_move(Move::new(dir.inverse(), count));
-                self.search.stack.remove_n(count as usize);
+            // Undo the single moves in reverse order.
+            for i in (1..=count).rev() {
+                puzzle.move_dir(dir.inverse());
+                let from = gap_after_move(puzzle, gap, dir, i).unwrap();
+                let to = gap_after_move(puzzle, gap, dir, i - 1).unwrap();
+                self.heuristic.undo_move(state, puzzle, from, to);
             }
+            self.search.stack.remove_n(count as usize);
         }
 
         ControlFlow::Continue(())
@@ -263,12 +280,13 @@ where
         let hval = self.heuristic.bound(&puzzle);
         let gap = puzzle.gap_position_xy();
 
+        let mut state = self.heuristic.init(&puzzle);
         iterative_deepening::<Mtm, _, _>(
             self,
             |s| &mut s.search,
             config,
             hval,
-            |s, depth| s.dfs(&mut puzzle, depth, gap, None),
+            |s, depth| s.dfs(&mut puzzle, &mut state, depth, gap, None),
         );
 
         Ok(())

@@ -17,12 +17,41 @@ where
     P: SlidingPuzzle,
     H: Heuristic<P, S, Stm>,
 {
+    type State = H::State;
+
     fn bound(&self, puzzle: &P) -> u64 {
+        Self::convert(puzzle, self.0.bound(puzzle))
+    }
+
+    fn init(&self, puzzle: &P) -> H::State {
+        self.0.init(puzzle)
+    }
+
+    fn bound_after_move(
+        &self,
+        state: &mut H::State,
+        puzzle: &P,
+        from: (u64, u64),
+        to: (u64, u64),
+    ) -> u64 {
+        Self::convert(puzzle, self.0.bound_after_move(state, puzzle, from, to))
+    }
+
+    fn undo_move(&self, state: &mut H::State, puzzle: &P, from: (u64, u64), to: (u64, u64)) {
+        self.0.undo_move(state, puzzle, from, to);
+    }
+}
+
+impl<H> MtmHeuristic<H> {
+    /// Converts an [`Stm`] bound for `puzzle` to an [`Mtm`] bound.
+    fn convert<P>(puzzle: &P, bound: u64) -> u64
+    where
+        P: SlidingPuzzle,
+    {
         let (w, h) = puzzle.size().into();
         // On a 1x1 puzzle, `k` would be 0, but the bound is always 0 there anyway.
         let k = (w.max(h) - 1).max(1);
-        let h = self.0.bound(puzzle);
-        h.div_ceil(k)
+        bound.div_ceil(k)
     }
 }
 
