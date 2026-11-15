@@ -3,7 +3,6 @@
 
 use std::cmp::Ordering;
 
-use itertools::Itertools as _;
 use num_traits::Zero as _;
 
 use crate::{
@@ -176,17 +175,17 @@ where
     Self: Distance,
 {
     fn bound(&self, puzzle: &P) -> u64 {
-        let (w, h) = puzzle.size().into();
-        let md = (0..w)
-            .cartesian_product(0..h)
-            .map(|pos| {
-                let piece = puzzle.piece_at_xy(pos);
-                let solved_pos = puzzle.solved_pos_xy(piece);
-                let md = self.dist(pos, solved_pos, puzzle.size());
-
-                if piece == P::Piece::zero() { 0 } else { md }
-            })
-            .sum::<u64>();
+        let size = puzzle.size();
+        let (w, h) = size.into();
+        let mut md = 0;
+        for y in 0..h {
+            for x in 0..w {
+                let piece = puzzle.piece_at_xy((x, y));
+                if piece != P::Piece::zero() {
+                    md += self.dist((x, y), puzzle.solved_pos_xy(piece), size);
+                }
+            }
+        }
 
         if Self::HAS_PARITY_CONSTRAINT {
             md
