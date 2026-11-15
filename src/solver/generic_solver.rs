@@ -304,7 +304,10 @@ mod tests {
             metric::{Mtm, Stm},
         },
         puzzle::{label::label::Rows, puzzle::Puzzle, size::Size},
-        solver::{config::SolverConfig, heuristic::mtm::MtmHeuristic},
+        solver::{
+            config::SolverConfig,
+            heuristic::{inversion::InversionCount, mtm::MtmHeuristic},
+        },
     };
 
     #[test]
@@ -336,6 +339,21 @@ mod tests {
         // Test it twice to make sure the internal state gets reset properly
         let solution = solver.solve(&puzzle).unwrap();
         assert_eq!(solution.len_stm(), 31);
+    }
+
+    #[test]
+    fn test_row_grids_inversion_count() {
+        let puzzle = Puzzle::from_str("8 6 7/2 5 4/3 0 1").unwrap();
+
+        let mut solver: GenericSolver<_, _, _, Stm> = GenericSolver::new(InversionCount, RowGrids);
+        let solution = solver.solve(&puzzle).unwrap();
+        assert_eq!(solution.len_stm(), 31);
+        assert!(solution.is_solution_of(puzzle.clone()));
+
+        let mut solver: GenericSolver<_, _, _, Mtm> =
+            GenericSolver::new(MtmHeuristic(InversionCount), RowGrids);
+        let solution = solver.solve(&puzzle).unwrap();
+        assert_eq!(solution.len_mtm(), 20);
     }
 
     #[test]

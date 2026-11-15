@@ -1,6 +1,7 @@
 //! Defines the [`Heuristic`] trait which is used to compute a lower bound on the length of an
 //! optimal solution of a puzzle.
 
+pub mod inversion;
 pub mod manhattan;
 pub mod mtm;
 
@@ -75,7 +76,9 @@ mod tests {
             size::Size,
             sliding_puzzle::SlidingPuzzle as _,
         },
-        solver::heuristic::{manhattan::ManhattanDistance, mtm::MtmHeuristic},
+        solver::heuristic::{
+            inversion::InversionCount, manhattan::ManhattanDistance, mtm::MtmHeuristic,
+        },
     };
 
     /// Checks that the bounds from [`Heuristic::bound_after_move`] match [`Heuristic::bound`]
@@ -136,6 +139,8 @@ mod tests {
         check(SplitSquareFringe);
         check(Diagonals);
         check(Checkerboard);
+        check_incremental::<RowGrids, Stm, _>(&InversionCount);
+        check_incremental::<RowGrids, Mtm, _>(&MtmHeuristic(InversionCount));
         check_incremental::<RowGrids, Stm, _>(&());
     }
 }
