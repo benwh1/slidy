@@ -65,6 +65,10 @@ struct Masks {
     left: u64,
     /// The states where the gap can move right (increasing the index by 1).
     right: u64,
+    /// The states where the gap can move up (decreasing the gap by `W`).
+    up: u64,
+    /// The states where the gap can move down (increasing the gap by `W`).
+    down: u64,
     /// The states with the gap in the top or bottom row, which have only one vertical move.
     edge_rows: u64,
 }
@@ -83,6 +87,8 @@ impl<const W: usize, const H: usize> Builder<W, H> {
             odd: 0,
             left: 0,
             right: 0,
+            up: 0,
+            down: 0,
             edge_rows: 0,
         };
         for lane in 0..Self::LANES {
@@ -99,6 +105,12 @@ impl<const W: usize, const H: usize> Builder<W, H> {
                 }
                 if x + 1 < W {
                     masks.right |= bit;
+                }
+                if y > 0 {
+                    masks.up |= bit;
+                }
+                if y + 1 < H {
+                    masks.down |= bit;
                 }
                 if y == 0 || y == H - 1 {
                     masks.edge_rows |= bit;
@@ -229,18 +241,26 @@ impl<const W: usize, const H: usize> Builder<W, H> {
                 continue;
             }
 
+            // Do the moves up and down separately, so that there's no branch on the direction.
             let decoded = decoder.decode_word(i as u64);
-            self.for_each_state(&decoded, i, vertical, |s, index, pieces, gap| {
-                let g = gap as usize;
-                if g >= W {
+            self.for_each_state(
+                &decoded,
+                i,
+                vertical & self.masks.up,
+                |s, index, pieces, gap| {
                     let delta = Padded::<W, H>::delta_up(pieces, gap);
                     new += u64::from(s.claim_vertically(index.wrapping_add(delta)));
-                }
-                if g + W < Self::N {
+                },
+            );
+            self.for_each_state(
+                &decoded,
+                i,
+                vertical & self.masks.down,
+                |s, index, pieces, gap| {
                     let delta = Padded::<W, H>::delta_down(pieces, gap);
                     new += u64::from(s.claim_vertically(index.wrapping_add(delta)));
-                }
-            });
+                },
+            );
         }
 
         new
