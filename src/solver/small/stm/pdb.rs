@@ -404,7 +404,7 @@ impl<const W: usize, const H: usize> Builder<W, H> {
             // Expand the frontier while it's small compared to the number of states that could be
             // in the next layer, then switch to checking those states instead.
             let next = &mut remaining[usize::from(depth % 2 == 0)];
-            new = if new * 2 < *next {
+            new = if new * 3 < *next * 2 {
                 self.push(depth)
             } else {
                 self.pull(depth)
