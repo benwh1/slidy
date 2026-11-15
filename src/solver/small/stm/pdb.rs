@@ -179,32 +179,25 @@ impl<const W: usize, const H: usize> Builder<W, H> {
         frontier
     }
 
-    /// Calls `f(index, pieces, gap)` for each state in word `i` in `states`.
+    /// Calls `f(index, pieces, gap)` for each state in word `i` in `states`, where `decoded` is
+    /// the decoding of the word (see [`BlockDecoder::decode_word`]).
     #[inline(always)]
     fn for_each_state(
         &mut self,
-        decoder: &mut BlockDecoder<W, H>,
+        decoded: &[[u64; 2]; 4],
         i: usize,
         mut states: u64,
         mut f: impl FnMut(&mut Self, u64, u64, u8),
     ) {
+        let base = 64 * i as u64;
         while states != 0 {
-            let lane = u64::from(states.trailing_zeros() / 16);
-            let mut lane_states = (states >> (16 * lane)) & 0xFFFF;
-            states &= !(0xFFFF << (16 * lane));
+            let bit = states.trailing_zeros();
+            states &= states - 1;
 
-            let block = i as u64 * Self::LANES + lane;
-            decoder.decode(block);
-            let base = 16 * block;
-
-            while lane_states != 0 {
-                let gap = lane_states.trailing_zeros() as u8;
-                lane_states &= lane_states - 1;
-
-                let ranked = decoder.ranked(Padded::<W, H>::is_odd(gap));
-                let pieces = Padded::<W, H>::insert_gap(ranked, gap);
-                f(self, base + u64::from(gap), pieces, gap);
-            }
+            let gap = (bit % 16) as u8;
+            let ranked = decoded[(bit / 16) as usize][usize::from(Padded::<W, H>::is_odd(gap))];
+            let pieces = Padded::<W, H>::insert_gap(ranked, gap);
+            f(self, base + u64::from(bit), pieces, gap);
         }
     }
 
@@ -232,7 +225,12 @@ impl<const W: usize, const H: usize> Builder<W, H> {
             // by a vertical move, that move goes back to a state that has already been reached.
             let vertical = frontier & !(self.reached[i].vertically & self.masks.edge_rows);
 
-            self.for_each_state(&mut decoder, i, vertical, |s, index, pieces, gap| {
+            if vertical == 0 {
+                continue;
+            }
+
+            let decoded = decoder.decode_word(i as u64);
+            self.for_each_state(&decoded, i, vertical, |s, index, pieces, gap| {
                 let g = gap as usize;
                 if g >= W {
                     let delta = Padded::<W, H>::delta_up(pieces, gap);
@@ -272,17 +270,20 @@ impl<const W: usize, const H: usize> Builder<W, H> {
                 & ((self.masks.left & (visited << 1)) | (self.masks.right & (visited >> 1)));
 
             let remaining = candidates & !found;
-            let base = 64 * i as u64;
-            self.for_each_state(&mut decoder, i, remaining, |s, index, pieces, gap| {
-                let g = gap as usize;
-                let reached = (g >= W
-                    && s.is_visited(index.wrapping_add(Padded::<W, H>::delta_up(pieces, gap))))
-                    || (g + W < Self::N
-                        && s.is_visited(
-                            index.wrapping_add(Padded::<W, H>::delta_down(pieces, gap)),
-                        ));
-                found |= u64::from(reached) << (index - base);
-            });
+            if remaining != 0 {
+                let decoded = decoder.decode_word(i as u64);
+                let base = 64 * i as u64;
+                self.for_each_state(&decoded, i, remaining, |s, index, pieces, gap| {
+                    let g = gap as usize;
+                    let reached = (g >= W
+                        && s.is_visited(index.wrapping_add(Padded::<W, H>::delta_up(pieces, gap))))
+                        || (g + W < Self::N
+                            && s.is_visited(
+                                index.wrapping_add(Padded::<W, H>::delta_down(pieces, gap)),
+                            ));
+                    found |= u64::from(reached) << (index - base);
+                });
+            }
 
             self.reached[i].any |= found;
             new += u64::from(found.count_ones());

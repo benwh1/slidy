@@ -294,9 +294,10 @@ impl<const W: usize, const H: usize> BlockDecoder<W, H> {
 
     /// For each suffix: the slots (indices into the ranks not taken by the prefix) of pieces
     /// `N - 4` (0 if that piece is in the prefix) and `N - 3`, the two remaining slots in
-    /// increasing order, and the parity of the digits of the suffix.
-    const SUFFIX: [[u8; 5]; 12] = {
-        let mut out = [[0; 5]; 12];
+    /// increasing order, and the parity of the digits of the suffix. It's padded to 16 entries
+    /// so that it can be indexed without bounds checks.
+    const SUFFIX: [[u8; 5]; 16] = {
+        let mut out = [[0; 5]; 16];
         let mut suffix = 0;
         while suffix < Self::SUFFIXES as usize {
             let (d4, d3) = if Self::K == 4 {
@@ -371,7 +372,7 @@ impl<const W: usize, const H: usize> BlockDecoder<W, H> {
         };
         out.free[1] = 0xFEDC_BA98_7654_3210;
         out.redo_from(1);
-        out.decode_suffix(0);
+        out.decoded = out.decode_suffix(0);
         out
     }
 
@@ -406,19 +407,20 @@ impl<const W: usize, const H: usize> BlockDecoder<W, H> {
         }
     }
 
-    /// Decodes the block with the current prefix and suffix `suffix`.
+    /// Decodes the block with the current prefix and suffix `suffix`, returning the pieces for
+    /// the even and odd permutations.
     #[inline(always)]
-    fn decode_suffix(&mut self, suffix: u64) {
-        let [s4, s3, u, v, parity] = Self::SUFFIX[suffix as usize].map(usize::from);
+    fn decode_suffix(&self, suffix: u64) -> [u64; 2] {
+        let [s4, s3, u, v, parity] = Self::SUFFIX[suffix as usize % 16].map(usize::from);
         let t = &self.terms;
-        let base = self.prefix_ranked | t[0][s4] | t[1][s3];
-        let a = base | t[2][u] | t[3][v];
-        let b = base | t[2][v] | t[3][u];
-        self.decoded = if (self.prefix_parity ^ parity as u64) & 1 == 0 {
+        let base = self.prefix_ranked | t[0][s4 % 4] | t[1][s3 % 4];
+        let a = base | t[2][u % 4] | t[3][v % 4];
+        let b = base | t[2][v % 4] | t[3][u % 4];
+        if (self.prefix_parity ^ parity as u64) & 1 == 0 {
             [a, b]
         } else {
             [b, a]
-        };
+        }
     }
 
     /// Sets the digits of the prefix to those of `prefix`, returning the first piece whose digit
@@ -450,10 +452,38 @@ impl<const W: usize, const H: usize> BlockDecoder<W, H> {
             return;
         }
         self.block = block;
+        self.set_prefix(block / Self::SUFFIXES);
+        self.decoded = self.decode_suffix(block % Self::SUFFIXES);
+    }
 
-        let prefix = block / Self::SUFFIXES;
-        let suffix = block % Self::SUFFIXES;
+    /// Decodes the 4 blocks `4 * word..4 * word + 4`, returning the pieces of the states of each
+    /// in reading order skipping the gap, for the states where that permutation is even and odd.
+    ///
+    /// Blocks past the end are skipped, and their pieces are 0.
+    #[inline(always)]
+    pub(super) fn decode_word(&mut self, word: u64) -> [[u64; 2]; 4] {
+        let first = 4 * word;
+        if Self::SUFFIXES % 4 == 0 {
+            // The blocks all have the same prefix.
+            self.set_prefix(first / Self::SUFFIXES);
+            let suffix = first % Self::SUFFIXES;
+            std::array::from_fn(|lane| self.decode_suffix(suffix + lane as u64))
+        } else {
+            std::array::from_fn(|lane| {
+                let block = first + lane as u64;
+                if block < Padded::<W, H>::BLOCKS {
+                    self.decode(block);
+                    self.decoded
+                } else {
+                    [0; 2]
+                }
+            })
+        }
+    }
 
+    /// Sets the prefix to `prefix`.
+    #[inline(always)]
+    fn set_prefix(&mut self, prefix: u64) {
         if prefix != self.prefix {
             let from = if prefix > self.prefix && prefix - self.prefix <= Self::MAX_STEP {
                 // Add the difference to the least significant digit and carry.
@@ -476,13 +506,11 @@ impl<const W: usize, const H: usize> BlockDecoder<W, H> {
             self.prefix = prefix;
             self.redo_from(from);
         }
-
-        self.decode_suffix(suffix);
     }
 
     /// Returns the pieces of the states in the last decoded block, in reading order skipping the
     /// gap, for the states where that permutation is odd if `odd` is true, or even otherwise.
-    #[inline(always)]
+    #[cfg(test)]
     pub(super) fn ranked(&self, odd: bool) -> u64 {
         self.decoded[usize::from(odd)]
     }
