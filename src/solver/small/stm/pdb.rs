@@ -33,14 +33,25 @@ const HASHES: [(usize, usize, u64); 12] = [
 /// The bitmaps use [`Padded`] indices, so each 64-bit word holds 4 blocks of states, one in each
 /// 16-bit lane, and a state's neighbours by horizontal moves are in the same lane.
 struct Builder<const W: usize, const H: usize> {
-    /// One bit per state: whether the state has been reached.
-    visited: Vec<u64>,
+    /// Which states have been reached.
+    reached: Vec<Reached>,
     /// One bit per state: whether the state has been expanded.
     done: Vec<u64>,
     /// One bit per state: `(d >> 1) & 1`, where `d` is the depth of the state.
     bits: Vec<u64>,
     /// Masks of the states in each word with certain properties.
     masks: Masks,
+}
+
+/// One word of [`Builder::reached`]. The two bitmaps are interleaved because they're updated
+/// together.
+#[derive(Clone, Copy, Default)]
+struct Reached {
+    /// One bit per state: whether the state has been reached.
+    any: u64,
+    /// One bit per state: whether the state was reached by a vertical move, before it was reached
+    /// by a horizontal move in the same layer or expanded.
+    vertically: u64,
 }
 
 /// Masks of the states in each word of the bitmaps with certain properties, which depend only on
@@ -54,6 +65,8 @@ struct Masks {
     left: u64,
     /// The states where the gap can move right (increasing the index by 1).
     right: u64,
+    /// The states with the gap in the top or bottom row, which have only one vertical move.
+    edge_rows: u64,
 }
 
 impl<const W: usize, const H: usize> Builder<W, H> {
@@ -70,6 +83,7 @@ impl<const W: usize, const H: usize> Builder<W, H> {
             odd: 0,
             left: 0,
             right: 0,
+            edge_rows: 0,
         };
         for lane in 0..Self::LANES {
             for gap in 0..Self::N {
@@ -86,11 +100,14 @@ impl<const W: usize, const H: usize> Builder<W, H> {
                 if x + 1 < W {
                     masks.right |= bit;
                 }
+                if y == 0 || y == H - 1 {
+                    masks.edge_rows |= bit;
+                }
             }
         }
 
         Self {
-            visited: vec![0; words],
+            reached: vec![Reached::default(); words],
             done: vec![0; words],
             bits: vec![0; words],
             masks,
@@ -120,11 +137,24 @@ impl<const W: usize, const H: usize> Builder<W, H> {
     #[inline(always)]
     fn claim(&mut self, index: u64) -> bool {
         let (word, mask) = ((index / 64) as usize, 1 << (index % 64));
-        debug_assert!(word < self.visited.len());
+        debug_assert!(word < self.reached.len());
         // SAFETY: `index` is the index of a state, so it's in bounds.
-        let v = unsafe { self.visited.get_unchecked_mut(word) };
-        let new = *v & mask == 0;
-        *v |= mask;
+        let r = unsafe { self.reached.get_unchecked_mut(word) };
+        let new = r.any & mask == 0;
+        r.any |= mask;
+        new
+    }
+
+    /// Like [`Self::claim`], for a state reached by a vertical move.
+    #[inline(always)]
+    fn claim_vertically(&mut self, index: u64) -> bool {
+        let (word, mask) = ((index / 64) as usize, 1 << (index % 64));
+        debug_assert!(word < self.reached.len());
+        // SAFETY: `index` is the index of a state, so it's in bounds.
+        let r = unsafe { self.reached.get_unchecked_mut(word) };
+        let new = r.any & mask == 0;
+        r.vertically |= mask & !r.any;
+        r.any |= mask;
         new
     }
 
@@ -132,16 +162,16 @@ impl<const W: usize, const H: usize> Builder<W, H> {
     #[inline(always)]
     fn is_visited(&self, index: u64) -> bool {
         let word = (index / 64) as usize;
-        debug_assert!(word < self.visited.len());
+        debug_assert!(word < self.reached.len());
         // SAFETY: `index` is the index of a state, so it's in bounds.
-        let v = unsafe { self.visited.get_unchecked(word) };
-        (v >> (index % 64)) & 1 == 1
+        let r = unsafe { self.reached.get_unchecked(word) };
+        (r.any >> (index % 64)) & 1 == 1
     }
 
     /// Returns the states in word `i` at depth `depth`, and marks them as expanded.
     #[inline(always)]
     fn take_frontier(&mut self, i: usize, depth: u8) -> u64 {
-        let frontier = self.visited[i] & !self.done[i] & self.parity_mask(i, depth);
+        let frontier = self.reached[i].any & !self.done[i] & self.parity_mask(i, depth);
         self.done[i] |= frontier;
         if (depth >> 1) & 1 == 1 {
             self.bits[i] |= frontier;
@@ -185,7 +215,7 @@ impl<const W: usize, const H: usize> Builder<W, H> {
         let mut new = 0;
         let mut decoder = BlockDecoder::<W, H>::new();
 
-        for i in 0..self.visited.len() {
+        for i in 0..self.reached.len() {
             let frontier = self.take_frontier(i, depth);
             if frontier == 0 {
                 continue;
@@ -195,19 +225,22 @@ impl<const W: usize, const H: usize> Builder<W, H> {
             // new states have the other parity, so they aren't mistaken for part of the frontier.
             let reached =
                 ((frontier & self.masks.left) >> 1) | ((frontier & self.masks.right) << 1);
-            new += u64::from((reached & !self.visited[i]).count_ones());
-            self.visited[i] |= reached;
+            new += u64::from((reached & !self.reached[i].any).count_ones());
+            self.reached[i].any |= reached;
 
-            // Every state has a vertical move, since `H >= 2`.
-            self.for_each_state(&mut decoder, i, frontier, |s, index, pieces, gap| {
+            // A state in the top or bottom row has only one vertical move, so if it was reached
+            // by a vertical move, that move goes back to a state that has already been reached.
+            let vertical = frontier & !(self.reached[i].vertically & self.masks.edge_rows);
+
+            self.for_each_state(&mut decoder, i, vertical, |s, index, pieces, gap| {
                 let g = gap as usize;
                 if g >= W {
                     let delta = Padded::<W, H>::delta_up(pieces, gap);
-                    new += u64::from(s.claim(index.wrapping_add(delta)));
+                    new += u64::from(s.claim_vertically(index.wrapping_add(delta)));
                 }
                 if g + W < Self::N {
                     let delta = Padded::<W, H>::delta_down(pieces, gap);
-                    new += u64::from(s.claim(index.wrapping_add(delta)));
+                    new += u64::from(s.claim_vertically(index.wrapping_add(delta)));
                 }
             });
         }
@@ -225,16 +258,16 @@ impl<const W: usize, const H: usize> Builder<W, H> {
         let mut new = 0;
         let mut decoder = BlockDecoder::<W, H>::new();
 
-        for i in 0..self.visited.len() {
+        for i in 0..self.reached.len() {
             self.take_frontier(i, depth);
 
-            let candidates = !self.visited[i] & self.parity_mask(i, depth + 1);
+            let candidates = !self.reached[i].any & self.parity_mask(i, depth + 1);
             if candidates == 0 {
                 continue;
             }
 
             // Horizontal moves stay in the same lane, so check them for the whole word at once.
-            let visited = self.visited[i];
+            let visited = self.reached[i].any;
             let mut found = candidates
                 & ((self.masks.left & (visited << 1)) | (self.masks.right & (visited >> 1)));
 
@@ -251,7 +284,7 @@ impl<const W: usize, const H: usize> Builder<W, H> {
                 found |= u64::from(reached) << (index - base);
             });
 
-            self.visited[i] |= found;
+            self.reached[i].any |= found;
             new += u64::from(found.count_ones());
         }
 
@@ -353,7 +386,7 @@ impl<const W: usize, const H: usize> Builder<W, H> {
         // While the frontier is small, keep it in a queue rather than scanning the bitmaps for it.
         let solved = (1..Self::N as u64).fold(0, |pieces, p| pieces | (p << (4 * (p - 1))));
         let mut queue = vec![(Self::N as u64 - 1, solved, Self::N as u8 - 1)];
-        let max_queue = self.visited.len() / 32;
+        let max_queue = self.reached.len() / 32;
 
         while !queue.is_empty() && queue.len() <= max_queue {
             queue = self.push_queue(depth, &queue);
