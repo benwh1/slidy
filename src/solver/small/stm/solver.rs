@@ -88,13 +88,6 @@ where
         }
     }
 
-    /// Returns the pieces after moving the gap from `gap` to `cell`.
-    #[inline(always)]
-    fn child_pieces(pieces: u64, gap: u8, cell: u8) -> u64 {
-        let piece = (pieces >> (4 * cell)) & 0xF;
-        pieces ^ (piece << (4 * gap)) ^ (piece << (4 * cell))
-    }
-
     /// Returns the optimal solution length of the state with the given pieces, gap, and index.
     fn distance(&self, mut pieces: u64, mut gap: u8, mut index: u64) -> u64 {
         // The solution length mod 4: the parity is the parity of the distance of the gap from the
@@ -114,7 +107,7 @@ where
                 let child = Self::child_index(pieces, gap, index, d);
                 if self.bit(child) == closer {
                     let cell = cells[d as usize];
-                    pieces = Self::child_pieces(pieces, gap, cell);
+                    pieces = Dense::<W, H, N>::move_gap(pieces, gap, cell);
                     gap = cell;
                     index = child;
                     break;
@@ -163,7 +156,7 @@ where
             }
 
             let cell = cells[d as usize];
-            let child_pieces = Self::child_pieces(pieces, gap, cell);
+            let child_pieces = Dense::<W, H, N>::move_gap(pieces, gap, cell);
             let child_moves = Self::MOVES[cell as usize].1 & !(1 << (d ^ 2));
 
             self.search.stack.push(DIRECTIONS[d as usize]);

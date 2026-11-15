@@ -94,17 +94,6 @@ impl<const W: usize, const H: usize, const S: usize> Coord<W, H, S> {
         out
     };
 
-    /// `RADIX_WEIGHT[p]` is `WEIGHT[p] / S`, the weight of the digit of piece `p` in the block.
-    const RADIX_WEIGHT: [u64; MAX_N] = {
-        let mut out = [0; MAX_N];
-        let mut p = 1;
-        while p + 2 < Self::N {
-            out[p] = Self::WEIGHT[p] / S as u64;
-            p += 1;
-        }
-        out
-    };
-
     /// The index of the state with the given pieces (4 bits per cell) and gap.
     pub(super) fn index(pieces: u64, gap: u8) -> u64 {
         let mut cell_of = [0u8; MAX_N];
@@ -209,7 +198,7 @@ impl<const W: usize, const H: usize, const S: usize> Coord<W, H, S> {
         let mut parity = 0;
 
         for p in 1..Self::N - 2 {
-            let w = Self::RADIX_WEIGHT[p];
+            let w = Self::WEIGHT[p] / S as u64;
             let digit = block / w;
             block %= w;
             parity ^= digit;
@@ -228,11 +217,6 @@ impl<const W: usize, const H: usize, const S: usize> Coord<W, H, S> {
         if parity & 1 == 0 { [a, b] } else { [b, a] }
     }
 
-    /// The radix of the digit of piece `p`.
-    const fn radix(p: usize) -> u64 {
-        (Self::N - p) as u64
-    }
-
     /// Inserts the gap at `gap` into pieces in reading order skipping the gap, giving the pieces
     /// of each cell.
     pub(super) const fn insert_gap(ranked: u64, gap: u8) -> u64 {
@@ -240,6 +224,13 @@ impl<const W: usize, const H: usize, const S: usize> Coord<W, H, S> {
         let low = ranked & ((1 << shift) - 1);
         let high = (ranked >> shift) << shift << 4;
         low | high
+    }
+
+    /// Returns the pieces (4 bits per cell) after moving the gap from `gap` to `cell`.
+    #[inline(always)]
+    pub(super) const fn move_gap(pieces: u64, gap: u8, cell: u8) -> u64 {
+        let piece = (pieces >> (4 * cell)) & 0xF;
+        pieces ^ (piece << (4 * gap)) ^ (piece << (4 * cell))
     }
 
     /// Decodes an index into the pieces (4 bits per cell) and gap of the state.
@@ -260,7 +251,6 @@ impl<const W: usize, const H: usize, const S: usize> Coord<W, H, S> {
 /// when decoding blocks in order, and only the digits that changed are redone. The suffix is
 /// applied with a small table.
 pub(super) struct BlockDecoder<const W: usize, const H: usize> {
-    block: u64,
     prefix: u64,
     /// `digits[p]` is the digit of piece `p`, for the pieces in the prefix.
     digits: [u64; MAX_N],
@@ -277,7 +267,6 @@ pub(super) struct BlockDecoder<const W: usize, const H: usize> {
     /// `terms[j][k]` is piece `N - 4 + j` at the `k`th rank not taken by the prefix, or 0 if
     /// that piece is in the prefix.
     terms: [[u64; 4]; 4],
-    decoded: [u64; 2],
 }
 
 impl<const W: usize, const H: usize> BlockDecoder<W, H> {
@@ -297,46 +286,30 @@ impl<const W: usize, const H: usize> BlockDecoder<W, H> {
     /// increasing order, and the parity of the digits of the suffix. It's padded to 16 entries
     /// so that it can be indexed without bounds checks.
     const SUFFIX: [[u8; 5]; 16] = {
+        /// Removes the `i`th slot from `slots`, returning it.
+        const fn take(slots: &mut [u8; 4], i: usize) -> u8 {
+            let slot = slots[i];
+            let mut j = i;
+            while j + 1 < 4 {
+                slots[j] = slots[j + 1];
+                j += 1;
+            }
+            slot
+        }
+
         let mut out = [[0; 5]; 16];
         let mut suffix = 0;
         while suffix < Self::SUFFIXES as usize {
-            let (d4, d3) = if Self::K == 4 {
-                (suffix / 3, suffix % 3)
-            } else {
-                (0, suffix)
-            };
-
-            // The slots not taken yet, in increasing order.
+            // The digits of pieces `N - 4` (if it isn't in the prefix) and `N - 3`.
+            let (d4, d3) = (suffix / 3, suffix % 3);
             let mut slots = [0, 1, 2, 3];
-            let mut len = Self::K;
-
             let s4 = if Self::K == 4 {
-                let s = slots[d4];
-                let mut i = d4;
-                while i + 1 < len {
-                    slots[i] = slots[i + 1];
-                    i += 1;
-                }
-                len -= 1;
-                s
+                take(&mut slots, d4)
             } else {
                 0
             };
-
-            let s3 = slots[d3];
-            let mut i = d3;
-            while i + 1 < len {
-                slots[i] = slots[i + 1];
-                i += 1;
-            }
-
-            out[suffix] = [
-                s4 as u8,
-                s3 as u8,
-                slots[0] as u8,
-                slots[1] as u8,
-                ((d4 + d3) % 2) as u8,
-            ];
+            let s3 = take(&mut slots, d3);
+            out[suffix] = [s4, s3, slots[0], slots[1], ((d4 + d3) % 2) as u8];
             suffix += 1;
         }
         out
@@ -347,7 +320,7 @@ impl<const W: usize, const H: usize> BlockDecoder<W, H> {
         let mut out = [0; MAX_N];
         let mut p = 1;
         while p <= Self::P {
-            out[p] = Padded::<W, H>::RADIX_WEIGHT[p] / Self::SUFFIXES;
+            out[p] = Padded::<W, H>::WEIGHT[p] / MAX_N as u64 / Self::SUFFIXES;
             p += 1;
         }
         out
@@ -359,7 +332,6 @@ impl<const W: usize, const H: usize> BlockDecoder<W, H> {
 
     pub(super) fn new() -> Self {
         let mut out = Self {
-            block: 0,
             prefix: 0,
             digits: [0; MAX_N],
             free: [0; MAX_N],
@@ -368,11 +340,9 @@ impl<const W: usize, const H: usize> BlockDecoder<W, H> {
             prefix_ranked: 0,
             prefix_parity: 0,
             terms: [[0; 4]; 4],
-            decoded: [0; 2],
         };
         out.free[1] = 0xFEDC_BA98_7654_3210;
         out.redo_from(1);
-        out.decoded = out.decode_suffix(0);
         out
     }
 
@@ -445,21 +415,10 @@ impl<const W: usize, const H: usize> BlockDecoder<W, H> {
         from
     }
 
-    /// Decodes `block`, after which [`Self::ranked`] returns the pieces of its states.
-    #[inline(always)]
-    pub(super) fn decode(&mut self, block: u64) {
-        if block == self.block {
-            return;
-        }
-        self.block = block;
-        self.set_prefix(block / Self::SUFFIXES);
-        self.decoded = self.decode_suffix(block % Self::SUFFIXES);
-    }
-
     /// Decodes the 4 blocks `4 * word..4 * word + 4`, returning the pieces of the states of each
     /// in reading order skipping the gap, for the states where that permutation is even and odd.
     ///
-    /// Blocks past the end are skipped, and their pieces are 0.
+    /// The pieces of blocks past the end are unspecified.
     #[inline(always)]
     pub(super) fn decode_word(&mut self, word: u64) -> [[u64; 2]; 4] {
         let first = 4 * word;
@@ -470,13 +429,9 @@ impl<const W: usize, const H: usize> BlockDecoder<W, H> {
             std::array::from_fn(|lane| self.decode_suffix(suffix + lane as u64))
         } else {
             std::array::from_fn(|lane| {
-                let block = first + lane as u64;
-                if block < Padded::<W, H>::BLOCKS {
-                    self.decode(block);
-                    self.decoded
-                } else {
-                    [0; 2]
-                }
+                let block = (first + lane as u64).min(Padded::<W, H>::BLOCKS - 1);
+                self.set_prefix(block / Self::SUFFIXES);
+                self.decode_suffix(block % Self::SUFFIXES)
             })
         }
     }
@@ -484,35 +439,30 @@ impl<const W: usize, const H: usize> BlockDecoder<W, H> {
     /// Sets the prefix to `prefix`.
     #[inline(always)]
     fn set_prefix(&mut self, prefix: u64) {
-        if prefix != self.prefix {
-            let from = if prefix > self.prefix && prefix - self.prefix <= Self::MAX_STEP {
-                // Add the difference to the least significant digit and carry.
-                let mut p = Self::P;
-                let mut carry = prefix - self.prefix;
-                loop {
-                    let sum = self.digits[p] + carry;
-                    let radix = Padded::<W, H>::radix(p);
-                    self.digits[p] = sum % radix;
-                    carry = sum / radix;
-                    if carry == 0 {
-                        break p;
-                    }
-                    p -= 1;
-                }
-            } else {
-                self.set_prefix_digits(prefix)
-            };
-
-            self.prefix = prefix;
-            self.redo_from(from);
+        if prefix == self.prefix {
+            return;
         }
-    }
 
-    /// Returns the pieces of the states in the last decoded block, in reading order skipping the
-    /// gap, for the states where that permutation is odd if `odd` is true, or even otherwise.
-    #[cfg(test)]
-    pub(super) fn ranked(&self, odd: bool) -> u64 {
-        self.decoded[usize::from(odd)]
+        let from = if prefix > self.prefix && prefix - self.prefix <= Self::MAX_STEP {
+            // Add the difference to the least significant digit and carry.
+            let mut p = Self::P;
+            let mut carry = prefix - self.prefix;
+            loop {
+                let sum = self.digits[p] + carry;
+                let radix = (Self::N - p) as u64;
+                self.digits[p] = sum % radix;
+                carry = sum / radix;
+                if carry == 0 {
+                    break p;
+                }
+                p -= 1;
+            }
+        } else {
+            self.set_prefix_digits(prefix)
+        };
+
+        self.prefix = prefix;
+        self.redo_from(from);
     }
 }
 
@@ -599,24 +549,25 @@ mod tests {
 
     fn check_block_decoder<const W: usize, const H: usize>() {
         let blocks = Padded::<W, H>::BLOCKS;
+        let words = blocks.div_ceil(4);
         let mut rng = Xoshiro256StarStar::seed_from_u64(2);
         let mut decoder = BlockDecoder::<W, H>::new();
-        let mut block = 0;
+        let mut word = 0;
 
         for _ in 0..100_000 {
-            decoder.decode(block);
-            let [even, odd] = Padded::<W, H>::decode_block(block);
-            assert_eq!(decoder.ranked(false), even);
-            assert_eq!(decoder.ranked(true), odd);
+            let decoded = decoder.decode_word(word);
+            for (block, decoded) in (4 * word..blocks).zip(decoded) {
+                assert_eq!(decoded, Padded::<W, H>::decode_block(block));
+            }
 
             // Mostly small steps forward, sometimes large ones or backwards.
-            block = match rng.random_range(0..10) {
-                0 => rng.random_range(0..blocks),
-                1..5 => block + 1,
-                _ => block + rng.random_range(0..100),
+            word = match rng.random_range(0..10) {
+                0 => rng.random_range(0..words),
+                1..5 => word + 1,
+                _ => word + rng.random_range(0..30),
             };
-            if block >= blocks {
-                block = rng.random_range(0..blocks);
+            if word >= words {
+                word = rng.random_range(0..words);
             }
         }
     }

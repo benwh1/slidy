@@ -330,9 +330,8 @@ impl<const W: usize, const H: usize> Builder<W, H> {
             let g = gap as usize;
             let mut visit = |s: &mut Self, child: u64, cell: usize| {
                 if s.claim(child) {
-                    let piece = (pieces >> (4 * cell)) & 0xF;
-                    let child_pieces = pieces ^ (piece << (4 * g)) ^ (piece << (4 * cell));
-                    next.push((child, child_pieces, cell as u8));
+                    let cell = cell as u8;
+                    next.push((child, Padded::<W, H>::move_gap(pieces, gap, cell), cell));
                 }
             };
 
