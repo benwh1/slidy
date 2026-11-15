@@ -3,6 +3,7 @@
 
 pub mod inversion;
 pub mod manhattan;
+pub mod max;
 pub mod mtm;
 
 /// Provides a function returning a lower bound on the number of moves needed to solve a puzzle.
@@ -77,7 +78,7 @@ mod tests {
             sliding_puzzle::SlidingPuzzle as _,
         },
         solver::heuristic::{
-            inversion::InversionCount, manhattan::ManhattanDistance, mtm::MtmHeuristic,
+            inversion::InversionCount, manhattan::ManhattanDistance, max::Max, mtm::MtmHeuristic,
         },
     };
 
@@ -142,5 +143,14 @@ mod tests {
         check_incremental::<RowGrids, Stm, _>(&InversionCount);
         check_incremental::<RowGrids, Mtm, _>(&MtmHeuristic(InversionCount));
         check_incremental::<RowGrids, Stm, _>(&());
+
+        check_incremental::<RowGrids, Stm, _>(&Max((ManhattanDistance(RowGrids), InversionCount)));
+        check_incremental::<RowGrids, Mtm, _>(&Max((
+            MtmHeuristic(InversionCount),
+            MtmHeuristic(ManhattanDistance(RowGrids)),
+            (),
+        )));
+        check_incremental::<Rows, Stm, _>(&Max(vec![ManhattanDistance(Rows); 3]));
+        check_incremental::<Rows, Stm, _>(&Max(Vec::<ManhattanDistance<Rows>>::new()));
     }
 }
