@@ -71,6 +71,16 @@ impl<const N: usize> ProjectedPuzzle<N> {
         true
     }
 
+    /// Returns the value in each cell, with 0 for the gap and the cells after the last.
+    pub(super) const fn pieces(&self) -> [u8; N] {
+        self.pieces
+    }
+
+    /// Returns the cell of the gap.
+    pub(super) const fn gap(&self) -> u8 {
+        self.gap
+    }
+
     /// Ranks the projected state to the multiset index used for the PDB arrays. `N` is the width
     /// of the scratch `pieces` buffer (16 for projections of up to 16 cells, 32 otherwise).
     pub(super) fn encode(&self, tally: &[u8]) -> u64 {

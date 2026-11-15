@@ -3,14 +3,17 @@
 use std::ops::ControlFlow;
 
 use crate::{
-    algorithm::{direction::Direction, metric::Stm},
+    algorithm::metric::Stm,
     puzzle::{
         label::label::Label, sliding_puzzle::SlidingPuzzle, solvable::Solvable,
         solved_state::SolvedState,
     },
     solver::{
         config::SolverConfig,
-        projection::{LARGE, SMALL, puzzle::ProjectedPuzzle, solver::Solver},
+        projection::{
+            LARGE, SMALL,
+            solver::{DIRECTIONS, Solver},
+        },
         search::iterative_deepening,
         solver::{Solver as SolverT, SolverError},
     },
@@ -22,49 +25,53 @@ where
     Target: Label + SolvedState + Solvable + Default,
     PruneTarget: Label + SolvedState + Default,
 {
+    /// Finds solutions of length `depth` of the state with the given pieces, gap, and index,
+    /// where `moves` is the set of moves to try. `depth` must be at least 1.
     fn dfs<const N: usize>(
         &mut self,
         puzzle: &P,
         depth: u64,
-        last_dir: Option<Direction>,
-        projected: ProjectedPuzzle<N>,
+        pieces: [u8; N],
+        gap: u8,
+        index: u64,
+        moves: u8,
     ) -> ControlFlow<()> {
-        let index = projected.encode(&self.tally) as usize;
+        let cells = self.moves[gap as usize].0;
+        let mut rest = moves;
+        while rest != 0 {
+            let d = rest.trailing_zeros();
+            rest &= rest - 1;
 
-        if depth == 0 {
-            if index == self.prune_target_solved_index && self.check_solution(puzzle) {
-                return self.search.record_solution();
-            }
+            let cell = cells[d as usize];
+            let mut child_pieces = pieces;
+            child_pieces.swap(gap as usize, cell as usize);
+            let child = self.child_index(&pieces, &child_pieces, gap, cell, index, d);
 
-            return ControlFlow::Continue(());
-        }
-
-        // SAFETY: `index` comes from encoding a projected puzzle, so is within bounds.
-        let heuristic = unsafe { self.pdb.get_unchecked(index) } as u64;
-        if heuristic > depth {
-            return ControlFlow::Continue(());
-        }
-
-        let original = projected;
-
-        for dir in [
-            Direction::Up,
-            Direction::Left,
-            Direction::Down,
-            Direction::Right,
-        ] {
-            if last_dir == Some(dir.inverse()) {
+            // Children at depth 0 are only checked for being solved, not against the bound.
+            if depth == 1 {
+                if child == self.prune_target_solved_index {
+                    self.search.stack.push(DIRECTIONS[d as usize]);
+                    if self.check_solution(puzzle) && self.search.record_solution().is_break() {
+                        return ControlFlow::Break(());
+                    }
+                    self.search.stack.pop();
+                }
                 continue;
             }
 
-            let mut proj = original;
-            if proj.do_move(dir) {
-                self.search.stack.push(dir);
-                if self.dfs(puzzle, depth - 1, Some(dir), proj).is_break() {
-                    return ControlFlow::Break(());
-                }
-                self.search.stack.pop();
+            if self.bound(child) >= depth {
+                continue;
             }
+
+            let child_moves = self.moves[cell as usize].1 & !(1 << (d ^ 2));
+            self.search.stack.push(DIRECTIONS[d as usize]);
+            if self
+                .dfs(puzzle, depth - 1, child_pieces, cell, child, child_moves)
+                .is_break()
+            {
+                return ControlFlow::Break(());
+            }
+            self.search.stack.pop();
         }
 
         ControlFlow::Continue(())
@@ -92,16 +99,25 @@ where
         }
 
         let projected = self.initial_projected::<N>(puzzle);
-        let start_index = projected.encode(&self.tally) as usize;
-        // SAFETY: `start_index` comes from encoding a projected puzzle, so is within bounds.
-        let hval = unsafe { self.pdb.get_unchecked(start_index) } as u64;
+        let index = projected.encode(&self.tally);
+        let (pieces, gap) = (projected.pieces(), projected.gap());
+        let moves = self.moves[gap as usize].1;
+        let hval = self.bound(index);
 
         iterative_deepening::<Stm, _, _>(
             self,
             |s| &mut s.search,
             config,
             hval,
-            |s, depth| s.dfs::<N>(puzzle, depth, None, projected),
+            |s, depth| {
+                if depth == 0 {
+                    if index == s.prune_target_solved_index && s.check_solution(puzzle) {
+                        return s.search.record_solution();
+                    }
+                    return ControlFlow::Continue(());
+                }
+                s.dfs::<N>(puzzle, depth, pieces, gap, index, moves)
+            },
         );
 
         Ok(())
