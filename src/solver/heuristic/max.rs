@@ -23,12 +23,12 @@ use crate::solver::heuristic::Heuristic;
 ///
 /// let heuristic = Max((ManhattanDistance(RowGrids), InversionCount));
 ///
-/// // Manhattan distance 24, inversion count 16.
-/// let puzzle = Puzzle::from_str("0 1 2 3/4 5 6 7/8 9 10 11/12 13 14 15").unwrap();
+/// // Manhattan distance 24, inversion count 18.
+/// let puzzle = Puzzle::from_str("0 1 2 3/4 5 6 7/8 9 10 11/12 13 15 14").unwrap();
 /// assert_eq!(heuristic.bound(&puzzle), 24);
 ///
 /// // Manhattan distance 5, inversion count 9.
-/// let puzzle = Puzzle::from_str("1 2 3 4/5 6 7 8/9 10 11 12/0 15 14 13").unwrap();
+/// let puzzle = Puzzle::from_str("1 2 3 4/5 6 7 8/9 10 11 12/0 15 13 14").unwrap();
 /// assert_eq!(heuristic.bound(&puzzle), 9);
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -137,6 +137,7 @@ mod tests {
         puzzle::{
             label::label::{RowGrids, Rows},
             puzzle::Puzzle,
+            sliding_puzzle::SlidingPuzzle as _,
         },
         solver::heuristic::{inversion::InversionCount, manhattan::ManhattanDistance},
     };
@@ -147,12 +148,13 @@ mod tests {
             "1 2 3/4 5 6/7 8 0",
             "8 6 7/2 5 4/3 0 1",
             "1 4 5/0 7 8/2 3 6",
-            "0 1 2 3/4 5 6 7/8 9 10 11/12 13 14 15",
-            "1 2 3 4/5 6 7 8/9 10 11 12/0 15 14 13",
+            "0 1 2 3/4 5 6 7/8 9 10 11/12 13 15 14",
+            "1 2 3 4/5 6 7 8/9 10 11 12/0 15 13 14",
             "11 1 9 10/0 2 13 15/4 5 3 14/8 6 12 7",
         ];
         for state in cases {
             let puzzle = Puzzle::from_str(state).unwrap();
+            assert!(puzzle.is_solvable(), "state {state}");
             let md = Heuristic::<_, RowGrids, Stm>::bound(&ManhattanDistance(RowGrids), &puzzle);
             let inv = Heuristic::<_, RowGrids, Stm>::bound(&InversionCount, &puzzle);
             let expected = md.max(inv);

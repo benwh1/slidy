@@ -46,13 +46,20 @@ use crate::{
 ///     solver::heuristic::{Heuristic, inversion::InversionCount},
 /// };
 ///
-/// // There are no inversions in reading order, but the gap is 3 rows from its solved row, so at
-/// // least 3 vertical moves are needed. There are 36 inversions in column order, which need at
-/// // least 12 horizontal moves, but the gap is 3 columns from its solved column, so an odd number
-/// // of horizontal moves is needed.
-/// let puzzle = Puzzle::from_str("0 1 2 3/4 5 6 7/8 9 10 11/12 13 14 15").unwrap();
+/// // There is 1 inversion in reading order, which needs at least 1 vertical move, but the gap is 3
+/// // rows from its solved row, so at least 3 vertical moves are needed. There are 43 inversions in
+/// // column order, which need at least 15 horizontal moves.
+/// let puzzle = Puzzle::from_str("0 1 2 3/4 5 6 7/8 9 10 11/12 13 15 14").unwrap();
 /// let bound = Heuristic::<_, RowGrids, Stm>::bound(&InversionCount, &puzzle);
-/// assert_eq!(bound, 3 + 13);
+/// assert_eq!(bound, 3 + 15);
+///
+/// // There are 2 inversions in reading order, which need at least 1 vertical move, but the gap is
+/// // in its solved row, so an even number of vertical moves is needed. There are 17 inversions in
+/// // column order, which need at least 6 horizontal moves, but the gap is 3 columns from its
+/// // solved column, so an odd number of horizontal moves is needed.
+/// let puzzle = Puzzle::from_str("1 2 3 4/5 6 7 8/9 10 11 12/0 15 13 14").unwrap();
+/// let bound = Heuristic::<_, RowGrids, Stm>::bound(&InversionCount, &puzzle);
+/// assert_eq!(bound, 2 + 7);
 /// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct InversionCount;
@@ -300,16 +307,17 @@ mod tests {
             // column order.
             ("0 1 2/3 4 5/6 7 8", 8),
             ("1 2 3 4/5 6 7 8/9 10 11 12/13 14 15 0", 0),
-            // 0 inversions in reading order, but the gap needs 3 vertical moves. 36 inversions in
-            // column order, which need 12 horizontal moves, but the gap needs an odd number.
-            ("0 1 2 3/4 5 6 7/8 9 10 11/12 13 14 15", 16),
-            // 3 inversions in reading order, which need 1 vertical move, but the gap needs an even
-            // number. 18 inversions in column order, which need 6 horizontal moves, but the gap
+            // 1 inversion in reading order, which needs 1 vertical move, but the gap needs 3. 43
+            // inversions in column order, which need 15 horizontal moves.
+            ("0 1 2 3/4 5 6 7/8 9 10 11/12 13 15 14", 18),
+            // 2 inversions in reading order, which need 1 vertical move, but the gap needs an even
+            // number. 17 inversions in column order, which need 6 horizontal moves, but the gap
             // needs an odd number.
-            ("1 2 3 4/5 6 7 8/9 10 11 12/0 15 14 13", 9),
+            ("1 2 3 4/5 6 7 8/9 10 11 12/0 15 13 14", 9),
         ];
         for (state, expected) in cases {
             let puzzle = Puzzle::from_str(state).unwrap();
+            assert!(puzzle.is_solvable(), "state {state}");
             assert_eq!(bound(&puzzle), expected, "state {state}");
         }
     }
@@ -326,6 +334,7 @@ mod tests {
             let pieces = (0..n * n).rev().map(|i| (i + 1) % (n * n)).collect();
             let puzzle = Puzzle::with_pieces(pieces, size).unwrap();
             assert_eq!(puzzle.gap_position_xy(), (0, 0));
+            assert!(puzzle.is_solvable(), "n = {n}");
 
             let base = n * n * n + n * n - 2 * n - 2;
             let expected = if n % 4 == 1 { base + 2 } else { base };
