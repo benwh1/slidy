@@ -106,27 +106,38 @@ pub(super) fn vertical_delta<const N: usize>(
     // The gap is the only cell with value 0, so its term is its position.
     let mut delta = weights[0].wrapping_mul(width as u64);
 
-    // The moved piece. The cells before `cell` are the same before and after the move.
+    // The moved piece's term after the move. The cells before `cell` are the same before and
+    // after the move.
     let (less, equal) = counts_before(pieces, cell, x);
     delta = delta.wrapping_add(wx.wrapping_mul(indexing::BINOMIAL[cell - less][equal + 1]));
-    let (less, equal) = counts_before(pieces, below, x);
-    delta = delta.wrapping_sub(wx.wrapping_mul(indexing::BINOMIAL[below - less][equal + 1]));
+
+    // The numbers of cells before `c` holding values less than `x` and equal to `x`, before the
+    // move, starting after the gap.
+    let (mut less_x, mut equal_x) = (less + 1, equal);
 
     // Cells between with smaller values have the gap moved from before them to after them, so
     // they have one fewer smaller value before them. Cells between with value `x` also have the
     // moved piece moved to before them.
     for c in cell + 1..below {
         let u = pieces[c];
-        if u <= x {
+        if u == x {
+            let pos = c - less_x;
+            let new = indexing::BINOMIAL[pos + 1][equal_x + 2];
+            let old = indexing::BINOMIAL[pos][equal_x + 1];
+            delta = delta.wrapping_add(wx.wrapping_mul(new.wrapping_sub(old)));
+            equal_x += 1;
+        } else if u < x {
             let (less, equal) = counts_before(pieces, c, u);
             let pos = c - less;
-            let new = indexing::BINOMIAL[pos + 1][equal + 1 + usize::from(u == x)];
+            let new = indexing::BINOMIAL[pos + 1][equal + 1];
             let old = indexing::BINOMIAL[pos][equal + 1];
             delta = delta.wrapping_add(weights[u as usize].wrapping_mul(new.wrapping_sub(old)));
+            less_x += 1;
         }
     }
 
-    delta
+    // The moved piece's term before the move.
+    delta.wrapping_sub(wx.wrapping_mul(indexing::BINOMIAL[below - less_x][equal_x + 1]))
 }
 
 #[cfg(test)]
