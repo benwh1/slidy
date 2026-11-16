@@ -53,40 +53,71 @@ fn depth_mask(chunk: &[u8; CHUNK], depth: u8) -> u64 {
     }
 }
 
-/// Marks every unvisited neighbour of the state `pieces` with `depth + 1` and returns how many
-/// there were.
+/// Sets the entry at `idx` to `depth + 1` if it is unvisited, and returns whether it was.
 #[inline(always)]
-fn expand(
-    pdb: &mut [u8],
-    pieces: u64,
-    depth: u8,
-    indexing_table: &IndexingTable,
-    base_5_table: &Base5Table,
-) -> u64 {
+fn claim(pdb: &mut [u8], idx: usize, depth: u8) -> u64 {
+    // Every visited entry is at most `depth + 1`, so this only changes unvisited ones.
+    let entry = pdb[idx];
+    pdb[idx] = entry.min(depth + 1);
+    u64::from(entry == u8::MAX)
+}
+
+/// Returns whether `gap` is in cells 8..16.
+#[inline(always)]
+fn in_low_half(gap: u8) -> bool {
+    gap >= 8
+}
+
+/// Returns the four states reached by moves that keep the gap in the same half of the puzzle
+/// (cells 0..8 or 8..16): the three moves along its row, and the one move to the other row of
+/// the half.
+fn same_half_moves(pieces: u64) -> [u64; 4] {
     let state = ReducedFourBitPuzzle {
         pieces,
         gap: gap_position(pieces),
     };
-    let mut new = 0;
+    let mut moves = [0; 4];
+    let mut n = 0;
 
-    for mv in [
-        Direction::Up,
-        Direction::Left,
-        Direction::Down,
-        Direction::Right,
-    ] {
+    for mv in [Direction::Left, Direction::Right] {
         let mut puzzle = state;
-
         while puzzle.do_move(mv) {
-            let idx = indexing_table.encode(puzzle.pieces(), base_5_table) as usize;
-            // Every visited entry is at most `depth + 1`, so this only changes unvisited ones.
-            let entry = pdb[idx];
-            new += u64::from(entry == u8::MAX);
-            pdb[idx] = entry.min(depth + 1);
+            moves[n] = puzzle.pieces();
+            n += 1;
         }
     }
 
-    new
+    // `Up` moves the gap down a row, and `Down` moves it up.
+    let mut puzzle = state;
+    let mv = if (state.gap >> 2) & 1 == 0 {
+        Direction::Up
+    } else {
+        Direction::Down
+    };
+    puzzle.do_move(mv);
+    moves[n] = puzzle.pieces();
+    n += 1;
+
+    debug_assert_eq!(n, 4);
+    moves
+}
+
+/// Calls `f` with the two states reached by moves that take the gap to the other half of the
+/// puzzle.
+#[inline(always)]
+fn for_each_cross_move(pieces: u64, mut f: impl FnMut(u64)) {
+    let gap = gap_position(pieces);
+    let low = in_low_half(gap);
+
+    // `Up` moves the gap down a row, and `Down` moves it up.
+    let mv = if low { Direction::Down } else { Direction::Up };
+    let mut puzzle = ReducedFourBitPuzzle { pieces, gap };
+
+    while puzzle.do_move(mv) {
+        if in_low_half(puzzle.gap) != low {
+            f(puzzle.pieces());
+        }
+    }
 }
 
 /// Returns the position of the gap (the only zero nibble) in `pieces`.
@@ -142,21 +173,38 @@ struct Block {
     start: u32,
     /// Pieces in cells 0..8.
     prefix: u32,
-    /// Index into [`Blocks::suffixes`] of the possible pieces in cells 8..16, in index order.
+    /// Index into [`Blocks::suffixes`] of the possible pieces in cells 8..16.
     suffixes: u16,
+    /// Whether the gap is in cells 0..8.
+    gap_in_prefix: bool,
+    /// If the gap is in cells 0..8, the starts of the blocks reached by [`same_half_moves`]. These
+    /// moves leave cells 8..16 alone, so the state at offset `j` in this block moves to offset
+    /// `j` in each of them.
+    children: [u32; 4],
+}
+
+/// The possible pieces in cells 8..16 for a block, given the pieces left over from cells 0..8.
+struct Suffixes {
+    /// The pieces in cells 8..16, in index order.
+    suffixes: Vec<u32>,
+    /// If the gap is in cells 8..16, the offsets within the block reached from each suffix by
+    /// [`same_half_moves`]. These moves leave cells 0..8 alone, so they stay in the block.
+    moves: Vec<[u16; 4]>,
 }
 
 /// Every state's index split into blocks, so that the table can be walked in index order and the
 /// state at each index read off directly.
 struct Blocks {
     blocks: Vec<Block>,
-    suffixes: Vec<Vec<u32>>,
+    suffixes: Vec<Suffixes>,
 }
 
 impl Blocks {
-    fn new() -> Self {
+    fn new(indexing_table: &IndexingTable, base_5_table: &Base5Table) -> Self {
+        let encode = |pieces| indexing_table.encode(pieces, base_5_table);
+
         let mut blocks = Vec::new();
-        let mut suffixes: Vec<Vec<u32>> = Vec::new();
+        let mut suffixes: Vec<Suffixes> = Vec::new();
         let mut suffix_ids = std::collections::HashMap::new();
         let mut start = 0;
 
@@ -164,16 +212,43 @@ impl Blocks {
             let id = *suffix_ids.entry(remaining).or_insert_with(|| {
                 let mut list = Vec::new();
                 for_each_arrangement(8, remaining, &mut |suffix, _| list.push(suffix));
-                suffixes.push(list);
+
+                // The offsets don't depend on the prefix, so compute them with this block's.
+                let moves = if remaining[0] == 1 {
+                    list.iter()
+                        .map(|&suffix| {
+                            let pieces = u64::from(prefix) | (u64::from(suffix) << 32);
+                            same_half_moves(pieces).map(|p| (encode(p) - start) as u16)
+                        })
+                        .collect()
+                } else {
+                    Vec::new()
+                };
+
+                suffixes.push(Suffixes {
+                    suffixes: list,
+                    moves,
+                });
                 suffixes.len() - 1
             });
+
+            let first = suffixes[id].suffixes[0];
+            let gap_in_prefix = remaining[0] == 0;
+            let children = if gap_in_prefix {
+                let pieces = u64::from(prefix) | (u64::from(first) << 32);
+                same_half_moves(pieces).map(encode)
+            } else {
+                [0; 4]
+            };
 
             blocks.push(Block {
                 start,
                 prefix,
                 suffixes: id as u16,
+                gap_in_prefix,
+                children,
             });
-            start += suffixes[id].len() as u32;
+            start += suffixes[id].suffixes.len() as u32;
         });
 
         debug_assert_eq!(start as usize, SIZE);
@@ -196,7 +271,7 @@ impl Pdb {
         base_5_table: &Base5Table,
         config: &PdbConfig,
     ) -> Self {
-        let blocks = Blocks::new();
+        let blocks = Blocks::new(indexing_table, base_5_table);
 
         let mut pdb = vec![u8::MAX; SIZE];
 
@@ -219,7 +294,7 @@ impl Pdb {
                 let suffixes = &blocks.suffixes[block.suffixes as usize];
                 let start = block.start as usize;
 
-                let len = suffixes.len();
+                let len = suffixes.suffixes.len();
                 let mut j = 0;
 
                 while j < len {
@@ -235,12 +310,25 @@ impl Pdb {
                     };
 
                     while mask != 0 {
-                        let k = mask.trailing_zeros() as usize;
+                        let offset = j + mask.trailing_zeros() as usize;
                         mask &= mask - 1;
 
-                        let suffix = suffixes[j + k];
+                        if block.gap_in_prefix {
+                            for child in block.children {
+                                new += claim(&mut pdb, child as usize + offset, depth);
+                            }
+                        } else {
+                            for child in suffixes.moves[offset] {
+                                new += claim(&mut pdb, start + child as usize, depth);
+                            }
+                        }
+
+                        let suffix = suffixes.suffixes[offset];
                         let pieces = u64::from(block.prefix) | (u64::from(suffix) << 32);
-                        new += expand(&mut pdb, pieces, depth, indexing_table, base_5_table);
+                        for_each_cross_move(pieces, |p| {
+                            let idx = indexing_table.encode(p, base_5_table) as usize;
+                            new += claim(&mut pdb, idx, depth);
+                        });
                     }
 
                     j += CHUNK;
