@@ -2,7 +2,7 @@
 //! single `u64` with 4 bits per piece. Moves are applied efficiently using bit operations.
 
 use crate::{
-    algorithm::direction::Direction,
+    algorithm::{direction::Direction, r#move::r#move::Move},
     puzzle::{puzzle::PuzzleError, size::Size, sliding_puzzle::SlidingPuzzle},
 };
 
@@ -128,6 +128,77 @@ macro_rules! impl_puzzle {
 
                 out
             };
+
+            /// The longest possible move.
+            const MAX_AMOUNT: usize = if $w > $h { $w - 1 } else { $h - 1 };
+
+            /// `DISTANCES[gap][dir]` is how far the gap can move in direction `dir`, i.e. the
+            /// largest amount of a move in direction `dir` that can be applied.
+            const DISTANCES: [[u8; 4]; Self::N] = {
+                let mut out = [[0; 4]; Self::N];
+
+                let mut i = 0;
+                while i < Self::N as u8 {
+                    let (gx, gy) = (i % $w, i / $w);
+                    out[i as usize] = [$h - 1 - gy, $w - 1 - gx, gy, gx];
+                    i += 1;
+                }
+
+                out
+            };
+
+            /// `MULTI_MASKS[gap][dir][amount]` selects the pieces moved by a move in direction
+            /// `dir` of `amount` pieces, with the gap at `gap`. It is 0 if the move can't be
+            /// applied.
+            const MULTI_MASKS: [[[u64; Self::MAX_AMOUNT + 1]; 4]; Self::N] = {
+                let mut out = [[[0; Self::MAX_AMOUNT + 1]; 4]; Self::N];
+
+                let mut gap = 0;
+                while gap < Self::N {
+                    let mut dir = 0;
+                    while dir < 4 {
+                        let mut amount = 1;
+                        while amount <= Self::DISTANCES[gap][dir] as usize {
+                            let cell = Self::NEXT_GAPS[gap][dir][amount] as u64;
+                            out[gap][dir][amount] = out[gap][dir][amount - 1] | (0xF << (4 * cell));
+                            amount += 1;
+                        }
+                        dir += 1;
+                    }
+                    gap += 1;
+                }
+
+                out
+            };
+
+            /// `NEXT_GAPS[gap][dir][amount]` is the position of the gap after a move in direction
+            /// `dir` of `amount` pieces, with the gap at `gap`.
+            const NEXT_GAPS: [[[u8; Self::MAX_AMOUNT + 1]; 4]; Self::N] = {
+                let mut out = [[[0; Self::MAX_AMOUNT + 1]; 4]; Self::N];
+
+                let mut gap = 0;
+                while gap < Self::N {
+                    let mut dir = 0;
+                    while dir < 4 {
+                        out[gap][dir][0] = gap as u8;
+                        let mut amount = 1;
+                        while amount <= Self::MAX_AMOUNT {
+                            out[gap][dir][amount] =
+                                Self::GAPS[out[gap][dir][amount - 1] as usize][dir];
+                            amount += 1;
+                        }
+                        dir += 1;
+                    }
+                    gap += 1;
+                }
+
+                out
+            };
+
+            /// `ROTATIONS[dir]` rotates the pieces moved by a move in direction `dir` into their
+            /// new positions. The moved pieces never wrap around, so this is a shift by one row or
+            /// column.
+            const ROTATIONS: [u32; 4] = [4 * $w, 4, 64 - 4 * $w, 60];
 
             pub(crate) const SWAP_MASKS: [[[u64; Self::N]; Self::N]; Self::N] = {
                 #[allow(clippy::large_stack_arrays)]
@@ -366,6 +437,27 @@ macro_rules! impl_puzzle {
             unsafe fn move_dir_unchecked(&mut self, dir: Direction) {
                 self.move_dir(dir);
             }
+
+            fn can_apply_move(&self, mv: Move) -> bool {
+                mv.amount <= u64::from(Self::DISTANCES[self.gap as usize][mv.direction as usize])
+            }
+
+            fn apply_move(&mut self, mv: Move) {
+                let gap = self.gap as usize;
+                let dir = mv.direction as usize;
+
+                // Moving further than possible moves as far as possible.
+                let amount = mv.amount.min(u64::from(Self::DISTANCES[gap][dir])) as usize;
+
+                let mask = Self::MULTI_MASKS[gap][dir][amount];
+                let moved = (self.pieces & mask).rotate_right(Self::ROTATIONS[dir]);
+                self.pieces = (self.pieces & !mask) | moved;
+                self.gap = Self::NEXT_GAPS[gap][dir][amount];
+            }
+
+            unsafe fn apply_move_unchecked(&mut self, mv: Move) {
+                self.apply_move(mv);
+            }
         }
 
         impl TryFrom<[u8; $w * $h]> for Puzzle<$w, $h> {
@@ -575,6 +667,18 @@ mod tests {
                             s.apply_move(mv);
                             g.apply_move(mv);
                         }
+                    }
+                    7 if rng.random() => {
+                        // Any amount, including too far, matches moving one piece at a time.
+                        let mv =
+                            Move::new(DIRS[rng.random_range(0..4)], rng.random_range(0..=max + 2));
+                        let mut expected = s;
+                        for _ in 0..mv.amount {
+                            expected.try_move_dir(mv.direction);
+                        }
+                        s.apply_move(mv);
+                        assert_eq!((s.pieces(), s.gap()), (expected.pieces(), expected.gap()));
+                        g.set_state(&s);
                     }
                     7 => {
                         let alg = random_alg(&mut rng, max);
