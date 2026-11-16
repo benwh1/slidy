@@ -86,6 +86,16 @@ name = "solver_small_pdb"
 path = "benches/solver/small/pdb.rs"
 harness = false
 
+[[bench]]
+name = "solver_small_pdb_large"
+path = "benches/solver/small/pdb_large.rs"
+harness = false
+
+[[bench]]
+name = "solver_small_solver"
+path = "benches/solver/small/solver.rs"
+harness = false
+
 [features]
 default = ["thread_rng"]
 palette = ["dep:palette", "dep:svg", "dep:enterpolation"]
