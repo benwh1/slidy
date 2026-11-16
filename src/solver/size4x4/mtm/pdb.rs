@@ -6,6 +6,7 @@ use xxhash_rust::xxh3;
 
 use crate::{
     algorithm::direction::Direction,
+    puzzle::small::find_nibble,
     solver::{
         config::PdbConfig,
         size4x4::mtm::{
@@ -107,12 +108,7 @@ fn set(nibbles: u32, cell: u32, piece: u32) -> u32 {
 
 /// Returns the position of the gap (the only zero nibble) in `pieces`.
 fn gap_position(pieces: u64) -> u8 {
-    const ONES: u64 = 0x1111_1111_1111_1111;
-    const HIGHS: u64 = 0x8888_8888_8888_8888;
-
-    // The lowest flagged nibble is exactly the lowest zero nibble.
-    let zeros = pieces.wrapping_sub(ONES) & !pieces & HIGHS;
-    (zeros.trailing_zeros() / 4) as u8
+    find_nibble(pieces, 0) as u8
 }
 
 /// Returns the four states reached by moves that keep the gap in the same half of the puzzle
