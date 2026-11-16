@@ -26,19 +26,30 @@ pub trait Heuristic<P, S, M> {
     /// Updates `state` after the piece at `from` is moved into the gap at `to` (so the gap is now
     /// at `from`), and returns a lower bound on the number of moves needed to solve `puzzle`,
     /// which is the state after the move.
+    ///
+    /// The default implementation doesn't change `state`, and returns
+    /// [`bound(puzzle)`](Heuristic::bound).
     fn bound_after_move(
         &self,
         state: &mut Self::State,
         puzzle: &P,
         from: (u64, u64),
         to: (u64, u64),
-    ) -> u64;
+    ) -> u64 {
+        let _ = (state, from, to);
+        self.bound(puzzle)
+    }
 
     /// Undoes [`Heuristic::bound_after_move`] with the same `from` and `to`, where `puzzle` is
     /// the state after the move has been undone (so the piece is back at `from`).
     ///
     /// Moves are undone in the opposite order to the order they were made in.
-    fn undo_move(&self, state: &mut Self::State, puzzle: &P, from: (u64, u64), to: (u64, u64));
+    ///
+    /// The default implementation does nothing, which is correct if
+    /// [`Heuristic::bound_after_move`] doesn't change `state`.
+    fn undo_move(&self, state: &mut Self::State, puzzle: &P, from: (u64, u64), to: (u64, u64)) {
+        let _ = (state, puzzle, from, to);
+    }
 }
 
 impl<P, S, M> Heuristic<P, S, M> for () {
@@ -49,12 +60,6 @@ impl<P, S, M> Heuristic<P, S, M> for () {
     }
 
     fn init(&self, _: &P) {}
-
-    fn bound_after_move(&self, (): &mut (), _: &P, _: (u64, u64), _: (u64, u64)) -> u64 {
-        0
-    }
-
-    fn undo_move(&self, (): &mut (), _: &P, _: (u64, u64), _: (u64, u64)) {}
 }
 
 #[cfg(test)]

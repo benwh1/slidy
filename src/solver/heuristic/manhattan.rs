@@ -23,6 +23,17 @@ use crate::{
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ManhattanDistance<S>(pub S);
 
+impl ManhattanDistance<Trivial> {
+    /// The distance of the gap at `(gx, gy)` from the bottom right corner of `puzzle`.
+    fn gap_distance<P>(puzzle: &P, (gx, gy): (u64, u64)) -> u64
+    where
+        P: SlidingPuzzle,
+    {
+        let (w, h) = puzzle.size().into();
+        w + h - 2 - gx - gy
+    }
+}
+
 impl<P> Heuristic<P, Trivial, Stm> for ManhattanDistance<Trivial>
 where
     P: SlidingPuzzle,
@@ -30,25 +41,15 @@ where
     type State = ();
 
     fn bound(&self, puzzle: &P) -> u64 {
-        let (w, h) = puzzle.size().into();
-        let (gx, gy) = puzzle.gap_position_xy();
-        w + h - 2 - gx - gy
+        Self::gap_distance(puzzle, puzzle.gap_position_xy())
     }
 
     fn init(&self, _: &P) {}
 
-    fn bound_after_move(
-        &self,
-        (): &mut (),
-        puzzle: &P,
-        (gx, gy): (u64, u64),
-        _: (u64, u64),
-    ) -> u64 {
-        let (w, h) = puzzle.size().into();
-        w + h - 2 - gx - gy
+    fn bound_after_move(&self, (): &mut (), puzzle: &P, from: (u64, u64), _: (u64, u64)) -> u64 {
+        // The gap is now at `from`, so this saves finding it.
+        Self::gap_distance(puzzle, from)
     }
-
-    fn undo_move(&self, (): &mut (), _: &P, _: (u64, u64), _: (u64, u64)) {}
 }
 
 /// Defines a function computing the shortest distance of a piece from a solved position.
