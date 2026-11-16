@@ -22,6 +22,10 @@ const HASH: u64 = 0x73b712151249d829;
 
 const CHUNK: usize = 64;
 
+/// Extra entries at the end of the table while it is being built. Every child's index is a start
+/// below [`SIZE`] plus a `u16` offset, so with this padding it is always in bounds.
+const PADDING: usize = 1 << 16;
+
 /// Layers are expanded from a queue while they have fewer states than this.
 const QUEUE_LIMIT: usize = 1 << 18;
 
@@ -63,6 +67,20 @@ fn claim(pdb: &mut [u8], idx: usize, depth: u8) -> u64 {
     let entry = pdb[idx];
     pdb[idx] = entry.min(depth + 1);
     u64::from(entry == u8::MAX)
+}
+
+/// [`claim`] without bounds checking.
+///
+/// # Safety
+///
+/// `idx` must be less than `pdb.len()`.
+#[inline(always)]
+unsafe fn claim_unchecked(pdb: &mut [u8], idx: usize, depth: u8) -> u64 {
+    // SAFETY: The caller guarantees that `idx` is in bounds.
+    let entry = unsafe { pdb.get_unchecked_mut(idx) };
+    let old = *entry;
+    *entry = old.min(depth + 1);
+    u64::from(old == u8::MAX)
 }
 
 /// Returns the piece in cell `cell` of `nibbles`.
@@ -324,7 +342,15 @@ impl Blocks {
             start += suffixes[id].suffixes.len() as u32;
         });
 
-        debug_assert_eq!(start as usize, SIZE);
+        assert_eq!(start as usize, SIZE);
+        // The building loop relies on this to skip bounds checks; see `PADDING`.
+        assert!(blocks.iter().all(|block| {
+            block
+                .children
+                .iter()
+                .chain(&block.cross)
+                .all(|&start| (start as usize) < SIZE)
+        }));
 
         Self { blocks, suffixes }
     }
@@ -346,7 +372,7 @@ impl Pdb {
     ) -> Self {
         let blocks = Blocks::new(indexing_table, base_5_table);
 
-        let mut pdb = vec![u8::MAX; SIZE];
+        let mut pdb = vec![u8::MAX; SIZE + PADDING];
 
         let puzzle = ReducedFourBitPuzzle::new();
         let solved_index = indexing_table.encode(puzzle.pieces, base_5_table) as usize;
@@ -428,36 +454,49 @@ impl Pdb {
                         let offset = j + mask.trailing_zeros() as usize;
                         mask &= mask - 1;
 
-                        let suffix = suffixes.suffixes[offset];
-                        let cross = &suffixes.cross[offset];
+                        // SAFETY: The mask only has bits for offsets less than `len`, the
+                        // length of all of the suffix tables.
+                        let (suffix, cross) = unsafe {
+                            (
+                                *suffixes.suffixes.get_unchecked(offset),
+                                suffixes.cross.get_unchecked(offset),
+                            )
+                        };
 
+                        // Every child index below is a start below `SIZE` (checked in
+                        // `Blocks::new`) plus a `u16`, so it is within `SIZE + PADDING`.
                         if block.gap_in_prefix {
                             for child in block.children {
-                                new += claim(&mut pdb, child as usize + offset, depth);
+                                // SAFETY: See the comment above the `if`.
+                                new += unsafe {
+                                    claim_unchecked(&mut pdb, child as usize + offset, depth)
+                                };
                             }
 
-                            let c = u32::from(block.gap_col);
-                            let child = block.cross[get(suffix, c) as usize] as usize;
-                            new += claim(&mut pdb, child + cross[2 * c as usize] as usize, depth);
-                            new +=
-                                claim(&mut pdb, child + cross[2 * c as usize + 1] as usize, depth);
+                            let c = u32::from(block.gap_col) & 3;
+                            let child = block.cross[(get(suffix, c) & 7) as usize] as usize;
+                            for t in 0..2 {
+                                let idx = child + cross[(2 * c + t) as usize] as usize;
+                                // SAFETY: See the comment above the `if`.
+                                new += unsafe { claim_unchecked(&mut pdb, idx, depth) };
+                            }
                         } else {
-                            for child in suffixes.moves[offset] {
-                                new += claim(&mut pdb, start + child as usize, depth);
+                            // SAFETY: as for `suffixes.suffixes` above.
+                            let moves = unsafe { suffixes.moves.get_unchecked(offset) };
+                            for &child in moves {
+                                // SAFETY: See the comment above the `if`.
+                                new += unsafe {
+                                    claim_unchecked(&mut pdb, start + child as usize, depth)
+                                };
                             }
 
                             let c = u32::from(gap_position(u64::from(suffix))) % 4;
-                            let child = cross[get(block.prefix, c + 4) as usize] as usize;
-                            new += claim(
-                                &mut pdb,
-                                block.cross[2 * c as usize] as usize + child,
-                                depth,
-                            );
-                            new += claim(
-                                &mut pdb,
-                                block.cross[2 * c as usize + 1] as usize + child,
-                                depth,
-                            );
+                            let child = cross[(get(block.prefix, c + 4) & 7) as usize] as usize;
+                            for t in 0..2 {
+                                let idx = block.cross[(2 * c + t) as usize] as usize + child;
+                                // SAFETY: See the comment above the `if`.
+                                new += unsafe { claim_unchecked(&mut pdb, idx, depth) };
+                            }
                         }
                     }
 
@@ -473,6 +512,7 @@ impl Pdb {
             }
         }
 
+        pdb.truncate(SIZE);
         let pdb = pdb.into_boxed_slice();
 
         Self { pdb }
