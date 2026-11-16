@@ -79,10 +79,10 @@ fn expand(
 
         while puzzle.do_move(mv) {
             let idx = indexing_table.encode(puzzle.pieces(), base_5_table) as usize;
-            if pdb[idx] == u8::MAX {
-                pdb[idx] = depth + 1;
-                new += 1;
-            }
+            // Every visited entry is at most `depth + 1`, so this only changes unvisited ones.
+            let entry = pdb[idx];
+            new += u64::from(entry == u8::MAX);
+            pdb[idx] = entry.min(depth + 1);
         }
     }
 
