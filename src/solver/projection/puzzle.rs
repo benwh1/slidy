@@ -3,20 +3,14 @@ use num_traits::Zero as _;
 use crate::{
     algorithm::direction::Direction,
     puzzle::{label::label::Label, size::Size, sliding_puzzle::SlidingPuzzle},
-    solver::projection::{
-        LARGE,
-        encoding::{self, vertical_delta},
+    solver::{
+        directions::{DIRECTIONS, gap_moves},
+        projection::{
+            LARGE,
+            encoding::{self, vertical_delta},
+        },
     },
 };
-
-/// The directions to search, in order. Bit `d` of a set of moves is `DIRECTIONS[d]`, and the
-/// inverse of `DIRECTIONS[d]` is `DIRECTIONS[d ^ 2]`.
-pub(super) const DIRECTIONS: [Direction; 4] = [
-    Direction::Up,
-    Direction::Left,
-    Direction::Down,
-    Direction::Right,
-];
 
 /// A projected puzzle state. `N` is the length of the `pieces` buffer (16 for projections of up
 /// to 16 cells, 32 otherwise).
@@ -72,14 +66,7 @@ impl Moves {
         for (gap, out) in table.iter_mut().enumerate().take(w * h) {
             let (x, y) = (gap % w, gap / w);
             parity |= (((w - 1 - x + h - 1 - y) % 2) as u32) << gap;
-            let possible = [y + 1 < h, x + 1 < w, y > 0, x > 0];
-            let cells = [gap + w, gap + 1, gap.wrapping_sub(w), gap.wrapping_sub(1)];
-            for d in 0..4 {
-                if possible[d] {
-                    out.0[d] = cells[d] as u8;
-                    out.1 |= 1 << d;
-                }
-            }
+            *out = gap_moves(w, h, gap);
         }
 
         Self {

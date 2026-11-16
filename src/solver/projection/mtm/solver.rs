@@ -10,11 +10,8 @@ use crate::{
     },
     solver::{
         config::SolverConfig,
-        projection::{
-            LARGE, SMALL,
-            puzzle::{DIRECTIONS, ProjectedPuzzle},
-            solver::Solver,
-        },
+        directions::DIRECTIONS,
+        projection::{LARGE, SMALL, puzzle::ProjectedPuzzle, solver::Solver},
         search::iterative_deepening,
         solver::{Solver as SolverT, SolverError},
     },

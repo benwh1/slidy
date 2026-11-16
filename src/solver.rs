@@ -4,6 +4,7 @@
 //! metric.
 
 pub mod config;
+mod directions;
 pub mod generic_solver;
 pub mod heuristic;
 mod indexing;

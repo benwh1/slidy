@@ -10,13 +10,9 @@ use crate::{
     },
     solver::{
         config::{PdbConfig, SolverConfig},
+        directions::DIRECTIONS,
         search::iterative_deepening,
-        small::{
-            coord::Dense,
-            moves::{DIRECTIONS, Moves},
-            pdb::Pdb,
-            solver::Solver,
-        },
+        small::{coord::Dense, moves::Moves, pdb::Pdb, solver::Solver},
         solver::{Solver as SolverT, SolverError},
     },
 };

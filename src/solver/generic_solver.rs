@@ -16,19 +16,12 @@ use crate::{
     },
     solver::{
         config::SolverConfig,
+        directions::DIRECTIONS,
         heuristic::{Heuristic, manhattan::ManhattanDistance},
         search::{Search, iterative_deepening},
         solver::{Solver, SolverError},
     },
 };
-
-/// The directions to search, in order.
-const DIRECTIONS: [Direction; 4] = [
-    Direction::Up,
-    Direction::Left,
-    Direction::Down,
-    Direction::Right,
-];
 
 /// Returns the position of the gap after moving `count` pieces in direction `dir`, where the gap
 /// is at `gap`, or `None` if the move isn't possible.

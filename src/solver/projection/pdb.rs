@@ -279,7 +279,7 @@ mod tests {
     use crate::{
         algorithm::metric::{Mtm, Stm},
         puzzle::label::label::{Checkerboard, Rows, Trivial},
-        solver::projection::puzzle::DIRECTIONS,
+        solver::directions::DIRECTIONS,
     };
 
     /// The distance of each state from the solved state, or `None` for states that can't be
