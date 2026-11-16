@@ -430,4 +430,296 @@ mod tests {
         let p3 = p2.conjugate_with_transpose();
         assert!(pt.equals(&p3));
     }
+
+    /// Checks that every [`SlidingPuzzle`] method of the small puzzle types agrees with the
+    /// generic [`Puzzle`], over random sequences of operations on every size.
+    mod equivalence {
+        use rand::{RngExt as _, SeedableRng as _};
+        use rand_xoshiro::Xoroshiro128StarStar;
+
+        use super::super::{Puzzle as Small, SmallPuzzle};
+        use crate::{
+            algorithm::{algorithm::Algorithm, direction::Direction, r#move::r#move::Move},
+            puzzle::{
+                label::label::{FringeGrids, RowGrids, SpiralGrids},
+                puzzle::Puzzle,
+                scrambler::{RandomInvertibleState, RandomState, Scrambler as _},
+                size::Size,
+                sliding_puzzle::SlidingPuzzle as _,
+            },
+        };
+
+        const DIRS: [Direction; 4] = [
+            Direction::Up,
+            Direction::Left,
+            Direction::Down,
+            Direction::Right,
+        ];
+
+        fn assert_same<const W: usize, const H: usize>(s: &Small<W, H>, g: &Puzzle)
+        where
+            Small<W, H>: SmallPuzzle<TransposedPuzzle = Small<H, W>>,
+            Small<H, W>: SmallPuzzle,
+        {
+            let n = (W * H) as u64;
+
+            assert!(s.equals(g), "{s:?} {g}");
+            assert!(g.equals(s), "{s:?} {g}");
+            assert_eq!(s.size(), g.size());
+            assert_eq!(s.gap_position(), g.gap_position());
+            assert_eq!(s.gap_position_xy(), g.gap_position_xy());
+            assert_eq!(s.try_gap_position(), g.try_gap_position());
+            assert_eq!(s.is_solved(), g.is_solved(), "{g}");
+            assert_eq!(s.is_solvable(), g.is_solvable(), "{g}");
+            assert_eq!(s.invertible(), g.invertible(), "{g}");
+
+            for i in 0..n + 2 {
+                assert_eq!(
+                    s.try_piece_at(i).map(u64::from),
+                    g.try_piece_at(i),
+                    "{g} {i}"
+                );
+                assert_eq!(
+                    s.try_piece_position(i as u8),
+                    g.try_piece_position(i),
+                    "{g} {i}"
+                );
+                assert_eq!(
+                    s.try_piece_position_xy(i as u8),
+                    g.try_piece_position_xy(i),
+                    "{g} {i}"
+                );
+                assert_eq!(s.try_solved_pos(i as u8), g.try_solved_pos(i), "{i}");
+                assert_eq!(s.can_move_position(i), g.can_move_position(i), "{g} {i}");
+            }
+            for piece in 0..n {
+                assert_eq!(s.piece_position(piece as u8), g.piece_position(piece));
+            }
+
+            for dir in DIRS {
+                assert_eq!(s.can_move_dir(dir), g.can_move_dir(dir), "{g} {dir:?}");
+                for amount in 0..=(W.max(H) as u64 + 1) {
+                    let mv = Move::new(dir, amount);
+                    assert_eq!(s.can_apply_move(mv), g.can_apply_move(mv), "{g} {mv:?}");
+                }
+            }
+
+            // Every piece in `piece_array` and `pieces`, and the gap field.
+            let (pieces, gap) = (s.pieces(), s.gap());
+            assert_eq!(u64::from(gap), g.gap_position());
+            for i in 0..n {
+                assert_eq!((pieces >> (4 * i)) & 0xF, g.piece_at(i), "{g} {i}");
+            }
+            assert_eq!(
+                pieces.checked_shr(4 * n as u32).unwrap_or(0),
+                0,
+                "{pieces:x}"
+            );
+
+            // The reference definition of `conjugate_with_transpose`.
+            let t = s.conjugate_with_transpose();
+            for y in 0..H as u64 {
+                for x in 0..W as u64 {
+                    let (sx, sy) = g.solved_pos_xy(g.piece_at_xy((x, y)));
+                    let p = 1 + sy + H as u64 * sx;
+                    let expected = if p == n { 0 } else { p };
+                    assert_eq!(u64::from(t.piece_at(y + H as u64 * x)), expected, "{g}");
+                }
+            }
+            assert_eq!(t.piece_at(u64::from(t.gap())), 0);
+        }
+
+        fn random_alg(rng: &mut Xoroshiro128StarStar, max: u64) -> Algorithm {
+            let len = rng.random_range(0..6);
+            std::iter::repeat_with(|| {
+                Move::new(DIRS[rng.random_range(0..4)], rng.random_range(1..=max))
+            })
+            .take(len)
+            .collect()
+        }
+
+        fn check<const W: usize, const H: usize>(seed: u64)
+        where
+            Small<W, H>: SmallPuzzle<TransposedPuzzle = Small<H, W>>,
+            Small<H, W>: SmallPuzzle,
+        {
+            let size = Size::new(W as u64, H as u64).unwrap();
+            let n = (W * H) as u64;
+            let max = W.max(H) as u64;
+
+            let mut rng = Xoroshiro128StarStar::seed_from_u64(seed);
+            let mut s = Small::<W, H>::new();
+            let mut g = Puzzle::new(size);
+            assert_same(&s, &g);
+
+            for _ in 0..3000 {
+                match rng.random_range(0..17) {
+                    0..=3 => {
+                        let dir = DIRS[rng.random_range(0..4)];
+                        assert_eq!(s.try_move_dir(dir), g.try_move_dir(dir));
+                    }
+                    4 => {
+                        let dir = DIRS[rng.random_range(0..4)];
+                        if g.can_move_dir(dir) {
+                            s.move_dir(dir);
+                            g.move_dir(dir);
+                        }
+                    }
+                    5 => {
+                        let mv = Move::new(DIRS[rng.random_range(0..4)], rng.random_range(0..=max));
+                        assert_eq!(s.try_apply_move(mv), g.try_apply_move(mv), "{mv:?}");
+                    }
+                    6 => {
+                        let mv = Move::new(DIRS[rng.random_range(0..4)], rng.random_range(0..=max));
+                        if g.can_apply_move(mv) {
+                            s.apply_move(mv);
+                            g.apply_move(mv);
+                        }
+                    }
+                    7 => {
+                        let alg = random_alg(&mut rng, max);
+                        assert_eq!(s.can_apply_alg(&alg), g.can_apply_alg(&alg));
+                        assert_eq!(s.try_apply_alg(&alg), g.try_apply_alg(&alg), "{alg}");
+                    }
+                    8 => {
+                        let idx = rng.random_range(0..n + 1);
+                        assert_eq!(
+                            s.try_swap_piece_with_gap(idx),
+                            g.try_swap_piece_with_gap(idx)
+                        );
+                    }
+                    9 => {
+                        let (i, j) = (rng.random_range(0..n + 1), rng.random_range(0..n + 1));
+                        assert_eq!(s.try_swap_pieces(i, j), g.try_swap_pieces(i, j));
+                    }
+                    10 => {
+                        let (i, j) = (rng.random_range(0..n + 1), rng.random_range(0..n + 1));
+                        assert_eq!(
+                            s.try_swap_non_gap_pieces(i, j),
+                            g.try_swap_non_gap_pieces(i, j)
+                        );
+                    }
+                    11 => {
+                        let idx = rng.random_range(0..n + 1);
+                        assert_eq!(s.try_move_position(idx), g.try_move_position(idx));
+                    }
+                    12 => {
+                        let piece = rng.random_range(0..n + 1);
+                        assert_eq!(s.try_move_piece(piece as u8), g.try_move_piece(piece));
+                    }
+                    13 => {
+                        let mut other = Puzzle::new(size);
+                        RandomState.scramble_with_rng(&mut other, &mut rng);
+                        s.set_state(&other);
+                        g.set_state(&other);
+                    }
+                    14 => {
+                        // The same scramble from the same seed.
+                        let seed: u64 = rng.random();
+                        let rng = || Xoroshiro128StarStar::seed_from_u64(seed);
+                        if seed % 2 == 0 {
+                            RandomState.scramble_with_rng(&mut s, &mut rng());
+                            RandomState.scramble_with_rng(&mut g, &mut rng());
+                        } else {
+                            RandomInvertibleState.scramble_with_rng(&mut s, &mut rng());
+                            RandomInvertibleState.scramble_with_rng(&mut g, &mut rng());
+                        }
+                    }
+                    15 => match rng.random_range(0..4) {
+                        0 => {
+                            s.reset();
+                            g.reset();
+                        }
+                        1 => {
+                            s.reset_to_label(&RowGrids);
+                            g.reset_to_label(&RowGrids);
+                        }
+                        2 => {
+                            s.reset_to_label(&FringeGrids);
+                            g.reset_to_label(&FringeGrids);
+                        }
+                        _ => {
+                            s.reset_to_label(&SpiralGrids);
+                            g.reset_to_label(&SpiralGrids);
+                        }
+                    },
+                    _ => {
+                        assert_eq!(s.try_invert(), g.try_invert());
+                    }
+                }
+
+                assert_same(&s, &g);
+
+                // Round trips through the raw representations.
+                // SAFETY: `s` is in a valid state, so its pieces and gap are valid.
+                let s2 =
+                    unsafe { Small::<W, H>::with_pieces_and_gap_unchecked(s.pieces(), s.gap()) };
+                assert_same(&s2, &g);
+                // SAFETY: `piece_array` returns a permutation of the pieces.
+                let s3 = unsafe { Small::<W, H>::from_piece_array_unchecked(s.piece_array()) };
+                assert_same(&s3, &g);
+                let mut g2 = Puzzle::new(size);
+                g2.set_state(&s);
+                assert_eq!(g, g2);
+            }
+        }
+
+        macro_rules! check_sizes {
+            ($($w:literal x $h:literal),* $(,)?) => {
+                #[test]
+                fn test_equivalence() {
+                    $(check::<$w, $h>($w * 100 + $h);)*
+                }
+
+                #[test]
+                fn test_try_from() {
+                    let mut rng = Xoroshiro128StarStar::seed_from_u64(0);
+                    $({
+                        const N: usize = $w * $h;
+                        let mut g = Puzzle::new(Size::new($w, $h).unwrap());
+                        for _ in 0..200 {
+                            RandomState.scramble_with_rng(&mut g, &mut rng);
+                            let mut array: [u8; N] =
+                                std::array::from_fn(|i| g.piece_at(i as u64) as u8);
+                            let s = Small::<$w, $h>::try_from(array).unwrap();
+                            assert!(s.equals(&g));
+                            assert_eq!(s.gap_position(), g.gap_position());
+
+                            // Out of range and duplicate pieces.
+                            let i = rng.random_range(0..N);
+                            let old = array[i];
+                            array[i] = rng.random_range(0..20);
+                            let result = Small::<$w, $h>::try_from(array);
+                            if array[i] == old {
+                                assert!(result.is_ok());
+                            } else if usize::from(array[i]) >= N {
+                                assert!(matches!(
+                                    result,
+                                    Err(PuzzleError::PieceOutOfRange(p)) if p == u64::from(array[i])
+                                ));
+                            } else {
+                                // The first repeated piece in the array is reported.
+                                let mut seen = [false; N];
+                                let dup = array
+                                    .iter()
+                                    .find(|&&p| std::mem::replace(&mut seen[usize::from(p)], true))
+                                    .unwrap();
+                                assert!(matches!(
+                                    result,
+                                    Err(PuzzleError::DuplicatePiece(p)) if p == u64::from(*dup)
+                                ));
+                            }
+                        }
+                    })*
+                }
+            };
+        }
+
+        use crate::puzzle::puzzle::PuzzleError;
+
+        check_sizes!(
+            2 x 2, 2 x 3, 2 x 4, 2 x 5, 2 x 6, 2 x 7, 2 x 8, 3 x 2, 3 x 3, 3 x 4, 3 x 5, 4 x 2,
+            4 x 3, 4 x 4, 5 x 2, 5 x 3, 6 x 2, 7 x 2, 8 x 2,
+        );
+    }
 }
