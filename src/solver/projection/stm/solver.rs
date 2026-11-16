@@ -26,13 +26,59 @@ where
     Target: Label + SolvedState + Solvable + Default,
     PruneTarget: Label + SolvedState + Default,
 {
-    /// Finds solutions of length `depth` of `state`, which has index `index`,
-    /// where `moves` is the set of moves to try. `depth` must be at least 1.
+    /// Returns the [`Pdb`] entry of the state at `index`, which must be the index of a state.
+    ///
+    /// [`Pdb`]: crate::solver::projection::pdb::Pdb
+    #[inline(always)]
+    fn entry(&self, index: u64) -> u64 {
+        // SAFETY: `index` is the index of a state, which is within bounds because the PDB has an
+        // entry for every state.
+        u64::from(unsafe { self.pdb.get_unchecked(index as usize) })
+    }
+
+    /// Returns the distance of `state`, which has index `index`, from the projected solved state,
+    /// by following moves that get closer to it.
+    fn distance<const N: usize>(&self, state: ProjectedPuzzle<N>, index: u64) -> u64 {
+        let (mut state, mut index) = (state, index);
+
+        // The PDB entry gives bit 1 of the distance, and the parity of the gap's distance from
+        // its solved cell gives bit 0.
+        let mut residue =
+            2 * u64::from(self.pdb.get(index as usize)) + u64::from(self.moves.parity(state.gap()));
+        let mut distance = 0;
+
+        while index != self.prune_target_solved_index {
+            // Every move changes the distance by 1, so the neighbours have residues `residue ± 1`
+            // mod 4, which have different entries.
+            let closer = (residue + 3) % 4;
+            let mut rest = self.moves.possible(state.gap());
+            loop {
+                assert!(rest != 0, "pattern database has no move closer to solved");
+                let d = rest.trailing_zeros();
+                rest &= rest - 1;
+
+                let (child, child_index) = self.moves.apply(&state, index, d);
+                if u64::from(self.pdb.get(child_index as usize)) == closer >> 1 {
+                    (state, index) = (child, child_index);
+                    break;
+                }
+            }
+            residue = closer;
+            distance += 1;
+        }
+
+        distance
+    }
+
+    /// Finds solutions of length `depth` of `state`, which has index `index` and distance `h`
+    /// from the projected solved state, where `moves` is the set of moves to try. `depth` must be
+    /// at least 1.
     fn dfs<const N: usize>(
         &mut self,
         depth: u64,
         state: ProjectedPuzzle<N>,
         index: u64,
+        h: u64,
         moves: u8,
     ) -> ControlFlow<()> {
         let mut rest = moves;
@@ -54,14 +100,18 @@ where
                 continue;
             }
 
-            if self.bound(child) >= depth {
+            // The child's distance is `h ± 1`, and the entry is bit 1 of it, which is different
+            // for the two.
+            let up = h + 1;
+            let child_h = up.wrapping_sub(2 * ((self.entry(child) ^ (up >> 1)) & 1));
+            if child_h >= depth {
                 continue;
             }
 
             let child_moves = self.moves.possible(child_state.gap()) & !(1 << (d ^ 2));
             self.search.stack.push(DIRECTIONS[d as usize]);
             if self
-                .dfs(depth - 1, child_state, child, child_moves)
+                .dfs(depth - 1, child_state, child, child_h, child_moves)
                 .is_break()
             {
                 return ControlFlow::Break(());
@@ -96,7 +146,7 @@ where
         let projected = self.initial_projected::<N>(puzzle);
         let index = projected.encode(&self.tally);
         let moves = self.moves.possible(projected.gap());
-        let hval = self.bound(index);
+        let hval = self.distance(projected, index);
 
         iterative_deepening::<Stm, _, _>(
             self,
@@ -110,7 +160,7 @@ where
                     }
                     return ControlFlow::Continue(());
                 }
-                s.dfs::<N>(depth, projected, index, moves)
+                s.dfs::<N>(depth, projected, index, hval, moves)
             },
         );
 

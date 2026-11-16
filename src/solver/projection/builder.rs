@@ -116,9 +116,10 @@ impl<P, Target, PruneTarget, Metric> SolverBuilder<P, Target, PruneTarget, Metri
     /// Sets an existing [`Pdb`] to be used in the [`Solver`].
     ///
     /// The [`Pdb`] must have been built for the same puzzle size and pruning label. If it doesn't
-    /// have the number of entries required by them, building the [`Solver`] fails with
-    /// [`SolverBuilderError::IncompatiblePdb`]. A [`Pdb`] with the right number of entries but
-    /// built for a different label is not detected, and leads to incorrect solutions.
+    /// have the length required by them, building the [`Solver`] fails with
+    /// [`SolverBuilderError::IncompatiblePdb`]. A [`Pdb`] with the right length but built for a
+    /// different label is not detected, and leads to incorrect solutions, panics, or the solver
+    /// failing to terminate.
     ///
     /// Use [`Self::pdb_config`] to build the [`Pdb`] from scratch with a custom configuration.
     ///

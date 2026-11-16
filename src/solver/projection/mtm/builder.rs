@@ -5,7 +5,7 @@ use crate::{
     puzzle::{label::label::Label, sliding_puzzle::SlidingPuzzle, solved_state::SolvedState},
     solver::projection::{
         builder::{PdbAction, SolverBuilder, SolverBuilderError},
-        pdb::{self, Pdb},
+        pdb::Pdb,
         solver::Solver,
     },
 };
@@ -33,7 +33,7 @@ where
             PdbAction::UseExisting { pdb } => {
                 // The solver indexes the PDB without bounds checks, so a PDB of the wrong length
                 // must be rejected here.
-                if pdb.pdb.len() != pdb::expected_len(&prune_target, size) {
+                if pdb.pdb.len() != Pdb::<Mtm>::expected_len(&prune_target, size) {
                     return Err(SolverBuilderError::IncompatiblePdb);
                 }
                 pdb

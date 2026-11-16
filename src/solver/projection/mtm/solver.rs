@@ -26,15 +26,75 @@ where
     Target: Label + SolvedState + Solvable + Default,
     PruneTarget: Label + SolvedState + Default,
 {
-    /// Finds solutions of length `depth` of `state`, which has index `index`,
-    /// where `moves` is the set of directions to try. `depth` must be at least 1.
+    /// Returns the [`Pdb`] entry of the state at `index`, which must be the index of a state.
+    ///
+    /// [`Pdb`]: crate::solver::projection::pdb::Pdb
+    #[inline(always)]
+    fn entry(&self, index: u64) -> u64 {
+        // SAFETY: `index` is the index of a state, which is within bounds because the PDB has an
+        // entry for every state.
+        u64::from(unsafe { self.pdb.get_unchecked(index as usize) })
+    }
+
+    /// Returns the distance of `state`, which has index `index`, from the projected solved state,
+    /// by following moves that get closer to it.
+    fn distance<const N: usize>(&self, state: ProjectedPuzzle<N>, index: u64) -> u64 {
+        let (mut state, mut index) = (state, index);
+        let mut residue = u64::from(self.pdb.get(index as usize));
+        let mut distance = 0;
+
+        while index != self.prune_target_solved_index {
+            let closer = (residue + 2) % 3;
+            (state, index) = self
+                .closer_neighbour(&state, index, closer)
+                .expect("pattern database has no move closer to solved");
+            residue = closer;
+            distance += 1;
+        }
+
+        distance
+    }
+
+    /// Returns a state one move from `state`, which has index `index`, whose entry is `closer`,
+    /// and its index.
+    fn closer_neighbour<const N: usize>(
+        &self,
+        state: &ProjectedPuzzle<N>,
+        index: u64,
+        closer: u64,
+    ) -> Option<(ProjectedPuzzle<N>, u64)> {
+        let mut rest = self.moves.possible(state.gap());
+        while rest != 0 {
+            let d = rest.trailing_zeros();
+            rest &= rest - 1;
+
+            let (mut child, mut child_index) = (*state, index);
+            while self.moves.possible(child.gap()) & (1 << d) != 0 {
+                (child, child_index) = self.moves.apply(&child, child_index, d);
+                if u64::from(self.pdb.get(child_index as usize)) == closer {
+                    return Some((child, child_index));
+                }
+            }
+        }
+        None
+    }
+
+    /// Finds solutions of length `depth` of `state`, which has index `index` and distance `h`
+    /// from the projected solved state, where `moves` is the set of directions to try. `depth`
+    /// must be at least 1.
     fn dfs<const N: usize>(
         &mut self,
         depth: u64,
         state: ProjectedPuzzle<N>,
         index: u64,
+        h: u64,
         moves: u8,
     ) -> ControlFlow<()> {
+        // The children's distances are `h - 1`, `h`, or `h + 1`, which have different entries
+        // `(h + k) % 3`. `STEP[entry + 3 - h % 3]` is `k + 1`.
+        const STEP: [u64; 8] = [1, 2, 0, 1, 2, 0, 1, 2];
+        let h_residue = h % 3;
+
         let mut rest = moves;
         while rest != 0 {
             let d = rest.trailing_zeros();
@@ -60,10 +120,17 @@ where
                     {
                         return ControlFlow::Break(());
                     }
-                } else if self.bound(index) < depth {
-                    let child_moves = self.moves.possible(state.gap()) & !axis;
-                    if self.dfs(depth - 1, state, index, child_moves).is_break() {
-                        return ControlFlow::Break(());
+                } else {
+                    let step = STEP[(self.entry(index) + 3 - h_residue) as usize % 8];
+                    let child_h = (h + step).wrapping_sub(1);
+                    if child_h < depth {
+                        let child_moves = self.moves.possible(state.gap()) & !axis;
+                        if self
+                            .dfs(depth - 1, state, index, child_h, child_moves)
+                            .is_break()
+                        {
+                            return ControlFlow::Break(());
+                        }
                     }
                 }
             }
@@ -97,7 +164,7 @@ where
         let projected = self.initial_projected::<N>(puzzle);
         let index = projected.encode(&self.tally);
         let moves = self.moves.possible(projected.gap());
-        let hval = self.bound(index);
+        let hval = self.distance(projected, index);
 
         iterative_deepening::<Mtm, _, _>(
             self,
@@ -111,7 +178,7 @@ where
                     }
                     return ControlFlow::Continue(());
                 }
-                s.dfs::<N>(depth, projected, index, moves)
+                s.dfs::<N>(depth, projected, index, hval, moves)
             },
         );
 

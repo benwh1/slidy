@@ -56,6 +56,8 @@ pub(super) struct Moves {
     /// possible moves. The length is a power of two so that indexing with a cell masked to it
     /// needs no bounds check.
     table: [([u8; 4], u8); LARGE],
+    /// Bit `c` is the parity of the distance of cell `c` from the last cell.
+    parity: u32,
     /// The [`encoding::weights`] of the tally.
     weights: [u64; LARGE],
     width: usize,
@@ -66,8 +68,10 @@ impl Moves {
     pub(super) fn new(size: Size, tally: &[u8]) -> Self {
         let (w, h) = (size.width() as usize, size.height() as usize);
         let mut table = [([0; 4], 0); LARGE];
+        let mut parity = 0;
         for (gap, out) in table.iter_mut().enumerate().take(w * h) {
             let (x, y) = (gap % w, gap / w);
+            parity |= (((w - 1 - x + h - 1 - y) % 2) as u32) << gap;
             let possible = [y + 1 < h, x + 1 < w, y > 0, x > 0];
             let cells = [gap + w, gap + 1, gap.wrapping_sub(w), gap.wrapping_sub(1)];
             for d in 0..4 {
@@ -80,6 +84,7 @@ impl Moves {
 
         Self {
             table,
+            parity,
             weights: encoding::weights(tally),
             width: w,
         }
@@ -89,6 +94,11 @@ impl Moves {
     #[inline(always)]
     pub(super) fn possible(&self, gap: u8) -> u8 {
         self.table[gap as usize % LARGE].1
+    }
+
+    /// Returns the parity of the distance of the cell `gap` from the last cell.
+    pub(super) fn parity(&self, gap: u8) -> u8 {
+        ((self.parity >> (gap as usize % LARGE)) & 1) as u8
     }
 
     /// Returns the state reached by moving in direction `dir` from `state`. The move must be

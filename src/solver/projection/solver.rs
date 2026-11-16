@@ -98,14 +98,6 @@ where
         project_puzzle::<N, P, PruneTarget>(puzzle, &self.prune_target)
     }
 
-    /// Returns the [`Pdb`] entry of the state at `index`, which must be the index of a state.
-    #[inline(always)]
-    pub(super) fn bound(&self, index: u64) -> u64 {
-        // SAFETY: `index` is the index of a state, which is within bounds because the PDB has an
-        // entry for every state.
-        u64::from(unsafe { self.pdb.get_unchecked(index as usize) })
-    }
-
     /// Returns whether the moves on the stack solve the puzzle passed to
     /// [`Self::initial_projected`] into `target`.
     pub(super) fn check_solution(&self) -> bool {
