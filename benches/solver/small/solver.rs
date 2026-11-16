@@ -59,6 +59,7 @@ fn bench_solve_all_5x2_mtm(c: &mut Criterion) {
         b.iter(|| {
             for puzzle in &puzzles {
                 let config = SolverConfig {
+                    depth_beyond_optimal: 0,
                     num_solutions: u64::MAX,
                     ..Default::default()
                 };
