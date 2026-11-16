@@ -239,3 +239,74 @@ where
         self.solve_impl(puzzle, config)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr as _;
+
+    use super::*;
+    use crate::puzzle::puzzle::Puzzle;
+
+    #[test]
+    fn test_optimal_lengths() {
+        // Scrambled with 30 random moves, with lengths checked against `GenericSolver` using
+        // `MtmHeuristic(ManhattanDistance(RowGrids))`.
+        let cases = [
+            ("1 6 4 8/5 0 3 11/9 7 2 12/13 10 14 15", 13),
+            ("0 1 3 12/7 8 4 11/5 2 10 15/6 9 13 14", 17),
+            ("2 6 3 4/5 1 11 0/9 14 8 7/13 15 10 12", 15),
+            ("2 4 0 12/1 7 3 8/14 5 6 10/9 13 11 15", 21),
+            ("5 1 3 4/10 9 2 7/13 14 6 11/15 0 12 8", 14),
+            ("5 1 3 4/2 6 8 0/13 14 7 15/11 9 12 10", 19),
+            ("5 7 1 8/2 11 3 6/9 10 12 4/13 0 14 15", 18),
+            ("1 2 4 6/5 9 10 3/13 15 0 11/14 7 12 8", 18),
+        ];
+
+        let mut solver = Solver::default();
+
+        for (state, length) in cases {
+            let mut puzzle = Puzzle::from_str(state).unwrap();
+            let solution = solver.solve(&puzzle).unwrap();
+            assert_eq!(solution.len_mtm(), length, "state {state}");
+
+            puzzle.apply_alg(&solution);
+            assert!(puzzle.is_solved(), "state {state}");
+        }
+    }
+
+    #[test]
+    fn test_solve_all_optimal() {
+        let cases: [(&str, &[&str]); 2] = [
+            (
+                "5 8 7 9/0 1 13 14/15 6 2 4/11 12 10 3",
+                &[
+                    "L3UR2D2L2U3R3DL2UR2D3L3U3RD3LUR3ULD2RU2L3UR2D3L2UR3UL3U",
+                    "L3UR2D2L2U3R3DL2UR2D3L3U3RD3LUR3UL3UR2D3RU2LD2L2UR3UL3U",
+                    "L3U2R2D3L2U3RD2R2U2L2D3RU2RDL3UR3DL3UR2URD3LU3LD3RU2L2U",
+                    "L3U2R2D3L2U3R2DLDR2U2L2D3RU2RDL3UR3DL3UR3D2LU3LD3RU2L2U",
+                    "L3U2R3D2L3DR3UL3UR3D2LUL2U2R3D2L3DR2U2L2D2R2U2L2D2RU3R2D3L3U3",
+                    "L3DR3ULU2RD2L3URURD3RUL3U2R3D3L3U3R2D3L2UR2DL2UR3UL3U",
+                    "L3DR3UL3U2R2D2L2DRU3R2DL3D2RU3RD3LU2LUR3D2L2ULUR3DL3U",
+                    "L3DR3UL3U2R3D2L3U2R3D2L3DRURDLU3LDR3DL3U2R2DL2D2R2U2L2U",
+                ],
+            ),
+            (
+                "7 9 14 2/0 15 13 1/11 8 10 3/6 4 5 12",
+                &["L3U2R3D2LU2L2DR2D2LU3R2D3L2U3R2D3L3U2R3DL3UR3DL2U2RD3L2U3"],
+            ),
+        ];
+
+        let mut solver = Solver::default();
+
+        for (state, expected) in cases {
+            let puzzle = Puzzle::from_str(state).unwrap();
+            let solutions = solver
+                .solve_all_optimal(&puzzle)
+                .unwrap()
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect::<Vec<_>>();
+            assert_eq!(solutions, expected, "state {state}");
+        }
+    }
+}
