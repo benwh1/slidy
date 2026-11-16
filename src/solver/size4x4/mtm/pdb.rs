@@ -62,10 +62,24 @@ fn claim(pdb: &mut [u8], idx: usize, depth: u8) -> u64 {
     u64::from(entry == u8::MAX)
 }
 
-/// Returns whether `gap` is in cells 8..16.
-#[inline(always)]
-fn in_low_half(gap: u8) -> bool {
-    gap >= 8
+/// Returns the piece in cell `cell` of `nibbles`.
+fn get(nibbles: u32, cell: u32) -> u32 {
+    (nibbles >> (4 * cell)) & 0xF
+}
+
+/// Returns `nibbles` with the piece in cell `cell` replaced by `piece`.
+fn set(nibbles: u32, cell: u32, piece: u32) -> u32 {
+    (nibbles & !(0xF << (4 * cell))) | (piece << (4 * cell))
+}
+
+/// Returns the position of the gap (the only zero nibble) in `pieces`.
+fn gap_position(pieces: u64) -> u8 {
+    const ONES: u64 = 0x1111_1111_1111_1111;
+    const HIGHS: u64 = 0x8888_8888_8888_8888;
+
+    // The lowest flagged nibble is exactly the lowest zero nibble.
+    let zeros = pieces.wrapping_sub(ONES) & !pieces & HIGHS;
+    (zeros.trailing_zeros() / 4) as u8
 }
 
 /// Returns the four states reached by moves that keep the gap in the same half of the puzzle
@@ -100,34 +114,6 @@ fn same_half_moves(pieces: u64) -> [u64; 4] {
 
     debug_assert_eq!(n, 4);
     moves
-}
-
-/// Calls `f` with the two states reached by moves that take the gap to the other half of the
-/// puzzle.
-#[inline(always)]
-fn for_each_cross_move(pieces: u64, mut f: impl FnMut(u64)) {
-    let gap = gap_position(pieces);
-    let low = in_low_half(gap);
-
-    // `Up` moves the gap down a row, and `Down` moves it up.
-    let mv = if low { Direction::Down } else { Direction::Up };
-    let mut puzzle = ReducedFourBitPuzzle { pieces, gap };
-
-    while puzzle.do_move(mv) {
-        if in_low_half(puzzle.gap) != low {
-            f(puzzle.pieces());
-        }
-    }
-}
-
-/// Returns the position of the gap (the only zero nibble) in `pieces`.
-fn gap_position(pieces: u64) -> u8 {
-    const ONES: u64 = 0x1111_1111_1111_1111;
-    const HIGHS: u64 = 0x8888_8888_8888_8888;
-
-    // The lowest flagged nibble is exactly the lowest zero nibble.
-    let zeros = pieces.wrapping_sub(ONES) & !pieces & HIGHS;
-    (zeros.trailing_zeros() / 4) as u8
 }
 
 /// Calls `f` with every arrangement of `len` cells using at most `counts[i]` pieces labelled `i`,
@@ -167,29 +153,54 @@ fn for_each_arrangement(len: usize, counts: [u8; 5], f: &mut impl FnMut(u32, [u8
     go(0, len, 0, &mut counts, f);
 }
 
-/// A run of consecutive indices that share the pieces in cells 0..8.
+/// A run of consecutive indices that share the pieces in cells 0..8 (the prefix). The states in
+/// the run are ordered by the pieces in cells 8..16 (the suffix).
+///
+/// The index of a state is the start of its block plus the offset of its suffix, and each of
+/// these depends on only one half of the puzzle. A move changes the prefix in a way that depends
+/// on the prefix and at most one piece of the suffix, and vice versa, so a child's index is a
+/// start looked up from the parent's [`Block`] plus an offset looked up from its suffix.
+///
+/// Write `c` for the gap's column.
+///
+/// If the gap is in the prefix:
+/// - the four moves within the prefix keep the suffix, so the child at `children[k]` has the same
+///   offset;
+/// - the two moves into the suffix pull in the piece `p` from cell `8 + c`. Both children have the
+///   start `cross[p]`, and offsets from [`Suffixes::cross`] at `2 * c` and `2 * c + 1`.
+///
+/// If the gap is in the suffix:
+/// - the four moves within the suffix keep the prefix, so the children stay in this block, at
+///   offsets from [`Suffixes::moves`];
+/// - the two moves into the prefix (to rows 1 and 0) push out the piece `q` from cell `4 + c`. The
+///   children have starts `cross[2 * c]` and `cross[2 * c + 1]`, and the same offset from
+///   [`Suffixes::cross`] at `q`.
 struct Block {
     /// Index of the first state in the block.
     start: u32,
     /// Pieces in cells 0..8.
     prefix: u32,
-    /// Index into [`Blocks::suffixes`] of the possible pieces in cells 8..16.
+    /// Index into [`Blocks::suffixes`] of the possible suffixes.
     suffixes: u16,
-    /// Whether the gap is in cells 0..8.
+    /// Whether the gap is in the prefix.
     gap_in_prefix: bool,
-    /// If the gap is in cells 0..8, the starts of the blocks reached by [`same_half_moves`]. These
-    /// moves leave cells 8..16 alone, so the state at offset `j` in this block moves to offset
-    /// `j` in each of them.
+    /// If the gap is in the prefix, its column.
+    gap_col: u8,
+    /// If the gap is in the prefix, the starts of the blocks reached by [`same_half_moves`].
     children: [u32; 4],
+    /// The starts of the blocks reached by moves that take the gap to the other half.
+    cross: [u32; 8],
 }
 
-/// The possible pieces in cells 8..16 for a block, given the pieces left over from cells 0..8.
+/// The possible suffixes of a block, which depend only on the pieces left over from the prefix.
 struct Suffixes {
     /// The pieces in cells 8..16, in index order.
     suffixes: Vec<u32>,
-    /// If the gap is in cells 8..16, the offsets within the block reached from each suffix by
-    /// [`same_half_moves`]. These moves leave cells 0..8 alone, so they stay in the block.
+    /// If the gap is in the suffix, the offsets reached from each suffix by [`same_half_moves`].
     moves: Vec<[u16; 4]>,
+    /// The offsets reached from each suffix by moves that take the gap to the other half. See
+    /// [`Block`].
+    cross: Vec<[u16; 8]>,
 }
 
 /// Every state's index split into blocks, so that the table can be walked in index order and the
@@ -201,7 +212,8 @@ struct Blocks {
 
 impl Blocks {
     fn new(indexing_table: &IndexingTable, base_5_table: &Base5Table) -> Self {
-        let encode = |pieces| indexing_table.encode(pieces, base_5_table);
+        let encode_prefix = |prefix| indexing_table.encode_prefix(prefix, base_5_table);
+        let encode_suffix = |suffix| indexing_table.encode_suffix(suffix, base_5_table) as u16;
 
         let mut blocks = Vec::new();
         let mut suffixes: Vec<Suffixes> = Vec::new();
@@ -209,44 +221,102 @@ impl Blocks {
         let mut start = 0;
 
         for_each_arrangement(8, TALLY, &mut |prefix, remaining| {
+            let gap_in_prefix = remaining[0] == 0;
+
             let id = *suffix_ids.entry(remaining).or_insert_with(|| {
                 let mut list = Vec::new();
                 for_each_arrangement(8, remaining, &mut |suffix, _| list.push(suffix));
 
-                // The offsets don't depend on the prefix, so compute them with this block's.
-                let moves = if remaining[0] == 1 {
-                    list.iter()
-                        .map(|&suffix| {
-                            let pieces = u64::from(prefix) | (u64::from(suffix) << 32);
-                            same_half_moves(pieces).map(|p| (encode(p) - start) as u16)
+                let (moves, cross) = if gap_in_prefix {
+                    let cross = list
+                        .iter()
+                        .map(|&s| {
+                            let mut cross = [0; 8];
+                            for c in 0..4 {
+                                // The gap moves to cell `8 + c`, or on to cell `12 + c`.
+                                cross[2 * c as usize] = encode_suffix(set(s, c, 0));
+                                cross[2 * c as usize + 1] =
+                                    encode_suffix(set(set(s, c, get(s, c + 4)), c + 4, 0));
+                            }
+                            cross
                         })
-                        .collect()
+                        .collect();
+                    (Vec::new(), cross)
                 } else {
-                    Vec::new()
+                    let moves = list
+                        .iter()
+                        .map(|&s| {
+                            let pieces = u64::from(prefix) | (u64::from(s) << 32);
+                            same_half_moves(pieces).map(|p| encode_suffix((p >> 32) as u32))
+                        })
+                        .collect();
+                    let cross = list
+                        .iter()
+                        .map(|&s| {
+                            // The suffix's gap is its lowest zero nibble.
+                            let h = u32::from(gap_position(u64::from(s)));
+                            let c = h % 4;
+                            let mut cross = [0; 8];
+                            for q in 1..5 {
+                                let child = if h < 4 {
+                                    set(s, c, q)
+                                } else {
+                                    set(set(s, c + 4, get(s, c)), c, q)
+                                };
+                                cross[q as usize] = encode_suffix(child);
+                            }
+                            cross
+                        })
+                        .collect();
+                    (moves, cross)
                 };
 
                 suffixes.push(Suffixes {
                     suffixes: list,
                     moves,
+                    cross,
                 });
                 suffixes.len() - 1
             });
 
-            let first = suffixes[id].suffixes[0];
-            let gap_in_prefix = remaining[0] == 0;
-            let children = if gap_in_prefix {
-                let pieces = u64::from(prefix) | (u64::from(first) << 32);
-                same_half_moves(pieces).map(encode)
+            let mut children = [0; 4];
+            let mut cross = [0; 8];
+            let mut gap_col = 0;
+
+            if gap_in_prefix {
+                let g = u32::from(gap_position(u64::from(prefix)));
+                let c = g % 4;
+                gap_col = c as u8;
+
+                children = same_half_moves(u64::from(prefix)).map(|p| encode_prefix(p as u32));
+
+                // The piece in cell `4 + c` moves up to the gap if it's in row 0, and `p` moves up
+                // into cell `4 + c`.
+                let shifted = if g < 4 {
+                    set(prefix, c, get(prefix, c + 4))
+                } else {
+                    prefix
+                };
+                for p in 1..5 {
+                    cross[p as usize] = encode_prefix(set(shifted, c + 4, p));
+                }
             } else {
-                [0; 4]
-            };
+                for c in 0..4 {
+                    // The gap moves to cell `4 + c`, or on to cell `c`.
+                    cross[2 * c as usize] = encode_prefix(set(prefix, c + 4, 0));
+                    cross[2 * c as usize + 1] =
+                        encode_prefix(set(set(prefix, c + 4, get(prefix, c)), c, 0));
+                }
+            }
 
             blocks.push(Block {
                 start,
                 prefix,
                 suffixes: id as u16,
                 gap_in_prefix,
+                gap_col,
                 children,
+                cross,
             });
             start += suffixes[id].suffixes.len() as u32;
         });
@@ -313,22 +383,37 @@ impl Pdb {
                         let offset = j + mask.trailing_zeros() as usize;
                         mask &= mask - 1;
 
+                        let suffix = suffixes.suffixes[offset];
+                        let cross = &suffixes.cross[offset];
+
                         if block.gap_in_prefix {
                             for child in block.children {
                                 new += claim(&mut pdb, child as usize + offset, depth);
                             }
+
+                            let c = u32::from(block.gap_col);
+                            let child = block.cross[get(suffix, c) as usize] as usize;
+                            new += claim(&mut pdb, child + cross[2 * c as usize] as usize, depth);
+                            new +=
+                                claim(&mut pdb, child + cross[2 * c as usize + 1] as usize, depth);
                         } else {
                             for child in suffixes.moves[offset] {
                                 new += claim(&mut pdb, start + child as usize, depth);
                             }
-                        }
 
-                        let suffix = suffixes.suffixes[offset];
-                        let pieces = u64::from(block.prefix) | (u64::from(suffix) << 32);
-                        for_each_cross_move(pieces, |p| {
-                            let idx = indexing_table.encode(p, base_5_table) as usize;
-                            new += claim(&mut pdb, idx, depth);
-                        });
+                            let c = u32::from(gap_position(u64::from(suffix))) % 4;
+                            let child = cross[get(block.prefix, c + 4) as usize] as usize;
+                            new += claim(
+                                &mut pdb,
+                                block.cross[2 * c as usize] as usize + child,
+                                depth,
+                            );
+                            new += claim(
+                                &mut pdb,
+                                block.cross[2 * c as usize + 1] as usize + child,
+                                depth,
+                            );
+                        }
                     }
 
                     j += CHUNK;

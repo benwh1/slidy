@@ -106,6 +106,32 @@ impl IndexingTable {
         }
     }
 
+    /// Returns the index of the first state whose cells 0..8 are `prefix`. Every state with these
+    /// cells has an index in a run starting here.
+    pub(super) fn encode_prefix(&self, prefix: u32, base_5_table: &Base5Table) -> u32 {
+        let t = |shift: u8| {
+            // SAFETY: `base_5_table` has length 0xFFFF.
+            unsafe { base_5_table.get_unchecked(((prefix >> shift) & 0xFFFF) as usize) as usize }
+        };
+
+        // SAFETY: `t` returns a 4 digit base-5 number, so this is an 8 digit base-5 number, and
+        // `self.high` has length 5^8.
+        unsafe { *self.high.get_unchecked(t(16) + 625 * t(0)) }
+    }
+
+    /// Returns the offset of a state whose cells 8..16 are `suffix` within the run of indices
+    /// given by [`Self::encode_prefix`].
+    pub(super) fn encode_suffix(&self, suffix: u32, base_5_table: &Base5Table) -> u32 {
+        let t = |shift: u8| {
+            // SAFETY: `base_5_table` has length 0xFFFF.
+            unsafe { base_5_table.get_unchecked(((suffix >> shift) & 0xFFFF) as usize) as usize }
+        };
+
+        // SAFETY: `t` returns a 4 digit base-5 number, so this is an 8 digit base-5 number, and
+        // `self.low` has length 5^8.
+        u32::from(unsafe { *self.low.get_unchecked(t(16) + 625 * t(0)) })
+    }
+
     #[inline(always)]
     pub(super) fn encode(&self, puzzle: u64, base_5_table: &Base5Table) -> u32 {
         let t = |shift: u8| {
