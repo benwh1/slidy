@@ -103,6 +103,9 @@ impl<const W: usize, const H: usize> Builder<W, H> {
     /// The number of blocks in each word.
     const LANES: u64 = 4;
 
+    /// The number of states reached by vertical moves to collect before claiming them.
+    const BATCH: usize = 64;
+
     fn new() -> Self {
         let words = Padded::<W, H>::BLOCKS.div_ceil(Self::LANES) as usize;
 
@@ -277,6 +280,10 @@ impl<const W: usize, const H: usize> Builder<W, H> {
         let mut new = 0;
         let mut decoder = BlockDecoder::<W, H>::new();
 
+        // The states reached by vertical moves, which are claimed in batches so that their words
+        // can be loaded in parallel.
+        let mut pending = Vec::with_capacity(2 * Self::BATCH);
+
         for i in 0..self.words.len() {
             let frontier = self.take_frontier(i, depth);
             if frontier == 0 {
@@ -299,13 +306,44 @@ impl<const W: usize, const H: usize> Builder<W, H> {
             let decoded = decoder.decode_word(i as u64);
             self.for_each_state(&decoded, i, vertical, |s, index, pieces, gap| {
                 s.for_each_vertical(pieces, gap, index, |s, _, _, child| {
-                    new += u64::from(s.claim(child, next));
+                    s.prefetch(child);
+                    pending.push(child);
                     false
                 });
             });
+
+            if pending.len() >= Self::BATCH {
+                new += self.claim_all(&pending, next);
+                pending.clear();
+            }
         }
 
-        new
+        new + self.claim_all(&pending, next)
+    }
+
+    /// Claims each state in `states` (see [`Self::claim`]), returning the number that were not
+    /// already reached.
+    #[inline(always)]
+    fn claim_all(&mut self, states: &[u64], r: u8) -> u64 {
+        states
+            .iter()
+            .map(|&index| u64::from(self.claim(index, r)))
+            .sum()
+    }
+
+    /// Hints that the word containing the state at `index` will be accessed soon.
+    #[inline(always)]
+    fn prefetch(&self, index: u64) {
+        #[cfg(target_arch = "x86_64")]
+        {
+            use std::arch::x86_64::{_MM_HINT_T0, _mm_prefetch};
+            let word = self.words.as_ptr().wrapping_add((index / 64) as usize);
+            // SAFETY: `sse` is enabled on all x86_64 targets, and a prefetch doesn't access
+            // memory, so the pointer doesn't need to be valid.
+            unsafe {
+                _mm_prefetch::<_MM_HINT_T0>(word.cast());
+            }
+        }
     }
 
     /// Finds the states at depth `depth + 1` by checking, for every state not yet reached, whether
