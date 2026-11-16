@@ -11,7 +11,6 @@ use crate::{
         config::{PdbConfig, SolverConfig},
         search::{Search, iterative_deepening},
         size4x4::mtm::{
-            base_5_table::Base5Table,
             indexing_table::IndexingTable,
             pdb::Pdb,
             puzzle::{FourBitPuzzle, ReducedFourBitPuzzle},
@@ -25,7 +24,6 @@ use crate::{
 /// [`Mtm`]: Mtm
 pub struct Solver {
     indexing_table: IndexingTable,
-    base_5_table: Base5Table,
     pdb: Pdb,
     search: Search<128>,
     puzzle: FourBitPuzzle,
@@ -38,14 +36,9 @@ impl Default for Solver {
 }
 
 impl Solver {
-    fn with_tables_and_pdb(
-        indexing_table: IndexingTable,
-        base_5_table: Base5Table,
-        pdb: Pdb,
-    ) -> Self {
+    fn with_tables_and_pdb(indexing_table: IndexingTable, pdb: Pdb) -> Self {
         Self {
             indexing_table,
-            base_5_table,
             pdb,
             search: Search::new(),
             puzzle: FourBitPuzzle::new(),
@@ -53,17 +46,16 @@ impl Solver {
     }
 
     fn with_pdb(pdb: Pdb) -> Self {
-        Self::with_tables_and_pdb(IndexingTable::new(), Base5Table::new(), pdb)
+        Self::with_tables_and_pdb(IndexingTable::new(), pdb)
     }
 
     /// Creates a new [`Solver`] and builds the pattern database.
     #[must_use]
     pub fn new(config: &PdbConfig) -> Self {
         let indexing_table = IndexingTable::new();
-        let base_5_table = Base5Table::new();
-        let pdb = Pdb::new(&indexing_table, &base_5_table, config);
+        let pdb = Pdb::new(&indexing_table, config);
 
-        Self::with_tables_and_pdb(indexing_table, base_5_table, pdb)
+        Self::with_tables_and_pdb(indexing_table, pdb)
     }
 
     /// Initializes a [`Solver`] using a boxed byte slice containing the pre-computed pattern
@@ -109,9 +101,7 @@ impl Solver {
         mut puzzle: ReducedFourBitPuzzle,
         mut transposed_puzzle: ReducedFourBitPuzzle,
     ) -> ControlFlow<()> {
-        let coord = self
-            .indexing_table
-            .encode(puzzle.pieces, &self.base_5_table) as usize;
+        let coord = self.indexing_table.encode(puzzle.pieces) as usize;
 
         // SAFETY: We have a test which guarantees that every `ReducedFourBitPuzzle` encodes to an
         // index that is within bounds.
@@ -120,9 +110,7 @@ impl Solver {
             return ControlFlow::Continue(());
         }
 
-        let coord = self
-            .indexing_table
-            .encode(transposed_puzzle.pieces, &self.base_5_table) as usize;
+        let coord = self.indexing_table.encode(transposed_puzzle.pieces) as usize;
 
         // SAFETY: See above.
         let heuristic = unsafe { self.pdb.get_unchecked(coord) } as u64;
@@ -200,9 +188,7 @@ impl Solver {
 
         self.puzzle = four_bit_puzzle;
 
-        let coord = self
-            .indexing_table
-            .encode(reduced_puzzle.pieces, &self.base_5_table);
+        let coord = self.indexing_table.encode(reduced_puzzle.pieces);
         let hval = self.pdb.get(coord as usize) as u64;
 
         iterative_deepening::<Mtm, _, _>(

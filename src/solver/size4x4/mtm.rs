@@ -14,7 +14,6 @@
 //!
 //! [`Mtm`]: crate::algorithm::metric::Mtm
 
-mod base_5_table;
 mod consts;
 mod indexing_table;
 pub mod pdb;

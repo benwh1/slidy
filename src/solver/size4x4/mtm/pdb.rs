@@ -9,7 +9,6 @@ use crate::{
     solver::{
         config::PdbConfig,
         size4x4::mtm::{
-            base_5_table::Base5Table,
             consts::{SIZE, TALLY},
             indexing_table::IndexingTable,
             puzzle::ReducedFourBitPuzzle,
@@ -232,9 +231,9 @@ struct Blocks {
 }
 
 impl Blocks {
-    fn new(indexing_table: &IndexingTable, base_5_table: &Base5Table) -> Self {
-        let encode_prefix = |prefix| indexing_table.encode_prefix(prefix, base_5_table);
-        let encode_suffix = |suffix| indexing_table.encode_suffix(suffix, base_5_table) as u16;
+    fn new(indexing_table: &IndexingTable) -> Self {
+        let encode_prefix = |prefix| indexing_table.encode_prefix(prefix);
+        let encode_suffix = |suffix| indexing_table.encode_suffix(suffix) as u16;
 
         let mut blocks = Vec::new();
         let mut suffixes: Vec<Suffixes> = Vec::new();
@@ -411,17 +410,13 @@ pub struct Pdb {
 }
 
 impl Pdb {
-    pub(super) fn new(
-        indexing_table: &IndexingTable,
-        base_5_table: &Base5Table,
-        config: &PdbConfig,
-    ) -> Self {
-        let blocks = Blocks::new(indexing_table, base_5_table);
+    pub(super) fn new(indexing_table: &IndexingTable, config: &PdbConfig) -> Self {
+        let blocks = Blocks::new(indexing_table);
 
         let mut pdb = vec![u8::MAX; SIZE + PADDING];
 
         let puzzle = ReducedFourBitPuzzle::new();
-        let solved_index = indexing_table.encode(puzzle.pieces, base_5_table) as usize;
+        let solved_index = indexing_table.encode(puzzle.pieces) as usize;
         pdb[solved_index] = 0;
 
         let mut depth = 0;
@@ -454,7 +449,7 @@ impl Pdb {
                     let mut puzzle = state;
 
                     while puzzle.do_move(mv) {
-                        let idx = indexing_table.encode(puzzle.pieces(), base_5_table) as usize;
+                        let idx = indexing_table.encode(puzzle.pieces()) as usize;
                         if claim(&mut pdb, idx, depth) == 1 {
                             next.push(puzzle.pieces());
                         }
@@ -612,8 +607,7 @@ mod tests {
     #[test]
     fn test_pdb() {
         let indexing_table = IndexingTable::new();
-        let base_5_table = Base5Table::new();
-        let pdb = Pdb::new(&indexing_table, &base_5_table, &PdbConfig::default());
+        let pdb = Pdb::new(&indexing_table, &PdbConfig::default());
         let hash = xxh3::xxh3_64(pdb.as_ref());
         assert_eq!(hash, HASH);
     }

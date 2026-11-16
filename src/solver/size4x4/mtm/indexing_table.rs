@@ -1,7 +1,4 @@
-use crate::solver::{
-    indexing,
-    size4x4::mtm::{base_5_table::Base5Table, consts::TALLY},
-};
+use crate::solver::{indexing, size4x4::mtm::consts::TALLY};
 
 pub(super) struct IndexingTable {
     high: Box<[u32]>,
@@ -13,8 +10,8 @@ impl IndexingTable {
         let max_counts = TALLY;
         let mut counts = [0, 0, 0, 0, 0];
 
-        let mut high = vec![0; 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5];
-        let mut low = vec![0; 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5];
+        let mut high = vec![0; LEN];
+        let mut low = vec![0; LEN];
 
         for p0 in 0..5 {
             counts[p0] += 1;
@@ -108,44 +105,52 @@ impl IndexingTable {
 
     /// Returns the index of the first state whose cells 0..8 are `prefix`. Every state with these
     /// cells has an index in a run starting here.
-    pub(super) fn encode_prefix(&self, prefix: u32, base_5_table: &Base5Table) -> u32 {
-        let t = |shift: u8| {
-            // SAFETY: `base_5_table` has length 0xFFFF.
-            unsafe { base_5_table.get_unchecked(((prefix >> shift) & 0xFFFF) as usize) as usize }
-        };
+    pub(super) fn encode_prefix(&self, prefix: u32) -> u32 {
+        let high = base_5(u64::from(prefix)) as u32 as usize;
 
-        // SAFETY: `t` returns a 4 digit base-5 number, so this is an 8 digit base-5 number, and
-        // `self.high` has length 5^8.
-        unsafe { *self.high.get_unchecked(t(16) + 625 * t(0)) }
+        // SAFETY: `base_5` returns halves less than `LEN`, the length of `self.high`.
+        unsafe { *self.high.get_unchecked(high) }
     }
 
     /// Returns the offset of a state whose cells 8..16 are `suffix` within the run of indices
     /// given by [`Self::encode_prefix`].
-    pub(super) fn encode_suffix(&self, suffix: u32, base_5_table: &Base5Table) -> u32 {
-        let t = |shift: u8| {
-            // SAFETY: `base_5_table` has length 0xFFFF.
-            unsafe { base_5_table.get_unchecked(((suffix >> shift) & 0xFFFF) as usize) as usize }
-        };
+    pub(super) fn encode_suffix(&self, suffix: u32) -> u32 {
+        let low = base_5(u64::from(suffix)) as u32 as usize;
 
-        // SAFETY: `t` returns a 4 digit base-5 number, so this is an 8 digit base-5 number, and
-        // `self.low` has length 5^8.
-        u32::from(unsafe { *self.low.get_unchecked(t(16) + 625 * t(0)) })
+        // SAFETY: `base_5` returns halves less than `LEN`, the length of `self.low`.
+        u32::from(unsafe { *self.low.get_unchecked(low) })
     }
 
     #[inline(always)]
-    pub(super) fn encode(&self, puzzle: u64, base_5_table: &Base5Table) -> u32 {
-        let t = |shift: u8| {
-            // SAFETY: `base_5_table` has length 0xFFFF.
-            unsafe { base_5_table.get_unchecked(((puzzle >> shift) & 0xFFFF) as usize) as usize }
-        };
+    pub(super) fn encode(&self, puzzle: u64) -> u32 {
+        let digits = base_5(puzzle);
+        let high = digits as u32 as usize;
+        let low = (digits >> 32) as usize;
 
-        let high = t(16) + 625 * t(0);
-        let low = t(48) + 625 * t(32);
-
-        // SAFETY: `high` and `low` are computed as 8 digit base-5 numbers. `self.high` and
-        // `self.low` have length 5^8, so these are within bounds.
-        unsafe { *self.high.get_unchecked(high) + *self.low.get_unchecked(low) as u32 }
+        // SAFETY: `base_5` returns halves less than `LEN`, the length of `self.high` and
+        // `self.low`.
+        unsafe { *self.high.get_unchecked(high) + u32::from(*self.low.get_unchecked(low)) }
     }
+}
+
+/// The length of the tables: one more than the largest value of either half of [`base_5`], which
+/// is reached when every cell is 7.
+const LEN: usize = 7 * (5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 - 1) / 4 + 1;
+
+/// Reads cells 0..8 and cells 8..16 of `pieces` as two 8 digit base-5 numbers, with the lower
+/// cells more significant, and returns them in the low and high 32 bits. Only the lowest 3 bits of
+/// each cell are read, so each half is less than [`LEN`] even if a cell is more than 4.
+#[inline(always)]
+fn base_5(pieces: u64) -> u64 {
+    const CELLS: u64 = 0x0707_0707_0707_0707;
+    const PAIRS: u64 = 0x00FF_00FF_00FF_00FF;
+    const QUADS: u64 = 0x0000_FFFF_0000_FFFF;
+
+    // Each step combines neighbouring fields, and no field overflows into the next: a pair is at
+    // most 7 * 5 + 7, a quad at most 42 * 25 + 42, and a half at most 1092 * 625 + 1092.
+    let pairs = (pieces & CELLS) * 5 + ((pieces >> 4) & CELLS);
+    let quads = (pairs & PAIRS) * 25 + ((pairs >> 8) & PAIRS);
+    (quads & QUADS) * 625 + ((quads >> 16) & QUADS)
 }
 
 #[cfg(test)]
@@ -157,7 +162,6 @@ mod tests {
     #[test]
     fn test_indexing_table() {
         let table = IndexingTable::new();
-        let base_5_table = Base5Table::new();
 
         let max_counts = TALLY;
         let mut counts = [0, 0, 0, 0, 0];
@@ -272,10 +276,8 @@ mod tests {
                                                                             | ((p1 as u64) << 4)
                                                                             | (p0 as u64);
 
-                                                                        let encoded = table.encode(
-                                                                            puzzle,
-                                                                            &base_5_table,
-                                                                        );
+                                                                        let encoded =
+                                                                            table.encode(puzzle);
 
                                                                         assert_eq!(
                                                                             encoded, index,
