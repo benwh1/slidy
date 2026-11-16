@@ -357,6 +357,10 @@ impl<const W: usize, const H: usize> Builder<W, H> {
         let mut new = 0;
         let mut decoder = BlockDecoder::<W, H>::new();
 
+        // Pairs of a state not yet reached and a state that it reaches by a vertical move, which
+        // are checked in batches so that the neighbours' words can be loaded in parallel.
+        let mut pending = Vec::with_capacity(2 * Self::BATCH);
+
         for i in 0..self.words.len() {
             self.take_frontier(i, depth);
 
@@ -367,24 +371,65 @@ impl<const W: usize, const H: usize> Builder<W, H> {
             }
 
             // Horizontal moves stay in the same lane, so check them for the whole word at once.
-            let mut found = candidates & self.horizontal(w.with_entry(current));
+            let found = candidates & self.horizontal(w.with_entry(current));
+            self.words[i].set_entry(found, next);
+            new += u64::from(found.count_ones());
 
             let remaining = candidates & !found & (self.masks.up | self.masks.down);
-            if remaining != 0 {
-                let decoded = decoder.decode_word(i as u64);
+            if remaining == 0 {
+                continue;
+            }
+
+            let decoded = decoder.decode_word(i as u64);
+            if H == 2 {
+                // Each state has one neighbour by a vertical move, so check them in batches.
+                self.for_each_state(&decoded, i, remaining, |s, index, pieces, gap| {
+                    s.for_each_vertical(pieces, gap, index, |s, _, _, child| {
+                        s.prefetch(child);
+                        pending.push((index, child));
+                        false
+                    });
+                });
+
+                if pending.len() >= Self::BATCH {
+                    new += self.pull_all(&pending, current, next);
+                    pending.clear();
+                }
+            } else {
+                // Each state has several neighbours by vertical moves, and checking them one at a
+                // time, stopping at the first one at the current depth, is faster than batching.
                 let base = 64 * i as u64;
+                let mut found = 0;
                 self.for_each_state(&decoded, i, remaining, |s, index, pieces, gap| {
                     let reached = s.for_each_vertical(pieces, gap, index, |s, _, _, child| {
                         s.has_entry(child, current)
                     });
                     found |= u64::from(reached) << (index - base);
                 });
+                self.words[i].set_entry(found, next);
+                new += u64::from(found.count_ones());
             }
-
-            self.words[i].set_entry(found, next);
-            new += u64::from(found.count_ones());
         }
 
+        new + self.pull_all(&pending, current, next)
+    }
+
+    /// For each pair `(index, child)` in `pairs`, where the state at `index` reaches the state at
+    /// `child` by one move, marks the state at `index` as reached with entry `next` if it hasn't
+    /// been reached and the state at `child` has entry `current`. Returns the number of states
+    /// marked.
+    #[inline(always)]
+    fn pull_all(&mut self, pairs: &[(u64, u64)], current: u8, next: u8) -> u64 {
+        let mut new = 0;
+        for &(index, child) in pairs {
+            // Whether the neighbour is at the current depth is unpredictable, so update the state
+            // without branching.
+            let hit = u64::from(self.has_entry(child, current)).wrapping_neg();
+            let (w, bit) = self.word_bit(index);
+            let found = w.entry[0] & w.entry[1] & bit & hit;
+            w.set_entry(found, next);
+            new += u64::from(found != 0);
+        }
         new
     }
 
