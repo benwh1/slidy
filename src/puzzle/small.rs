@@ -438,6 +438,30 @@ macro_rules! impl_puzzle {
                 self.move_dir(dir);
             }
 
+            fn is_solvable(&self) -> bool {
+                // A state is solvable if and only if the parity of the permutation taking each
+                // position to the solved position of its piece is the parity of the gap's
+                // distance from the bottom right corner.
+                //
+                // The parity of the permutation is the parity of the number of inversions. For
+                // each position, `seen >> solved` has a bit for each earlier piece that belongs
+                // after this one, and the parity of the total of these bits is the parity of the
+                // bits in their XOR.
+                let mut seen = 0u16;
+                let mut inversions = 0u16;
+                for i in 0..Self::N {
+                    let piece = ((self.pieces >> (4 * i)) & 0xF) as usize;
+                    let solved = if piece == 0 { Self::N - 1 } else { piece - 1 };
+                    inversions ^= seen >> solved;
+                    seen |= 1 << solved;
+                }
+
+                let (gx, gy) = self.gap_position_xy();
+                let distance = ($w - 1 - gx) + ($h - 1 - gy);
+
+                (inversions.count_ones() as u64 + distance) % 2 == 0
+            }
+
             fn can_apply_move(&self, mv: Move) -> bool {
                 mv.amount <= u64::from(Self::DISTANCES[self.gap as usize][mv.direction as usize])
             }
