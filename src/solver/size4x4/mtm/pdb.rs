@@ -22,6 +22,9 @@ const HASH: u64 = 0x73b712151249d829;
 
 const CHUNK: usize = 64;
 
+/// Layers are expanded from a queue while they have fewer states than this.
+const QUEUE_LIMIT: usize = 1 << 18;
+
 /// Returns a mask with bit `k` set if `chunk[k] == depth`.
 #[inline(always)]
 fn depth_mask(chunk: &[u8; CHUNK], depth: u8) -> u64 {
@@ -356,6 +359,48 @@ impl Pdb {
         if let Some(f) = &config.end_of_iter_callback {
             f(PdbIterationStats { depth, new, total });
         }
+
+        // Scanning the whole table costs about as much as expanding a couple of hundred thousand
+        // states from a queue, so expand the first few layers from a queue instead.
+        let mut frontier = vec![puzzle.pieces];
+
+        while new != 0 && frontier.len() < QUEUE_LIMIT {
+            let mut next = Vec::new();
+
+            for &pieces in &frontier {
+                let state = ReducedFourBitPuzzle {
+                    pieces,
+                    gap: gap_position(pieces),
+                };
+
+                for mv in [
+                    Direction::Up,
+                    Direction::Left,
+                    Direction::Down,
+                    Direction::Right,
+                ] {
+                    let mut puzzle = state;
+
+                    while puzzle.do_move(mv) {
+                        let idx = indexing_table.encode(puzzle.pieces(), base_5_table) as usize;
+                        if claim(&mut pdb, idx, depth) == 1 {
+                            next.push(puzzle.pieces());
+                        }
+                    }
+                }
+            }
+
+            new = next.len() as u64;
+            total += new;
+            depth += 1;
+            frontier = next;
+
+            if let Some(f) = &config.end_of_iter_callback {
+                f(PdbIterationStats { depth, new, total });
+            }
+        }
+
+        drop(frontier);
 
         while new != 0 {
             new = 0;
