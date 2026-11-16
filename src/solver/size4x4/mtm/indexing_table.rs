@@ -1,4 +1,9 @@
-use crate::solver::{indexing, size4x4::mtm::consts::TALLY};
+use std::array;
+
+use crate::solver::{
+    indexing,
+    size4x4::mtm::consts::{SIZE, TALLY},
+};
 
 pub(super) struct IndexingTable {
     high: Box<[u32]>,
@@ -7,95 +12,53 @@ pub(super) struct IndexingTable {
 
 impl IndexingTable {
     pub(super) fn new() -> Self {
-        let max_counts = TALLY;
-        let mut counts = [0, 0, 0, 0, 0];
+        /// Calls `f` with the base-5 digits and the piece counts of every arrangement of 8 cells
+        /// with at most `TALLY[i]` pieces labelled `i`, in lexicographic order.
+        fn go(
+            cell: usize,
+            digits: usize,
+            counts: &mut [u8; 5],
+            f: &mut impl FnMut(usize, &[u8; 5]),
+        ) {
+            if cell == 8 {
+                f(digits, counts);
+                return;
+            }
+
+            for piece in 0..5 {
+                if counts[piece] < TALLY[piece] {
+                    counts[piece] += 1;
+                    go(cell + 1, 5 * digits + piece, counts, f);
+                    counts[piece] -= 1;
+                }
+            }
+        }
 
         let mut high = vec![0; LEN];
         let mut low = vec![0; LEN];
 
-        for p0 in 0..5 {
-            counts[p0] += 1;
-            for p1 in 0..5 {
-                if counts[p1] >= max_counts[p1] {
-                    continue;
-                }
-                counts[p1] += 1;
-                for p2 in 0..5 {
-                    if counts[p2] >= max_counts[p2] {
-                        continue;
-                    }
-                    counts[p2] += 1;
-                    for p3 in 0..5 {
-                        if counts[p3] >= max_counts[p3] {
-                            continue;
-                        }
-                        counts[p3] += 1;
-                        for p4 in 0..5 {
-                            if counts[p4] >= max_counts[p4] {
-                                continue;
-                            }
-                            counts[p4] += 1;
-                            for p5 in 0..5 {
-                                if counts[p5] >= max_counts[p5] {
-                                    continue;
-                                }
-                                counts[p5] += 1;
-                                for p6 in 0..5 {
-                                    if counts[p6] >= max_counts[p6] {
-                                        continue;
-                                    }
-                                    counts[p6] += 1;
-                                    for p7 in 0..5 {
-                                        if counts[p7] >= max_counts[p7] {
-                                            continue;
-                                        }
-                                        counts[p7] += 1;
+        // The next index for a prefix: every state with a lexicographically smaller prefix comes
+        // first.
+        let mut start = 0;
+        // For each multiset of pieces, the rank of its next arrangement among all of its
+        // arrangements.
+        let mut ranks = [0; 2 * 3 * 5 * 6 * 5];
 
-                                        let index = p7
-                                            + 5 * (p6
-                                                + 5 * (p5
-                                                    + 5 * (p4
-                                                        + 5 * (p3
-                                                            + 5 * (p2 + 5 * (p1 + 5 * p0))))));
+        go(0, 0, &mut [0; 5], &mut |digits, counts| {
+            high[digits] = start;
+            // The states with this prefix have every arrangement of the remaining pieces as their
+            // suffix.
+            start +=
+                indexing::multinomial(&array::from_fn::<_, 5, _>(|i| TALLY[i] - counts[i])) as u32;
 
-                                        let mut pieces = [
-                                            p0 as u8, p1 as u8, p2 as u8, p3 as u8, p4 as u8,
-                                            p5 as u8, p6 as u8, p7 as u8, 0, 0, 0, 0, 0, 0, 0, 0,
-                                        ];
+            let id = (0..5).rev().fold(0, |id, i| {
+                id * (usize::from(TALLY[i]) + 1) + usize::from(counts[i])
+            });
+            low[digits] = ranks[id];
+            ranks[id] += 1;
+        });
 
-                                        let mut piece_index = 8;
-                                        for i in 0..5 {
-                                            for _ in counts[i]..max_counts[i] {
-                                                pieces[piece_index] = i as u8;
-                                                piece_index += 1;
-                                            }
-                                        }
-                                        high[index] =
-                                            indexing::encode_multiset(pieces, max_counts) as u32;
-
-                                        let pieces = [
-                                            p0 as u8, p1 as u8, p2 as u8, p3 as u8, p4 as u8,
-                                            p5 as u8, p6 as u8, p7 as u8,
-                                        ];
-                                        low[index] =
-                                            indexing::encode_multiset(pieces, counts) as u16;
-
-                                        counts[p7] -= 1;
-                                    }
-                                    counts[p6] -= 1;
-                                }
-                                counts[p5] -= 1;
-                            }
-                            counts[p4] -= 1;
-                        }
-                        counts[p3] -= 1;
-                    }
-                    counts[p2] -= 1;
-                }
-                counts[p1] -= 1;
-            }
-            counts[p0] -= 1;
-        }
+        debug_assert_eq!(start as usize, SIZE);
 
         Self {
             high: high.into_boxed_slice(),

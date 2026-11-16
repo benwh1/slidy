@@ -56,28 +56,6 @@ pub(super) const fn multinomial(counts: &[u8]) -> u64 {
     r
 }
 
-pub(super) fn encode_multiset<const LEN: usize, const DISTINCT: usize>(
-    arr: [u8; LEN],
-    tally: [u8; DISTINCT],
-) -> u64 {
-    let mut remaining = tally;
-    let mut t = 0;
-
-    for &v in &arr {
-        let cur = v as usize;
-        for s in 0..cur {
-            if remaining[s] > 0 {
-                remaining[s] -= 1;
-                t += multinomial(&remaining);
-                remaining[s] += 1;
-            }
-        }
-        remaining[cur] -= 1;
-    }
-
-    t
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
