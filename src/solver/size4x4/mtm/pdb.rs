@@ -51,11 +51,24 @@ fn depth_mask(chunk: &[u8; CHUNK], depth: u8) -> u64 {
 
     #[cfg(not(target_arch = "x86_64"))]
     {
-        let mut mask = 0;
-        for (k, &x) in chunk.iter().enumerate() {
-            mask |= u64::from(x == depth) << k;
-        }
-        mask
+        const ONES: u64 = 0x0101_0101_0101_0101;
+        const LOWS: u64 = 0x7F7F_7F7F_7F7F_7F7F;
+        // Bit `56 + k` of the product is bit `8k` of the multiplicand, and no other bits carry
+        // into the top byte.
+        const GATHER: u64 = 0x0102_0408_1020_4080;
+
+        let target = ONES * u64::from(depth);
+        chunk
+            .as_chunks::<8>()
+            .0
+            .iter()
+            .enumerate()
+            .fold(0, |mask, (i, bytes)| {
+                let x = u64::from_le_bytes(*bytes) ^ target;
+                // The high bit of each byte is set exactly when the byte is zero.
+                let zeros = !(((x & LOWS) + LOWS) | x | LOWS);
+                mask | (((zeros >> 7).wrapping_mul(GATHER) >> 56) << (8 * i))
+            })
     }
 }
 
@@ -603,6 +616,25 @@ impl AsRef<[u8]> for Pdb {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_depth_mask() {
+        use rand::{RngExt as _, SeedableRng as _};
+
+        let mut rng = rand_xoshiro::Xoshiro256StarStar::seed_from_u64(0);
+        for _ in 0..10000 {
+            // A random number of distinct values, so that chunks have anywhere from no matches to
+            // all matches.
+            let range = rng.random_range(1..=255);
+            let chunk: [u8; CHUNK] = std::array::from_fn(|_| rng.random_range(0..range));
+            let depth = rng.random_range(0..range);
+            let expected = chunk
+                .iter()
+                .enumerate()
+                .fold(0, |m, (k, &x)| m | (u64::from(x == depth) << k));
+            assert_eq!(depth_mask(&chunk, depth), expected);
+        }
+    }
 
     #[test]
     fn test_pdb() {
