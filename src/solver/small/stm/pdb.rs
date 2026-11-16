@@ -77,6 +77,9 @@ impl<const W: usize, const H: usize> Builder<W, H> {
     /// The number of blocks in each word.
     const LANES: u64 = 4;
 
+    /// The number of states reached by vertical moves to collect before claiming them.
+    const BATCH: usize = 64;
+
     fn new() -> Self {
         let words = Padded::<W, H>::BLOCKS.div_ceil(Self::LANES) as usize;
 
@@ -160,6 +163,32 @@ impl<const W: usize, const H: usize> Builder<W, H> {
         new
     }
 
+    /// Claims each state in `states` with [`Self::claim_vertically`], returning the number that
+    /// were not already reached.
+    #[inline(always)]
+    fn claim_all_vertically(&mut self, states: &[u64]) -> u64 {
+        states
+            .iter()
+            .map(|&index| u64::from(self.claim_vertically(index)))
+            .sum()
+    }
+
+    /// Hints that the word of [`Self::reached`] containing the state at `index` will be accessed
+    /// soon.
+    #[inline(always)]
+    fn prefetch(&self, index: u64) {
+        #[cfg(target_arch = "x86_64")]
+        {
+            use std::arch::x86_64::{_MM_HINT_T0, _mm_prefetch};
+            let word = self.reached.as_ptr().wrapping_add((index / 64) as usize);
+            // SAFETY: `sse` is enabled on all x86_64 targets, and a prefetch doesn't access
+            // memory, so the pointer doesn't need to be valid.
+            unsafe {
+                _mm_prefetch::<_MM_HINT_T0>(word.cast());
+            }
+        }
+    }
+
     /// Whether the state at `index` has been reached.
     #[inline(always)]
     fn is_visited(&mut self, index: u64) -> bool {
@@ -214,6 +243,10 @@ impl<const W: usize, const H: usize> Builder<W, H> {
         let mut new = 0;
         let mut decoder = BlockDecoder::<W, H>::new();
 
+        // The states reached by vertical moves, which are claimed in batches so that their words
+        // can be loaded in parallel.
+        let mut pending = Vec::with_capacity(2 * Self::BATCH);
+
         for i in 0..self.reached.len() {
             let frontier = self.take_frontier(i, depth);
             if frontier == 0 {
@@ -242,8 +275,9 @@ impl<const W: usize, const H: usize> Builder<W, H> {
                 i,
                 vertical & self.masks.up,
                 |s, index, pieces, gap| {
-                    let delta = Padded::<W, H>::delta_up(pieces, gap);
-                    new += u64::from(s.claim_vertically(index.wrapping_add(delta)));
+                    let child = index.wrapping_add(Padded::<W, H>::delta_up(pieces, gap));
+                    s.prefetch(child);
+                    pending.push(child);
                 },
             );
             self.for_each_state(
@@ -251,13 +285,19 @@ impl<const W: usize, const H: usize> Builder<W, H> {
                 i,
                 vertical & self.masks.down,
                 |s, index, pieces, gap| {
-                    let delta = Padded::<W, H>::delta_down(pieces, gap);
-                    new += u64::from(s.claim_vertically(index.wrapping_add(delta)));
+                    let child = index.wrapping_add(Padded::<W, H>::delta_down(pieces, gap));
+                    s.prefetch(child);
+                    pending.push(child);
                 },
             );
+
+            if pending.len() >= Self::BATCH {
+                new += self.claim_all_vertically(&pending);
+                pending.clear();
+            }
         }
 
-        new
+        new + self.claim_all_vertically(&pending)
     }
 
     /// Finds the states at depth `depth + 1` by checking, for every state not yet reached, whether
