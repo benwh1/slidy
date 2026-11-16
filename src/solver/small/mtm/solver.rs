@@ -205,9 +205,9 @@ where
             config,
             distance,
             |s, depth| {
-                if distance > depth {
-                    return ControlFlow::Continue(());
-                }
+                // `iterative_deepening` starts at `distance` or deeper. `dfs` relies on this, as it
+                // records a solution at depth 0 without checking that the puzzle is solved.
+                assert!(distance <= depth);
                 s.dfs(depth, distance, pieces, gap, index, moves)
             },
         );
