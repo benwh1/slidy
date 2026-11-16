@@ -62,6 +62,11 @@ path = "benches/puzzle/scrambler.rs"
 harness = false
 
 [[bench]]
+name = "puzzle_small"
+path = "benches/puzzle/small.rs"
+harness = false
+
+[[bench]]
 name = "solver_projection_memory"
 path = "benches/solver/projection/memory.rs"
 harness = false
