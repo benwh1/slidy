@@ -437,7 +437,11 @@ impl Pdb {
         let mut total = 1;
 
         if let Some(f) = &config.end_of_iter_callback {
-            f(PdbIterationStats { depth, new, total });
+            f(PdbIterationStats {
+                depth: depth.into(),
+                new,
+                total,
+            });
         }
 
         // Scanning the whole table costs about as much as expanding a couple of hundred thousand
@@ -476,7 +480,11 @@ impl Pdb {
             frontier = next;
 
             if let Some(f) = &config.end_of_iter_callback {
-                f(PdbIterationStats { depth, new, total });
+                f(PdbIterationStats {
+                    depth: depth.into(),
+                    new,
+                    total,
+                });
             }
         }
 
@@ -538,7 +546,11 @@ impl Pdb {
             depth += 1;
 
             if let Some(f) = &config.end_of_iter_callback {
-                f(PdbIterationStats { depth, new, total });
+                f(PdbIterationStats {
+                    depth: depth.into(),
+                    new,
+                    total,
+                });
             }
         }
 

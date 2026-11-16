@@ -132,7 +132,11 @@ impl Pdb {
             total += new;
 
             if let Some(callback) = &config.end_of_iter_callback {
-                callback(PdbIterationStats { depth, new, total });
+                callback(PdbIterationStats {
+                    depth: depth.into(),
+                    new,
+                    total,
+                });
             }
         }
 

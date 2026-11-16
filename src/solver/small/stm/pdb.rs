@@ -438,7 +438,11 @@ impl<const W: usize, const H: usize> Builder<W, H> {
 
         loop {
             if let Some(f) = &config.end_of_iter_callback {
-                f(PdbIterationStats { depth, new, total });
+                f(PdbIterationStats {
+                    depth: depth.into(),
+                    new,
+                    total,
+                });
             }
             if new == 0 {
                 break;

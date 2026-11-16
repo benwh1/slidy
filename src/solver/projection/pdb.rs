@@ -91,10 +91,6 @@ impl<Metric> Pdb<Metric> {
     /// in one direction ([`Mtm`]), and the database has two bits per state; otherwise a move moves
     /// one piece ([`Stm`]), and the database has one bit per state.
     ///
-    /// # Panics
-    ///
-    /// Panics if some state is more than 255 moves from the solved state.
-    ///
     /// [`Mtm`]: crate::algorithm::metric::Mtm
     /// [`Stm`]: crate::algorithm::metric::Stm
     pub(super) fn build<const MULTI_TILE: bool, L>(
@@ -132,7 +128,7 @@ impl<Metric> Pdb<Metric> {
 
         let mut current = vec![solved];
 
-        let mut depth = 0u8;
+        let mut depth = 0;
         let mut new = 1;
         let mut total = 1;
 
@@ -142,7 +138,6 @@ impl<Metric> Pdb<Metric> {
 
         while !current.is_empty() {
             let mut next = Vec::with_capacity(current.len() * 4);
-            let next_depth = depth.checked_add(1);
 
             for state in &current {
                 let index = state.encode(&tally);
@@ -155,8 +150,7 @@ impl<Metric> Pdb<Metric> {
                     loop {
                         (puzzle, idx) = moves.apply(&puzzle, idx, d);
                         if table.is_new(idx as usize) {
-                            let depth = next_depth.expect("pattern database depth overflowed `u8`");
-                            table.claim(idx as usize, depth);
+                            table.claim(idx as usize, depth + 1);
                             next.push(puzzle);
                         }
 
@@ -224,13 +218,13 @@ impl<const MULTI_TILE: bool> Table<MULTI_TILE> {
 
     /// Marks the state at `index`, which hasn't been reached, as reached at depth `depth`.
     #[inline(always)]
-    fn claim(&mut self, index: usize, depth: u8) {
+    fn claim(&mut self, index: usize, depth: u64) {
         if MULTI_TILE {
             // The entry is 3, so this sets it to `depth % 3`.
-            self.entries[index / 4] ^= (3 ^ (depth % 3)) << (2 * (index % 4));
+            self.entries[index / 4] ^= (3 ^ (depth % 3) as u8) << (2 * (index % 4));
         } else {
             self.reached[index / 64] |= 1 << (index % 64);
-            self.entries[index / 8] |= ((depth >> 1) & 1) << (index % 8);
+            self.entries[index / 8] |= (((depth >> 1) & 1) as u8) << (index % 8);
         }
     }
 

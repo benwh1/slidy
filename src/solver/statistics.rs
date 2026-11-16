@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PdbIterationStats {
     /// The greatest depth of entries currently in the PDB.
-    pub depth: u8,
+    pub depth: u64,
 
     /// The number of entries at depth `depth`.
     pub new: u64,
