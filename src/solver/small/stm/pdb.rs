@@ -177,6 +177,10 @@ impl<const W: usize, const H: usize> Builder<W, H> {
     /// soon.
     #[inline(always)]
     fn prefetch(&self, index: u64) {
+        // Prefetching is x86_64 only.
+        #[cfg(not(target_arch = "x86_64"))]
+        let _ = (self, index);
+
         #[cfg(target_arch = "x86_64")]
         {
             use std::arch::x86_64::{_MM_HINT_T0, _mm_prefetch};
