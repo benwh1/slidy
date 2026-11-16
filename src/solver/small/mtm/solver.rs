@@ -11,15 +11,12 @@ use crate::{
     solver::{
         config::{PdbConfig, SolverConfig},
         directions::DIRECTIONS,
+        residue,
         search::iterative_deepening,
         small::{coord::Dense, moves::Moves, pdb::Pdb, solver::Solver},
         solver::{Solver as SolverT, SolverError},
     },
 };
-
-/// The children of a state at distance `d` are at distance `d + k - 1` where `k` is
-/// `STEP[e + 3 - d % 3]` and `e` is the child's entry, `(d + k - 1) % 3`.
-const STEP: [u64; 8] = [1, 2, 0, 1, 2, 0, 1, 2];
 
 impl<const W: usize, const H: usize, const N: usize> Default for Solver<W, H, N, Mtm>
 where
@@ -51,43 +48,43 @@ where
     }
 
     /// Returns the optimal solution length of the state with the given pieces, gap, and index.
-    fn distance(&self, mut pieces: u64, mut gap: u8, mut index: u64) -> u64 {
-        let mut residue = self.entry(index);
-        let mut distance = 0;
+    fn distance(&self, pieces: u64, gap: u8, index: u64) -> u64 {
+        residue::walk_distance(
+            (pieces, gap, index),
+            self.entry(index),
+            |&(_, _, index)| index == N as u64 - 1,
+            |&state, closer| self.closer_neighbour(state, closer),
+        )
+    }
 
-        'walk: while index != N as u64 - 1 {
-            // Every move changes the distance by at most 1, so exactly the neighbours closer to
-            // solved have this entry.
-            let closer = (residue + 2) % 3;
+    /// Returns a state one move from the state `(pieces, gap, index)` whose entry is `closer`.
+    fn closer_neighbour(
+        &self,
+        (pieces, gap, index): (u64, u8, u64),
+        closer: u64,
+    ) -> (u64, u8, u64) {
+        let mut rest = Moves::<W, H, N>::MOVES[gap as usize].1;
+        while rest != 0 {
+            let d = rest.trailing_zeros();
+            rest &= rest - 1;
 
-            let mut rest = Moves::<W, H, N>::MOVES[gap as usize].1;
-            while rest != 0 {
-                let d = rest.trailing_zeros();
-                rest &= rest - 1;
-
-                let (mut p, mut g, mut i) = (pieces, gap, index);
-                loop {
-                    let (cells, moves) = Moves::<W, H, N>::MOVES[g as usize];
-                    if moves & (1 << d) == 0 {
-                        break;
-                    }
-                    i = Moves::<W, H, N>::child_index(p, g, i, d);
-                    let cell = cells[d as usize];
-                    p = Dense::<W, H, N>::move_gap(p, g, cell);
-                    g = cell;
-                    if self.entry(i) == closer {
-                        (pieces, gap, index) = (p, g, i);
-                        residue = closer;
-                        distance += 1;
-                        continue 'walk;
-                    }
+            let (mut p, mut g, mut i) = (pieces, gap, index);
+            loop {
+                let (cells, moves) = Moves::<W, H, N>::MOVES[g as usize];
+                if moves & (1 << d) == 0 {
+                    break;
+                }
+                i = Moves::<W, H, N>::child_index(p, g, i, d);
+                let cell = cells[d as usize];
+                p = Dense::<W, H, N>::move_gap(p, g, cell);
+                g = cell;
+                if self.entry(i) == closer {
+                    return (p, g, i);
                 }
             }
-
-            unreachable!("every unsolved state has a neighbour closer to solved");
         }
 
-        distance
+        unreachable!("every unsolved state has a neighbour closer to solved");
     }
 
     /// Finds solutions of length `depth` of the state with the given pieces, gap, index, and
@@ -104,10 +101,6 @@ where
         if depth == 0 {
             return self.search.record_solution();
         }
-
-        // The children's distances are `distance - 1`, `distance`, or `distance + 1`, which have
-        // different entries.
-        let residue = distance % 3;
 
         let mut rest = moves;
         while rest != 0 {
@@ -132,8 +125,7 @@ where
                 count += 1;
                 self.search.stack.push(DIRECTIONS[d as usize]);
 
-                let step = STEP[(self.entry(i) + 3 - residue) as usize % 8];
-                let child_distance = (distance + step).wrapping_sub(1);
+                let child_distance = residue::neighbour_distance(distance, self.entry(i));
                 if child_distance > depth - 1 {
                     continue;
                 }

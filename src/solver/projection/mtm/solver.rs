@@ -12,6 +12,7 @@ use crate::{
         config::SolverConfig,
         directions::DIRECTIONS,
         projection::{LARGE, SMALL, puzzle::ProjectedPuzzle, solver::Solver},
+        residue,
         search::iterative_deepening,
         solver::{Solver as SolverT, SolverError},
     },
@@ -36,20 +37,15 @@ where
     /// Returns the distance of `state`, which has index `index`, from the projected solved state,
     /// by following moves that get closer to it.
     fn distance<const N: usize>(&self, state: ProjectedPuzzle<N>, index: u64) -> u64 {
-        let (mut state, mut index) = (state, index);
-        let mut residue = u64::from(self.pdb.get(index as usize));
-        let mut distance = 0;
-
-        while index != self.prune_target_solved_index {
-            let closer = (residue + 2) % 3;
-            (state, index) = self
-                .closer_neighbour(&state, index, closer)
-                .expect("pattern database has no move closer to solved");
-            residue = closer;
-            distance += 1;
-        }
-
-        distance
+        residue::walk_distance(
+            (state, index),
+            u64::from(self.pdb.get(index as usize)),
+            |&(_, index)| index == self.prune_target_solved_index,
+            |(state, index), closer| {
+                self.closer_neighbour(state, *index, closer)
+                    .expect("pattern database has no move closer to solved")
+            },
+        )
     }
 
     /// Returns a state one move from `state`, which has index `index`, whose entry is `closer`,
@@ -87,11 +83,6 @@ where
         h: u64,
         moves: u8,
     ) -> ControlFlow<()> {
-        // The children's distances are `h - 1`, `h`, or `h + 1`, which have different entries
-        // `(h + k) % 3`. `STEP[entry + 3 - h % 3]` is `k + 1`.
-        const STEP: [u64; 8] = [1, 2, 0, 1, 2, 0, 1, 2];
-        let h_residue = h % 3;
-
         let mut rest = moves;
         while rest != 0 {
             let d = rest.trailing_zeros();
@@ -118,8 +109,7 @@ where
                         return ControlFlow::Break(());
                     }
                 } else {
-                    let step = STEP[(self.entry(index) + 3 - h_residue) as usize % 8];
-                    let child_h = (h + step).wrapping_sub(1);
+                    let child_h = residue::neighbour_distance(h, self.entry(index));
                     if child_h < depth {
                         let child_moves = self.moves.possible(state.gap()) & !axis;
                         if self

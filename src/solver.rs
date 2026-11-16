@@ -9,6 +9,7 @@ pub mod generic_solver;
 pub mod heuristic;
 mod indexing;
 pub mod projection;
+mod residue;
 mod search;
 pub mod size4x4;
 pub mod small;
