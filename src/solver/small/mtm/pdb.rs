@@ -537,9 +537,9 @@ impl<const W: usize, const H: usize> Builder<W, H> {
             } else {
                 queue.clear();
 
-                // Expand the frontier while it's small compared to the number of states not yet
+                // Expand the frontier until it's much larger than the number of states not yet
                 // reached, then switch to checking those states instead.
-                if new * 2 < remaining {
+                if new < remaining * 2 {
                     self.push(depth)
                 } else {
                     self.pull(depth)
