@@ -5,7 +5,10 @@ use crate::{
     puzzle::small::{Puzzle, sealed::SmallPuzzle},
     solver::{
         config::PdbConfig,
-        small::{coord::Dense, moves::Moves, pdb::Pdb},
+        small::{
+            coord::{BlockDecoder, Dense, Padded},
+            pdb::Pdb,
+        },
         statistics::PdbIterationStats,
     },
 };
@@ -26,59 +29,366 @@ const HASHES: [(usize, usize, u64); 12] = [
 ];
 
 /// The state of the breadth first search that builds a [`Pdb`].
-struct Builder<const W: usize, const H: usize, const N: usize> {
-    /// Two bits per state with [`Dense`] indices: `d % 3`, where `d` is the depth of the state, or
-    /// 3 if the state hasn't been reached.
-    entries: Vec<u8>,
+///
+/// The bitmaps use [`Padded`] indices, so each 64-bit word holds 4 blocks of states, one in each
+/// 16-bit lane, and a state's neighbours by horizontal moves are in the same lane.
+struct Builder<const W: usize, const H: usize> {
+    words: Vec<Word>,
+    /// Masks of the states in each word with certain properties.
+    masks: Masks,
 }
 
-impl<const W: usize, const H: usize, const N: usize> Builder<W, H, N> {
-    fn new() -> Self {
-        Self {
-            entries: vec![u8::MAX; Dense::<W, H, N>::SIZE.div_ceil(4) as usize],
-        }
+/// One word of each bitmap of [`Builder`]. They're interleaved because they're mostly accessed
+/// together.
+#[derive(Clone, Copy, Default)]
+struct Word {
+    /// Bits 0 and 1 of each state's entry: `d % 3`, where `d` is the depth of the state, or 3 if
+    /// the state hasn't been reached. Positions that aren't states have entry 0.
+    entry: [u64; 2],
+    /// Whether the state has been expanded. Positions that aren't states are marked as expanded.
+    done: u64,
+    /// Whether all of the states that the state can reach by a vertical move have been reached,
+    /// so that it doesn't need expanding vertically.
+    column: u64,
+}
+
+/// Masks of the states in each word of the bitmaps with certain properties, which depend only on
+/// the gap.
+struct Masks {
+    /// The states (with the gap in one of the `N` cells).
+    valid: u64,
+    /// The states where the gap can move left (decreasing the index by 1).
+    left: u64,
+    /// The states where the gap can move right (increasing the index by 1).
+    right: u64,
+    /// The states where the gap can move up (decreasing the gap by `W`).
+    up: u64,
+    /// The states where the gap can move down (increasing the gap by `W`).
+    down: u64,
+}
+
+impl Word {
+    /// The states with entry `r`.
+    #[inline(always)]
+    const fn with_entry(&self, r: u8) -> u64 {
+        let lo = if r & 1 == 1 {
+            self.entry[0]
+        } else {
+            !self.entry[0]
+        };
+        let hi = if r & 2 == 2 {
+            self.entry[1]
+        } else {
+            !self.entry[1]
+        };
+        lo & hi
     }
 
-    /// Marks the state at `index` as reached at depth `depth`, returning whether it was not
-    /// already reached.
+    /// Sets the entries of `states`, which haven't been reached (so their entries are 3), to
+    /// `r`.
     #[inline(always)]
-    fn claim(&mut self, index: u64, depth: u8) -> bool {
-        let byte = &mut self.entries[(index / 4) as usize];
-        let shift = 2 * (index % 4);
-        let new = (*byte >> shift) & 3 == 3;
+    const fn set_entry(&mut self, states: u64, r: u8) {
+        if r & 1 == 0 {
+            self.entry[0] &= !states;
+        }
+        if r & 2 == 0 {
+            self.entry[1] &= !states;
+        }
+    }
+}
+
+impl<const W: usize, const H: usize> Builder<W, H> {
+    const N: usize = W * H;
+
+    /// The number of blocks in each word.
+    const LANES: u64 = 4;
+
+    fn new() -> Self {
+        let words = Padded::<W, H>::BLOCKS.div_ceil(Self::LANES) as usize;
+
+        let mut masks = Masks {
+            valid: 0,
+            left: 0,
+            right: 0,
+            up: 0,
+            down: 0,
+        };
+        for lane in 0..Self::LANES {
+            for gap in 0..Self::N {
+                let bit = 1 << (16 * lane + gap as u64);
+                let (x, y) = (gap % W, gap / W);
+                masks.valid |= bit;
+                if x > 0 {
+                    masks.left |= bit;
+                }
+                if x + 1 < W {
+                    masks.right |= bit;
+                }
+                if y > 0 {
+                    masks.up |= bit;
+                }
+                if y + 1 < H {
+                    masks.down |= bit;
+                }
+            }
+        }
+
+        let word = Word {
+            entry: [masks.valid; 2],
+            done: !masks.valid,
+            column: 0,
+        };
+        let mut out = Self {
+            words: vec![word; words],
+            masks,
+        };
+
+        // Mark the lanes past the last block as not states.
+        let lanes = Padded::<W, H>::BLOCKS % Self::LANES;
+        if lanes != 0 {
+            let unused = u64::MAX << (16 * lanes);
+            let last = &mut out.words[words - 1];
+            last.entry[0] &= !unused;
+            last.entry[1] &= !unused;
+            last.done |= unused;
+        }
+
+        out
+    }
+
+    /// Returns the word containing the state at `index`, and the state's bit in it.
+    #[inline(always)]
+    fn word_bit(&mut self, index: u64) -> (&mut Word, u64) {
+        let word = (index / 64) as usize;
+        debug_assert!(word < self.words.len());
+        // SAFETY: `index` is the index of a state, so it's in bounds.
+        let w = unsafe { self.words.get_unchecked_mut(word) };
+        (w, 1 << (index % 64))
+    }
+
+    /// Marks the state at `index` as reached at a depth with entry `r`, if it hasn't been reached,
+    /// and as not needing expanding vertically. Returns whether it was not already reached.
+    #[inline(always)]
+    fn claim(&mut self, index: u64, r: u8) -> bool {
+        let (w, bit) = self.word_bit(index);
+        w.column |= bit;
+        let new = w.entry[0] & w.entry[1] & bit != 0;
         if new {
-            // The entry is 3, so this sets it to `depth % 3`.
-            *byte ^= (3 ^ (depth % 3)) << shift;
+            w.set_entry(bit, r);
         }
         new
     }
 
+    /// Whether the state at `index` has entry `r`.
+    #[inline(always)]
+    fn has_entry(&mut self, index: u64, r: u8) -> bool {
+        let (w, bit) = self.word_bit(index);
+        w.with_entry(r) & bit != 0
+    }
+
+    /// Returns the states in word `i` at depth `depth`, and marks them as expanded.
+    #[inline(always)]
+    fn take_frontier(&mut self, i: usize, depth: u8) -> u64 {
+        let w = &mut self.words[i];
+        let frontier = w.with_entry(depth % 3) & !w.done;
+        w.done |= frontier;
+        frontier
+    }
+
+    /// Returns the states in a word reached from `states` in the same word by moving the gap
+    /// horizontally any number of cells.
+    #[inline(always)]
+    const fn horizontal(&self, states: u64) -> u64 {
+        let (mut left, mut right) = (states, states);
+        let mut out = 0;
+        let mut k = 1;
+        while k < W {
+            left = (left & self.masks.left) >> 1;
+            right = (right & self.masks.right) << 1;
+            out |= left | right;
+            k += 1;
+        }
+        out
+    }
+
+    /// Calls `f(cell, pieces, index)` for each state reached from the state with the given
+    /// pieces, gap, and index by moving the gap vertically, nearest first in each direction,
+    /// stopping when `f` returns `true`. Returns whether `f` returned `true`.
+    #[inline(always)]
+    fn for_each_vertical(
+        &mut self,
+        pieces: u64,
+        gap: u8,
+        index: u64,
+        mut f: impl FnMut(&mut Self, u8, u64, u64) -> bool,
+    ) -> bool {
+        let (mut p, mut g, mut i) = (pieces, gap, index);
+        while g as usize >= W {
+            i = i.wrapping_add(Padded::<W, H>::delta_up(p, g));
+            let cell = g - W as u8;
+            p = Padded::<W, H>::move_gap(p, g, cell);
+            g = cell;
+            if f(self, g, p, i) {
+                return true;
+            }
+        }
+
+        let (mut p, mut g, mut i) = (pieces, gap, index);
+        while (g as usize) + W < Self::N {
+            i = i.wrapping_add(Padded::<W, H>::delta_down(p, g));
+            let cell = g + W as u8;
+            p = Padded::<W, H>::move_gap(p, g, cell);
+            g = cell;
+            if f(self, g, p, i) {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// Calls `f(index, pieces, gap)` for each state in word `i` in `states`, where `decoded` is
+    /// the decoding of the word (see [`BlockDecoder::decode_word`]).
+    #[inline(always)]
+    fn for_each_state(
+        &mut self,
+        decoded: &[[u64; 2]; 4],
+        i: usize,
+        mut states: u64,
+        mut f: impl FnMut(&mut Self, u64, u64, u8),
+    ) {
+        let base = 64 * i as u64;
+        while states != 0 {
+            let bit = states.trailing_zeros();
+            states &= states - 1;
+
+            let gap = (bit % 16) as u8;
+            let ranked = decoded[(bit / 16) as usize][usize::from(Padded::<W, H>::is_odd(gap))];
+            let pieces = Padded::<W, H>::insert_gap(ranked, gap);
+            f(self, base + u64::from(bit), pieces, gap);
+        }
+    }
+
+    /// Expands all states at depth `depth`, returning the number of new states at depth
+    /// `depth + 1`.
+    #[inline(always)]
+    fn push(&mut self, depth: u8) -> u64 {
+        let next = (depth + 1) % 3;
+        let mut new = 0;
+        let mut decoder = BlockDecoder::<W, H>::new();
+
+        for i in 0..self.words.len() {
+            let frontier = self.take_frontier(i, depth);
+            if frontier == 0 {
+                continue;
+            }
+
+            // Horizontal moves stay in the same lane, so do them for the whole word at once. The
+            // new states have a different entry, so they aren't mistaken for part of the
+            // frontier.
+            let reached = self.horizontal(frontier) & self.words[i].with_entry(3);
+            self.words[i].set_entry(reached, next);
+            new += u64::from(reached.count_ones());
+
+            // A state whose column has been expanded doesn't need expanding vertically.
+            let vertical = frontier & !self.words[i].column & (self.masks.up | self.masks.down);
+            if vertical == 0 {
+                continue;
+            }
+
+            let decoded = decoder.decode_word(i as u64);
+            self.for_each_state(&decoded, i, vertical, |s, index, pieces, gap| {
+                s.for_each_vertical(pieces, gap, index, |s, _, _, child| {
+                    new += u64::from(s.claim(child, next));
+                    false
+                });
+            });
+        }
+
+        new
+    }
+
+    /// Finds the states at depth `depth + 1` by checking, for every state not yet reached, whether
+    /// it has a neighbour at depth `depth`, returning the number found.
+    ///
+    /// A neighbour of a state not yet reached is at depth at least `depth`, so it's at depth
+    /// `depth` exactly when its entry is `depth % 3`. States found in this pass have a different
+    /// entry, so they aren't mistaken for neighbours at depth `depth`.
+    #[inline(always)]
+    fn pull(&mut self, depth: u8) -> u64 {
+        let (current, next) = (depth % 3, (depth + 1) % 3);
+        let mut new = 0;
+        let mut decoder = BlockDecoder::<W, H>::new();
+
+        for i in 0..self.words.len() {
+            self.take_frontier(i, depth);
+
+            let w = self.words[i];
+            let candidates = w.with_entry(3);
+            if candidates == 0 {
+                continue;
+            }
+
+            // Horizontal moves stay in the same lane, so check them for the whole word at once.
+            let mut found = candidates & self.horizontal(w.with_entry(current));
+
+            let remaining = candidates & !found & (self.masks.up | self.masks.down);
+            if remaining != 0 {
+                let decoded = decoder.decode_word(i as u64);
+                let base = 64 * i as u64;
+                self.for_each_state(&decoded, i, remaining, |s, index, pieces, gap| {
+                    let reached = s.for_each_vertical(pieces, gap, index, |s, _, _, child| {
+                        s.has_entry(child, current)
+                    });
+                    found |= u64::from(reached) << (index - base);
+                });
+            }
+
+            self.words[i].set_entry(found, next);
+            new += u64::from(found.count_ones());
+        }
+
+        new
+    }
+
     /// Expands the states in `queue`, which are at depth `depth`, returning the new states at
-    /// depth `depth + 1`. The states are `(index, pieces, gap)`.
+    /// depth `depth + 1`.
+    ///
+    /// This is used while the frontier is small, instead of scanning the whole bitmap. The states
+    /// are `(index, pieces, gap)`.
     fn push_queue(&mut self, depth: u8, queue: &[(u64, u64, u8)]) -> Vec<(u64, u64, u8)> {
-        let mut next = Vec::with_capacity(queue.len() * 2);
+        let next_entry = (depth + 1) % 3;
+        let mut next = Vec::new();
 
         for &(index, pieces, gap) in queue {
-            let mut rest = Moves::<W, H, N>::MOVES[gap as usize].1;
-            while rest != 0 {
-                let d = rest.trailing_zeros();
-                rest &= rest - 1;
+            let (w, bit) = self.word_bit(index);
+            w.done |= bit;
+            let column = w.column & bit != 0;
 
-                // Move one more piece at a time, each a single move from `(index, pieces, gap)`.
-                let (mut index, mut pieces, mut gap) = (index, pieces, gap);
-                loop {
-                    let (cells, moves) = Moves::<W, H, N>::MOVES[gap as usize];
-                    if moves & (1 << d) == 0 {
-                        break;
-                    }
-                    index = Moves::<W, H, N>::child_index(pieces, gap, index, d);
-                    let cell = cells[d as usize];
-                    pieces = Dense::<W, H, N>::move_gap(pieces, gap, cell);
-                    gap = cell;
-                    if self.claim(index, depth + 1) {
-                        next.push((index, pieces, gap));
+            // Moving the gap left or right by one cell changes the index by 1.
+            let x = gap as usize % W;
+            for (steps, sign) in [(x, u64::MAX), (W - 1 - x, 1)] {
+                let (mut p, mut g, mut i) = (pieces, gap, index);
+                for _ in 0..steps {
+                    i = i.wrapping_add(sign);
+                    let cell = g.wrapping_add(sign as u8);
+                    p = Padded::<W, H>::move_gap(p, g, cell);
+                    g = cell;
+                    let (w, bit) = self.word_bit(i);
+                    if w.entry[0] & w.entry[1] & bit != 0 {
+                        w.set_entry(bit, next_entry);
+                        next.push((i, p, g));
                     }
                 }
+            }
+
+            if !column {
+                self.for_each_vertical(pieces, gap, index, |s, cell, child_pieces, child| {
+                    if s.claim(child, next_entry) {
+                        next.push((child, child_pieces, cell));
+                    }
+                    false
+                });
             }
         }
 
@@ -86,16 +396,50 @@ impl<const W: usize, const H: usize, const N: usize> Builder<W, H, N> {
     }
 
     /// Builds the table, two bits per state packed into bytes, with [`Dense`] indices.
-    fn build(mut self, config: &PdbConfig) -> Box<[u8]> {
+    fn build(self, config: &PdbConfig) -> Box<[u8]> {
+        #[cfg(target_arch = "x86_64")]
+        if is_x86_feature_detected!("popcnt")
+            && is_x86_feature_detected!("bmi1")
+            && is_x86_feature_detected!("bmi2")
+        {
+            // SAFETY: The target features are available.
+            return unsafe { self.build_bmi2(config) };
+        }
+
+        self.build_impl(config)
+    }
+
+    /// [`Self::build`], compiled with instructions that make the bit manipulation cheaper:
+    /// `popcnt`, and shifts by a variable amount that are a single instruction.
+    ///
+    /// # Safety
+    ///
+    /// The CPU must support the `popcnt`, `bmi1`, and `bmi2` target features.
+    #[cfg(target_arch = "x86_64")]
+    #[target_feature(enable = "popcnt,bmi1,bmi2")]
+    unsafe fn build_bmi2(self, config: &PdbConfig) -> Box<[u8]> {
+        self.build_impl(config)
+    }
+
+    #[inline(always)]
+    fn build_impl(mut self, config: &PdbConfig) -> Box<[u8]> {
         // The solved state has the gap in the last cell and the pieces in order, so all digits
         // except the gap's are 0.
-        let solved = (1..N as u64).fold(0, |pieces, p| pieces | (p << (4 * (p - 1))));
-        self.claim(N as u64 - 1, 0);
-        let mut queue = vec![(N as u64 - 1, solved, N as u8 - 1)];
+        let solved_index = Self::N as u64 - 1;
+        let (w, bit) = self.word_bit(solved_index);
+        w.set_entry(bit, 0);
 
         let mut depth = 0;
         let mut new = 1;
         let mut total = 1;
+
+        // The number of states not yet reached.
+        let mut remaining = Padded::<W, H>::SIZE - 1;
+
+        // While the frontier is small, keep it in a queue rather than scanning the bitmaps for it.
+        let solved = (1..Self::N as u64).fold(0, |pieces, p| pieces | (p << (4 * (p - 1))));
+        let mut queue = vec![(solved_index, solved, Self::N as u8 - 1)];
+        let max_queue = self.words.len() / 32;
 
         loop {
             if let Some(f) = &config.end_of_iter_callback {
@@ -105,13 +449,61 @@ impl<const W: usize, const H: usize, const N: usize> Builder<W, H, N> {
                 break;
             }
 
-            queue = self.push_queue(depth, &queue);
-            new = queue.len() as u64;
+            new = if !queue.is_empty() && queue.len() <= max_queue {
+                queue = self.push_queue(depth, &queue);
+                queue.len() as u64
+            } else {
+                queue.clear();
+
+                // Expand the frontier while it's small compared to the number of states not yet
+                // reached, then switch to checking those states instead.
+                if new * 2 < remaining {
+                    self.push(depth)
+                } else {
+                    self.pull(depth)
+                }
+            };
+            remaining -= new;
             total += new;
             depth += 1;
         }
 
-        self.entries.into_boxed_slice()
+        self.dense_bytes()
+    }
+
+    /// Returns the entries with [`Dense`] indices, two bits each, packed into bytes.
+    fn dense_bytes(&self) -> Box<[u8]> {
+        /// Spreads the low 16 bits of `x` to the even bits of the result.
+        const fn spread(mut x: u64) -> u64 {
+            x = (x | (x << 8)) & 0x00FF_00FF;
+            x = (x | (x << 4)) & 0x0F0F_0F0F;
+            x = (x | (x << 2)) & 0x3333_3333;
+            (x | (x << 1)) & 0x5555_5555
+        }
+
+        let n = Self::N as u32;
+        let len = Padded::<W, H>::SIZE.div_ceil(4) as usize;
+        let mut out = Vec::with_capacity(len + 16);
+        let mut acc = 0u128;
+        let mut filled = 0;
+
+        for block in 0..Padded::<W, H>::BLOCKS {
+            let word = &self.words[(block / Self::LANES) as usize];
+            let shift = 16 * (block % Self::LANES);
+            let lo = (word.entry[0] >> shift) & ((1 << n) - 1);
+            let hi = (word.entry[1] >> shift) & ((1 << n) - 1);
+            acc |= u128::from(spread(lo) | (spread(hi) << 1)) << filled;
+            filled += 2 * n;
+            if filled >= 64 {
+                out.extend_from_slice(&(acc as u64).to_le_bytes());
+                acc >>= 64;
+                filled -= 64;
+            }
+        }
+        out.extend_from_slice(&(acc as u64).to_le_bytes());
+
+        out.truncate(len);
+        out.into_boxed_slice()
     }
 }
 
@@ -134,7 +526,7 @@ where
     #[must_use]
     pub fn new(config: &PdbConfig) -> Self {
         Self {
-            pdb: Builder::<W, H, N>::new().build(config),
+            pdb: Builder::<W, H>::new().build(config),
             phantom_metric: PhantomData,
         }
     }
