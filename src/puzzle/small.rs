@@ -1,9 +1,16 @@
 //! Defines a fixed-size puzzle with at most 15 pieces. The puzzle grid is represented using a
 //! single `u64` with 4 bits per piece. Moves are applied efficiently using bit operations.
 
+use num_traits::AsPrimitive;
+
 use crate::{
     algorithm::{direction::Direction, r#move::r#move::Move},
-    puzzle::{puzzle::PuzzleError, size::Size, sliding_puzzle::SlidingPuzzle},
+    puzzle::{
+        label::label::BijectiveLabel,
+        puzzle::PuzzleError,
+        size::Size,
+        sliding_puzzle::{self, SlidingPuzzle},
+    },
 };
 
 /// A `WxH` puzzle.
@@ -199,6 +206,33 @@ macro_rules! impl_puzzle {
             /// new positions. The moved pieces never wrap around, so this is a shift by one row or
             /// column.
             const ROTATIONS: [u32; 4] = [4 * $w, 4, 64 - 4 * $w, 60];
+
+            /// Rearranges the puzzle so that the piece at each position `i` is `target(i)`, like
+            /// [`sliding_puzzle::rearrange`], which this falls back to if the targets aren't a
+            /// permutation of the pieces.
+            fn rearrange_to(&mut self, mut target: impl FnMut(u64) -> u8) {
+                let mut pieces = 0;
+                let mut gap = 0;
+                let mut seen = 0u32;
+
+                for i in 0..Self::N as u64 {
+                    let piece = target(i);
+                    if usize::from(piece) < Self::N {
+                        seen |= 1 << piece;
+                    }
+                    pieces |= u64::from(piece) << (4 * i);
+                    if piece == 0 {
+                        gap = i as u8;
+                    }
+                }
+
+                if seen == (1 << Self::N) - 1 {
+                    self.pieces = pieces;
+                    self.gap = gap;
+                } else {
+                    sliding_puzzle::rearrange(self, target);
+                }
+            }
 
             pub(crate) const SWAP_MASKS: [[[u64; Self::N]; Self::N]; Self::N] = {
                 #[allow(clippy::large_stack_arrays)]
@@ -415,6 +449,53 @@ macro_rules! impl_puzzle {
 
             fn reset(&mut self) {
                 *self = Self::new();
+            }
+
+            fn reset_to_label<L>(&mut self, label: &L)
+            where
+                L: BijectiveLabel,
+            {
+                // The same as the default implementation, but without allocating.
+                let size = self.size();
+                let w = size.width();
+                let area = <u8 as num_traits::NumCast>::from(size.area()).unwrap();
+                self.rearrange_to(|i| {
+                    let label = label.position_label(size, (i % w, i / w));
+                    let a = <u8 as num_traits::NumCast>::from(label).unwrap() + 1;
+                    if a == area { 0 } else { a }
+                });
+            }
+
+            fn try_set_state<P>(&mut self, other: &P) -> bool
+            where
+                P: SlidingPuzzle,
+                P::Piece: AsPrimitive<Self::Piece>,
+                Self::Piece: 'static,
+            {
+                if self.size() == other.size() {
+                    self.rearrange_to(|i| other.piece_at(i).as_());
+                    true
+                } else {
+                    false
+                }
+            }
+
+            fn try_invert(&mut self) -> bool {
+                // The same as the default implementation, but without allocating.
+                if !self.invertible() {
+                    return false;
+                }
+
+                let mut inv = [0; $w * $h];
+                for i in 0..Self::N as u64 {
+                    let piece = self
+                        .piece_at(self.solved_pos(<u8 as num_traits::NumCast>::from(i).unwrap()));
+                    inv[self.solved_pos(piece) as usize] = i;
+                }
+
+                self.rearrange_to(|i| <u8 as num_traits::NumCast>::from(inv[i as usize]).unwrap());
+
+                true
             }
 
             fn swap_piece_with_gap(&mut self, idx: u64) {

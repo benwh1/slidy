@@ -1027,7 +1027,7 @@ fn position_moving_into_gap(gap: u64, width: u64, dir: Direction) -> u64 {
 /// The target pieces must be a permutation of the pieces of `puzzle`. This takes O(n) time, by
 /// keeping track of the position of each piece instead of searching for it with
 /// [`SlidingPuzzle::piece_position`].
-fn rearrange<P, F>(puzzle: &mut P, mut target: F)
+pub(crate) fn rearrange<P, F>(puzzle: &mut P, mut target: F)
 where
     P: SlidingPuzzle,
     F: FnMut(u64) -> P::Piece,
