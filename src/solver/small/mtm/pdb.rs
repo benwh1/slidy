@@ -175,11 +175,10 @@ impl<const W: usize, const H: usize> Builder<W, H> {
     fn claim(&mut self, index: u64, r: u8) -> bool {
         let (w, bit) = self.word_bit(index);
         w.column |= bit;
-        let new = w.entry[0] & w.entry[1] & bit != 0;
-        if new {
-            w.set_entry(bit, r);
-        }
-        new
+        // Whether the state is new is unpredictable, so update the entry without branching.
+        let new = w.entry[0] & w.entry[1] & bit;
+        w.set_entry(new, r);
+        new != 0
     }
 
     /// Whether the state at `index` has entry `r`.
