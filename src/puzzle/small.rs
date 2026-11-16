@@ -350,6 +350,25 @@ macro_rules! impl_puzzle {
                 Size::new($w, $h).unwrap()
             }
 
+            fn try_piece_position(&self, piece: Self::Piece) -> Option<u64> {
+                const ONES: u64 = 0x1111_1111_1111_1111;
+                const HIGHS: u64 = 0x8888_8888_8888_8888;
+
+                if usize::from(piece) >= Self::N {
+                    return None;
+                }
+
+                // The nibbles equal to `piece` are the zero nibbles of `x`. A zero nibble sets its
+                // high bit in `zeros`, and so can a nibble above a zero one, because of the
+                // borrow, but the lowest bit set in `zeros` is always the lowest zero nibble. The
+                // unused nibbles above the puzzle are 0, so they only match the gap, which comes
+                // first.
+                let x = self.pieces ^ (u64::from(piece) * ONES);
+                let zeros = x.wrapping_sub(ONES) & !x & HIGHS;
+
+                Some(u64::from(zeros.trailing_zeros() / 4))
+            }
+
             fn piece_at(&self, idx: u64) -> Self::Piece {
                 ((self.pieces >> (idx * 4)) & 0xF) as u8
             }
