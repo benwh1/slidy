@@ -538,6 +538,11 @@ macro_rules! impl_puzzle {
                 self.move_dir(dir);
             }
 
+            fn is_solved(&self) -> bool {
+                // Each state has its own `pieces`, so this is the same as checking every piece.
+                self.pieces == Self::SOLVED
+            }
+
             fn is_solvable(&self) -> bool {
                 // A state is solvable if and only if the parity of the permutation taking each
                 // position to the solved position of its piece is the parity of the gap's
