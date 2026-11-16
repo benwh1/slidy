@@ -24,6 +24,7 @@ pub(super) fn neighbour_distance(distance: u64, entry: u64) -> u64 {
 /// Returns the distance from solved of `state`, which has entry `entry`, by following moves that
 /// get closer to solved until `is_solved` is true. `closer(state, entry)` returns a neighbour of
 /// `state` with entry `entry`, which is closer to solved.
+#[inline(always)]
 pub(super) fn walk_distance<T>(
     mut state: T,
     mut entry: u64,

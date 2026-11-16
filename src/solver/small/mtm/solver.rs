@@ -58,6 +58,7 @@ where
     }
 
     /// Returns a state one move from the state `(pieces, gap, index)` whose entry is `closer`.
+    #[inline(always)]
     fn closer_neighbour(
         &self,
         (pieces, gap, index): (u64, u8, u64),
