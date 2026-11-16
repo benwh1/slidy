@@ -341,8 +341,19 @@ macro_rules! impl_puzzle {
         impl SlidingPuzzle for Puzzle<$w, $h> {
             type Piece = u8;
 
+            #[inline]
             fn size(&self) -> Size {
                 Size::new($w, $h).unwrap()
+            }
+
+            #[inline]
+            fn area(&self) -> u64 {
+                $w * $h
+            }
+
+            #[inline]
+            fn num_pieces(&self) -> u64 {
+                $w * $h - 1
             }
 
             fn try_piece_position(&self, piece: Self::Piece) -> Option<u64> {
@@ -364,10 +375,12 @@ macro_rules! impl_puzzle {
                 Some(u64::from(zeros.trailing_zeros() / 4))
             }
 
+            #[inline]
             fn piece_at(&self, idx: u64) -> Self::Piece {
                 ((self.pieces >> (idx * 4)) & 0xF) as u8
             }
 
+            #[inline]
             fn swap_pieces(&mut self, idx1: u64, idx2: u64) {
                 let piece1 = self.piece_at(idx1);
                 let piece2 = self.piece_at(idx2);
@@ -384,6 +397,7 @@ macro_rules! impl_puzzle {
                 }
             }
 
+            #[inline]
             fn gap_position(&self) -> u64 {
                 self.gap as u64
             }
@@ -408,6 +422,7 @@ macro_rules! impl_puzzle {
                 self.gap_position_xy()
             }
 
+            #[inline]
             fn reset(&mut self) {
                 *self = Self::new();
             }
