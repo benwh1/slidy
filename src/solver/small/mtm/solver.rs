@@ -3,7 +3,7 @@ use std::ops::ControlFlow;
 use num_traits::AsPrimitive;
 
 use crate::{
-    algorithm::{axis::Axis, direction::Direction, metric::Mtm},
+    algorithm::metric::Mtm,
     puzzle::{
         sliding_puzzle::SlidingPuzzle,
         small::{Puzzle, sealed::SmallPuzzle},
@@ -11,10 +11,19 @@ use crate::{
     solver::{
         config::{PdbConfig, SolverConfig},
         search::iterative_deepening,
-        small::{indexing, pdb::Pdb, solver::Solver},
+        small::{
+            coord::Dense,
+            moves::{DIRECTIONS, Moves},
+            pdb::Pdb,
+            solver::Solver,
+        },
         solver::{Solver as SolverT, SolverError},
     },
 };
+
+/// The children of a state at distance `d` are at distance `d + k - 1` where `k` is
+/// `STEP[e + 3 - d % 3]` and `e` is the child's entry, `(d + k - 1) % 3`.
+const STEP: [u64; 8] = [1, 2, 0, 1, 2, 0, 1, 2];
 
 impl<const W: usize, const H: usize, const N: usize> Default for Solver<W, H, N, Mtm>
 where
@@ -37,47 +46,107 @@ where
         Self::with_pdb(Pdb::<_, _, _, Mtm>::new(config))
     }
 
+    /// Returns `d % 3`, where `d` is the optimal solution length of the state at `index`.
+    #[inline(always)]
+    fn entry(&self, index: u64) -> u64 {
+        // SAFETY: `index` is always the index of a solvable state, computed by `Coord`, so it is
+        // less than `N! / 2`.
+        u64::from(unsafe { self.pdb.entry_unchecked(index) })
+    }
+
+    /// Returns the optimal solution length of the state with the given pieces, gap, and index.
+    fn distance(&self, mut pieces: u64, mut gap: u8, mut index: u64) -> u64 {
+        let mut residue = self.entry(index);
+        let mut distance = 0;
+
+        'walk: while index != N as u64 - 1 {
+            // Every move changes the distance by at most 1, so exactly the neighbours closer to
+            // solved have this entry.
+            let closer = (residue + 2) % 3;
+
+            let mut rest = Moves::<W, H, N>::MOVES[gap as usize].1;
+            while rest != 0 {
+                let d = rest.trailing_zeros();
+                rest &= rest - 1;
+
+                let (mut p, mut g, mut i) = (pieces, gap, index);
+                loop {
+                    let (cells, moves) = Moves::<W, H, N>::MOVES[g as usize];
+                    if moves & (1 << d) == 0 {
+                        break;
+                    }
+                    i = Moves::<W, H, N>::child_index(p, g, i, d);
+                    let cell = cells[d as usize];
+                    p = Dense::<W, H, N>::move_gap(p, g, cell);
+                    g = cell;
+                    if self.entry(i) == closer {
+                        (pieces, gap, index) = (p, g, i);
+                        residue = closer;
+                        distance += 1;
+                        continue 'walk;
+                    }
+                }
+            }
+
+            unreachable!("every unsolved state has a neighbour closer to solved");
+        }
+
+        distance
+    }
+
+    /// Finds solutions of length `depth` of the state with the given pieces, gap, index, and
+    /// optimal solution length `distance`, where `moves` is the set of directions to try.
     fn dfs(
         &mut self,
         depth: u64,
-        last_axis: Option<Axis>,
-        mut puzzle: Puzzle<W, H>,
+        distance: u64,
+        pieces: u64,
+        gap: u8,
+        index: u64,
+        moves: u8,
     ) -> ControlFlow<()> {
-        let coord = indexing::encode(puzzle.piece_array());
-
-        // SAFETY: `encode` produces integers from 0 to k-1 where k is the size of the PDB, so the
-        // index is always in bounds.
-        let heuristic = unsafe { self.pdb.get_unchecked(coord as usize) } as u64;
-        if heuristic > depth {
-            return ControlFlow::Continue(());
-        }
-
         if depth == 0 {
             return self.search.record_solution();
         }
 
-        let original_puzzle = puzzle;
+        // The children's distances are `distance - 1`, `distance`, or `distance + 1`, which have
+        // different entries.
+        let residue = distance % 3;
 
-        for dir in [
-            Direction::Up,
-            Direction::Left,
-            Direction::Down,
-            Direction::Right,
-        ] {
-            if last_axis.is_some_and(|a| a == dir.into()) {
-                continue;
-            }
+        let mut rest = moves;
+        while rest != 0 {
+            let d = rest.trailing_zeros();
+            rest &= rest - 1;
 
+            // The children can't move along the same axis.
+            let axis = 0b0101 << (d & 1);
+
+            // Move one more piece at a time, each a single move from the current state.
+            let (mut p, mut g, mut i) = (pieces, gap, index);
             let mut count = 0;
-
-            puzzle = original_puzzle;
-
-            while puzzle.try_move_dir(dir) {
+            loop {
+                let (cells, possible) = Moves::<W, H, N>::MOVES[g as usize];
+                if possible & (1 << d) == 0 {
+                    break;
+                }
+                i = Moves::<W, H, N>::child_index(p, g, i, d);
+                let cell = cells[d as usize];
+                p = Dense::<W, H, N>::move_gap(p, g, cell);
+                g = cell;
                 count += 1;
+                self.search.stack.push(DIRECTIONS[d as usize]);
 
-                self.search.stack.push(dir);
+                let step = STEP[(self.entry(i) + 3 - residue) as usize % 8];
+                let child_distance = (distance + step).wrapping_sub(1);
+                if child_distance > depth - 1 {
+                    continue;
+                }
 
-                if self.dfs(depth - 1, Some(dir.into()), puzzle).is_break() {
+                let child_moves = Moves::<W, H, N>::MOVES[g as usize].1 & !axis;
+                if self
+                    .dfs(depth - 1, child_distance, p, g, i, child_moves)
+                    .is_break()
+                {
                     return ControlFlow::Break(());
                 }
             }
@@ -121,19 +190,26 @@ where
         puzzle: Puzzle<W, H>,
         config: SolverConfig,
     ) -> Result<(), SolverError> {
-        if !puzzle.is_solvable() {
+        let (pieces, gap) = (puzzle.pieces(), puzzle.gap());
+        if !Dense::<W, H, N>::is_solvable(pieces, gap) {
             return Err(SolverError::Unsolvable);
         }
 
-        let coord = indexing::encode(puzzle.piece_array());
-        let hval = self.pdb.get(coord as usize) as u64;
+        let index = Dense::<W, H, N>::index(pieces, gap);
+        let distance = self.distance(pieces, gap, index);
+        let moves = Moves::<W, H, N>::MOVES[gap as usize].1;
 
         iterative_deepening::<Mtm, _, _>(
             self,
             |s| &mut s.search,
             config,
-            hval,
-            |s, depth| s.dfs(depth, None, puzzle),
+            distance,
+            |s, depth| {
+                if distance > depth {
+                    return ControlFlow::Continue(());
+                }
+                s.dfs(depth, distance, pieces, gap, index, moves)
+            },
         );
 
         Ok(())

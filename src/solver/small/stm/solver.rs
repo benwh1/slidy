@@ -3,7 +3,7 @@ use std::ops::ControlFlow;
 use num_traits::AsPrimitive;
 
 use crate::{
-    algorithm::{direction::Direction, metric::Stm},
+    algorithm::metric::Stm,
     puzzle::{
         sliding_puzzle::SlidingPuzzle,
         small::{Puzzle, sealed::SmallPuzzle},
@@ -11,19 +11,15 @@ use crate::{
     solver::{
         config::{PdbConfig, SolverConfig},
         search::iterative_deepening,
-        small::{coord::Dense, pdb::Pdb, solver::Solver},
+        small::{
+            coord::Dense,
+            moves::{DIRECTIONS, Moves},
+            pdb::Pdb,
+            solver::Solver,
+        },
         solver::{Solver as SolverT, SolverError},
     },
 };
-
-/// The directions to search, in order. Bit `d` of a set of moves is `DIRECTIONS[d]`, and the
-/// inverse of `DIRECTIONS[d]` is `DIRECTIONS[d ^ 2]`.
-const DIRECTIONS: [Direction; 4] = [
-    Direction::Up,
-    Direction::Left,
-    Direction::Down,
-    Direction::Right,
-];
 
 impl<const W: usize, const H: usize, const N: usize> Default for Solver<W, H, N, Stm>
 where
@@ -46,46 +42,12 @@ where
         Self::with_pdb(Pdb::<_, _, _, Stm>::new(config))
     }
 
-    /// For each cell of the gap, the cells that it moves to in each direction (ignoring moves
-    /// that aren't possible), and the set of possible moves.
-    const MOVES: [([u8; 4], u8); N] = {
-        let mut out = [([0; 4], 0); N];
-        let mut gap = 0;
-        while gap < N {
-            let (x, y) = (gap % W, gap / W);
-            let possible = [y + 1 < H, x + 1 < W, y > 0, x > 0];
-            let cells = [gap + W, gap + 1, gap.wrapping_sub(W), gap.wrapping_sub(1)];
-            let mut d = 0;
-            while d < 4 {
-                if possible[d] {
-                    out[gap].0[d] = cells[d] as u8;
-                    out[gap].1 |= 1 << d;
-                }
-                d += 1;
-            }
-            gap += 1;
-        }
-        out
-    };
-
     /// Returns `(d >> 1) & 1`, where `d` is the optimal solution length of the state at `index`.
     #[inline(always)]
     fn bit(&self, index: u64) -> u8 {
         // SAFETY: `index` is always the index of a solvable state, computed by `Coord`, so it is
         // less than `N! / 2`.
         unsafe { self.pdb.bit_unchecked(index) }
-    }
-
-    /// Returns the index of the state reached by moving in direction `DIRECTIONS[d]` from the
-    /// state with the given pieces, gap, and index. The move must be possible.
-    #[inline(always)]
-    fn child_index(pieces: u64, gap: u8, index: u64, d: u32) -> u64 {
-        match d {
-            0 => index.wrapping_add(Dense::<W, H, N>::delta_down(pieces, gap)),
-            1 => index + 1,
-            2 => index.wrapping_add(Dense::<W, H, N>::delta_up(pieces, gap)),
-            _ => index - 1,
-        }
     }
 
     /// Returns the optimal solution length of the state with the given pieces, gap, and index.
@@ -100,11 +62,11 @@ where
             // Exactly the neighbours closer to solved have this bit.
             let closer = (d4.wrapping_sub(1) >> 1) as u8 & 1;
 
-            let (cells, mut moves) = Self::MOVES[gap as usize];
+            let (cells, mut moves) = Moves::<W, H, N>::MOVES[gap as usize];
             loop {
                 let d = moves.trailing_zeros();
                 moves &= moves - 1;
-                let child = Self::child_index(pieces, gap, index, d);
+                let child = Moves::<W, H, N>::child_index(pieces, gap, index, d);
                 if self.bit(child) == closer {
                     let cell = cells[d as usize];
                     pieces = Dense::<W, H, N>::move_gap(pieces, gap, cell);
@@ -139,13 +101,13 @@ where
         // Exactly the children closer to solved have this bit.
         let closer = (distance.wrapping_sub(1) >> 1) as u8 & 1;
 
-        let cells = Self::MOVES[gap as usize].0;
+        let cells = Moves::<W, H, N>::MOVES[gap as usize].0;
         let mut rest = moves;
         while rest != 0 {
             let d = rest.trailing_zeros();
             rest &= rest - 1;
 
-            let child = Self::child_index(pieces, gap, index, d);
+            let child = Moves::<W, H, N>::child_index(pieces, gap, index, d);
             let child_distance = if distance > 0 && self.bit(child) == closer {
                 distance - 1
             } else {
@@ -157,7 +119,7 @@ where
 
             let cell = cells[d as usize];
             let child_pieces = Dense::<W, H, N>::move_gap(pieces, gap, cell);
-            let child_moves = Self::MOVES[cell as usize].1 & !(1 << (d ^ 2));
+            let child_moves = Moves::<W, H, N>::MOVES[cell as usize].1 & !(1 << (d ^ 2));
 
             self.search.stack.push(DIRECTIONS[d as usize]);
 
@@ -221,7 +183,7 @@ where
 
         let index = Dense::<W, H, N>::index(pieces, gap);
         let distance = self.distance(pieces, gap, index);
-        let moves = Self::MOVES[gap as usize].1;
+        let moves = Moves::<W, H, N>::MOVES[gap as usize].1;
 
         iterative_deepening::<Stm, _, _>(
             self,

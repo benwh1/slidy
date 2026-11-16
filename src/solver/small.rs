@@ -1,7 +1,7 @@
 //! Defines solvers for small puzzles.
 
 mod coord;
-mod indexing;
+mod moves;
 mod mtm;
 pub mod pdb;
 pub mod solver;
