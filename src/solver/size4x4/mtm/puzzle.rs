@@ -104,11 +104,9 @@ impl ReducedFourBitPuzzle {
         let gap = self.gap as usize;
         let dir = dir as usize;
 
-        let shift = Puzzle4x4::SHIFTS[gap][dir] as u64;
-        let piece = ((self.pieces >> shift) & 0xF) as usize;
-
-        let mask = Puzzle4x4::MOVE_MASKS[gap][dir][piece];
-        self.pieces ^= mask;
+        // The piece that moves into the gap, which is 0 if the move isn't possible.
+        let moved = self.pieces & Puzzle4x4::MULTI_MASKS[gap][dir][1];
+        self.pieces ^= moved | moved.rotate_right(Puzzle4x4::ROTATIONS[dir]);
 
         let next_gap = Puzzle4x4::GAPS[gap][dir];
         self.gap = next_gap;

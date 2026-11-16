@@ -118,24 +118,6 @@ macro_rules! impl_puzzle {
                 out
             };
 
-            pub(crate) const SHIFTS: [[u8; 4]; Self::N] = {
-                let mut out = [[0; 4]; Self::N];
-
-                let mut gap = 0;
-                while gap < Self::N as u8 {
-                    let mut dir = 0;
-                    while dir < 4 {
-                        let g = gap as usize;
-                        let other = Self::GAPS[g][dir];
-                        out[g][dir] = if gap == other { 0 } else { other * 4 };
-                        dir += 1;
-                    }
-                    gap += 1;
-                }
-
-                out
-            };
-
             /// The longest possible move.
             const MAX_AMOUNT: usize = if $w > $h { $w - 1 } else { $h - 1 };
 
@@ -157,7 +139,7 @@ macro_rules! impl_puzzle {
             /// `MULTI_MASKS[gap][dir][amount]` selects the pieces moved by a move in direction
             /// `dir` of `amount` pieces, with the gap at `gap`. It is 0 if the move can't be
             /// applied.
-            const MULTI_MASKS: [[[u64; Self::MAX_AMOUNT + 1]; 4]; Self::N] = {
+            pub(crate) const MULTI_MASKS: [[[u64; Self::MAX_AMOUNT + 1]; 4]; Self::N] = {
                 let mut out = [[[0; Self::MAX_AMOUNT + 1]; 4]; Self::N];
 
                 let mut gap = 0;
@@ -205,7 +187,7 @@ macro_rules! impl_puzzle {
             /// `ROTATIONS[dir]` rotates the pieces moved by a move in direction `dir` into their
             /// new positions. The moved pieces never wrap around, so this is a shift by one row or
             /// column.
-            const ROTATIONS: [u32; 4] = [4 * $w, 4, 64 - 4 * $w, 60];
+            pub(crate) const ROTATIONS: [u32; 4] = [4 * $w, 4, 64 - 4 * $w, 60];
 
             /// Rearranges the puzzle so that the piece at each position `i` is `target(i)`, like
             /// [`sliding_puzzle::rearrange`], which this falls back to if the targets aren't a
@@ -255,27 +237,6 @@ macro_rules! impl_puzzle {
                             }
                         }
                         other += 1;
-                    }
-                    gap += 1;
-                }
-
-                out
-            };
-
-            pub(crate) const MOVE_MASKS: [[[u64; Self::N]; 4]; Self::N] = {
-                let mut out = [[[0; Self::N]; 4]; Self::N];
-
-                let mut gap = 0;
-                while gap < Self::N {
-                    let mut dir = 0;
-                    while dir < 4 {
-                        let mut piece = 0;
-                        while piece < Self::N {
-                            let other = Self::GAPS[gap][dir] as usize;
-                            out[gap][dir][piece] = Self::SWAP_MASKS[gap][other][piece];
-                            piece += 1;
-                        }
-                        dir += 1;
                     }
                     gap += 1;
                 }
@@ -522,11 +483,9 @@ macro_rules! impl_puzzle {
                 let gap = self.gap as usize;
                 let dir = dir as usize;
 
-                let shift = Self::SHIFTS[gap][dir] as u64;
-                let piece = ((self.pieces >> shift) & 0xF) as usize;
-
-                let mask = Self::MOVE_MASKS[gap][dir][piece];
-                self.pieces ^= mask;
+                // The piece that moves into the gap, which is 0 if the move isn't possible.
+                let moved = self.pieces & Self::MULTI_MASKS[gap][dir][1];
+                self.pieces ^= moved | moved.rotate_right(Self::ROTATIONS[dir]);
 
                 let next_gap = Self::GAPS[gap][dir];
                 self.gap = next_gap;
