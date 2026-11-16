@@ -31,7 +31,7 @@ const HASHES: [(usize, usize, u64); 12] = [
 /// The state of the breadth first search that builds a [`Pdb`].
 ///
 /// The bitmaps use [`Padded`] indices, so each 64-bit word holds 4 blocks of states, one in each
-/// 16-bit lane, and a state's neighbours by horizontal moves are in the same lane.
+/// 16-bit lane, and a state's neighbors by horizontal moves are in the same lane.
 struct Builder<const W: usize, const H: usize> {
     /// Which states have been reached.
     reached: Vec<Reached>,
@@ -305,9 +305,9 @@ impl<const W: usize, const H: usize> Builder<W, H> {
     }
 
     /// Finds the states at depth `depth + 1` by checking, for every state not yet reached, whether
-    /// it has a neighbour at depth `depth`, returning the number found.
+    /// it has a neighbor at depth `depth`, returning the number found.
     ///
-    /// A neighbour of a state not yet reached has been reached if and only if it is at depth
+    /// A neighbor of a state not yet reached has been reached if and only if it is at depth
     /// `depth`, because otherwise the state would have been reached already.
     #[inline(always)]
     fn pull(&mut self, depth: u8) -> u64 {
@@ -511,8 +511,6 @@ where
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
     /// Creates and builds a new pattern database for a `WxH` puzzle in the [`Stm`] metric.
-    ///
-    /// Depending on the size of the puzzle, this may take several seconds to run.
     #[must_use]
     pub fn new(config: &PdbConfig) -> Self {
         Self {

@@ -53,17 +53,13 @@ where
             (pieces, gap, index),
             self.entry(index),
             |&(_, _, index)| index == N as u64 - 1,
-            |&state, closer| self.closer_neighbour(state, closer),
+            |&state, closer| self.closer_neighbor(state, closer),
         )
     }
 
     /// Returns a state one move from the state `(pieces, gap, index)` whose entry is `closer`.
     #[inline(always)]
-    fn closer_neighbour(
-        &self,
-        (pieces, gap, index): (u64, u8, u64),
-        closer: u64,
-    ) -> (u64, u8, u64) {
+    fn closer_neighbor(&self, (pieces, gap, index): (u64, u8, u64), closer: u64) -> (u64, u8, u64) {
         let mut rest = Moves::<W, H, N>::MOVES[gap as usize].1;
         while rest != 0 {
             let d = rest.trailing_zeros();
@@ -85,7 +81,7 @@ where
             }
         }
 
-        unreachable!("every unsolved state has a neighbour closer to solved");
+        unreachable!("every unsolved state has a neighbor closer to solved");
     }
 
     /// Finds solutions of length `depth` of the state with the given pieces, gap, index, and
@@ -126,7 +122,7 @@ where
                 count += 1;
                 self.search.stack.push(DIRECTIONS[d as usize]);
 
-                let child_distance = residue::neighbour_distance(distance, self.entry(i));
+                let child_distance = residue::neighbor_distance(distance, self.entry(i));
                 if child_distance > depth - 1 {
                     continue;
                 }

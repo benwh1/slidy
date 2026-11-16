@@ -13,7 +13,7 @@ pub(super) struct IndexingTable {
 impl IndexingTable {
     pub(super) fn new() -> Self {
         /// Calls `f` with the base-5 digits and the piece counts of every arrangement of 8 cells
-        /// with at most `TALLY[i]` pieces labelled `i`, in lexicographic order.
+        /// with at most `TALLY[i]` pieces labeled `i`, in lexicographic order.
         fn go(
             cell: usize,
             digits: usize,
@@ -109,7 +109,7 @@ fn base_5(pieces: u64) -> u64 {
     const PAIRS: u64 = 0x00FF_00FF_00FF_00FF;
     const QUADS: u64 = 0x0000_FFFF_0000_FFFF;
 
-    // Each step combines neighbouring fields, and no field overflows into the next: a pair is at
+    // Each step combines neighboring fields, and no field overflows into the next: a pair is at
     // most 7 * 5 + 7, a quad at most 42 * 25 + 42, and a half at most 1092 * 625 + 1092.
     let pairs = (pieces & CELLS) * 5 + ((pieces >> 4) & CELLS);
     let quads = (pairs & PAIRS) * 25 + ((pairs >> 8) & PAIRS);

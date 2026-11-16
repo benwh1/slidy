@@ -45,7 +45,7 @@ where
         let mut distance = 0;
 
         while index != self.prune_target_solved_index {
-            // Every move changes the distance by 1, so the neighbours have residues `residue ± 1`
+            // Every move changes the distance by 1, so the neighbors have residues `residue ± 1`
             // mod 4, which have different entries.
             let closer = (residue + 3) % 4;
             let mut rest = self.moves.possible(state.gap());

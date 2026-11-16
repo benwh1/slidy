@@ -145,7 +145,7 @@ fn same_half_moves(pieces: u64) -> [u64; 4] {
     moves
 }
 
-/// Calls `f` with every arrangement of `len` cells using at most `counts[i]` pieces labelled `i`,
+/// Calls `f` with every arrangement of `len` cells using at most `counts[i]` pieces labeled `i`,
 /// in lexicographic order (cell 0 most significant). Cell `k` is stored in bits `4k..4k + 4`,
 /// and `f` also receives the counts left over.
 fn for_each_arrangement(len: usize, counts: [u8; 5], f: &mut impl FnMut(u32, [u8; 5])) {
@@ -363,14 +363,14 @@ impl Blocks {
         Self { blocks, suffixes }
     }
 
-    /// Returns the indices of the six neighbours of the state at `offset` in `block`. These are
+    /// Returns the indices of the six neighbors of the state at `offset` in `block`. These are
     /// all less than `SIZE + PADDING`.
     ///
     /// # Safety
     ///
     /// `offset` must be less than the number of suffixes of `block`.
     #[inline(always)]
-    unsafe fn neighbours(&self, block: &Block, offset: usize) -> [usize; 6] {
+    unsafe fn neighbors(&self, block: &Block, offset: usize) -> [usize; 6] {
         let suffixes = &self.suffixes[block.suffixes as usize];
 
         // SAFETY: The caller guarantees that `offset` is less than the length of the suffix
@@ -488,7 +488,7 @@ impl Pdb {
 
         while new != 0 {
             // Once fewer states are unvisited than are in the current layer, it's cheaper to check
-            // each unvisited state for a neighbour in the layer than to expand the layer.
+            // each unvisited state for a neighbor in the layer than to expand the layer.
             let pull = SIZE as u64 - total < new;
             let target = if pull { u8::MAX } else { depth };
             new = 0;
@@ -517,18 +517,18 @@ impl Pdb {
                         mask &= mask - 1;
 
                         // SAFETY: The mask only has bits for offsets less than `len`.
-                        let neighbours = unsafe { blocks.neighbours(block, offset) };
+                        let neighbors = unsafe { blocks.neighbors(block, offset) };
 
                         if pull {
-                            let found = neighbours.iter().any(|&idx| {
-                                // SAFETY: `neighbours` returns indices within `SIZE + PADDING`.
+                            let found = neighbors.iter().any(|&idx| {
+                                // SAFETY: `neighbors` returns indices within `SIZE + PADDING`.
                                 unsafe { *pdb.get_unchecked(idx) == depth }
                             });
                             pdb[start + offset] = if found { depth + 1 } else { u8::MAX };
                             new += u64::from(found);
                         } else {
-                            for idx in neighbours {
-                                // SAFETY: `neighbours` returns indices within `SIZE + PADDING`.
+                            for idx in neighbors {
+                                // SAFETY: `neighbors` returns indices within `SIZE + PADDING`.
                                 new += unsafe { claim_unchecked(&mut pdb, idx, depth) };
                             }
                         }

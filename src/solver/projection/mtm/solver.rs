@@ -42,7 +42,7 @@ where
             u64::from(self.pdb.get(index as usize)),
             |&(_, index)| index == self.prune_target_solved_index,
             |(state, index), closer| {
-                self.closer_neighbour(state, *index, closer)
+                self.closer_neighbor(state, *index, closer)
                     .expect("pattern database has no move closer to solved")
             },
         )
@@ -50,7 +50,7 @@ where
 
     /// Returns a state one move from `state`, which has index `index`, whose entry is `closer`,
     /// and its index.
-    fn closer_neighbour<const N: usize>(
+    fn closer_neighbor<const N: usize>(
         &self,
         state: &ProjectedPuzzle<N>,
         index: u64,
@@ -109,7 +109,7 @@ where
                         return ControlFlow::Break(());
                     }
                 } else {
-                    let child_h = residue::neighbour_distance(h, self.entry(index));
+                    let child_h = residue::neighbor_distance(h, self.entry(index));
                     if child_h < depth {
                         let child_moves = self.moves.possible(state.gap()) & !axis;
                         if self

@@ -31,7 +31,7 @@ const HASHES: [(usize, usize, u64); 12] = [
 /// The state of the breadth first search that builds a [`Pdb`].
 ///
 /// The bitmaps use [`Padded`] indices, so each 64-bit word holds 4 blocks of states, one in each
-/// 16-bit lane, and a state's neighbours by horizontal moves are in the same lane.
+/// 16-bit lane, and a state's neighbors by horizontal moves are in the same lane.
 struct Builder<const W: usize, const H: usize> {
     words: Vec<Word>,
     /// Masks of the states in each word with certain properties.
@@ -350,11 +350,11 @@ impl<const W: usize, const H: usize> Builder<W, H> {
     }
 
     /// Finds the states at depth `depth + 1` by checking, for every state not yet reached, whether
-    /// it has a neighbour at depth `depth`, returning the number found.
+    /// it has a neighbor at depth `depth`, returning the number found.
     ///
-    /// A neighbour of a state not yet reached is at depth at least `depth`, so it's at depth
+    /// A neighbor of a state not yet reached is at depth at least `depth`, so it's at depth
     /// `depth` exactly when its entry is `depth % 3`. States found in this pass have a different
-    /// entry, so they aren't mistaken for neighbours at depth `depth`.
+    /// entry, so they aren't mistaken for neighbors at depth `depth`.
     #[inline(always)]
     fn pull(&mut self, depth: u8) -> u64 {
         let (current, next) = (depth % 3, (depth + 1) % 3);
@@ -362,7 +362,7 @@ impl<const W: usize, const H: usize> Builder<W, H> {
         let mut decoder = BlockDecoder::<W, H>::new();
 
         // Pairs of a state not yet reached and a state that it reaches by a vertical move, which
-        // are checked in batches so that the neighbours' words can be loaded in parallel.
+        // are checked in batches so that the neighbors' words can be loaded in parallel.
         let mut pending = Vec::with_capacity(2 * Self::BATCH);
 
         for i in 0..self.words.len() {
@@ -386,7 +386,7 @@ impl<const W: usize, const H: usize> Builder<W, H> {
 
             let decoded = decoder.decode_word(i as u64);
             if H == 2 {
-                // Each state has one neighbour by a vertical move, so check them in batches.
+                // Each state has one neighbor by a vertical move, so check them in batches.
                 self.for_each_state(&decoded, i, remaining, |s, index, pieces, gap| {
                     s.for_each_vertical(pieces, gap, index, |s, _, _, child| {
                         s.prefetch(child);
@@ -400,7 +400,7 @@ impl<const W: usize, const H: usize> Builder<W, H> {
                     pending.clear();
                 }
             } else {
-                // Each state has several neighbours by vertical moves, and checking them one at a
+                // Each state has several neighbors by vertical moves, and checking them one at a
                 // time, stopping at the first one at the current depth, is faster than batching.
                 let base = 64 * i as u64;
                 let mut found = 0;
@@ -426,7 +426,7 @@ impl<const W: usize, const H: usize> Builder<W, H> {
     fn pull_all(&mut self, pairs: &[(u64, u64)], current: u8, next: u8) -> u64 {
         let mut new = 0;
         for &(index, child) in pairs {
-            // Whether the neighbour is at the current depth is unpredictable, so update the state
+            // Whether the neighbor is at the current depth is unpredictable, so update the state
             // without branching.
             let hit = u64::from(self.has_entry(child, current)).wrapping_neg();
             let (w, bit) = self.word_bit(index);
@@ -611,8 +611,6 @@ where
     Puzzle<W, H>: SmallPuzzle<PieceArray = [u8; N]>,
 {
     /// Creates and builds a new pattern database for a `WxH` puzzle in the [`Mtm`] metric.
-    ///
-    /// Depending on the size of the puzzle, this may take several minutes to run.
     #[must_use]
     pub fn new(config: &PdbConfig) -> Self {
         Self {

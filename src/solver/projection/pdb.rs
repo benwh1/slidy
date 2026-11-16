@@ -1,7 +1,7 @@
 //! Defines the [`Pdb`] struct, which is a pattern database used to accelerate [`Solver`].
 //!
 //! The database stores, for each projected state, enough information to find the state's distance
-//! `d` from the projected solved state, given the distance of a neighbouring state.
+//! `d` from the projected solved state, given the distance of a neighboring state.
 //!
 //! In [`Stm`], each state has one bit, `(d >> 1) & 1`. Every move changes `d` by exactly 1, so
 //! from a state at distance `h`, the bit tells whether a move goes to `h - 1` or `h + 1`.

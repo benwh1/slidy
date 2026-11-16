@@ -55,7 +55,7 @@ where
         let mut distance = 0;
 
         while index != N as u64 - 1 {
-            // Exactly the neighbours closer to solved have this bit.
+            // Exactly the neighbors closer to solved have this bit.
             let closer = (d4.wrapping_sub(1) >> 1) as u8 & 1;
 
             let (cells, mut moves) = Moves::<W, H, N>::MOVES[gap as usize];

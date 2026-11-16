@@ -243,7 +243,8 @@ impl<const W: usize, const H: usize, const S: usize> Coord<W, H, S> {
     }
 }
 
-/// Decodes blocks (see [`Coord::decode_block`]) incrementally.
+/// Decodes blocks (`index / S`, see [`Coord`]) incrementally into the pieces of their states in
+/// reading order, skipping the gap.
 ///
 /// The last digits of a block, those of pieces `N - K..=N - 3` (where `K` is [`Self::K`]), only
 /// choose how the last `K` pieces fill the `K` ranks not taken by the other pieces. So a block is
