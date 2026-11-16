@@ -354,6 +354,52 @@ impl Blocks {
 
         Self { blocks, suffixes }
     }
+
+    /// Returns the indices of the six neighbours of the state at `offset` in `block`. These are
+    /// all less than `SIZE + PADDING`.
+    ///
+    /// # Safety
+    ///
+    /// `offset` must be less than the number of suffixes of `block`.
+    #[inline(always)]
+    unsafe fn neighbours(&self, block: &Block, offset: usize) -> [usize; 6] {
+        let suffixes = &self.suffixes[block.suffixes as usize];
+
+        // SAFETY: The caller guarantees that `offset` is less than the length of the suffix
+        // tables.
+        let (suffix, cross) = unsafe {
+            (
+                *suffixes.suffixes.get_unchecked(offset),
+                suffixes.cross.get_unchecked(offset),
+            )
+        };
+
+        // Every index below is a start below `SIZE` (checked in `Blocks::new`) plus a `u16`, so
+        // it is within `SIZE + PADDING`.
+        if block.gap_in_prefix {
+            let [a, b, c, d] = block.children.map(|child| child as usize + offset);
+
+            let col = u32::from(block.gap_col) & 3;
+            let child = block.cross[(get(suffix, col) & 7) as usize] as usize;
+            let e = child + cross[(2 * col) as usize] as usize;
+            let f = child + cross[(2 * col + 1) as usize] as usize;
+
+            [a, b, c, d, e, f]
+        } else {
+            let start = block.start as usize;
+
+            // SAFETY: as for `suffixes.suffixes` above.
+            let moves = unsafe { suffixes.moves.get_unchecked(offset) };
+            let [a, b, c, d] = moves.map(|child| start + child as usize);
+
+            let col = u32::from(gap_position(u64::from(suffix))) % 4;
+            let child = cross[(get(block.prefix, col + 4) & 7) as usize] as usize;
+            let e = block.cross[(2 * col) as usize] as usize + child;
+            let f = block.cross[(2 * col + 1) as usize] as usize + child;
+
+            [a, b, c, d, e, f]
+        }
+    }
 }
 
 /// Pattern database used by [`Solver`].
@@ -429,6 +475,10 @@ impl Pdb {
         drop(frontier);
 
         while new != 0 {
+            // Once fewer states are unvisited than are in the current layer, it's cheaper to check
+            // each unvisited state for a neighbour in the layer than to expand the layer.
+            let pull = SIZE as u64 - total < new;
+            let target = if pull { u8::MAX } else { depth };
             new = 0;
 
             for block in &blocks.blocks {
@@ -442,59 +492,31 @@ impl Pdb {
                     let n = (len - j).min(CHUNK);
                     let mut mask = if n == CHUNK {
                         let chunk = pdb[start + j..start + j + CHUNK].try_into().unwrap();
-                        depth_mask(chunk, depth)
+                        depth_mask(chunk, target)
                     } else {
                         pdb[start + j..start + j + n]
                             .iter()
                             .enumerate()
-                            .fold(0, |m, (k, &x)| m | (u64::from(x == depth) << k))
+                            .fold(0, |m, (k, &x)| m | (u64::from(x == target) << k))
                     };
 
                     while mask != 0 {
                         let offset = j + mask.trailing_zeros() as usize;
                         mask &= mask - 1;
 
-                        // SAFETY: The mask only has bits for offsets less than `len`, the
-                        // length of all of the suffix tables.
-                        let (suffix, cross) = unsafe {
-                            (
-                                *suffixes.suffixes.get_unchecked(offset),
-                                suffixes.cross.get_unchecked(offset),
-                            )
-                        };
+                        // SAFETY: The mask only has bits for offsets less than `len`.
+                        let neighbours = unsafe { blocks.neighbours(block, offset) };
 
-                        // Every child index below is a start below `SIZE` (checked in
-                        // `Blocks::new`) plus a `u16`, so it is within `SIZE + PADDING`.
-                        if block.gap_in_prefix {
-                            for child in block.children {
-                                // SAFETY: See the comment above the `if`.
-                                new += unsafe {
-                                    claim_unchecked(&mut pdb, child as usize + offset, depth)
-                                };
-                            }
-
-                            let c = u32::from(block.gap_col) & 3;
-                            let child = block.cross[(get(suffix, c) & 7) as usize] as usize;
-                            for t in 0..2 {
-                                let idx = child + cross[(2 * c + t) as usize] as usize;
-                                // SAFETY: See the comment above the `if`.
-                                new += unsafe { claim_unchecked(&mut pdb, idx, depth) };
-                            }
+                        if pull {
+                            let found = neighbours.iter().any(|&idx| {
+                                // SAFETY: `neighbours` returns indices within `SIZE + PADDING`.
+                                unsafe { *pdb.get_unchecked(idx) == depth }
+                            });
+                            pdb[start + offset] = if found { depth + 1 } else { u8::MAX };
+                            new += u64::from(found);
                         } else {
-                            // SAFETY: as for `suffixes.suffixes` above.
-                            let moves = unsafe { suffixes.moves.get_unchecked(offset) };
-                            for &child in moves {
-                                // SAFETY: See the comment above the `if`.
-                                new += unsafe {
-                                    claim_unchecked(&mut pdb, start + child as usize, depth)
-                                };
-                            }
-
-                            let c = u32::from(gap_position(u64::from(suffix))) % 4;
-                            let child = cross[(get(block.prefix, c + 4) & 7) as usize] as usize;
-                            for t in 0..2 {
-                                let idx = block.cross[(2 * c + t) as usize] as usize + child;
-                                // SAFETY: See the comment above the `if`.
+                            for idx in neighbours {
+                                // SAFETY: `neighbours` returns indices within `SIZE + PADDING`.
                                 new += unsafe { claim_unchecked(&mut pdb, idx, depth) };
                             }
                         }
