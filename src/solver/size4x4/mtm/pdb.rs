@@ -20,6 +20,75 @@ use crate::{
 
 const HASH: u64 = 0x73b712151249d829;
 
+const CHUNK: usize = 64;
+
+/// Returns a mask with bit `k` set if `chunk[k] == depth`.
+#[inline(always)]
+fn depth_mask(chunk: &[u8; CHUNK], depth: u8) -> u64 {
+    #[cfg(target_arch = "x86_64")]
+    {
+        use std::arch::x86_64::{
+            __m128i, _mm_cmpeq_epi8, _mm_loadu_si128, _mm_movemask_epi8, _mm_set1_epi8,
+        };
+
+        // SAFETY: `sse2` is enabled on all x86_64 targets, and each load reads 16 bytes within
+        // `chunk`, which has length 64.
+        unsafe {
+            let target = _mm_set1_epi8(depth as i8);
+            let lane = |i: usize| {
+                let v = _mm_loadu_si128(chunk.as_ptr().add(16 * i).cast::<__m128i>());
+                u64::from(_mm_movemask_epi8(_mm_cmpeq_epi8(v, target)) as u16)
+            };
+            lane(0) | (lane(1) << 16) | (lane(2) << 32) | (lane(3) << 48)
+        }
+    }
+
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        let mut mask = 0;
+        for (k, &x) in chunk.iter().enumerate() {
+            mask |= u64::from(x == depth) << k;
+        }
+        mask
+    }
+}
+
+/// Marks every unvisited neighbour of the state `pieces` with `depth + 1` and returns how many
+/// there were.
+#[inline(always)]
+fn expand(
+    pdb: &mut [u8],
+    pieces: u64,
+    depth: u8,
+    indexing_table: &IndexingTable,
+    base_5_table: &Base5Table,
+) -> u64 {
+    let state = ReducedFourBitPuzzle {
+        pieces,
+        gap: gap_position(pieces),
+    };
+    let mut new = 0;
+
+    for mv in [
+        Direction::Up,
+        Direction::Left,
+        Direction::Down,
+        Direction::Right,
+    ] {
+        let mut puzzle = state;
+
+        while puzzle.do_move(mv) {
+            let idx = indexing_table.encode(puzzle.pieces(), base_5_table) as usize;
+            if pdb[idx] == u8::MAX {
+                pdb[idx] = depth + 1;
+                new += 1;
+            }
+        }
+    }
+
+    new
+}
+
 /// Returns the position of the gap (the only zero nibble) in `pieces`.
 fn gap_position(pieces: u64) -> u8 {
     const ONES: u64 = 0x1111_1111_1111_1111;
@@ -150,33 +219,31 @@ impl Pdb {
                 let suffixes = &blocks.suffixes[block.suffixes as usize];
                 let start = block.start as usize;
 
-                for (j, &suffix) in suffixes.iter().enumerate() {
-                    if pdb[start + j] != depth {
-                        continue;
-                    }
+                let len = suffixes.len();
+                let mut j = 0;
 
-                    let pieces = u64::from(block.prefix) | (u64::from(suffix) << 32);
-                    let state = ReducedFourBitPuzzle {
-                        pieces,
-                        gap: gap_position(pieces),
+                while j < len {
+                    let n = (len - j).min(CHUNK);
+                    let mut mask = if n == CHUNK {
+                        let chunk = pdb[start + j..start + j + CHUNK].try_into().unwrap();
+                        depth_mask(chunk, depth)
+                    } else {
+                        pdb[start + j..start + j + n]
+                            .iter()
+                            .enumerate()
+                            .fold(0, |m, (k, &x)| m | (u64::from(x == depth) << k))
                     };
 
-                    for mv in [
-                        Direction::Up,
-                        Direction::Left,
-                        Direction::Down,
-                        Direction::Right,
-                    ] {
-                        let mut puzzle = state;
+                    while mask != 0 {
+                        let k = mask.trailing_zeros() as usize;
+                        mask &= mask - 1;
 
-                        while puzzle.do_move(mv) {
-                            let idx = indexing_table.encode(puzzle.pieces(), base_5_table) as usize;
-                            if pdb[idx] == u8::MAX {
-                                pdb[idx] = depth + 1;
-                                new += 1;
-                            }
-                        }
+                        let suffix = suffixes[j + k];
+                        let pieces = u64::from(block.prefix) | (u64::from(suffix) << 32);
+                        new += expand(&mut pdb, pieces, depth, indexing_table, base_5_table);
                     }
+
+                    j += CHUNK;
                 }
             }
 
