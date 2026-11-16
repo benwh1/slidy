@@ -51,6 +51,17 @@ where
     }
 }
 
+/// Returns the position of the gap before moving one piece in direction `dir`, where the gap is
+/// at `gap` after the move.
+fn gap_before_move((gx, gy): (u64, u64), dir: Direction) -> (u64, u64) {
+    match dir {
+        Direction::Up => (gx, gy - 1),
+        Direction::Left => (gx - 1, gy),
+        Direction::Down => (gx, gy + 1),
+        Direction::Right => (gx + 1, gy),
+    }
+}
+
 /// An optimal puzzle solver using a [`Heuristic`] `H` to speed up the search.
 pub struct GenericSolver<P, S, H, M> {
     search: Search<256>,
@@ -258,13 +269,16 @@ where
                 prev_gap = next_gap;
             }
 
-            // Undo the single moves in reverse order.
-            for i in (1..=count).rev() {
+            // Undo the single moves in reverse order. `prev_gap` is where the last one left the
+            // gap.
+            let mut from = prev_gap;
+            for _ in 0..count {
                 puzzle.move_dir(dir.inverse());
-                let from = gap_after_move(puzzle, gap, dir, i).unwrap();
-                let to = gap_after_move(puzzle, gap, dir, i - 1).unwrap();
+                let to = gap_before_move(from, dir);
                 self.heuristic.undo_move(state, puzzle, from, to);
+                from = to;
             }
+            debug_assert_eq!(from, gap);
             self.search.stack.remove_n(count as usize);
         }
 
