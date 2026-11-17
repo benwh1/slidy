@@ -18,19 +18,26 @@ use crate::{
     },
 };
 
+// Tuning constants. These only affect how fast the table is built, not its contents.
+
+/// Layers are expanded from a queue while they have fewer states than this. `1 << 17` to
+/// `1 << 19` build in the same time, and `1 << 20` is ~1.5% slower.
+const QUEUE_LIMIT: usize = 1 << 18;
+
+/// Pull passes list the states they don't reach once at most this many states are unvisited, so
+/// that the next pass checks only those instead of scanning the table. `1 << 24` builds in the
+/// same time, using more memory.
+const LIST_LIMIT: u64 = 1 << 22;
+
 const HASH: u64 = 0x73b712151249d829;
 
+/// The number of table entries compared at once when scanning for a layer. This is the width of
+/// the mask returned by [`depth_mask`].
 const CHUNK: usize = 64;
 
 /// Extra entries at the end of the table while it is being built. Every child's index is a start
 /// below [`SIZE`] plus a `u16` offset, so with this padding it is always in bounds.
 const PADDING: usize = 1 << 16;
-
-/// Layers are expanded from a queue while they have fewer states than this.
-const QUEUE_LIMIT: usize = 1 << 18;
-
-/// Pull passes list the states they don't reach once at most this many states are unvisited.
-const LIST_LIMIT: u64 = 1 << 22;
 
 /// Returns a mask with bit `k` set if `chunk[k] == depth`.
 #[inline(always)]
