@@ -20,14 +20,14 @@ use crate::{
 
 // Tuning constants. These only affect how fast the table is built, not its contents.
 
-/// Layers are expanded from a queue while they have fewer states than this. `1 << 17` to
-/// `1 << 19` build in the same time, and `1 << 20` is ~1.5% slower.
-const QUEUE_LIMIT: usize = 1 << 18;
+/// Layers are expanded from a queue while they have fewer states than this. `1 << 18` and
+/// `1 << 20` build ~0.5% slower, and `1 << 16` ~3% slower.
+const QUEUE_LIMIT: usize = 1 << 19;
 
 /// Pull passes list the states they don't reach once at most this many states are unvisited, so
-/// that the next pass checks only those instead of scanning the table. `1 << 24` builds in the
-/// same time, using more memory.
-const LIST_LIMIT: u64 = 1 << 22;
+/// that the next pass checks only those instead of scanning the table. `1 << 22` builds ~1%
+/// slower, and `1 << 25` in the same time.
+const LIST_LIMIT: u64 = 1 << 24;
 
 const HASH: u64 = 0x29c23b6ab750f72c;
 
