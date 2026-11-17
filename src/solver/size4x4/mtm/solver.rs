@@ -9,6 +9,7 @@ use crate::{
     puzzle::{sliding_puzzle::SlidingPuzzle, small::Puzzle4x4},
     solver::{
         config::{PdbConfig, SolverConfig},
+        directions::DIRECTIONS,
         residue,
         search::{Search, iterative_deepening},
         size4x4::mtm::{
@@ -110,25 +111,20 @@ impl Solver {
         residue::walk_distance(
             puzzle,
             self.entry(&puzzle),
-            |puzzle| puzzle.pieces == ReducedFourBitPuzzle::new().pieces,
+            |puzzle| puzzle.pieces == ReducedFourBitPuzzle::SOLVED,
             |puzzle, closer| {
-                [
-                    Direction::Up,
-                    Direction::Left,
-                    Direction::Down,
-                    Direction::Right,
-                ]
-                .into_iter()
-                .find_map(|dir| {
-                    let mut child = *puzzle;
-                    while child.do_move(dir) {
-                        if self.entry(&child) == closer {
-                            return Some(child);
+                DIRECTIONS
+                    .into_iter()
+                    .find_map(|dir| {
+                        let mut child = *puzzle;
+                        while child.do_move(dir) {
+                            if self.entry(&child) == closer {
+                                return Some(child);
+                            }
                         }
-                    }
-                    None
-                })
-                .expect("pattern database has no move closer to solved")
+                        None
+                    })
+                    .expect("pattern database has no move closer to solved")
             },
         )
     }

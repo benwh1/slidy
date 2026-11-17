@@ -9,6 +9,7 @@ use crate::{
     puzzle::small::find_nibble,
     solver::{
         config::PdbConfig,
+        directions::DIRECTIONS,
         size4x4::mtm::{
             consts::{SIZE, TALLY},
             indexing_table::IndexingTable,
@@ -44,7 +45,7 @@ const CHUNK: usize = 64;
 /// Extra entries at the end of the table while it is being built. Every child's index is a start
 /// below [`SIZE`] plus an offset of [`OFFSET_BITS`] bits, so with this padding it is always in
 /// bounds.
-const PADDING: usize = 1 << 16;
+const PADDING: usize = 1 << OFFSET_BITS;
 
 /// Returns a mask with bit `k` set if `chunk[k] == depth`.
 #[inline(always)]
@@ -249,6 +250,10 @@ const OFFSET_BITS: u32 = 16;
 /// The low [`OFFSET_BITS`] bits.
 const OFFSET_MASK: u64 = (1 << OFFSET_BITS) - 1;
 
+/// The index of the gap's column in an entry of [`Suffixes::suffix_gap`], after the four
+/// same-half offsets and the `LABELS - 1` cross-half ones.
+const SUFFIX_GAP_COL: usize = LABELS + 3;
+
 /// The possible suffixes of a block, which depend only on the pieces left over from the prefix.
 /// The tables are packed so that the build loop reads as little as possible for each state.
 struct Suffixes {
@@ -261,8 +266,8 @@ struct Suffixes {
     prefix_gap: [Vec<u64>; 4],
     /// If the gap is in the suffix: for each suffix in index order, the offsets reached by
     /// [`same_half_moves`], then the offsets reached by moves that push out the piece `q` into the
-    /// prefix, at entry `3 + q` for `q` in `1..LABELS`. The last entry is the gap's column.
-    suffix_gap: Vec<[u16; 12]>,
+    /// prefix, at entry `3 + q` for `q` in `1..LABELS`, then the gap's column.
+    suffix_gap: Vec<[u16; SUFFIX_GAP_COL + 1]>,
 }
 
 /// Every state's index split into blocks, so that the table can be walked in index order and the
@@ -320,7 +325,7 @@ impl Blocks {
                             let h = u32::from(gap_position(u64::from(s)));
                             let c = h % 4;
 
-                            let mut entry = [0; 12];
+                            let mut entry = [0; SUFFIX_GAP_COL + 1];
                             entry[..4].copy_from_slice(&moves);
                             for q in 1..LABELS as u32 {
                                 let child = if h < 4 {
@@ -330,7 +335,7 @@ impl Blocks {
                                 };
                                 entry[3 + q as usize] = encode_suffix(child);
                             }
-                            entry[11] = c as u16;
+                            entry[SUFFIX_GAP_COL] = c as u16;
                             entry
                         })
                         .collect();
@@ -433,7 +438,7 @@ impl Blocks {
             let [a, b, c, d] =
                 [entry[0], entry[1], entry[2], entry[3]].map(|child| start + usize::from(child));
 
-            let col = u32::from(entry[11] & 3);
+            let col = u32::from(entry[SUFFIX_GAP_COL] & 3);
             // `q` is at most 7, so the entry is in bounds.
             let q = get(block.prefix, col + 4) & 7;
             let child = usize::from(entry[q as usize + 3]);
@@ -526,12 +531,7 @@ impl Pdb {
                     gap: gap_position(pieces),
                 };
 
-                for mv in [
-                    Direction::Up,
-                    Direction::Left,
-                    Direction::Down,
-                    Direction::Right,
-                ] {
+                for mv in DIRECTIONS {
                     let mut puzzle = state;
 
                     while puzzle.do_move(mv) {
