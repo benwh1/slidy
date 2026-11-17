@@ -133,18 +133,30 @@ impl Solver {
         )
     }
 
-    /// Finds solutions of length `depth` of a state whose reduced puzzle `puzzle` is at distance
-    /// `h` from solved, and whose transposed reduced puzzle `transposed_puzzle` is at distance
-    /// `transposed_h`. Both distances must be at most `depth`.
+    /// Finds solutions of length `depth` of a state with reduced puzzle `puzzle` and transposed
+    /// reduced puzzle `transposed_puzzle`. `parent_h` and `parent_transposed_h` are the distances
+    /// of the parent's reduced puzzles from solved. For the starting state, which has no parent,
+    /// they are one more than its own distances, which decode to the right values.
     fn dfs(
         &mut self,
         depth: u64,
         last_axis: Option<Axis>,
         puzzle: ReducedFourBitPuzzle,
         transposed_puzzle: ReducedFourBitPuzzle,
-        h: u64,
-        transposed_h: u64,
+        parent_h: u64,
+        parent_transposed_h: u64,
     ) -> ControlFlow<()> {
+        let h = residue::neighbor_distance(parent_h, self.entry(&puzzle));
+        if h > depth {
+            return ControlFlow::Continue(());
+        }
+
+        let transposed_h =
+            residue::neighbor_distance(parent_transposed_h, self.entry(&transposed_puzzle));
+        if transposed_h > depth {
+            return ControlFlow::Continue(());
+        }
+
         if depth == 0 {
             let mut p = self.puzzle;
             for dir in self.search.stack.iter() {
@@ -179,25 +191,14 @@ impl Solver {
 
                 self.search.stack.push(dir);
 
-                let child_h = residue::neighbor_distance(h, self.entry(&puzzle));
-                if child_h >= depth {
-                    continue;
-                }
-
-                let child_transposed_h =
-                    residue::neighbor_distance(transposed_h, self.entry(&transposed_puzzle));
-                if child_transposed_h >= depth {
-                    continue;
-                }
-
                 if self
                     .dfs(
                         depth - 1,
                         Some(dir.into()),
                         puzzle,
                         transposed_puzzle,
-                        child_h,
-                        child_transposed_h,
+                        h,
+                        transposed_h,
                     )
                     .is_break()
                 {
@@ -244,8 +245,8 @@ impl Solver {
                     None,
                     reduced_puzzle,
                     transposed_reduced_puzzle,
-                    h,
-                    transposed_h,
+                    h + 1,
+                    transposed_h + 1,
                 )
             },
         );
