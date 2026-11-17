@@ -29,6 +29,9 @@ const PADDING: usize = 1 << 16;
 /// Layers are expanded from a queue while they have fewer states than this.
 const QUEUE_LIMIT: usize = 1 << 18;
 
+/// Pull passes list the states they don't reach once at most this many states are unvisited.
+const LIST_LIMIT: u64 = 1 << 22;
+
 /// Returns a mask with bit `k` set if `chunk[k] == depth`.
 #[inline(always)]
 fn depth_mask(chunk: &[u8; CHUNK], depth: u8) -> u64 {
@@ -408,6 +411,41 @@ impl Blocks {
             [a, b, c, d, e, f]
         }
     }
+
+    /// Sets the entry of the state at `offset` in block `b` to `depth + 1` if the state has a
+    /// neighbor at `depth`, and otherwise adds it to `unreached`, if that is `Some`. Returns
+    /// whether it has such a neighbor.
+    ///
+    /// # Safety
+    ///
+    /// `offset` must be less than the number of suffixes of block `b`, and `pdb` must have length
+    /// `SIZE + PADDING`.
+    #[inline(always)]
+    unsafe fn pull(
+        &self,
+        pdb: &mut [u8],
+        b: usize,
+        offset: usize,
+        depth: u8,
+        unreached: &mut Option<Vec<(u32, u16)>>,
+    ) -> u64 {
+        let block = &self.blocks[b];
+
+        // SAFETY: The caller guarantees that `offset` is in range.
+        let neighbors = unsafe { self.neighbors(block, offset) };
+        let found = neighbors.iter().any(|&idx| {
+            // SAFETY: `neighbors` returns indices within `SIZE + PADDING`, which is the length of
+            // `pdb`.
+            unsafe { *pdb.get_unchecked(idx) == depth }
+        });
+
+        if found {
+            pdb[block.start as usize + offset] = depth + 1;
+        } else if let Some(unreached) = unreached {
+            unreached.push((b as u32, offset as u16));
+        }
+        u64::from(found)
+    }
 }
 
 /// Pattern database used by [`Solver`].
@@ -486,58 +524,77 @@ impl Pdb {
 
         drop(frontier);
 
+        // The states that the last pull pass didn't reach, as (block, offset) pairs, if it listed
+        // them.
+        let mut unreached: Option<Vec<(u32, u16)>> = None;
+
         while new != 0 {
+            let unvisited = SIZE as u64 - total;
+
             // Once fewer states are unvisited than are in the current layer, it's cheaper to check
             // each unvisited state for a neighbor in the layer than to expand the layer.
-            let pull = SIZE as u64 - total < new;
+            let pull = unvisited < new;
             let target = if pull { u8::MAX } else { depth };
+
+            // Once few states are unvisited, a pull pass lists the states it doesn't reach, so that
+            // the next pass only checks those instead of scanning the whole table.
+            let previous = unreached.take();
+            let mut next = (pull && unvisited <= LIST_LIMIT).then(Vec::new);
             new = 0;
 
-            for block in &blocks.blocks {
-                let suffixes = &blocks.suffixes[block.suffixes as usize];
-                let start = block.start as usize;
-
-                let len = suffixes.suffixes.len();
-                let mut j = 0;
-
-                while j < len {
-                    let n = (len - j).min(CHUNK);
-                    let mut mask = if n == CHUNK {
-                        let chunk = pdb[start + j..start + j + CHUNK].try_into().unwrap();
-                        depth_mask(chunk, target)
-                    } else {
-                        pdb[start + j..start + j + n]
-                            .iter()
-                            .enumerate()
-                            .fold(0, |m, (k, &x)| m | (u64::from(x == target) << k))
+            if unvisited == 0 {
+                // Every state has been visited, so the next layer is empty.
+            } else if let (true, Some(previous)) = (pull, previous) {
+                for (b, offset) in previous {
+                    // SAFETY: Every listed offset came from a scan of its block, so it is in range.
+                    new += unsafe {
+                        blocks.pull(&mut pdb, b as usize, offset.into(), depth, &mut next)
                     };
+                }
+            } else {
+                for (b, block) in blocks.blocks.iter().enumerate() {
+                    let suffixes = &blocks.suffixes[block.suffixes as usize];
+                    let start = block.start as usize;
 
-                    while mask != 0 {
-                        let offset = j + mask.trailing_zeros() as usize;
-                        mask &= mask - 1;
+                    let len = suffixes.suffixes.len();
+                    let mut j = 0;
 
-                        // SAFETY: The mask only has bits for offsets less than `len`.
-                        let neighbors = unsafe { blocks.neighbors(block, offset) };
-
-                        if pull {
-                            let found = neighbors.iter().any(|&idx| {
-                                // SAFETY: `neighbors` returns indices within `SIZE + PADDING`.
-                                unsafe { *pdb.get_unchecked(idx) == depth }
-                            });
-                            pdb[start + offset] = if found { depth + 1 } else { u8::MAX };
-                            new += u64::from(found);
+                    while j < len {
+                        let n = (len - j).min(CHUNK);
+                        let mut mask = if n == CHUNK {
+                            let chunk = pdb[start + j..start + j + CHUNK].try_into().unwrap();
+                            depth_mask(chunk, target)
                         } else {
-                            for idx in neighbors {
-                                // SAFETY: `neighbors` returns indices within `SIZE + PADDING`.
-                                new += unsafe { claim_unchecked(&mut pdb, idx, depth) };
+                            pdb[start + j..start + j + n]
+                                .iter()
+                                .enumerate()
+                                .fold(0, |m, (k, &x)| m | (u64::from(x == target) << k))
+                        };
+
+                        while mask != 0 {
+                            let offset = j + mask.trailing_zeros() as usize;
+                            mask &= mask - 1;
+
+                            if pull {
+                                // SAFETY: The mask only has bits for offsets less than `len`.
+                                new +=
+                                    unsafe { blocks.pull(&mut pdb, b, offset, depth, &mut next) };
+                            } else {
+                                // SAFETY: The mask only has bits for offsets less than `len`.
+                                let neighbors = unsafe { blocks.neighbors(block, offset) };
+                                for idx in neighbors {
+                                    // SAFETY: `neighbors` returns indices within `SIZE + PADDING`.
+                                    new += unsafe { claim_unchecked(&mut pdb, idx, depth) };
+                                }
                             }
                         }
-                    }
 
-                    j += CHUNK;
+                        j += CHUNK;
+                    }
                 }
             }
 
+            unreached = next;
             total += new;
             depth += 1;
 
