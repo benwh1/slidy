@@ -1,4 +1,4 @@
-//! A fast 4x4 [`Mtm`] solver using a ~62 MiB pattern database and 96 MiB of indexing tables.
+//! A fast 4x4 [`Mtm`] solver using a ~62 MiB pattern database and ~3 MiB of indexing tables.
 //!
 //! The heuristic used is the distance from solved when the solved state is relabeled as:
 //! ```text
