@@ -211,33 +211,39 @@ fn for_each_arrangement(len: usize, counts: [u8; LABELS], f: &mut impl FnMut(u32
 /// Write `c` for the gap's column.
 ///
 /// If the gap is in the prefix:
-/// - the four moves within the prefix keep the suffix, so the child at `children[k]` has the same
+/// - the four moves within the prefix keep the suffix, so the child at `links[k]` has the same
 ///   offset;
 /// - the two moves into the suffix pull in the piece `p` from cell `8 + c`. Both children have the
-///   start `cross[p]`, and offsets from [`Suffixes::prefix_gap`].
+///   start `links[3 + p]`, and offsets from [`Suffixes::prefix_gap`].
 ///
 /// If the gap is in the suffix:
 /// - the four moves within the suffix keep the prefix, so the children stay in this block, at
 ///   offsets from [`Suffixes::suffix_gap`];
 /// - the two moves into the prefix (to rows 1 and 0) push out the piece `q` from cell `4 + c`. The
-///   children have starts `cross[2 * c]` and `cross[2 * c + 1]`, and the same offset from
-///   [`Suffixes::suffix_gap`].
+///   children have starts `links[2 * c]` and `links[2 * c + 1]`, and the same offset from
+///   [`Suffixes::suffix_gap`]. `q` is read from the prefix, at `links[PREFIX_LINK]`.
 struct Block {
     /// Index of the first state in the block.
     start: u32,
-    /// Pieces in cells 0..8.
-    prefix: u32,
+    /// The starts of the blocks reached by moves out of this one, and if the gap is in the suffix,
+    /// the pieces in cells 0..8. See [`Block`].
+    links: [u32; LINKS],
     /// Index into [`Blocks::suffixes`] of the possible suffixes.
     suffixes: u16,
     /// Whether the gap is in the prefix.
     gap_in_prefix: bool,
     /// If the gap is in the prefix, its column.
     gap_col: u8,
-    /// If the gap is in the prefix, the starts of the blocks reached by [`same_half_moves`].
-    children: [u32; 4],
-    /// The starts of the blocks reached by moves that take the gap to the other half.
-    cross: [u32; 8],
 }
+
+/// The length of [`Block::links`]: four same-half moves and `LABELS - 1` cross-half moves if the
+/// gap is in the prefix, or eight cross-half moves and the prefix if it's in the suffix.
+const LINKS: usize = LABELS + 3;
+
+/// The index of the prefix in [`Block::links`], if the gap is in the suffix.
+const PREFIX_LINK: usize = 8;
+
+const _: () = assert!(PREFIX_LINK < LINKS);
 
 /// The number of distinct labels, including the gap's.
 const LABELS: usize = TALLY.len();
@@ -350,8 +356,7 @@ impl Blocks {
                 suffixes.len() - 1
             });
 
-            let mut children = [0; 4];
-            let mut cross = [0; 8];
+            let mut links = [0; LINKS];
             let mut gap_col = 0;
 
             if gap_in_prefix {
@@ -359,7 +364,8 @@ impl Blocks {
                 let c = g % 4;
                 gap_col = c as u8;
 
-                children = same_half_moves(u64::from(prefix)).map(|p| encode_prefix(p as u32));
+                let children = same_half_moves(u64::from(prefix)).map(|p| encode_prefix(p as u32));
+                links[..4].copy_from_slice(&children);
 
                 // The piece in cell `4 + c` moves up to the gap if it's in row 0, and `p` moves up
                 // into cell `4 + c`.
@@ -369,25 +375,24 @@ impl Blocks {
                     prefix
                 };
                 for p in 1..LABELS as u32 {
-                    cross[p as usize] = encode_prefix(set(shifted, c + 4, p));
+                    links[3 + p as usize] = encode_prefix(set(shifted, c + 4, p));
                 }
             } else {
                 for c in 0..4 {
                     // The gap moves to cell `4 + c`, or on to cell `c`.
-                    cross[2 * c as usize] = encode_prefix(set(prefix, c + 4, 0));
-                    cross[2 * c as usize + 1] =
+                    links[2 * c as usize] = encode_prefix(set(prefix, c + 4, 0));
+                    links[2 * c as usize + 1] =
                         encode_prefix(set(set(prefix, c + 4, get(prefix, c)), c, 0));
                 }
+                links[PREFIX_LINK] = prefix;
             }
 
             blocks.push(Block {
                 start,
-                prefix,
+                links,
                 suffixes: id as u16,
                 gap_in_prefix,
                 gap_col,
-                children,
-                cross,
             });
             start += suffixes[id].len as u32;
         });
@@ -395,11 +400,12 @@ impl Blocks {
         assert_eq!(start as usize, SIZE);
         // The building loop relies on this to skip bounds checks; see `PADDING`.
         assert!(blocks.iter().all(|block| {
-            block
-                .children
-                .iter()
-                .chain(&block.cross)
-                .all(|&start| (start as usize) < SIZE)
+            let starts = if block.gap_in_prefix {
+                &block.links[..]
+            } else {
+                &block.links[..PREFIX_LINK]
+            };
+            starts.iter().all(|&start| (start as usize) < SIZE)
         }));
 
         Self { blocks, suffixes }
@@ -418,14 +424,16 @@ impl Blocks {
         // Every index below is a start below `SIZE` (checked in `Blocks::new`) plus an offset below
         // `1 << OFFSET_BITS`, which is `PADDING`, so it is within `SIZE + PADDING`.
         if block.gap_in_prefix {
-            let [a, b, c, d] = block.children.map(|child| child as usize + offset);
+            let [a, b, c, d] = [0, 1, 2, 3].map(|k| block.links[k] as usize + offset);
 
             let col = usize::from(block.gap_col & 3);
 
             // SAFETY: The caller guarantees that `offset` is less than the number of suffixes,
             // which is the length of each table.
             let packed = unsafe { *suffixes.prefix_gap[col].get_unchecked(offset) };
-            let child = block.cross[(packed >> (2 * OFFSET_BITS)) as usize & 7] as usize;
+            // `p` is at most 7, so the link is in bounds.
+            let p = (packed >> (2 * OFFSET_BITS)) as usize & 7;
+            let child = block.links[3 + p] as usize;
             let e = child + (packed & OFFSET_MASK) as usize;
             let f = child + ((packed >> OFFSET_BITS) & OFFSET_MASK) as usize;
 
@@ -440,10 +448,10 @@ impl Blocks {
 
             let col = u32::from(entry[SUFFIX_GAP_COL] & 3);
             // `q` is at most 7, so the entry is in bounds.
-            let q = get(block.prefix, col + 4) & 7;
+            let q = get(block.links[PREFIX_LINK], col + 4) & 7;
             let child = usize::from(entry[q as usize + 3]);
-            let e = block.cross[(2 * col) as usize] as usize + child;
-            let f = block.cross[(2 * col + 1) as usize] as usize + child;
+            let e = block.links[(2 * col) as usize] as usize + child;
+            let f = block.links[(2 * col + 1) as usize] as usize + child;
 
             [a, b, c, d, e, f]
         }
@@ -464,7 +472,7 @@ impl Blocks {
         b: usize,
         offset: usize,
         depth: u8,
-        unreached: &mut Option<Vec<(u32, u16)>>,
+        unreached: &mut Option<Unreached>,
     ) -> u64 {
         let block = &self.blocks[b];
 
@@ -479,9 +487,44 @@ impl Blocks {
         if found {
             pdb[block.start as usize + offset] = depth + 1;
         } else if let Some(unreached) = unreached {
-            unreached.push((b as u32, offset as u16));
+            unreached.push(b, offset);
         }
         u64::from(found)
+    }
+}
+
+/// The states that a pull pass didn't reach, in index order.
+struct Unreached {
+    /// The number of unreached states in each block.
+    counts: Vec<u16>,
+    /// The offsets of the unreached states within their blocks.
+    offsets: Vec<u16>,
+}
+
+impl Unreached {
+    /// Returns an empty list for `blocks` blocks.
+    fn new(blocks: usize) -> Self {
+        Self {
+            counts: vec![0; blocks],
+            offsets: Vec::new(),
+        }
+    }
+
+    /// Adds the state at `offset` in block `b`. States must be added in index order, and `offset`
+    /// must be less than `1 << OFFSET_BITS`.
+    #[inline(always)]
+    fn push(&mut self, b: usize, offset: usize) {
+        self.counts[b] += 1;
+        self.offsets.push(offset as u16);
+    }
+
+    /// Returns the states as (block, offset) pairs, in index order.
+    fn iter(&self) -> impl Iterator<Item = (usize, usize)> {
+        self.counts
+            .iter()
+            .enumerate()
+            .flat_map(|(b, &n)| std::iter::repeat_n(b, n.into()))
+            .zip(self.offsets.iter().map(|&offset| offset.into()))
     }
 }
 
@@ -559,9 +602,8 @@ impl Pdb {
 
         drop(frontier);
 
-        // The states that the last pull pass didn't reach, as (block, offset) pairs, if it listed
-        // them.
-        let mut unreached: Option<Vec<(u32, u16)>> = None;
+        // The states that the last pull pass didn't reach, if it listed them.
+        let mut unreached: Option<Unreached> = None;
 
         while new != 0 {
             let unvisited = SIZE as u64 - total;
@@ -574,17 +616,16 @@ impl Pdb {
             // Once few states are unvisited, a pull pass lists the states it doesn't reach, so that
             // the next pass only checks those instead of scanning the whole table.
             let previous = unreached.take();
-            let mut next = (pull && unvisited <= LIST_LIMIT).then(Vec::new);
+            let mut next =
+                (pull && unvisited <= LIST_LIMIT).then(|| Unreached::new(blocks.blocks.len()));
             new = 0;
 
             if unvisited == 0 {
                 // Every state has been visited, so the next layer is empty.
             } else if let (true, Some(previous)) = (pull, previous) {
-                for (b, offset) in previous {
+                for (b, offset) in previous.iter() {
                     // SAFETY: Every listed offset came from a scan of its block, so it is in range.
-                    new += unsafe {
-                        blocks.pull(&mut pdb, b as usize, offset.into(), depth, &mut next)
-                    };
+                    new += unsafe { blocks.pull(&mut pdb, b, offset, depth, &mut next) };
                 }
             } else {
                 for (b, block) in blocks.blocks.iter().enumerate() {
