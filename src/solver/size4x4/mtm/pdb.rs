@@ -29,6 +29,7 @@ const QUEUE_LIMIT: usize = 1 << 19;
 /// slower, and `1 << 25` in the same time.
 const LIST_LIMIT: u64 = 1 << 24;
 
+/// The [`xxh3`] hash of the packed table, checked by [`Pdb::try_from_bytes`].
 const HASH: u64 = 0x2e33a2290cd86e3c;
 
 /// The length of the table in bytes, with four entries per byte.
