@@ -199,14 +199,14 @@ fn for_each_arrangement(len: usize, counts: [u8; 5], f: &mut impl FnMut(u32, [u8
 /// - the four moves within the prefix keep the suffix, so the child at `children[k]` has the same
 ///   offset;
 /// - the two moves into the suffix pull in the piece `p` from cell `8 + c`. Both children have the
-///   start `cross[p]`, and offsets from [`Suffixes::cross`] at `2 * c` and `2 * c + 1`.
+///   start `cross[p]`, and offsets from [`Suffixes::prefix_gap`].
 ///
 /// If the gap is in the suffix:
 /// - the four moves within the suffix keep the prefix, so the children stay in this block, at
-///   offsets from [`Suffixes::moves`];
+///   offsets from [`Suffixes::suffix_gap`];
 /// - the two moves into the prefix (to rows 1 and 0) push out the piece `q` from cell `4 + c`. The
 ///   children have starts `cross[2 * c]` and `cross[2 * c + 1]`, and the same offset from
-///   [`Suffixes::cross`] at `q`.
+///   [`Suffixes::suffix_gap`].
 struct Block {
     /// Index of the first state in the block.
     start: u32,
@@ -224,15 +224,27 @@ struct Block {
     cross: [u32; 8],
 }
 
+/// The number of bits of an offset within a block in [`Suffixes`]. A block has at most 5040
+/// suffixes, so this is enough.
+const OFFSET_BITS: u32 = 13;
+
+/// The low [`OFFSET_BITS`] bits.
+const OFFSET_MASK: u32 = (1 << OFFSET_BITS) - 1;
+
 /// The possible suffixes of a block, which depend only on the pieces left over from the prefix.
+/// The tables are packed so that the build loop reads as little as possible for each state.
 struct Suffixes {
-    /// The pieces in cells 8..16, in index order.
-    suffixes: Vec<u32>,
-    /// If the gap is in the suffix, the offsets reached from each suffix by [`same_half_moves`].
-    moves: Vec<[u16; 4]>,
-    /// The offsets reached from each suffix by moves that take the gap to the other half. See
-    /// [`Block`].
-    cross: Vec<[u16; 8]>,
+    /// The number of suffixes.
+    len: usize,
+    /// If the gap is in the prefix: for each column `c` of the gap, and each suffix in index
+    /// order, the piece `p` in cell `8 + c` and the offsets `e` and `f` reached by moving the gap
+    /// to cell `8 + c` and on to `12 + c`, packed as `e | (f << OFFSET_BITS) | (p << 2 *
+    /// OFFSET_BITS)`.
+    prefix_gap: [Vec<u32>; 4],
+    /// If the gap is in the suffix: for each suffix in index order, the offsets reached by
+    /// [`same_half_moves`], then the offsets reached by moves that push out the piece `q` into the
+    /// prefix, for `q` in `1..5`. Bits `14..16` of the first entry are the gap's column.
+    suffix_gap: Vec<[u16; 8]>,
 }
 
 /// Every state's index split into blocks, so that the table can be walked in index order and the
@@ -259,54 +271,58 @@ impl Blocks {
                 let mut list = Vec::new();
                 for_each_arrangement(8, remaining, &mut |suffix, _| list.push(suffix));
 
-                let (moves, cross) = if gap_in_prefix {
-                    let cross = list
-                        .iter()
-                        .map(|&s| {
-                            let mut cross = [0; 8];
-                            for c in 0..4 {
+                assert!(list.len() <= 1 << OFFSET_BITS);
+
+                let (prefix_gap, suffix_gap) = if gap_in_prefix {
+                    let prefix_gap = std::array::from_fn(|c| {
+                        let c = c as u32;
+                        list.iter()
+                            .map(|&s| {
                                 // The gap moves to cell `8 + c`, or on to cell `12 + c`.
-                                cross[2 * c as usize] = encode_suffix(set(s, c, 0));
-                                cross[2 * c as usize + 1] =
-                                    encode_suffix(set(set(s, c, get(s, c + 4)), c + 4, 0));
-                            }
-                            cross
-                        })
-                        .collect();
-                    (Vec::new(), cross)
+                                let e = u32::from(encode_suffix(set(s, c, 0)));
+                                let f = u32::from(encode_suffix(set(
+                                    set(s, c, get(s, c + 4)),
+                                    c + 4,
+                                    0,
+                                )));
+                                e | (f << OFFSET_BITS) | (get(s, c) << (2 * OFFSET_BITS))
+                            })
+                            .collect()
+                    });
+                    (prefix_gap, Vec::new())
                 } else {
-                    let moves = list
+                    let suffix_gap = list
                         .iter()
                         .map(|&s| {
                             let pieces = u64::from(prefix) | (u64::from(s) << 32);
-                            same_half_moves(pieces).map(|p| encode_suffix((p >> 32) as u32))
-                        })
-                        .collect();
-                    let cross = list
-                        .iter()
-                        .map(|&s| {
+                            let moves =
+                                same_half_moves(pieces).map(|p| encode_suffix((p >> 32) as u32));
+
                             // The suffix's gap is its lowest zero nibble.
                             let h = u32::from(gap_position(u64::from(s)));
                             let c = h % 4;
-                            let mut cross = [0; 8];
+
+                            let mut entry = [0; 8];
+                            entry[..4].copy_from_slice(&moves);
                             for q in 1..5 {
                                 let child = if h < 4 {
                                     set(s, c, q)
                                 } else {
                                     set(set(s, c + 4, get(s, c)), c, q)
                                 };
-                                cross[q as usize] = encode_suffix(child);
+                                entry[3 + q as usize] = encode_suffix(child);
                             }
-                            cross
+                            entry[0] |= (c as u16) << 14;
+                            entry
                         })
                         .collect();
-                    (moves, cross)
+                    (Default::default(), suffix_gap)
                 };
 
                 suffixes.push(Suffixes {
-                    suffixes: list,
-                    moves,
-                    cross,
+                    len: list.len(),
+                    prefix_gap,
+                    suffix_gap,
                 });
                 suffixes.len() - 1
             });
@@ -350,7 +366,7 @@ impl Blocks {
                 children,
                 cross,
             });
-            start += suffixes[id].suffixes.len() as u32;
+            start += suffixes[id].len as u32;
         });
 
         assert_eq!(start as usize, SIZE);
@@ -376,35 +392,32 @@ impl Blocks {
     unsafe fn neighbors(&self, block: &Block, offset: usize) -> [usize; 6] {
         let suffixes = &self.suffixes[block.suffixes as usize];
 
-        // SAFETY: The caller guarantees that `offset` is less than the length of the suffix
-        // tables.
-        let (suffix, cross) = unsafe {
-            (
-                *suffixes.suffixes.get_unchecked(offset),
-                suffixes.cross.get_unchecked(offset),
-            )
-        };
-
-        // Every index below is a start below `SIZE` (checked in `Blocks::new`) plus a `u16`, so
-        // it is within `SIZE + PADDING`.
+        // Every index below is a start below `SIZE` (checked in `Blocks::new`) plus an offset below
+        // `1 << OFFSET_BITS`, so it is within `SIZE + PADDING`.
         if block.gap_in_prefix {
             let [a, b, c, d] = block.children.map(|child| child as usize + offset);
 
-            let col = u32::from(block.gap_col) & 3;
-            let child = block.cross[(get(suffix, col) & 7) as usize] as usize;
-            let e = child + cross[(2 * col) as usize] as usize;
-            let f = child + cross[(2 * col + 1) as usize] as usize;
+            let col = usize::from(block.gap_col & 3);
+
+            // SAFETY: The caller guarantees that `offset` is less than the number of suffixes,
+            // which is the length of each table.
+            let packed = unsafe { *suffixes.prefix_gap[col].get_unchecked(offset) };
+            let child = block.cross[(packed >> (2 * OFFSET_BITS)) as usize & 7] as usize;
+            let e = child + (packed & OFFSET_MASK) as usize;
+            let f = child + ((packed >> OFFSET_BITS) & OFFSET_MASK) as usize;
 
             [a, b, c, d, e, f]
         } else {
             let start = block.start as usize;
 
-            // SAFETY: as for `suffixes.suffixes` above.
-            let moves = unsafe { suffixes.moves.get_unchecked(offset) };
-            let [a, b, c, d] = moves.map(|child| start + child as usize);
+            // SAFETY: as above.
+            let entry = unsafe { suffixes.suffix_gap.get_unchecked(offset) };
+            let [a, b, c, d] = [entry[0], entry[1], entry[2], entry[3]]
+                .map(|child| start + (u32::from(child) & OFFSET_MASK) as usize);
 
-            let col = u32::from(gap_position(u64::from(suffix))) % 4;
-            let child = cross[(get(block.prefix, col + 4) & 7) as usize] as usize;
+            let col = u32::from(entry[0] >> 14);
+            let q = get(block.prefix, col + 4) & 7;
+            let child = entry[(q + 3) as usize & 7] as usize;
             let e = block.cross[(2 * col) as usize] as usize + child;
             let f = block.cross[(2 * col + 1) as usize] as usize + child;
 
@@ -556,7 +569,7 @@ impl Pdb {
                     let suffixes = &blocks.suffixes[block.suffixes as usize];
                     let start = block.start as usize;
 
-                    let len = suffixes.suffixes.len();
+                    let len = suffixes.len;
                     let mut j = 0;
 
                     while j < len {
