@@ -646,9 +646,35 @@ mod tests {
 
     #[test]
     fn test_pdb() {
+        use std::sync::{Arc, Mutex};
+
+        // The number of states at each distance, ending with the empty layer that stops the
+        // search.
+        const LAYERS: [u64; 34] = [
+            1, 6, 17, 36, 96, 249, 587, 1414, 3308, 7663, 17276, 37649, 80601, 167658, 334785,
+            645969, 1198729, 2124539, 3583084, 5733933, 8640864, 12190858, 15956191, 19252372,
+            21079452, 20626215, 17512909, 12438500, 6808520, 2467288, 421157, 19179, 95, 0,
+        ];
+
+        let stats = Arc::new(Mutex::new(Vec::new()));
+        let config = PdbConfig {
+            end_of_iter_callback: Some(Box::new({
+                let stats = Arc::clone(&stats);
+                move |s| stats.lock().unwrap().push(s)
+            })),
+        };
+
         let indexing_table = IndexingTable::new();
-        let pdb = Pdb::new(&indexing_table, &PdbConfig::default());
+        let pdb = Pdb::new(&indexing_table, &config);
         let hash = xxh3::xxh3_64(pdb.as_ref());
         assert_eq!(hash, HASH);
+
+        let stats = stats.lock().unwrap();
+        let mut total = 0;
+        for (depth, (s, &new)) in stats.iter().zip(&LAYERS).enumerate() {
+            total += new;
+            assert_eq!((s.depth, s.new, s.total), (depth as u64, new, total));
+        }
+        assert_eq!(stats.len(), LAYERS.len());
     }
 }
