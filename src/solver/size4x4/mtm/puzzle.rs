@@ -86,7 +86,15 @@ impl FourBitPuzzle {
 }
 
 impl ReducedFourBitPuzzle {
-    const SOLVED: u64 = 0x0443443322332211;
+    /// The labels of the cells of the solved puzzle, one nibble per cell:
+    ///
+    /// ```text
+    /// 1 1 2 2
+    /// 3 2 2 2
+    /// 4 2 2 2
+    /// 5 6 7 0
+    /// ```
+    pub(super) const SOLVED: u64 = 0x0765_2224_2223_2211;
 
     pub(super) fn new() -> Self {
         Self {
@@ -155,7 +163,7 @@ mod tests {
         #[allow(clippy::undocumented_unsafe_blocks)]
         let puzzle = unsafe { FourBitPuzzle::with_pieces_and_gap_unchecked(0xd46f9b8ac0e51732, 6) };
         let reduced = puzzle.reduced();
-        assert_eq!(reduced.pieces, 0x3234342340431221);
+        assert_eq!(reduced.pieces, 0x5227_4222_2063_1221);
         assert_eq!(reduced.gap, 6);
     }
 }

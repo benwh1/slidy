@@ -23,7 +23,7 @@ fn bench_solve_all_optimal(c: &mut Criterion) {
 
 criterion_group! {
     name = benches;
-    // Building the pattern database takes about 2 s, and the solve about 0.4 s.
+    // Building the pattern database takes about 4 s, and the solve about 0.26 s.
     config = Criterion::default().sample_size(10);
     targets = bench_solver_default, bench_solve_all_optimal
 }

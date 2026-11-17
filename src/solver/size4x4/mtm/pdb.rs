@@ -29,14 +29,15 @@ const QUEUE_LIMIT: usize = 1 << 18;
 /// same time, using more memory.
 const LIST_LIMIT: u64 = 1 << 22;
 
-const HASH: u64 = 0x73b712151249d829;
+const HASH: u64 = 0x29c23b6ab750f72c;
 
 /// The number of table entries compared at once when scanning for a layer. This is the width of
 /// the mask returned by [`depth_mask`].
 const CHUNK: usize = 64;
 
 /// Extra entries at the end of the table while it is being built. Every child's index is a start
-/// below [`SIZE`] plus a `u16` offset, so with this padding it is always in bounds.
+/// below [`SIZE`] plus an offset of [`OFFSET_BITS`] bits, so with this padding it is always in
+/// bounds.
 const PADDING: usize = 1 << 16;
 
 /// Returns a mask with bit `k` set if `chunk[k] == depth`.
@@ -158,20 +159,20 @@ fn same_half_moves(pieces: u64) -> [u64; 4] {
 /// Calls `f` with every arrangement of `len` cells using at most `counts[i]` pieces labeled `i`,
 /// in lexicographic order (cell 0 most significant). Cell `k` is stored in bits `4k..4k + 4`,
 /// and `f` also receives the counts left over.
-fn for_each_arrangement(len: usize, counts: [u8; 5], f: &mut impl FnMut(u32, [u8; 5])) {
+fn for_each_arrangement(len: usize, counts: [u8; LABELS], f: &mut impl FnMut(u32, [u8; LABELS])) {
     fn go(
         cell: usize,
         len: usize,
         nibbles: u32,
-        counts: &mut [u8; 5],
-        f: &mut impl FnMut(u32, [u8; 5]),
+        counts: &mut [u8; LABELS],
+        f: &mut impl FnMut(u32, [u8; LABELS]),
     ) {
         if cell == len {
             f(nibbles, *counts);
             return;
         }
 
-        for piece in 0..5 {
+        for piece in 0..LABELS {
             if counts[piece] == 0 {
                 continue;
             }
@@ -231,12 +232,16 @@ struct Block {
     cross: [u32; 8],
 }
 
-/// The number of bits of an offset within a block in [`Suffixes`]. A block has at most 5040
-/// suffixes, so this is enough.
-const OFFSET_BITS: u32 = 13;
+/// The number of distinct labels, including the gap's.
+const LABELS: usize = TALLY.len();
+
+/// The number of bits of an offset within a block in [`Suffixes`]. A block has at most 8! = 40320
+/// suffixes, when the suffix has the gap, labels 3 to 7, and one each of labels 1 and 2, so this
+/// is enough.
+const OFFSET_BITS: u32 = 16;
 
 /// The low [`OFFSET_BITS`] bits.
-const OFFSET_MASK: u32 = (1 << OFFSET_BITS) - 1;
+const OFFSET_MASK: u64 = (1 << OFFSET_BITS) - 1;
 
 /// The possible suffixes of a block, which depend only on the pieces left over from the prefix.
 /// The tables are packed so that the build loop reads as little as possible for each state.
@@ -247,11 +252,11 @@ struct Suffixes {
     /// order, the piece `p` in cell `8 + c` and the offsets `e` and `f` reached by moving the gap
     /// to cell `8 + c` and on to `12 + c`, packed as `e | (f << OFFSET_BITS) | (p << 2 *
     /// OFFSET_BITS)`.
-    prefix_gap: [Vec<u32>; 4],
+    prefix_gap: [Vec<u64>; 4],
     /// If the gap is in the suffix: for each suffix in index order, the offsets reached by
     /// [`same_half_moves`], then the offsets reached by moves that push out the piece `q` into the
-    /// prefix, for `q` in `1..5`. Bits `14..16` of the first entry are the gap's column.
-    suffix_gap: Vec<[u16; 8]>,
+    /// prefix, at entry `3 + q` for `q` in `1..LABELS`. The last entry is the gap's column.
+    suffix_gap: Vec<[u16; 12]>,
 }
 
 /// Every state's index split into blocks, so that the table can be walked in index order and the
@@ -286,13 +291,13 @@ impl Blocks {
                         list.iter()
                             .map(|&s| {
                                 // The gap moves to cell `8 + c`, or on to cell `12 + c`.
-                                let e = u32::from(encode_suffix(set(s, c, 0)));
-                                let f = u32::from(encode_suffix(set(
+                                let e = u64::from(encode_suffix(set(s, c, 0)));
+                                let f = u64::from(encode_suffix(set(
                                     set(s, c, get(s, c + 4)),
                                     c + 4,
                                     0,
                                 )));
-                                e | (f << OFFSET_BITS) | (get(s, c) << (2 * OFFSET_BITS))
+                                e | (f << OFFSET_BITS) | (u64::from(get(s, c)) << (2 * OFFSET_BITS))
                             })
                             .collect()
                     });
@@ -309,9 +314,9 @@ impl Blocks {
                             let h = u32::from(gap_position(u64::from(s)));
                             let c = h % 4;
 
-                            let mut entry = [0; 8];
+                            let mut entry = [0; 12];
                             entry[..4].copy_from_slice(&moves);
-                            for q in 1..5 {
+                            for q in 1..LABELS as u32 {
                                 let child = if h < 4 {
                                     set(s, c, q)
                                 } else {
@@ -319,7 +324,7 @@ impl Blocks {
                                 };
                                 entry[3 + q as usize] = encode_suffix(child);
                             }
-                            entry[0] |= (c as u16) << 14;
+                            entry[11] = c as u16;
                             entry
                         })
                         .collect();
@@ -352,7 +357,7 @@ impl Blocks {
                 } else {
                     prefix
                 };
-                for p in 1..5 {
+                for p in 1..LABELS as u32 {
                     cross[p as usize] = encode_prefix(set(shifted, c + 4, p));
                 }
             } else {
@@ -400,7 +405,7 @@ impl Blocks {
         let suffixes = &self.suffixes[block.suffixes as usize];
 
         // Every index below is a start below `SIZE` (checked in `Blocks::new`) plus an offset below
-        // `1 << OFFSET_BITS`, so it is within `SIZE + PADDING`.
+        // `1 << OFFSET_BITS`, which is `PADDING`, so it is within `SIZE + PADDING`.
         if block.gap_in_prefix {
             let [a, b, c, d] = block.children.map(|child| child as usize + offset);
 
@@ -419,12 +424,13 @@ impl Blocks {
 
             // SAFETY: as above.
             let entry = unsafe { suffixes.suffix_gap.get_unchecked(offset) };
-            let [a, b, c, d] = [entry[0], entry[1], entry[2], entry[3]]
-                .map(|child| start + (u32::from(child) & OFFSET_MASK) as usize);
+            let [a, b, c, d] =
+                [entry[0], entry[1], entry[2], entry[3]].map(|child| start + usize::from(child));
 
-            let col = u32::from(entry[0] >> 14);
+            let col = u32::from(entry[11] & 3);
+            // `q` is at most 7, so the entry is in bounds.
             let q = get(block.prefix, col + 4) & 7;
-            let child = entry[(q + 3) as usize & 7] as usize;
+            let child = usize::from(entry[q as usize + 3]);
             let e = block.cross[(2 * col) as usize] as usize + child;
             let f = block.cross[(2 * col + 1) as usize] as usize + child;
 
@@ -727,10 +733,11 @@ mod tests {
 
         // The number of states at each distance, ending with the empty layer that stops the
         // search.
-        const LAYERS: [u64; 34] = [
-            1, 6, 17, 36, 96, 249, 587, 1414, 3308, 7663, 17276, 37649, 80601, 167658, 334785,
-            645969, 1198729, 2124539, 3583084, 5733933, 8640864, 12190858, 15956191, 19252372,
-            21079452, 20626215, 17512909, 12438500, 6808520, 2467288, 421157, 19179, 95, 0,
+        const LAYERS: [u64; 35] = [
+            1, 6, 18, 42, 106, 258, 637, 1594, 3701, 8773, 19995, 45077, 96900, 206786, 419189,
+            833302, 1569248, 2868931, 4945258, 8171129, 12678971, 18480920, 25029510, 31216644,
+            35536278, 36020069, 32283810, 24411593, 15109886, 6956267, 2156058, 363146, 24670, 427,
+            0,
         ];
 
         let stats = Arc::new(Mutex::new(Vec::new()));
