@@ -642,19 +642,24 @@ impl Pdb {
             }
         }
 
+        drop(blocks);
+
         // Every state is reachable, so the table has no unvisited entries left.
         pdb.truncate(SIZE);
         debug_assert!(pdb.iter().all(|&d| d != u8::MAX));
 
-        // Pack four entries into each byte, the first in the lowest two bits.
-        let pdb = pdb
-            .as_chunks::<4>()
-            .0
-            .iter()
-            .map(|chunk| chunk.iter().rev().fold(0, |byte, &d| (byte << 2) | (d % 3)))
-            .collect();
+        // Pack four entries into each byte, the first in the lowest two bits. Byte `i` is
+        // written after entries `4 * i..4 * i + 4` are read, and no later byte reads it, so the
+        // table can be packed in place.
+        for i in 0..LEN {
+            let chunk: [u8; 4] = pdb[4 * i..4 * i + 4].try_into().unwrap();
+            pdb[i] = chunk.iter().rev().fold(0, |byte, &d| (byte << 2) | (d % 3));
+        }
+        pdb.truncate(LEN);
 
-        Self { pdb }
+        Self {
+            pdb: pdb.into_boxed_slice(),
+        }
     }
 
     /// Initializes a [`Pdb`] from a boxed byte slice containing the pre-computed data.
