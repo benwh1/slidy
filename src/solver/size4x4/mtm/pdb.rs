@@ -29,7 +29,12 @@ const QUEUE_LIMIT: usize = 1 << 19;
 /// slower, and `1 << 25` in the same time.
 const LIST_LIMIT: u64 = 1 << 24;
 
-const HASH: u64 = 0x29c23b6ab750f72c;
+const HASH: u64 = 0x2e33a2290cd86e3c;
+
+/// The length of the table in bytes, with four entries per byte.
+const LEN: usize = SIZE / 4;
+
+const _: () = assert!(SIZE % 4 == 0);
 
 /// The number of table entries compared at once when scanning for a layer. This is the width of
 /// the mask returned by [`depth_mask`].
@@ -476,6 +481,9 @@ impl Blocks {
 
 /// Pattern database used by [`Solver`].
 ///
+/// Each state has a two-bit entry, `d % 3`, where `d` is its distance from solved. Every move
+/// changes `d` by at most 1, so the solver can recover each state's distance from its parent's.
+///
 /// [`Solver`]: crate::solver::size4x4::mtm::solver::Solver
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Pdb {
@@ -633,8 +641,17 @@ impl Pdb {
             }
         }
 
+        // Every state is reachable, so the table has no unvisited entries left.
         pdb.truncate(SIZE);
-        let pdb = pdb.into_boxed_slice();
+        debug_assert!(pdb.iter().all(|&d| d != u8::MAX));
+
+        // Pack four entries into each byte, the first in the lowest two bits.
+        let pdb = pdb
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|chunk| chunk.iter().rev().fold(0, |byte, &d| (byte << 2) | (d % 3)))
+            .collect();
 
         Self { pdb }
     }
@@ -656,7 +673,7 @@ impl Pdb {
     /// [`Solver`]: crate::solver::size4x4::mtm::solver::Solver
     #[must_use]
     pub unsafe fn try_from_bytes(bytes: Box<[u8]>) -> Option<Self> {
-        if bytes.len() != SIZE || xxh3::xxh3_64(&bytes) != HASH {
+        if bytes.len() != LEN || xxh3::xxh3_64(&bytes) != HASH {
             return None;
         }
 
@@ -680,21 +697,27 @@ impl Pdb {
         Self { pdb: bytes }
     }
 
-    /// Returns the entry for the state at `index`.
+    /// Returns the entry for the state at `index`: `d % 3`, where `d` is the distance of the state
+    /// from solved.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `index` is out of bounds.
     #[must_use]
     pub fn get(&self, index: usize) -> u8 {
-        self.pdb[index]
+        (self.pdb[index >> 2] >> (2 * (index & 3))) & 3
     }
 
-    /// Returns the entry for the state at `index`, without bounds checking.
+    /// Returns the entry for the state at `index`, without bounds checking. See [`Self::get`].
     ///
     /// # Safety
     ///
-    /// `index` must be within bounds.
+    /// `index` must be less than 4 times the length of the database in bytes.
     #[must_use]
+    #[inline(always)]
     pub unsafe fn get_unchecked(&self, index: usize) -> u8 {
         // SAFETY: The caller guarantees that `index` is in bounds.
-        unsafe { *self.pdb.get_unchecked(index) }
+        (unsafe { *self.pdb.get_unchecked(index >> 2) } >> (2 * (index & 3))) & 3
     }
 }
 
@@ -760,5 +783,9 @@ mod tests {
             assert_eq!((s.depth, s.new, s.total), (depth as u64, new, total));
         }
         assert_eq!(stats.len(), LAYERS.len());
+
+        // SAFETY: The bytes come from a database built above.
+        let loaded = unsafe { Pdb::try_from_bytes(pdb.as_ref().into()) };
+        assert_eq!(loaded.as_ref(), Some(&pdb));
     }
 }

@@ -9,6 +9,7 @@ use crate::{
     puzzle::{sliding_puzzle::SlidingPuzzle, small::Puzzle4x4},
     solver::{
         config::{PdbConfig, SolverConfig},
+        residue,
         search::{Search, iterative_deepening},
         size4x4::mtm::{
             indexing_table::IndexingTable,
@@ -94,30 +95,56 @@ impl Solver {
         Self::with_pdb(unsafe { Pdb::from_bytes_unchecked(bytes) })
     }
 
-    fn dfs(
-        &mut self,
-        depth: u64,
-        last_axis: Option<Axis>,
-        mut puzzle: ReducedFourBitPuzzle,
-        mut transposed_puzzle: ReducedFourBitPuzzle,
-    ) -> ControlFlow<()> {
+    /// Returns the [`Pdb`] entry of `puzzle`.
+    #[inline(always)]
+    fn entry(&self, puzzle: &ReducedFourBitPuzzle) -> u64 {
         let coord = self.indexing_table.encode(puzzle.pieces) as usize;
 
         // SAFETY: We have a test which guarantees that every `ReducedFourBitPuzzle` encodes to an
         // index that is within bounds.
-        let heuristic = unsafe { self.pdb.get_unchecked(coord) } as u64;
-        if heuristic > depth {
-            return ControlFlow::Continue(());
-        }
+        u64::from(unsafe { self.pdb.get_unchecked(coord) })
+    }
 
-        let coord = self.indexing_table.encode(transposed_puzzle.pieces) as usize;
+    /// Returns the distance of `puzzle` from solved, by following moves that get closer to it.
+    fn distance(&self, puzzle: ReducedFourBitPuzzle) -> u64 {
+        residue::walk_distance(
+            puzzle,
+            self.entry(&puzzle),
+            |puzzle| puzzle.pieces == ReducedFourBitPuzzle::new().pieces,
+            |puzzle, closer| {
+                [
+                    Direction::Up,
+                    Direction::Left,
+                    Direction::Down,
+                    Direction::Right,
+                ]
+                .into_iter()
+                .find_map(|dir| {
+                    let mut child = *puzzle;
+                    while child.do_move(dir) {
+                        if self.entry(&child) == closer {
+                            return Some(child);
+                        }
+                    }
+                    None
+                })
+                .expect("pattern database has no move closer to solved")
+            },
+        )
+    }
 
-        // SAFETY: See above.
-        let heuristic = unsafe { self.pdb.get_unchecked(coord) } as u64;
-        if heuristic > depth {
-            return ControlFlow::Continue(());
-        }
-
+    /// Finds solutions of length `depth` of a state whose reduced puzzle `puzzle` is at distance
+    /// `h` from solved, and whose transposed reduced puzzle `transposed_puzzle` is at distance
+    /// `transposed_h`. Both distances must be at most `depth`.
+    fn dfs(
+        &mut self,
+        depth: u64,
+        last_axis: Option<Axis>,
+        puzzle: ReducedFourBitPuzzle,
+        transposed_puzzle: ReducedFourBitPuzzle,
+        h: u64,
+        transposed_h: u64,
+    ) -> ControlFlow<()> {
         if depth == 0 {
             let mut p = self.puzzle;
             for dir in self.search.stack.iter() {
@@ -131,9 +158,6 @@ impl Solver {
             return ControlFlow::Continue(());
         }
 
-        let original_puzzle = puzzle;
-        let original_transposed = transposed_puzzle;
-
         for (dir, transposed_dir) in [
             (Direction::Up, Direction::Left),
             (Direction::Left, Direction::Up),
@@ -146,8 +170,8 @@ impl Solver {
 
             let mut count = 0;
 
-            puzzle = original_puzzle;
-            transposed_puzzle = original_transposed;
+            let mut puzzle = puzzle;
+            let mut transposed_puzzle = transposed_puzzle;
 
             while puzzle.do_move(dir) {
                 transposed_puzzle.do_move(transposed_dir);
@@ -155,8 +179,26 @@ impl Solver {
 
                 self.search.stack.push(dir);
 
+                let child_h = residue::neighbor_distance(h, self.entry(&puzzle));
+                if child_h >= depth {
+                    continue;
+                }
+
+                let child_transposed_h =
+                    residue::neighbor_distance(transposed_h, self.entry(&transposed_puzzle));
+                if child_transposed_h >= depth {
+                    continue;
+                }
+
                 if self
-                    .dfs(depth - 1, Some(dir.into()), puzzle, transposed_puzzle)
+                    .dfs(
+                        depth - 1,
+                        Some(dir.into()),
+                        puzzle,
+                        transposed_puzzle,
+                        child_h,
+                        child_transposed_h,
+                    )
                     .is_break()
                 {
                     return ControlFlow::Break(());
@@ -188,15 +230,24 @@ impl Solver {
 
         self.puzzle = four_bit_puzzle;
 
-        let coord = self.indexing_table.encode(reduced_puzzle.pieces);
-        let hval = self.pdb.get(coord as usize) as u64;
+        let h = self.distance(reduced_puzzle);
+        let transposed_h = self.distance(transposed_reduced_puzzle);
 
         iterative_deepening::<Mtm, _, _>(
             self,
             |s| &mut s.search,
             config,
-            hval,
-            |s, depth| s.dfs(depth, None, reduced_puzzle, transposed_reduced_puzzle),
+            h.max(transposed_h),
+            |s, depth| {
+                s.dfs(
+                    depth,
+                    None,
+                    reduced_puzzle,
+                    transposed_reduced_puzzle,
+                    h,
+                    transposed_h,
+                )
+            },
         );
 
         Ok(())
