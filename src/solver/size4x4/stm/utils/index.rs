@@ -45,26 +45,78 @@ pub(super) fn index_of_cells(cells: &[u8]) -> u32 {
     index
 }
 
-/// The cells of placement `index` of `tile_count` tiles.
-#[must_use]
-pub(super) fn cells_of_index(mut index: u32, tile_count: usize) -> [u8; 16] {
-    let mut digits = [0u8; 16];
-    for position in (0..tile_count).rev() {
+/// `SET_BIT_POSITIONS[byte][n]`: the position of set bit `n` (from the lowest) of `byte`, or 8
+/// when it has `n` or fewer set bits.
+const SET_BIT_POSITIONS: [[u8; 8]; 256] = {
+    let mut table = [[8; 8]; 256];
+    let mut byte = 0;
+    while byte < 256 {
+        let mut found = 0;
+        let mut bit = 0;
+        while bit < 8 {
+            if (byte >> bit) & 1 != 0 {
+                table[byte][found] = bit as u8;
+                found += 1;
+            }
+            bit += 1;
+        }
+        byte += 1;
+    }
+    table
+};
+
+/// The position of set bit `n` (from the lowest) of `mask`, which has more than `n`.
+#[inline(always)]
+fn nth_set_bit(mask: u16, n: u32) -> u32 {
+    let low = usize::from(mask as u8);
+    let low_count = low.count_ones();
+    let in_low = u32::from(SET_BIT_POSITIONS[low][(n & 7) as usize]);
+    let high = usize::from(mask >> 8);
+    let in_high = 8 + u32::from(SET_BIT_POSITIONS[high][(n.wrapping_sub(low_count) & 7) as usize]);
+    select_unpredictable(n < low_count, in_low, in_high)
+}
+
+/// The cells of placement `index` of `N` tiles.
+#[inline(always)]
+fn cells_of_index_with<const N: usize>(mut index: u32) -> [u8; N] {
+    // With `N` known, the divisions by the radices are by constants.
+    let mut digits = [0; N];
+    for position in (0..N).rev() {
         let radix = 16 - position as u32;
-        digits[position] = (index % radix) as u8;
+        digits[position] = index % radix;
         index /= radix;
     }
-    let mut cells = [0u8; 16];
-    let mut used = 0u16;
-    for position in 0..tile_count {
-        let mut unused = !used;
-        for _ in 0..digits[position] {
-            unused &= unused - 1;
-        }
-        cells[position] = unused.trailing_zeros() as u8;
-        used |= 1 << cells[position];
+    let mut cells = [0; N];
+    let mut unused = u16::MAX;
+    for (cell, digit) in cells.iter_mut().zip(digits) {
+        let position = nth_set_bit(unused, digit);
+        *cell = position as u8;
+        unused &= !(1 << position);
     }
     cells
+}
+
+/// The cells of placement `index` of `tile_count` tiles (from 1 to 9), then zeros.
+#[inline(always)]
+#[must_use]
+pub(super) fn cells_of_index(index: u32, tile_count: usize) -> [u8; 16] {
+    fn padded<const N: usize>(cells: [u8; N]) -> [u8; 16] {
+        let mut padded = [0; 16];
+        padded[..N].copy_from_slice(&cells);
+        padded
+    }
+    match tile_count {
+        1 => padded(cells_of_index_with::<1>(index)),
+        2 => padded(cells_of_index_with::<2>(index)),
+        3 => padded(cells_of_index_with::<3>(index)),
+        4 => padded(cells_of_index_with::<4>(index)),
+        5 => padded(cells_of_index_with::<5>(index)),
+        6 => padded(cells_of_index_with::<6>(index)),
+        7 => padded(cells_of_index_with::<7>(index)),
+        8 => padded(cells_of_index_with::<8>(index)),
+        9 => padded(cells_of_index_with::<9>(index)),
+        _ => panic!("groups have 1 to 9 tiles"),
+    }
 }
 
 /// The index of the placement of `tiles` on `board`.
@@ -199,6 +251,17 @@ pub(in crate::solver::size4x4::stm) fn shifted_blank_rank(
 mod tests {
     use super::*;
     use crate::solver::size4x4::stm::utils::{MIRRORED_CELL, MOVES, random_boards, reflect};
+
+    #[test]
+    fn nth_set_bit_matches_clearing_lower_bits() {
+        for mask in 1..=u16::MAX {
+            let mut remaining = mask;
+            for n in 0..mask.count_ones() {
+                assert_eq!(nth_set_bit(mask, n), remaining.trailing_zeros());
+                remaining &= remaining - 1;
+            }
+        }
+    }
 
     #[test]
     fn indices_round_trip() {

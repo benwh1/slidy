@@ -88,15 +88,15 @@ struct Placement {
 }
 
 impl Placement {
+    #[inline(always)]
     fn new(index: u32, tiles: &[u8]) -> Self {
         let cells = cells_of_index(index, tiles.len());
         let mut board = [0; 16];
+        let mut free_cells = u16::MAX;
         for (&cell, &tile) in cells.iter().zip(tiles) {
             board[usize::from(cell)] = tile;
+            free_cells &= !(1 << cell);
         }
-        let free_cells = (0..16)
-            .filter(|&cell| board[cell] == 0)
-            .fold(0, |mask, cell| mask | (1 << cell));
         Self {
             board,
             free_cells,
