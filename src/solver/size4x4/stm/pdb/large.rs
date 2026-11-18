@@ -62,7 +62,10 @@ const fn up(value: u32) -> u32 {
 /// The blank's rank among the cells of `board` without a tile of `group`.
 fn rank(board: &Board, group: u16) -> u32 {
     let blank = board.iter().position(|&t| t == 0).unwrap();
-    board[..blank].iter().filter(|&&t| (group >> t) & 1 == 0).count() as u32
+    board[..blank]
+        .iter()
+        .filter(|&&t| (group >> t) & 1 == 0)
+        .count() as u32
 }
 
 impl Large {
@@ -148,7 +151,11 @@ impl Pdb for Large {
         let mut values = [[0; 4]; 2];
         let mut bound = 0;
         for (s, board) in boards.iter().enumerate() {
-            indices[s] = [placement(T, board), placement(B, board), rank(board, mask(B))];
+            indices[s] = [
+                placement(T, board),
+                placement(B, board),
+                rank(board, mask(B)),
+            ];
             let seven = |code, bit: u32| {
                 walk(
                     T,

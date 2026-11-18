@@ -78,7 +78,9 @@ impl Placement {
         for (i, &tile) in tiles.iter().enumerate() {
             board[usize::from(cells[i])] = tile;
         }
-        let free = (0..16).filter(|&c| board[c] == 0).fold(0, |m, c| m | (1 << c));
+        let free = (0..16)
+            .filter(|&c| board[c] == 0)
+            .fold(0, |m, c| m | (1 << c));
         Self { board, free, index }
     }
 
@@ -187,8 +189,16 @@ where
                             }
                             let placement = Placement::new(p as u32, tiles);
                             count += layer(
-                                &placement, &table, &states, f, cost, pulling, here, next,
-                                depth as u8, &found,
+                                &placement,
+                                &table,
+                                &states,
+                                f,
+                                cost,
+                                pulling,
+                                here,
+                                next,
+                                depth as u8,
+                                &found,
                             );
                         }
                     }
@@ -319,7 +329,10 @@ pub fn relax(tiles: &[u8], min: &mut [u8]) {
     // they repeat until one changes nothing.
     loop {
         let changed = thread::scope(|s| {
-            #[expect(clippy::needless_collect, reason = "every thread starts before any is joined")]
+            #[expect(
+                clippy::needless_collect,
+                reason = "every thread starts before any is joined"
+            )]
             let handles: Vec<_> = (0..threads)
                 .map(|t| {
                     let table = &table;
@@ -350,7 +363,9 @@ pub fn relax(tiles: &[u8], min: &mut [u8]) {
                     })
                 })
                 .collect();
-            handles.into_iter().fold(false, |c, h| h.join().unwrap() | c)
+            handles
+                .into_iter()
+                .fold(false, |c, h| h.join().unwrap() | c)
         });
         if !changed {
             return;

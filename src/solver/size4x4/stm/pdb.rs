@@ -150,7 +150,11 @@ mod tests {
             let mut solved = puzzle.clone();
             solved.apply_alg(&solution);
             assert!(solved.is_solved(), "{text}: {solution} does not solve it");
-            assert_eq!(solution.len_stm(), length, "{text}: {solution} is not optimal");
+            assert_eq!(
+                solution.len_stm(),
+                length,
+                "{text}: {solution} is not optimal"
+            );
         }
         let bytes = solver.pdb().as_ref();
         let actual = xxh3::xxh3_64(bytes);

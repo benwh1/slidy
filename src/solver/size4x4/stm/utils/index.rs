@@ -174,7 +174,7 @@ pub fn shift_rank(rank: u32, board: &Board, m: &Move, side: usize, group: u16, t
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::solver::size4x4::stm::utils::{MOVES, MIRROR, random_boards, reflect};
+    use crate::solver::size4x4::stm::utils::{MIRROR, MOVES, random_boards, reflect};
 
     #[test]
     fn lehmer_round_trips() {
@@ -201,7 +201,11 @@ mod tests {
             let blank = board.iter().position(|&t| t == 0).unwrap();
             for m in &MOVES[blank][15].moves[..usize::from(MOVES[blank][15].n)] {
                 for (side, board) in boards.iter().enumerate() {
-                    let here = if side == 0 { blank } else { usize::from(MIRROR[blank]) };
+                    let here = if side == 0 {
+                        blank
+                    } else {
+                        usize::from(MIRROR[blank])
+                    };
                     let next = usize::from(m.next[side]);
                     let tile = board[next];
                     let mut moved = *board;
@@ -225,14 +229,21 @@ mod tests {
         let group = mask(&[1, 2, 3, 4, 5, 6, 7, 8, 9]);
         let rank = |board: &Board| {
             let blank = board.iter().position(|&t| t == 0).unwrap();
-            board[..blank].iter().filter(|&&t| (group >> t) & 1 == 0).count() as u32
+            board[..blank]
+                .iter()
+                .filter(|&&t| (group >> t) & 1 == 0)
+                .count() as u32
         };
         for board in random_boards(200) {
             let boards = [board, reflect(&board)];
             let blank = board.iter().position(|&t| t == 0).unwrap();
             for m in &MOVES[blank][15].moves[..usize::from(MOVES[blank][15].n)] {
                 for (side, board) in boards.iter().enumerate() {
-                    let here = if side == 0 { blank } else { usize::from(MIRROR[blank]) };
+                    let here = if side == 0 {
+                        blank
+                    } else {
+                        usize::from(MIRROR[blank])
+                    };
                     let next = usize::from(m.next[side]);
                     let tile = board[next];
                     let mut moved = *board;

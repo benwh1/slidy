@@ -56,7 +56,9 @@ pub fn walk(
     let mut node = Node {
         index: placement(tiles, board),
         blank: board.iter().position(|&t| t == 0).unwrap() as u32,
-        free: (0..16).filter(|&c| tiles_on[c] == 0).fold(0, |m, c| m | (1 << c)),
+        free: (0..16)
+            .filter(|&c| tiles_on[c] == 0)
+            .fold(0, |m, c| m | (1 << c)),
     };
     let goal = lehmer(tiles);
     // The value's parity: in the serpentine order a cell's colour is its parity, and an additive
@@ -109,7 +111,10 @@ pub fn walk(
             let tile = tiles_on[from as usize];
             if tile == 0 {
                 // The blank moves to a cell without a group tile.
-                return Node { blank: from, ..node };
+                return Node {
+                    blank: from,
+                    ..node
+                };
             }
             let row = &table[usize::from(tile)];
             let lane = |x: u64| (x >> (32 * lane)) as u32;

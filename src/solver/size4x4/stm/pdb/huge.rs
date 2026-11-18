@@ -75,7 +75,10 @@ const fn up(value: u32) -> u32 {
 /// The blank's rank among the cells of `board` without a tile of `group`.
 fn rank(board: &Board, group: u16) -> u32 {
     let blank = board.iter().position(|&t| t == 0).unwrap();
-    board[..blank].iter().filter(|&&t| (group >> t) & 1 == 0).count() as u32
+    board[..blank]
+        .iter()
+        .filter(|&&t| (group >> t) & 1 == 0)
+        .count() as u32
 }
 
 impl Huge {
@@ -218,7 +221,13 @@ impl Pdb for Huge {
             let [ta, tf, ba, bf] = values[s];
             let [ra, rf] = self.six(R_AT, indices[s][0], blank);
             let [la, lf] = self.six(L_AT, indices[s][2], blank);
-            bound = bound.max(ra + ta).max(rf).max(tf).max(la + ba).max(lf).max(bf);
+            bound = bound
+                .max(ra + ta)
+                .max(rf)
+                .max(tf)
+                .max(la + ba)
+                .max(lf)
+                .max(bf);
         }
         (indices, values, u64::from(bound))
     }

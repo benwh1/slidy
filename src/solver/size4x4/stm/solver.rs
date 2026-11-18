@@ -254,7 +254,12 @@ where
         let mut children = [const { MaybeUninit::<Expansion<P>>::uninit() }; 4];
         for (slot, &k) in order[..n].iter().enumerate() {
             // SAFETY: survivors' candidates and values were written.
-            let (c, v) = unsafe { (node.candidates[k].assume_init_ref(), values[k].assume_init()) };
+            let (c, v) = unsafe {
+                (
+                    node.candidates[k].assume_init_ref(),
+                    values[k].assume_init(),
+                )
+            };
             self.slide(here, c.blanks, c.tiles);
             let child = self.expand::<A>(usize::from(c.blanks[0]), &c.indices, c.node, v);
             children[slot].write(child);
@@ -262,8 +267,12 @@ where
         }
         for (slot, &k) in order[..n].iter().enumerate() {
             // SAFETY: as above, and every survivor's successors were written.
-            let (c, child) =
-                unsafe { (node.candidates[k].assume_init_ref(), children[slot].assume_init_ref()) };
+            let (c, child) = unsafe {
+                (
+                    node.candidates[k].assume_init_ref(),
+                    children[slot].assume_init_ref(),
+                )
+            };
             self.slide(here, c.blanks, c.tiles);
             let flow = self.dfs::<A>(usize::from(c.blanks[0]), depth - 1, child);
             self.slide(c.blanks, here, c.tiles);
