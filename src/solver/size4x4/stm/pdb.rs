@@ -16,37 +16,30 @@
 //!
 //! Most tables store only a code of each distance, which the search decodes against the
 //! parent's distances (a move changes them by a known amount), so the search carries each node's
-//! distances down the tree. The root's come from walking downhill in each coded table
-//! ([`walk`](super::utils::walk)).
-//!
-//! Internal labels throughout: serpentine rows `0 1 2 3 / 7 6 5 4 / 8 9 10 11 / 15 14 13 12`,
-//! tile `t`'s home is cell `t`, the blank's cell 0.
+//! distances down the tree. The root's come from walking downhill in each coded table.
 
-pub mod huge;
-pub mod large;
-pub mod medium;
-pub mod tiny;
+// Internal labels throughout: serpentine rows `0 1 2 3 / 7 6 5 4 / 8 9 10 11 / 15 14 13 12`,
+// tile `t`'s home is cell `t`, the blank's cell 0.
+
+mod huge;
+mod large;
+mod medium;
+mod sealed;
+mod tiny;
 
 pub use huge::Huge;
 pub use large::Large;
 pub use medium::Medium;
+use sealed::Search;
 pub use tiny::Tiny;
 
-use crate::solver::{
-    config::PdbConfig,
-    size4x4::stm::utils::{Board, Move},
-};
+use crate::solver::config::PdbConfig;
 
-/// A pattern database: its construction, and everything the search needs to know about it.
-/// Pairs are `[direct, mirrored]`.
-pub trait Pdb: AsRef<[u8]> + Sized {
-    /// A node's table indices in both orientations, and anything else a move updates
-    /// incrementally.
-    type Indices: Copy;
-
-    /// A node's exact values of its coded tables, which its children's entries decode against.
-    type Values: Copy;
-
+/// A pattern database for the [`Solver`]: building it, and loading it from the bytes it gives
+/// through [`AsRef`]. Implemented only by the databases in this module.
+///
+/// [`Solver`]: super::solver::Solver
+pub trait Pdb: AsRef<[u8]> + Sized + Search {
     /// Builds the pattern database.
     fn new(config: &PdbConfig) -> Self;
 
@@ -81,31 +74,6 @@ pub trait Pdb: AsRef<[u8]> + Sized {
     ///
     /// [`Solver`]: super::solver::Solver
     unsafe fn from_bytes_unchecked(bytes: Box<[u8]>) -> Self;
-
-    /// The root's indices, its values and its lower bound.
-    fn root(&self, boards: &[Board; 2]) -> (Self::Indices, Self::Values, u64);
-
-    /// The indices after move `tile_move` from `boards`, which moves `tiles` into the blank.
-    /// Prefetches the entries [`Self::evaluate`] will read.
-    fn shifted(
-        &self,
-        parent: &Self::Indices,
-        boards: &[Board; 2],
-        tile_move: &Move,
-        tiles: [u8; 2],
-    ) -> Self::Indices;
-
-    /// A child of a node with values `parent`: the child has indices `child`, the blank at
-    /// `blanks` and the moved tile `tiles`. `None` when its lower bound reaches `depth` (the moves
-    /// left at the parent), else its best-first sort key (smaller first) and its values.
-    fn evaluate(
-        &self,
-        parent: &Self::Values,
-        child: &Self::Indices,
-        blanks: [u8; 2],
-        tiles: [u8; 2],
-        depth: u64,
-    ) -> Option<(u64, Self::Values)>;
 }
 
 #[cfg(test)]

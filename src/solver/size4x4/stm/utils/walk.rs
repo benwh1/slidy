@@ -15,7 +15,7 @@ use crate::solver::size4x4::stm::utils::{
 
 /// What a coded table holds, and so how a walk moves.
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub enum Encoding {
+pub(in crate::solver::size4x4::stm) enum Encoding {
     /// `(value >> 1) & 1` of the additive distance: a group tile moves into the blank's region.
     AdditiveBit,
     /// `(value >> 1) & 1` of the full distance: the blank moves.
@@ -27,10 +27,10 @@ pub enum Encoding {
 
 /// A state of a walk: the placement's index, the blank's cell and the cells without a group tile.
 #[derive(Clone, Copy)]
-pub struct WalkState {
-    pub index: u32,
-    pub blank: u32,
-    pub free_cells: u16,
+pub(in crate::solver::size4x4::stm) struct WalkState {
+    pub(in crate::solver::size4x4::stm) index: u32,
+    pub(in crate::solver::size4x4::stm) blank: u32,
+    pub(in crate::solver::size4x4::stm) free_cells: u16,
 }
 
 /// The value at `board` of the coded table of `tiles` (which `encoding` describes), whose codes
@@ -42,7 +42,7 @@ pub struct WalkState {
 /// Panics if the table's codes lead nowhere, which only wrong tables do.
 ///
 /// [`index_shift_table`]: super::index::index_shift_table
-pub fn exact_value(
+pub(in crate::solver::size4x4::stm) fn exact_value(
     tiles: &[u8],
     shifts: &[[u64; 16]; 16],
     partition: usize,

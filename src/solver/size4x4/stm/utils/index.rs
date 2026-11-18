@@ -10,7 +10,7 @@ use crate::solver::size4x4::stm::utils::{Board, Move};
 
 /// The number of placements of `tile_count` tiles.
 #[must_use]
-pub const fn placement_count(tile_count: usize) -> usize {
+pub(in crate::solver::size4x4::stm) const fn placement_count(tile_count: usize) -> usize {
     let mut count = 1;
     let mut placed = 0;
     while placed < tile_count {
@@ -22,7 +22,7 @@ pub const fn placement_count(tile_count: usize) -> usize {
 
 /// The mask with bit `tile` set for each of `tiles`.
 #[must_use]
-pub const fn tile_mask(tiles: &[u8]) -> u16 {
+pub(in crate::solver::size4x4::stm) const fn tile_mask(tiles: &[u8]) -> u16 {
     let mut mask = 0;
     let mut position = 0;
     while position < tiles.len() {
@@ -34,7 +34,7 @@ pub const fn tile_mask(tiles: &[u8]) -> u16 {
 
 /// The index of the placement with the group's tiles on `cells`.
 #[must_use]
-pub fn index_of_cells(cells: &[u8]) -> u32 {
+pub(super) fn index_of_cells(cells: &[u8]) -> u32 {
     let mut used = 0u16;
     let mut index = 0;
     for (position, &cell) in cells.iter().enumerate() {
@@ -47,7 +47,7 @@ pub fn index_of_cells(cells: &[u8]) -> u32 {
 
 /// The cells of placement `index` of `tile_count` tiles.
 #[must_use]
-pub fn cells_of_index(mut index: u32, tile_count: usize) -> [u8; 16] {
+pub(super) fn cells_of_index(mut index: u32, tile_count: usize) -> [u8; 16] {
     let mut digits = [0u8; 16];
     for position in (0..tile_count).rev() {
         let radix = 16 - position as u32;
@@ -69,7 +69,7 @@ pub fn cells_of_index(mut index: u32, tile_count: usize) -> [u8; 16] {
 
 /// The index of the placement of `tiles` on `board`.
 #[must_use]
-pub fn placement_index(tiles: &[u8], board: &Board) -> u32 {
+pub(in crate::solver::size4x4::stm) fn placement_index(tiles: &[u8], board: &Board) -> u32 {
     let mut cells = [0u8; 16];
     for (cell, &tile) in cells.iter_mut().zip(tiles) {
         *cell = board
@@ -89,7 +89,9 @@ pub fn placement_index(tiles: &[u8], board: &Board) -> u32 {
 /// each tile passed that is not an earlier tile of its group, and each later tile of its group
 /// passed changes its digit by one the opposite way.
 #[must_use]
-pub const fn index_shift_table(partitions: [&[&[u8]]; 2]) -> [[u64; 16]; 16] {
+pub(in crate::solver::size4x4::stm) const fn index_shift_table(
+    partitions: [&[&[u8]]; 2],
+) -> [[u64; 16]; 16] {
     let mut table = [[0u64; 16]; 16];
     let mut partition = 0;
     while partition < 2 {
@@ -142,7 +144,7 @@ pub const fn index_shift_table(partitions: [&[&[u8]]; 2]) -> [[u64; 16]; 16] {
 /// `table` is the partitions' [`index_shift_table`].
 #[inline(always)]
 #[must_use]
-pub fn index_shifts(
+pub(in crate::solver::size4x4::stm) fn index_shifts(
     table: &[[u64; 16]; 16],
     board: &Board,
     tile_move: &Move,
@@ -168,7 +170,7 @@ pub fn index_shifts(
 /// `rank` before the move.
 #[inline(always)]
 #[must_use]
-pub fn shifted_blank_rank(
+pub(in crate::solver::size4x4::stm) fn shifted_blank_rank(
     rank: u32,
     board: &Board,
     tile_move: &Move,

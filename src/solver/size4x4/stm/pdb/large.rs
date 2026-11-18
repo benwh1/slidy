@@ -14,7 +14,7 @@ use xxhash_rust::xxh3;
 use crate::solver::{
     config::PdbConfig,
     size4x4::stm::{
-        pdb::Pdb,
+        pdb::{Pdb, Search},
         utils::{
             Board, Move,
             build::{Cost, as_atomic, breadth_first_search},
@@ -60,7 +60,10 @@ const LEN: usize = BOTTOM_EIGHT_START + EIGHT_TILE_TABLE_LEN;
 // TODO: set from `test_pdb`'s output once the database has been built.
 const HASH: u64 = 0;
 
-/// The large pattern database. See the [module documentation](self).
+/// The large pattern database (1.27 GB): a single 7-8 partition. Builds in about ten
+/// minutes.
+///
+/// See [`Pdb`] for building it, and loading and saving its bytes.
 pub struct Large {
     bytes: Box<[u8]>,
 }
@@ -138,12 +141,6 @@ fn decode_bits(bits: u32, full_offset: u32, in_group: bool, [additive, full]: [u
 }
 
 impl Pdb for Large {
-    /// Each group's index (top, bottom), and the blank's rank among the 8-tile group's free
-    /// cells.
-    type Indices = [[u32; 3]; 2];
-    /// Each group's additive and full values (top, then bottom).
-    type Values = [[u8; 4]; 2];
-
     fn new(config: &PdbConfig) -> Self {
         let mut bytes = vec![0; LEN].into_boxed_slice();
         let (top_seven, bottom_eight) = bytes.split_at_mut(BOTTOM_EIGHT_START);
@@ -176,6 +173,14 @@ impl Pdb for Large {
         assert_eq!(bytes.len(), LEN, "the database has the wrong length");
         Self { bytes }
     }
+}
+
+impl Search for Large {
+    /// Each group's index (top, bottom), and the blank's rank among the 8-tile group's free
+    /// cells.
+    type Indices = [[u32; 3]; 2];
+    /// Each group's additive and full values (top, then bottom).
+    type Values = [[u8; 4]; 2];
 
     fn root(&self, boards: &[Board; 2]) -> (Self::Indices, Self::Values, u64) {
         let mut indices = [[0; 3]; 2];

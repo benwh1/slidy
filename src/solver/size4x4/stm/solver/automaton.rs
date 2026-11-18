@@ -6,7 +6,7 @@ mod fsm;
 /// Which move sequences the search may take, as an automaton over moves. A node is
 /// `(state << 4) | allowed`, `allowed` the mask of directions (slidy's: up 0, left 1, down 2,
 /// right 3, a tile's move) the next move may take.
-pub trait Automaton: 'static {
+pub(super) trait Automaton: 'static {
     /// The root's node.
     const START: u32;
 
@@ -17,7 +17,7 @@ pub trait Automaton: 'static {
 /// Forbids undoing the previous move and one of each pair of equivalent move sequences of equal
 /// length (the generated tables in `fsm`): still reaches every position by a shortest path, so it
 /// finds an optimal solution, but not every one.
-pub struct Pruning;
+pub(super) struct Pruning;
 
 impl Automaton for Pruning {
     const START: u32 = fsm::START;
@@ -41,7 +41,7 @@ impl Automaton for Pruning {
 }
 
 /// Forbids only undoing the previous move, so it finds every solution of a length.
-pub struct Backtrack;
+pub(super) struct Backtrack;
 
 impl Automaton for Backtrack {
     const START: u32 = 15;

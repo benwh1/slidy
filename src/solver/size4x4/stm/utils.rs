@@ -15,21 +15,21 @@
 //! `1 2 3 4/5 6 7 8/9 10 11 12/13 14 15 0`. `to_internal` converts it;
 //! solutions come back as the moved tiles' directions (`directions`).
 
-pub mod build;
-pub mod index;
-pub mod walk;
+pub(super) mod build;
+pub(super) mod index;
+pub(super) mod walk;
 
 use crate::algorithm::direction::Direction;
 
 /// A 4x4 board: one tile per cell, 0 is the blank.
-pub type Board = [u8; 16];
+pub(super) type Board = [u8; 16];
 
 /// Blank-move directions come from slidy (`Up` = 0, `Left` = 1, `Down` = 2,
 /// `Right` = 3), matching the columns of this table.
 /// `NEIGHBOR_IN_DIRECTION[blank][direction]` is the internal position of the blank after moving
 /// it in direction `direction` ([`Direction`] order: up, left, down, right),
 /// or -1 when that move leaves the board.
-pub const NEIGHBOR_IN_DIRECTION: [[i8; 4]; 16] = [
+const NEIGHBOR_IN_DIRECTION: [[i8; 4]; 16] = [
     [-1, -1, 7, 1],
     [-1, 0, 6, 2],
     [-1, 1, 5, 3],
@@ -49,7 +49,7 @@ pub const NEIGHBOR_IN_DIRECTION: [[i8; 4]; 16] = [
 ];
 
 /// `NEIGHBOR_MASKS[cell]`: the cells next to `cell`, as a mask.
-pub const NEIGHBOR_MASKS: [u16; 16] = {
+const NEIGHBOR_MASKS: [u16; 16] = {
     let mut out = [0; 16];
     let mut cell = 0;
     while cell < 16 {
@@ -68,7 +68,7 @@ pub const NEIGHBOR_MASKS: [u16; 16] = {
 /// Hints the cache line at `address` into the cache ahead of a read. The tables are far larger
 /// than any cache, so nearly every lookup misses without this.
 #[inline(always)]
-pub fn prefetch(address: *const u8) {
+pub(super) fn prefetch(address: *const u8) {
     #[cfg(target_arch = "x86_64")]
     // SAFETY: SSE is enabled on all x86_64 targets, and a prefetch never faults.
     unsafe {
@@ -83,26 +83,28 @@ pub fn prefetch(address: *const u8) {
 /// Everything about a move that depends only on the blank's cell and the direction is
 /// precomputed, per orientation (`[direct, mirrored]`).
 #[derive(Clone, Copy)]
+// `pub` (in this private module) because the sealed `Search` trait, which `Pdb` exposes as a
+// supertrait, takes it; nothing outside the 4x4 STM solver can name it.
 pub struct Move {
     /// The direction the blank moves ([`Direction`] order: up 0, left 1, down 2, right 3).
-    pub(crate) direction: u8,
+    pub(super) direction: u8,
     /// The blank's cell after the move.
-    pub(crate) blank_after: [u8; 2],
+    pub(super) blank_after: [u8; 2],
     /// The lower of the blank's cells before and after the move.
-    pub(crate) lower_cell: [u8; 2],
+    pub(super) lower_cell: [u8; 2],
     /// How far apart the blank's cells before and after the move are, in label order: the cells
     /// strictly between them are the ones the moved tile passes.
-    pub(crate) cell_gap: [u8; 2],
+    pub(super) cell_gap: [u8; 2],
     /// Whether the blank moves to the higher cell (so the moved tile to the lower one).
-    pub(crate) blank_to_higher_cell: [bool; 2],
+    pub(super) blank_to_higher_cell: [bool; 2],
 }
 
 /// The usable moves from one blank cell.
 #[derive(Clone, Copy)]
-pub(crate) struct MoveList {
+pub(super) struct MoveList {
     /// How many moves there are.
-    pub(crate) count: u8,
-    pub(crate) moves: [Move; 4],
+    pub(super) count: u8,
+    pub(super) moves: [Move; 4],
 }
 
 /// `MOVES[blank][allowed]`: the moves available from `blank` among the
@@ -110,7 +112,7 @@ pub(crate) struct MoveList {
 /// duplicate-pruning automaton supplies the mask, which also excludes
 /// the move that would undo the previous one). The moves are listed in
 /// generation order: left, right, up, down.
-pub(crate) const MOVES: [[MoveList; 16]; 16] = build_moves();
+pub(super) const MOVES: [[MoveList; 16]; 16] = build_moves();
 
 /// The order the successors are generated in.
 const GENERATION_ORDER: [u8; 4] = [
@@ -173,7 +175,7 @@ const fn build_moves() -> [[MoveList; 16]; 16] {
 }
 
 /// Mirror of an internal position across the main diagonal.
-pub(crate) const MIRRORED_CELL: [u8; 16] = [0, 7, 8, 15, 14, 9, 6, 1, 2, 5, 10, 13, 12, 11, 4, 3];
+pub(super) const MIRRORED_CELL: [u8; 16] = [0, 7, 8, 15, 14, 9, 6, 1, 2, 5, 10, 13, 12, 11, 4, 3];
 
 /// The internal cell of each row-major cell.
 const ROW_MAJOR_TO_INTERNAL: [u8; 16] = [0, 1, 2, 3, 7, 6, 5, 4, 8, 9, 10, 11, 15, 14, 13, 12];
@@ -182,13 +184,13 @@ const ROW_MAJOR_TO_INTERNAL: [u8; 16] = [0, 1, 2, 3, 7, 6, 5, 4, 8, 9, 10, 11, 1
 /// same tables on the mirrored position, and the heuristic takes the better
 /// (larger) of both orientations.
 #[must_use]
-pub(crate) fn reflect(board: &Board) -> Board {
+pub(super) fn reflect(board: &Board) -> Board {
     std::array::from_fn(|cell| MIRRORED_CELL[board[MIRRORED_CELL[cell] as usize] as usize])
 }
 
 /// Internal position of the blank.
 #[must_use]
-pub(crate) fn blank_position(board: &Board) -> usize {
+pub(super) fn blank_position(board: &Board) -> usize {
     board
         .iter()
         .position(|&tile| tile == 0)
@@ -197,7 +199,7 @@ pub(crate) fn blank_position(board: &Board) -> usize {
 
 /// Convert a user board (row-major, tiles 1–15, 0 blank) to internal order.
 #[must_use]
-pub(crate) fn to_internal(input: &Board) -> Board {
+pub(super) fn to_internal(input: &Board) -> Board {
     std::array::from_fn(|cell| {
         let tile = input[15 - ROW_MAJOR_TO_INTERNAL[cell] as usize];
         ROW_MAJOR_TO_INTERNAL[(16 - tile as usize) % 16]
@@ -206,7 +208,7 @@ pub(crate) fn to_internal(input: &Board) -> Board {
 
 /// The moves of a blank trail (internal cells after each move, from `blank`), as the directions
 /// the moved tiles go.
-pub(crate) fn directions(
+pub(super) fn directions(
     blank: usize,
     trail: impl Iterator<Item = usize>,
 ) -> impl Iterator<Item = Direction> {
@@ -233,7 +235,7 @@ pub(crate) fn directions(
 
 /// `count` random internal boards (a fixed xorshift sequence), for tests.
 #[cfg(test)]
-pub(crate) fn random_boards(count: usize) -> impl Iterator<Item = Board> {
+fn random_boards(count: usize) -> impl Iterator<Item = Board> {
     let mut state: u64 = 0x9E37_79B9_7F4A_7C15;
     std::iter::repeat_with(move || {
         let mut board: Board = std::array::from_fn(|cell| cell as u8);

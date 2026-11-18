@@ -2,13 +2,13 @@
 //! [`Solver`](SolverT) interface.
 //!
 //! The search keeps the board in both orientations (`[direct, mirrored]`, mirrored across the
-//! main diagonal), generates successors through the move table and an [`automaton`] over moves,
+//! main diagonal), generates successors through the move table and an automaton over moves,
 //! and asks the pattern database to shift its indices (prefetching the entries) and to decode,
 //! prune and rank each successor. Each node's successors are generated before it is visited,
 //! while its siblings are generated or searched, so their table lines load in the meantime. The
 //! search is monomorphised per [`Pdb`] and every lookup is inlined into it.
 
-pub mod automaton;
+mod automaton;
 
 use std::{mem::MaybeUninit, ops::ControlFlow};
 

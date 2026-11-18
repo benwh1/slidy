@@ -12,7 +12,7 @@ use xxhash_rust::xxh3;
 use crate::solver::{
     config::PdbConfig,
     size4x4::stm::{
-        pdb::Pdb,
+        pdb::{Pdb, Search},
         utils::{
             Board, Move,
             build::{Cost, as_atomic, breadth_first_search, relax_minimums},
@@ -78,7 +78,10 @@ const LEN: usize = BOTTOM_SIX_START + SIX_TILE_TABLE_LEN;
 /// The [`xxh3`] hash of the database, checked by [`Pdb::try_from_bytes`].
 const HASH: u64 = 0xfe6a_4bd3_1b78_1448;
 
-/// The tiny pattern database. See the [module documentation](self).
+/// The tiny pattern database (5.9 MB): the maximum of two 6-6-3 partitions. Builds in
+/// about a second.
+///
+/// See [`Pdb`] for building it, and loading and saving its bytes.
 pub struct Tiny {
     bytes: Box<[u8]>,
 }
@@ -160,11 +163,6 @@ fn build_six_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig) {
 }
 
 impl Pdb for Tiny {
-    /// Each group's index: top row, left six, right six, right column, upper six, bottom six.
-    type Indices = [[u32; 6]; 2];
-    /// The 6-tile groups' values: left, right, upper, bottom.
-    type Values = [[u8; 4]; 2];
-
     fn new(config: &PdbConfig) -> Self {
         let mut bytes = vec![0; LEN].into_boxed_slice();
         let tables = [
@@ -198,6 +196,13 @@ impl Pdb for Tiny {
         assert_eq!(bytes.len(), LEN, "the database has the wrong length");
         Self { bytes }
     }
+}
+
+impl Search for Tiny {
+    /// Each group's index: top row, left six, right six, right column, upper six, bottom six.
+    type Indices = [[u32; 6]; 2];
+    /// The 6-tile groups' values: left, right, upper, bottom.
+    type Values = [[u8; 4]; 2];
 
     fn root(&self, boards: &[Board; 2]) -> (Self::Indices, Self::Values, u64) {
         let mut indices = [[0; 6]; 2];

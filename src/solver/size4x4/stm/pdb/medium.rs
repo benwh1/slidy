@@ -14,7 +14,7 @@ use xxhash_rust::xxh3;
 use crate::solver::{
     config::PdbConfig,
     size4x4::stm::{
-        pdb::Pdb,
+        pdb::{Pdb, Search},
         utils::{
             Board, Move,
             build::{Cost, as_atomic, breadth_first_search, relax_minimums},
@@ -86,7 +86,10 @@ const LEN: usize = CORNER_START + ONE_TILE_TABLE_LEN;
 /// The [`xxh3`] hash of the database, checked by [`Pdb::try_from_bytes`].
 const HASH: u64 = 0x0d61_c7fc_24c1_c3ad;
 
-/// The medium pattern database. See the [module documentation](self).
+/// The medium pattern database (75 MB): the maximum of a 7-7-1 partition and a 6-6-3 one.
+/// Builds in a minute or two.
+///
+/// See [`Pdb`] for building it, and loading and saving its bytes.
 pub struct Medium {
     bytes: Box<[u8]>,
 }
@@ -230,12 +233,6 @@ fn build_byte_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig) {
 }
 
 impl Pdb for Medium {
-    /// Each group's index: top seven, bottom seven, corner, top row, left six, right six.
-    type Indices = [[u32; 6]; 2];
-    /// The 7-tile groups' values (top, bottom), then the 6-tile groups' additive and full values
-    /// (left, right).
-    type Values = [[u8; 6]; 2];
-
     fn new(config: &PdbConfig) -> Self {
         let mut bytes = vec![0; LEN].into_boxed_slice();
         let top_seven = &mut bytes[TOP_SEVEN_START..BOTTOM_SEVEN_START];
@@ -269,6 +266,14 @@ impl Pdb for Medium {
         assert_eq!(bytes.len(), LEN, "the database has the wrong length");
         Self { bytes }
     }
+}
+
+impl Search for Medium {
+    /// Each group's index: top seven, bottom seven, corner, top row, left six, right six.
+    type Indices = [[u32; 6]; 2];
+    /// The 7-tile groups' values (top, bottom), then the 6-tile groups' additive and full values
+    /// (left, right).
+    type Values = [[u8; 6]; 2];
 
     fn root(&self, boards: &[Board; 2]) -> (Self::Indices, Self::Values, u64) {
         let mut indices = [[0; 6]; 2];

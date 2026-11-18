@@ -14,7 +14,7 @@ use xxhash_rust::xxh3;
 use crate::solver::{
     config::PdbConfig,
     size4x4::stm::{
-        pdb::Pdb,
+        pdb::{Pdb, Search},
         utils::{
             Board, Move,
             build::{Cost, as_atomic, breadth_first_search},
@@ -72,7 +72,10 @@ const LEN: usize = LAST_NINE_START + NINE_TILE_TABLE_LEN;
 // TODO: set from `test_pdb`'s output once the database has been built.
 const HASH: u64 = 0;
 
-/// The huge pattern database. See the [module documentation](self).
+/// The huge pattern database (17.0 GB): the maximum of two 9-6 partitions. Builds in about an
+/// hour, using up to 25 GB.
+///
+/// See [`Pdb`] for building it, and loading and saving its bytes.
 pub struct Huge {
     bytes: Box<[u8]>,
 }
@@ -178,12 +181,6 @@ fn build_nine_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig) {
 }
 
 impl Pdb for Huge {
-    /// Each group's index (last six, first nine, first six, last nine), then the blank's rank
-    /// among the free cells of the first and the last nine.
-    type Indices = [[u32; 6]; 2];
-    /// The 9-tile groups' additive and full values (first nine, then last nine).
-    type Values = [[u8; 4]; 2];
-
     fn new(config: &PdbConfig) -> Self {
         let mut bytes = vec![0; LEN].into_boxed_slice();
         build_six_tile_table(
@@ -217,6 +214,14 @@ impl Pdb for Huge {
         assert_eq!(bytes.len(), LEN, "the database has the wrong length");
         Self { bytes }
     }
+}
+
+impl Search for Huge {
+    /// Each group's index (last six, first nine, first six, last nine), then the blank's rank
+    /// among the free cells of the first and the last nine.
+    type Indices = [[u32; 6]; 2];
+    /// The 9-tile groups' additive and full values (first nine, then last nine).
+    type Values = [[u8; 4]; 2];
 
     fn root(&self, boards: &[Board; 2]) -> (Self::Indices, Self::Values, u64) {
         let [_, first_nine_mask, _, last_nine_mask] = GROUP_MASKS;

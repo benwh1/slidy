@@ -26,7 +26,7 @@ use crate::solver::{
 
 /// Which moves a distance counts.
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub enum Cost {
+pub(in crate::solver::size4x4::stm) enum Cost {
     /// Only moves of the group's tiles.
     Additive,
     /// Every move.
@@ -37,14 +37,14 @@ pub enum Cost {
 const UNVISITED: u8 = 3;
 
 /// `bytes` viewed as atomics, for writing from several threads.
-pub fn as_atomic(bytes: &mut [u8]) -> &[AtomicU8] {
+pub(in crate::solver::size4x4::stm) fn as_atomic(bytes: &mut [u8]) -> &[AtomicU8] {
     // SAFETY: `AtomicU8` has the same layout as `u8`, and the borrow is exclusive.
     unsafe { std::slice::from_raw_parts(bytes.as_mut_ptr().cast::<AtomicU8>(), bytes.len()) }
 }
 
 /// The cells reachable from the cells of `seed` through the cells of `free_cells`.
 #[must_use]
-pub fn reachable_region(seed: u16, free_cells: u16) -> u16 {
+pub(super) fn reachable_region(seed: u16, free_cells: u16) -> u16 {
     let mut region = seed;
     loop {
         let mut grown = region;
@@ -269,8 +269,12 @@ where
 /// `cost`'s distances, calling `visit(placement, blank, rank, distance)` once for every state
 /// (`rank`: how many cells below the blank's have no group tile), from several threads. Reports
 /// each layer to `config`'s callback.
-pub fn breadth_first_search<F>(tiles: &[u8], cost: Cost, config: &PdbConfig, visit: F)
-where
+pub(in crate::solver::size4x4::stm) fn breadth_first_search<F>(
+    tiles: &[u8],
+    cost: Cost,
+    config: &PdbConfig,
+    visit: F,
+) where
     F: Fn(u32, u32, usize, u8) + Sync,
 {
     let placements = placement_count(tiles.len());
@@ -363,7 +367,7 @@ where
 
 /// Lowers each placement's value in `minimums` (by steps of 2, keeping it admissible and its
 /// parity) until moving one of `tiles` to a neighbouring cell changes it by at most 3.
-pub fn relax_minimums(tiles: &[u8], minimums: &mut [u8]) {
+pub(in crate::solver::size4x4::stm) fn relax_minimums(tiles: &[u8], minimums: &mut [u8]) {
     let shifts = index_shift_table([&[tiles], &[]]);
     let minimums = as_atomic(minimums);
     let threads = thread::available_parallelism().map_or(1, usize::from);

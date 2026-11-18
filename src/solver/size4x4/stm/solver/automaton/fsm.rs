@@ -7,13 +7,13 @@
 //! `d` is allowed, so the move table can be indexed by the mask directly.
 
 /// The packed start node: the start state, every direction allowed.
-pub const START: u32 = 134159;
+pub(super) const START: u32 = 134159;
 
 /// `TRANSITIONS[state][dir]`: the state after moving the blank in `dir` (0 for a
 /// forbidden move, which the mask never offers). States are grouped by
 /// their mask, each group padded to a multiple of 64, so the table holds
 /// 16-bit states and [`ALLOWED_DIRECTIONS`] recovers the mask.
-pub static TRANSITIONS: [[u16; 4]; 8448] = [
+pub(super) static TRANSITIONS: [[u16; 4]; 8448] = [
     [128, 0, 0, 0],
     [2752, 0, 0, 0],
     [4196, 0, 0, 0],
@@ -8465,7 +8465,7 @@ pub static TRANSITIONS: [[u16; 4]; 8448] = [
 ];
 
 /// `ALLOWED_DIRECTIONS[state >> 6]`: the directions state `state` allows.
-pub static ALLOWED_DIRECTIONS: [u8; 132] = [
+pub(super) static ALLOWED_DIRECTIONS: [u8; 132] = [
     1, 2, 3, 3, 3, 3, 3, 4, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
     7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 8, 9, 9, 9, 9, 9, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 11,
     11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 13,
