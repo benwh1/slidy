@@ -22,7 +22,7 @@ mod test_util;
 use crate::{
     algorithm::metric::{Mtm, Stm},
     solver::{
-        size4x4::{mtm::solver::Solver as Solver44M, stm::solver::Solver as Solver44S},
+        size4x4::{mtm::solver::Solver as Solver44M, stm::old::solver::Solver as Solver44S},
         small::solver::Solver as SmallSolver,
     },
 };

@@ -10,7 +10,7 @@ use crate::{
     solver::{
         config::{PdbConfig, SolverConfig},
         search::{Search, iterative_deepening},
-        size4x4::stm::{pattern::Pattern, pdb::Pdb, puzzle::Puzzle as Puzzle4},
+        size4x4::stm::old::{pattern::Pattern, pdb::Pdb, puzzle::Puzzle as Puzzle4},
         solver::{Solver as SolverT, SolverError},
     },
 };
@@ -200,7 +200,7 @@ mod tests {
         puzzle::puzzle::Puzzle,
         solver::{
             config::SolverConfig,
-            size4x4::stm::solver::Solver,
+            size4x4::stm::old::solver::Solver,
             solver::{Solver as _, SolverError},
         },
     };

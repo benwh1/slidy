@@ -1,4 +1,4 @@
-use crate::{algorithm::direction::Direction, solver::size4x4::stm::pattern::Pattern};
+use crate::{algorithm::direction::Direction, solver::size4x4::stm::old::pattern::Pattern};
 
 pub(super) enum MoveResult {
     MovedPiece,

@@ -3,7 +3,7 @@ use std::{hint::black_box, str::FromStr as _};
 use criterion::{Criterion, criterion_group, criterion_main};
 use slidy::{
     puzzle::puzzle::Puzzle,
-    solver::{size4x4::stm::solver::Solver, solver::Solver as _},
+    solver::{size4x4::stm::old::solver::Solver, solver::Solver as _},
 };
 
 fn bench_solver_default(c: &mut Criterion) {

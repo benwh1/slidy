@@ -1,16 +1,26 @@
-//! A fast, low-memory, 4x4-specific solver using pattern databases of 3 and 4 pieces, based on
-//! the [ida15] solver by Robert Hilchie.
+//! Optimal 15-puzzle solver.
 //!
-//! The pattern databases are defined by splitting the puzzle into four quadrants, each containing
-//! 3 or 4 pieces. Only two are stored in memory, because the three quadrants with 4 pieces are all
-//! equivalent by symmetry.
-//!
-//! During the search, the puzzle is represented using four coordinates and moves are applied using
-//! a transposition table.
-//!
-//! [ida15]: https://web.ncf.ca/aa576/
+//! A single-threaded IDA* search ([`large`]) generic over a set of
+//! pattern-database tables ([`large::TableSet`]; the solver's is
+//! [`Tables`]), board geometry and solution rendering ([`tables`]), and
+//! table loading ([`pdb`]).
 
-mod pattern;
-mod pdb;
-mod puzzle;
-pub mod solver;
+#![allow(missing_docs, reason = "copied from solver3 as is; documented later")]
+
+pub mod build;
+mod fsm;
+pub mod generic;
+pub mod lab;
+pub mod large;
+pub mod max7896;
+pub mod old;
+pub mod pdb;
+pub mod sets;
+mod shift;
+pub mod tables;
+mod walk;
+pub mod x7896;
+pub mod x9669;
+
+/// The table set the solver uses: the max(9-6, 6-9) set ([`x9669`], 17.0 GB).
+pub type Tables = x9669::X9669;
