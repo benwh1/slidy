@@ -11,10 +11,10 @@
 
 use std::hint::select_unpredictable;
 
-use super::{Format, Group, MAX_GROUPS, Spec};
 use crate::solver::size4x4::stm::{
     pdb::{
         build::lehmer,
+        group::{Format, Group, MAX_GROUPS, Spec},
         region::{Dbs, decode_code, prefetch},
     },
     utils::{Board, NEIGHBORS},
@@ -628,7 +628,7 @@ where
 mod tests {
     use super::*;
     use crate::solver::size4x4::stm::{
-        pdb::sets::{HugeSpec, LargeSpec, MediumSpec, TinySpec},
+        pdb::{huge, large, large_compact, medium, tiny},
         utils,
     };
 
@@ -639,7 +639,8 @@ mod tests {
     {
         // The table is never read: only the index arithmetic is tested.
         let region = [0u8; 64];
-        let dbs = Dbs::for_test(region.as_ptr());
+        // SAFETY: the region outlives the view.
+        let dbs = unsafe { Dbs::from_base(region.as_ptr()) };
         for board in utils::random_boards(500) {
             let blank = board.iter().position(|&t| t == 0).unwrap() as u8;
             for (g, &group) in S::GROUPS.iter().enumerate() {
@@ -686,9 +687,10 @@ mod tests {
 
     #[test]
     fn shift_matches_full_recompute() {
-        check_shift::<TinySpec>();
-        check_shift::<MediumSpec>();
-        check_shift::<LargeSpec>();
-        check_shift::<HugeSpec>();
+        check_shift::<tiny::Groups>();
+        check_shift::<medium::Groups>();
+        check_shift::<large_compact::Groups>();
+        check_shift::<large::Groups>();
+        check_shift::<huge::Groups>();
     }
 }

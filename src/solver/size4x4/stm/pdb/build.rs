@@ -4,7 +4,7 @@
 use std::sync::atomic::{AtomicU8, Ordering::Relaxed};
 
 use crate::solver::size4x4::stm::{
-    pdb::tables::{Format, Group},
+    pdb::group::{Format, Group},
     utils::NEIGHBORS,
 };
 
@@ -88,17 +88,18 @@ fn atomic(v: &mut [u8]) -> &[AtomicU8] {
     unsafe { std::slice::from_raw_parts(v.as_mut_ptr().cast::<AtomicU8>(), v.len()) }
 }
 
+/// A placement's neighbours: `f(p, push)` pushes each one.
+type Neighbours<'a> = dyn Fn(usize, &mut dyn FnMut(usize)) + Sync + 'a;
+
 /// One breadth-first layer: `f(p, push)` for every placement of `cur` on `threads` threads,
 /// collecting the pushed placements (deduplicated by `mark` for layer `d`).
-fn layer(
-    cur: &[u32],
-    mark: &[AtomicU8],
-    d: u8,
-    threads: usize,
-    f: &(dyn Fn(usize, &mut dyn FnMut(usize)) + Sync),
-) -> Vec<u32> {
+fn layer(cur: &[u32], mark: &[AtomicU8], d: u8, threads: usize, f: &Neighbours) -> Vec<u32> {
     let chunk = cur.len().div_ceil(threads).max(1);
     std::thread::scope(|s| {
+        #[expect(
+            clippy::needless_collect,
+            reason = "spawns every thread before joining any"
+        )]
         let handles: Vec<_> = cur
             .chunks(chunk)
             .map(|c| {
@@ -131,6 +132,7 @@ pub struct Values {
 }
 
 /// Build `group`'s values on `threads` threads.
+#[must_use]
 pub fn values(group: Group, threads: usize) -> Values {
     let (tiles, k) = group.tile_list();
     let home = &tiles[..k];
@@ -236,6 +238,7 @@ pub fn values(group: Group, threads: usize) -> Values {
 /// Each placement's additive value minimised over the blank's cells, then lowered (by steps of
 /// 2, keeping it admissible and its parity) until a move changes it by at most 3, on `threads`
 /// threads.
+#[must_use]
 pub fn relaxed_min(group: Group, add: &[u8], threads: usize) -> Vec<u8> {
     let k = group.len() as usize;
     let mut minv: Vec<u8> = add.chunks(16).map(|c| *c.iter().min().unwrap()).collect();
@@ -245,6 +248,10 @@ pub fn relaxed_min(group: Group, add: &[u8], threads: usize) -> Vec<u8> {
     // they repeat until one changes nothing.
     loop {
         let changed = std::thread::scope(|s| {
+            #[expect(
+                clippy::needless_collect,
+                reason = "spawns every thread before joining any"
+            )]
             let handles: Vec<_> = (0..min.len())
                 .step_by(chunk)
                 .map(|lo| {
@@ -351,7 +358,7 @@ pub fn pair_to_pair8(group: Group, pair: &[u8], out: &mut [u8], threads: usize) 
     std::thread::scope(|s| {
         for (t, out) in out.chunks_mut(2 * chunk).enumerate() {
             s.spawn(move || {
-                for (i, o) in out.chunks_exact_mut(2).enumerate() {
+                for (i, o) in out.as_chunks_mut::<2>().0.iter_mut().enumerate() {
                     let p = t * chunk + i;
                     let word = u32::from_le_bytes(pair[4 * p..4 * p + 4].try_into().unwrap());
                     let mut free = !occupied(&unlehmer(p as u32, k)[..k]);
@@ -363,7 +370,7 @@ pub fn pair_to_pair8(group: Group, pair: &[u8], out: &mut [u8], threads: usize) 
                         w |= ((word >> (2 * c + 1)) & 1) as u16 * (1 << (8 + r));
                         r += 1;
                     }
-                    o.copy_from_slice(&w.to_le_bytes());
+                    *o = w.to_le_bytes();
                 }
             });
         }

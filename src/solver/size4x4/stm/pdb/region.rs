@@ -223,6 +223,12 @@ impl Region {
         Ok(())
     }
 
+    /// The layout of the tables.
+    #[must_use]
+    pub const fn layout(&self) -> &'static Layout {
+        self.layout
+    }
+
     #[must_use]
     pub fn as_dbs(&self) -> Dbs<'_> {
         let start = match &self.bytes {
@@ -253,14 +259,23 @@ unsafe impl Send for Dbs<'_> {}
 unsafe impl Sync for Dbs<'_> {}
 
 impl Dbs<'_> {
-    /// A view whose base is `base`, for tests of the index arithmetic
-    /// (nothing may be read through it).
-    #[cfg(test)]
-    pub(crate) fn for_test(base: *const u8) -> Self {
-        Dbs {
+    /// The view whose base pointer is `base`, from [`Self::base`].
+    ///
+    /// # Safety
+    ///
+    /// `base` must come from a region that outlives the view.
+    #[must_use]
+    pub(crate) const unsafe fn from_base(base: *const u8) -> Self {
+        Self {
             base,
             _region: PhantomData,
         }
+    }
+
+    /// The base pointer, for [`Self::from_base`].
+    #[must_use]
+    pub(crate) const fn base(self) -> *const u8 {
+        self.base
     }
 
     /// Address of a table entry, for prefetching: `offset` is a table's

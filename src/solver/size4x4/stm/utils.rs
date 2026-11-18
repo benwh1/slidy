@@ -10,8 +10,8 @@
 //! ```
 //!
 //! The user-facing format is row-major with tiles 1–15 and 0 as the blank:
-//! `1 2 3 4/5 6 7 8/9 10 11 12/13 14 15 0`. [`to_internal`] converts it;
-//! solutions come back as blank-move strings over `ULDR` ([`solution_string`]).
+//! `1 2 3 4/5 6 7 8/9 10 11 12/13 14 15 0`. `to_internal` converts it;
+//! solutions come back as the moved tiles' directions (`directions`).
 
 use std::error::Error;
 
@@ -196,14 +196,6 @@ pub fn parse_scramble(text: &str) -> Result<Board, Box<dyn Error>> {
     Ok(std::array::from_fn(|i| puzzle.piece_at(i as u64) as u8))
 }
 
-/// Render a blank trail (internal cells after each move, from `blank`) as
-/// a tile-move string over `ULDR`: each char is where the *moved tile* goes
-/// (`R` moves a tile right, so the blank goes left).
-#[must_use]
-pub(crate) fn solution_string(blank: usize, trail: impl Iterator<Item = usize>) -> String {
-    directions(blank, trail).map(|d| d.as_char()).collect()
-}
-
 /// The moves of a blank trail (internal cells after each move, from `blank`), as the directions
 /// the moved tiles go.
 pub(crate) fn directions(
@@ -270,8 +262,13 @@ mod tests {
         );
         // Multi-step blank trail renders in order (serpentine internal 0→1 is
         // row-major right).
-        assert_eq!(solution_string(0, [1, 2, 3].into_iter()), "RRR");
-        assert_eq!(solution_string(0, [7].into_iter()), "D");
+        let solution_string = |blank, trail: &[usize]| {
+            directions(blank, trail.iter().copied())
+                .map(|d| d.as_char())
+                .collect::<String>()
+        };
+        assert_eq!(solution_string(0, &[1, 2, 3]), "RRR");
+        assert_eq!(solution_string(0, &[7]), "D");
     }
 
     #[test]

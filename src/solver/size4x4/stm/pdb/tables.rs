@@ -1,5 +1,6 @@
-//! A generic [`TableSet`]: any number of partitions of tiles 1-15 into groups, each group's
-//! table in one of a few [`Format`]s, looked up in both orientations (direct and mirrored).
+//! The lookups shared by every table set ([`Tables`]): any number of partitions of tiles 1-15
+//! into groups, each group's table in one of a few [`Format`]s, looked up in both orientations
+//! (direct and mirrored).
 //!
 //! A set is described by a [`Spec`]: its [`Group`]s, each naming its tiles, the partition it
 //! belongs to and the format of its table. The heuristic is the maximum, over both orientations,
@@ -8,229 +9,16 @@
 //! against the parent's values, which the search carries; the root's come from walking downhill
 //! in each coded table (`walk`).
 
-use std::{hint::select_unpredictable, marker::PhantomData};
+use std::{error::Error, hint::select_unpredictable, marker::PhantomData, path::Path};
 
 use crate::solver::size4x4::stm::{
-    large::TableSet,
-    pdb::region::{Dbs, Layout, decode_code, prefetch},
-    utils::{Board, Move, permutations},
+    pdb::{
+        Pdb, build,
+        group::{Format, Group, MAX_PARTS, Spec},
+        region::{Dbs, Region, decode_code, prefetch},
+    },
+    utils::{Board, Move},
 };
-
-/// The most groups a set may have.
-pub const MAX_GROUPS: usize = 6;
-
-/// The most partitions a set may have.
-pub const MAX_PARTS: usize = 4;
-
-/// How a group's table stores its values.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Format {
-    /// The additive value minimised over the blank's cells (relaxed so that a move changes it by
-    /// 1 or 3), as a 2-bit code `(value >> 1) & 3` per placement, four per byte.
-    Min2,
-    /// The exact additive value: bit `cell` of a little-endian u16 per placement holds
-    /// `(value >> 1) & 1` for the blank at `cell`.
-    Cells,
-    /// The exact additive and full values: bits `2 * cell` and `2 * cell + 1` of a little-endian
-    /// u32 per placement.
-    Pair,
-    /// The exact additive and full values of a group of 8 or more tiles: bits `r` and `8 + r` of
-    /// a little-endian u16 per placement, for the blank at the `r`-th cell not holding a group
-    /// tile.
-    Pair8,
-    /// Plain values: a little-endian u16 per placement and blank cell, the additive value in the
-    /// low byte, the full one in the high byte.
-    Bytes16,
-    /// Plain additive values: a byte per placement and blank cell.
-    Bytes8,
-}
-
-impl Format {
-    /// Index units per placement: bytes, except that `Min2`'s and `Pair8`'s indices count
-    /// placements (so a 9-tile `Pair8` index fits a u32).
-    pub const fn scale(self) -> u32 {
-        match self {
-            Self::Min2 => 1,
-            Self::Cells => 2,
-            Self::Pair => 4,
-            Self::Pair8 => 1,
-            Self::Bytes16 => 32,
-            Self::Bytes8 => 16,
-        }
-    }
-
-    /// Whether the table holds codes that decode against the parent's value.
-    pub const fn coded(self) -> bool {
-        matches!(self, Self::Min2 | Self::Cells | Self::Pair | Self::Pair8)
-    }
-
-    /// Whether the table holds a full value.
-    pub const fn has_full(self) -> bool {
-        matches!(self, Self::Pair | Self::Pair8 | Self::Bytes16)
-    }
-}
-
-/// One group of tiles and its table.
-#[derive(Clone, Copy, Debug)]
-pub struct Group {
-    /// The group's tiles, as a mask over tile labels (internal labels: tile `t`'s home is
-    /// cell `t`).
-    pub tiles: u16,
-    /// The partition the group belongs to.
-    pub partition: u8,
-    /// Its table's format.
-    pub format: Format,
-    /// Whether its full value is a term of the maximum (only for formats that hold one).
-    pub full: bool,
-}
-
-impl Group {
-    /// The group of `tiles` in `partition`, its table in `format`.
-    pub const fn new(tiles: &[u8], partition: u8, format: Format) -> Self {
-        let mut mask = 0u16;
-        let mut i = 0;
-        while i < tiles.len() {
-            assert!(tiles[i] >= 1 && tiles[i] <= 15);
-            mask |= 1 << tiles[i];
-            i += 1;
-        }
-        assert!(!matches!(format, Format::Pair8) || mask.count_ones() >= 8);
-        Self {
-            tiles: mask,
-            partition,
-            format,
-            full: false,
-        }
-    }
-
-    /// The same group with its full value as a term.
-    #[must_use]
-    pub const fn with_full(mut self) -> Self {
-        assert!(self.format.has_full());
-        self.full = true;
-        self
-    }
-
-    /// Number of tiles.
-    pub const fn len(self) -> u32 {
-        self.tiles.count_ones()
-    }
-
-    /// Number of placements of the group's tiles.
-    pub const fn placements(self) -> u64 {
-        let mut n = 1u64;
-        let mut i = 0;
-        while i < self.len() {
-            n *= 16 - i as u64;
-            i += 1;
-        }
-        n
-    }
-
-    /// Size of its table in bytes.
-    pub const fn bytes(self) -> u64 {
-        let n = self.placements();
-        match self.format {
-            Format::Min2 => n.div_ceil(4),
-            Format::Pair8 => 2 * n,
-            f @ (Format::Cells | Format::Pair | Format::Bytes16 | Format::Bytes8) => {
-                n * f.scale() as u64
-            }
-        }
-    }
-
-    /// Whether `tile` belongs to the group.
-    #[inline(always)]
-    pub const fn has(self, tile: u8) -> bool {
-        (self.tiles >> tile) & 1 != 0
-    }
-
-    /// Lehmer weight of `tile` (a group tile) in the group's index: tiles in ascending order,
-    /// cells in radix 16, 15, ...
-    const fn weight(self, tile: u8) -> u32 {
-        let i = (self.tiles & ((1 << tile) - 1)).count_ones() as i32;
-        let k = self.len() as i32;
-        permutations(15 - i, k - 1 - i) as u32
-    }
-
-    /// The group's tiles in ascending order, and how many there are.
-    pub fn tile_list(self) -> ([u8; 16], usize) {
-        let mut out = [0; 16];
-        let mut k = 0;
-        for t in 1..16 {
-            if self.has(t) {
-                out[k] = t;
-                k += 1;
-            }
-        }
-        (out, k)
-    }
-}
-
-/// The table sizes of `groups`, one table per group, for a [`Layout`].
-pub const fn parts<const N: usize>(groups: &[Group; N]) -> [(&'static str, u64); N] {
-    let mut out = [("", 0); N];
-    let mut g = 0;
-    while g < N {
-        out[g].1 = groups[g].bytes();
-        g += 1;
-    }
-    out
-}
-
-/// A generic table set's description.
-pub trait Spec: 'static {
-    /// The groups, one table each. Every partition covers tiles 1-15 exactly once.
-    const GROUPS: &'static [Group];
-    /// The tables' layout: one part per group, in order (see [`parts`]).
-    const LAYOUT: Layout;
-
-    /// Number of partitions.
-    const PARTS: usize = count_parts(Self::GROUPS);
-    /// Each group's displacement from the base pointer.
-    const OFFSETS: [isize; MAX_GROUPS] = offsets(&Self::LAYOUT, Self::GROUPS.len());
-    /// The index shift tables.
-    const SHIFT: &'static Shift = &Shift::new(Self::GROUPS);
-}
-
-const fn count_parts(groups: &[Group]) -> usize {
-    assert!(groups.len() <= MAX_GROUPS);
-    let mut parts = 0;
-    let mut g = 0;
-    while g < groups.len() {
-        if groups[g].partition as usize + 1 > parts {
-            parts = groups[g].partition as usize + 1;
-        }
-        g += 1;
-    }
-    assert!(parts <= MAX_PARTS);
-    // Every partition covers tiles 1-15 exactly once.
-    let mut p = 0;
-    while p < parts {
-        let mut covered = 0u16;
-        let mut g = 0;
-        while g < groups.len() {
-            if groups[g].partition as usize == p {
-                assert!(covered & groups[g].tiles == 0);
-                covered |= groups[g].tiles;
-            }
-            g += 1;
-        }
-        assert!(covered == 0xFFFE);
-        p += 1;
-    }
-    parts
-}
-
-const fn offsets(layout: &Layout, n: usize) -> [isize; MAX_GROUPS] {
-    let mut out = [0; MAX_GROUPS];
-    let mut g = 0;
-    while g < n {
-        out[g] = layout.offset(g);
-        g += 1;
-    }
-    out
-}
 
 /// Per-tile Lehmer weights for every partition, scaled to byte offsets in the moved tile's
 /// group's table, with partition `p` in 32-bit lane `p % 2` of word `p / 2`, so a scanned cell
@@ -243,7 +31,7 @@ pub struct Shift {
 }
 
 impl Shift {
-    const fn new(groups: &[Group]) -> Self {
+    pub(super) const fn new(groups: &[Group]) -> Self {
         let mut contrib = [[[0u64; 2]; 16]; 16];
         let mut wbits = [[0u64; 2]; 16];
         let mut g = 0;
@@ -315,78 +103,79 @@ macro_rules! each_part {
     };
 }
 
-/// The generic table set for spec `S`.
-pub struct Gen<S, const N: usize>(PhantomData<S>);
-
-/// Both orientations' scaled indices, one per group.
-#[derive(Clone, Copy)]
-pub struct Indices<const N: usize> {
-    idx: [[u32; N]; 2],
-    /// Each `Pair8` group's blank rank: how many cells below the blank's hold none of the
-    /// group's tiles (unused for other formats).
-    rank: [[u8; N]; 2],
+/// The tables of the set that spec `S` describes (`N` is its number of groups), and their
+/// lookups.
+pub struct Tables<S, const N: usize> {
+    region: Region,
+    /// The region's [`Dbs`] base, which a lookup adds its table's offset to.
+    base: *const u8,
+    spec: PhantomData<S>,
 }
 
-/// A node's values in both orientations: each group's additive and full value.
-#[derive(Clone, Copy)]
-pub struct Values<const N: usize> {
-    a: [[u8; N]; 2],
-    f: [[u8; N]; 2],
-}
+// SAFETY: the tables are never written after construction, so they can be shared and sent like
+// the `Region` they point into.
+unsafe impl<S, const N: usize> Send for Tables<S, N> {}
+// SAFETY: as for `Send`.
+unsafe impl<S, const N: usize> Sync for Tables<S, N> {}
 
-/// `((value + 1) >> 1) & 1`: the entry bit of `value + 1`. A move changes an exact value by
-/// exactly 1 and an entry holds `(v >> 1) & 1`, so a child's bit matches this exactly when its
-/// value is `value + 1`.
-#[inline(always)]
-const fn up(value: u32) -> u32 {
-    ((value + 1) >> 1) & 1
-}
-
-/// One group's values at a node, set up for decoding its children's entries.
-#[derive(Clone, Copy)]
-pub struct Half {
-    /// The additive value (kept when none of the group's tiles moves).
-    a: u32,
-    /// `Min2`: the middle code `(a + 5) / 2`; full formats: the full value + 1.
-    f: u32,
-    /// `Min2`: the lowest candidate `a - 3`; bit formats: the entry bits of `value + 1` where
-    /// the child's bits sit (a child's bit that differs went down).
-    m: u32,
-}
-
-impl Half {
-    #[inline(always)]
-    fn new(format: Format, a: u8, f: u8) -> Self {
-        let (a, f) = (u32::from(a), u32::from(f));
-        match format {
-            Format::Min2 => Self {
-                a,
-                f: u32::midpoint(a, 5),
-                m: a.wrapping_sub(3),
-            },
-            Format::Cells => Self { a, f: 0, m: up(a) },
-            Format::Pair => Self {
-                a,
-                f: f + 1,
-                m: up(a) | (up(f) << 1),
-            },
-            Format::Pair8 => Self {
-                a,
-                f: f + 1,
-                m: up(a) | (up(f) << 8),
-            },
-            Format::Bytes16 | Format::Bytes8 => Self { a, f, m: 0 },
+impl<S: Spec, const N: usize> Tables<S, N> {
+    /// Tables held in `region`, which must have `S`'s layout.
+    #[must_use]
+    pub fn from_region(region: Region) -> Self {
+        const { assert!(N == S::GROUPS.len(), "N is the number of groups") };
+        assert!(
+            region.layout().size() == S::LAYOUT.size(),
+            "the region has the set's layout"
+        );
+        let base = region.as_dbs().base();
+        Self {
+            region,
+            base,
+            spec: PhantomData,
         }
     }
-}
 
-/// A node's values in both orientations set up for decoding.
-#[derive(Clone, Copy)]
-pub struct Decoder<const N: usize> {
-    h: [[Half; N]; 2],
-}
+    /// Builds the tables in memory on `threads` threads.
+    #[must_use]
+    pub fn build(threads: usize) -> Self {
+        let region = Region::build(&S::LAYOUT, |part, out| {
+            let group = S::GROUPS[part];
+            build::encode(group, &build::values(group, threads), out, threads);
+        })
+        .expect("allocating the tables");
+        Self::from_region(region)
+    }
 
-impl<S: Spec, const N: usize> Gen<S, N> {
+    /// Reads the tables from `dir`: the set's combined file (see [`Self::save`]), or else its
+    /// separate table files. Only the files' sizes are checked: other tables of the right sizes
+    /// give wrong solutions (or a panic), though never undefined behaviour.
+    pub fn load(dir: &Path) -> Result<Self, Box<dyn Error>> {
+        Ok(Self::from_region(Region::preload(dir, &S::LAYOUT)?))
+    }
+
+    /// Maps the set's combined file in `dir` read-only, so that processes using the same file
+    /// share its memory. See [`Self::load`].
+    pub fn map(dir: &Path) -> Result<Self, Box<dyn Error>> {
+        Ok(Self::from_region(Region::map(dir, &S::LAYOUT)?))
+    }
+
+    /// Saves the tables to `dir` as the set's combined file.
+    pub fn save(&self, dir: &Path) -> Result<(), Box<dyn Error>> {
+        self.region.save(dir)
+    }
+
+    /// The tables' size in bytes.
+    #[must_use]
+    pub const fn size() -> u64 {
+        S::LAYOUT.size()
+    }
+
+    #[inline(always)]
+    fn dbs(&self) -> Dbs<'_> {
+        // SAFETY: the base comes from this region, which lives as long as `self`.
+        unsafe { Dbs::from_base(self.base) }
+    }
+
     /// One orientation's indices after move `m`, which moves `tile` into the blank.
     #[inline(always)]
     fn shift_side(
@@ -532,15 +321,82 @@ impl<S: Spec, const N: usize> Gen<S, N> {
     }
 }
 
-impl<S: Spec, const N: usize> TableSet for Gen<S, N> {
-    const LAYOUT: Layout = S::LAYOUT;
+/// Both orientations' scaled indices, one per group.
+#[derive(Clone, Copy)]
+pub struct Indices<const N: usize> {
+    idx: [[u32; N]; 2],
+    /// Each `Pair8` group's blank rank: how many cells below the blank's hold none of the
+    /// group's tiles (unused for other formats).
+    rank: [[u8; N]; 2],
+}
+
+/// A node's values in both orientations: each group's additive and full value.
+#[derive(Clone, Copy)]
+pub struct Values<const N: usize> {
+    a: [[u8; N]; 2],
+    f: [[u8; N]; 2],
+}
+
+/// `((value + 1) >> 1) & 1`: the entry bit of `value + 1`. A move changes an exact value by
+/// exactly 1 and an entry holds `(v >> 1) & 1`, so a child's bit matches this exactly when its
+/// value is `value + 1`.
+#[inline(always)]
+const fn up(value: u32) -> u32 {
+    ((value + 1) >> 1) & 1
+}
+
+/// One group's values at a node, set up for decoding its children's entries.
+#[derive(Clone, Copy)]
+pub struct Half {
+    /// The additive value (kept when none of the group's tiles moves).
+    a: u32,
+    /// `Min2`: the middle code `(a + 5) / 2`; full formats: the full value + 1.
+    f: u32,
+    /// `Min2`: the lowest candidate `a - 3`; bit formats: the entry bits of `value + 1` where
+    /// the child's bits sit (a child's bit that differs went down).
+    m: u32,
+}
+
+impl Half {
+    #[inline(always)]
+    fn new(format: Format, a: u8, f: u8) -> Self {
+        let (a, f) = (u32::from(a), u32::from(f));
+        match format {
+            Format::Min2 => Self {
+                a,
+                f: u32::midpoint(a, 5),
+                m: a.wrapping_sub(3),
+            },
+            Format::Cells => Self { a, f: 0, m: up(a) },
+            Format::Pair => Self {
+                a,
+                f: f + 1,
+                m: up(a) | (up(f) << 1),
+            },
+            Format::Pair8 => Self {
+                a,
+                f: f + 1,
+                m: up(a) | (up(f) << 8),
+            },
+            Format::Bytes16 | Format::Bytes8 => Self { a, f, m: 0 },
+        }
+    }
+}
+
+/// A node's values in both orientations set up for decoding.
+#[derive(Clone, Copy)]
+pub struct Decoder<const N: usize> {
+    h: [[Half; N]; 2],
+}
+
+impl<S: Spec, const N: usize> Pdb for Tables<S, N> {
     type Indices = Indices<N>;
     type Values = Values<N>;
     type Decoder = Decoder<N>;
     type Decoded = Values<N>;
 
-    fn root(dbs: Dbs<'_>, boards: &[Board; 2], _blank: usize) -> (Indices<N>, Values<N>, u64) {
-        const { assert!(N == S::GROUPS.len(), "N is the number of groups") };
+    fn root(&self, boards: &[Board; 2], _blank: usize) -> (Indices<N>, Values<N>, u64) {
+        let dbs = self.dbs();
         let mut idx = [[0u32; N]; 2];
         let mut rank = [[0u8; N]; 2];
         let mut values = Values {
@@ -591,7 +447,8 @@ impl<S: Spec, const N: usize> TableSet for Gen<S, N> {
     }
 
     #[inline(always)]
-    fn prefetch(dbs: Dbs<'_>, c: &Indices<N>, blanks: [u8; 2]) {
+    fn prefetch(&self, c: &Indices<N>, blanks: [u8; 2]) {
+        let dbs = self.dbs();
         // In the order evaluate reads them.
         each_part!(S, p, {
             for s in 0..2 {
@@ -620,13 +477,14 @@ impl<S: Spec, const N: usize> TableSet for Gen<S, N> {
     /// and the sum of all the estimates below.
     #[inline(always)]
     fn evaluate(
-        dbs: Dbs<'_>,
+        &self,
         c: &Indices<N>,
         blanks: [u8; 2],
         tiles: [u8; 2],
         decoder: &Decoder<N>,
         depth: u64,
     ) -> Option<(u64, Values<N>)> {
+        let dbs = self.dbs();
         let mut out = Values {
             a: [[0; N]; 2],
             f: [[0; N]; 2],
