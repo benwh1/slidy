@@ -46,13 +46,14 @@ pub enum Format {
 }
 
 impl Format {
-    /// Bytes per placement in the scaled index (`Min2`'s index counts placements).
+    /// Index units per placement: bytes, except that `Min2`'s and `Pair8`'s indices count
+    /// placements (so a 9-tile `Pair8` index fits a u32).
     pub const fn scale(self) -> u32 {
         match self {
             Self::Min2 => 1,
             Self::Cells => 2,
             Self::Pair => 4,
-            Self::Pair8 => 2,
+            Self::Pair8 => 1,
             Self::Bytes16 => 32,
             Self::Bytes8 => 16,
         }
@@ -103,6 +104,7 @@ impl Group {
     }
 
     /// The same group with its full value as a term.
+    #[must_use]
     pub const fn with_full(mut self) -> Self {
         assert!(self.format.has_full());
         self.full = true;
@@ -130,7 +132,10 @@ impl Group {
         let n = self.placements();
         match self.format {
             Format::Min2 => n.div_ceil(4),
-            f => n * f.scale() as u64,
+            Format::Pair8 => 2 * n,
+            f @ (Format::Cells | Format::Pair | Format::Bytes16 | Format::Bytes8) => {
+                n * f.scale() as u64
+            }
         }
     }
 
@@ -294,6 +299,22 @@ macro_rules! each_group {
     };
 }
 
+/// Unrolls `$body` for `$p` in `0..MAX_PARTS`, skipping the partitions a set does not have.
+macro_rules! each_part {
+    ($s:ty, $p:ident, $body:block) => {{
+        each_part!(@one $s, $p, 0, $body);
+        each_part!(@one $s, $p, 1, $body);
+        each_part!(@one $s, $p, 2, $body);
+        each_part!(@one $s, $p, 3, $body);
+    }};
+    (@one $s:ty, $p:ident, $n:literal, $body:block) => {
+        if $n < <$s>::PARTS {
+            let $p: usize = $n;
+            $body
+        }
+    };
+}
+
 /// The generic table set for spec `S`.
 pub struct Gen<S, const N: usize>(PhantomData<S>);
 
@@ -301,8 +322,9 @@ pub struct Gen<S, const N: usize>(PhantomData<S>);
 #[derive(Clone, Copy)]
 pub struct Indices<const N: usize> {
     idx: [[u32; N]; 2],
-    /// The cells holding each `Pair8` group's tiles (unused for other formats).
-    occ: [[u16; N]; 2],
+    /// Each `Pair8` group's blank rank: how many cells below the blank's hold none of the
+    /// group's tiles (unused for other formats).
+    rank: [[u8; N]; 2],
 }
 
 /// A node's values in both orientations: each group's additive and full value.
@@ -312,10 +334,56 @@ pub struct Values<const N: usize> {
     f: [[u8; N]; 2],
 }
 
-/// `((value + 1) >> 1) & 1`: the entry bit of `value + 1`.
+/// `((value + 1) >> 1) & 1`: the entry bit of `value + 1`. A move changes an exact value by
+/// exactly 1 and an entry holds `(v >> 1) & 1`, so a child's bit matches this exactly when its
+/// value is `value + 1`.
 #[inline(always)]
 const fn up(value: u32) -> u32 {
     ((value + 1) >> 1) & 1
+}
+
+/// One group's values at a node, set up for decoding its children's entries.
+#[derive(Clone, Copy)]
+pub struct Half {
+    /// The additive value (kept when none of the group's tiles moves).
+    a: u32,
+    /// `Min2`: the middle code `(a + 5) / 2`; full formats: the full value + 1.
+    f: u32,
+    /// `Min2`: the lowest candidate `a - 3`; bit formats: the entry bits of `value + 1` where
+    /// the child's bits sit (a child's bit that differs went down).
+    m: u32,
+}
+
+impl Half {
+    #[inline(always)]
+    fn new(format: Format, a: u8, f: u8) -> Self {
+        let (a, f) = (u32::from(a), u32::from(f));
+        match format {
+            Format::Min2 => Self {
+                a,
+                f: u32::midpoint(a, 5),
+                m: a.wrapping_sub(3),
+            },
+            Format::Cells => Self { a, f: 0, m: up(a) },
+            Format::Pair => Self {
+                a,
+                f: f + 1,
+                m: up(a) | (up(f) << 1),
+            },
+            Format::Pair8 => Self {
+                a,
+                f: f + 1,
+                m: up(a) | (up(f) << 8),
+            },
+            Format::Bytes16 | Format::Bytes8 => Self { a, f, m: 0 },
+        }
+    }
+}
+
+/// A node's values in both orientations set up for decoding.
+#[derive(Clone, Copy)]
+pub struct Decoder<const N: usize> {
+    h: [[Half; N]; 2],
 }
 
 impl<S: Spec, const N: usize> Gen<S, N> {
@@ -323,12 +391,12 @@ impl<S: Spec, const N: usize> Gen<S, N> {
     #[inline(always)]
     fn shift_side(
         base: [u32; N],
-        occ: [u16; N],
+        rank: [u8; N],
         board: &Board,
         m: &Move,
         side: usize,
         tile: u8,
-    ) -> ([u32; N], [u16; N]) {
+    ) -> ([u32; N], [u8; N]) {
         let (lo, gap, sign) = (m.lo[side] as usize, m.gap[side] as usize, m.sign[side] != 0);
         let two = S::PARTS > 2;
         // SAFETY: tile is a tile value.
@@ -337,14 +405,23 @@ impl<S: Spec, const N: usize> Gen<S, N> {
         let own = unsafe { S::SHIFT.wbits.get_unchecked(tile as usize) };
         let mut acc0 = own[0];
         let mut acc1 = if two { own[1] } else { 0 };
+        // Each `Pair8` group's tiles among the cells passed.
+        let mut inside = [0u8; N];
         macro_rules! cell {
             ($k:literal) => {{
-                // SAFETY: a cell strictly between the two blank positions, and a tile value.
-                let packed = unsafe { row.get_unchecked(*board.get_unchecked(lo + $k) as usize) };
+                // SAFETY: a cell strictly between the two blank positions.
+                let other = unsafe { *board.get_unchecked(lo + $k) };
+                // SAFETY: a tile value.
+                let packed = unsafe { row.get_unchecked(other as usize) };
                 acc0 = acc0.wrapping_add(packed[0]);
                 if two {
                     acc1 = acc1.wrapping_add(packed[1]);
                 }
+                each_group!(N, g, {
+                    if matches!(S::GROUPS[g].format, Format::Pair8) {
+                        inside[g] += ((S::GROUPS[g].tiles >> other) & 1) as u8;
+                    }
+                });
             }};
         }
         match gap {
@@ -377,32 +454,31 @@ impl<S: Spec, const N: usize> Gen<S, N> {
             neg(acc1 >> 32),
         ];
         let mut out = base;
-        let mut occ = occ;
-        let swap = (1u16 << lo) | (1u16 << (lo + gap));
+        let mut rank = rank;
         each_group!(N, g, {
             let group = S::GROUPS[g];
             let d = deltas[group.partition as usize];
             out[g] = out[g].wrapping_add(select_unpredictable(group.has(tile), d, 0));
             if matches!(group.format, Format::Pair8) {
-                occ[g] ^= select_unpredictable(group.has(tile), swap, 0);
+                // The cells that change sides of the blank: the passed ones and the moved tile's.
+                let passed = (gap as u8 - 1) - inside[g] + u8::from(!group.has(tile));
+                let r = rank[g];
+                rank[g] = select_unpredictable(sign, r + passed, r.wrapping_sub(passed));
             }
         });
-        (out, occ)
+        (out, rank)
     }
 
     /// Group `g`'s values (additive, full) for a child in one orientation with index `idx`, the
-    /// blank at `blank` and the moved tile `tile`, from the parent's `a` and `f`.
+    /// blank at `blank` and the moved tile `tile`, decoded against the parent's `h`.
     #[inline(always)]
-    #[allow(clippy::too_many_arguments, reason = "one group's inputs")]
     fn decode(
         dbs: Dbs<'_>,
         g: usize,
-        idx: u32,
-        occ: u16,
+        (idx, rank): (u32, u8),
         blank: u32,
         tile: u8,
-        a: u32,
-        f: u32,
+        h: Half,
     ) -> (u32, u32) {
         let group = S::GROUPS[g];
         let off = S::OFFSETS[g];
@@ -410,26 +486,29 @@ impl<S: Spec, const N: usize> Gen<S, N> {
         match group.format {
             Format::Min2 => {
                 let code = (dbs.byte(off, idx >> 2) >> ((idx & 3) * 2)) & 3;
-                let child = decode_code(a.wrapping_sub(3), (a + 5) / 2, code);
-                (select_unpredictable(moved, child, a), 0)
+                let child = decode_code(h.m, h.f, code);
+                (select_unpredictable(moved, child, h.a), 0)
             }
             Format::Cells => {
-                let bit = (dbs.half(off, idx) >> blank) & 1;
-                let child = a + 1 - 2 * (bit ^ up(a));
-                (select_unpredictable(moved, child, a), 0)
+                let y = (dbs.half(off, idx) >> blank) ^ h.m;
+                let child = h.a + 1 - ((y << 1) & 2);
+                (select_unpredictable(moved, child, h.a), 0)
             }
             Format::Pair => {
-                let word = dbs.word(off, idx) >> (2 * blank);
-                let child = a + 1 - 2 * ((word & 1) ^ up(a));
-                let full = f + 1 - 2 * (((word >> 1) & 1) ^ up(f));
-                (select_unpredictable(moved, child, a), full)
+                let y = (dbs.word(off, idx) >> (2 * blank)) ^ h.m;
+                let child = h.a + 1 - ((y << 1) & 2);
+                (
+                    select_unpredictable(moved, child, h.a),
+                    h.f.wrapping_sub(y & 2),
+                )
             }
             Format::Pair8 => {
-                let rank = (!occ & ((1u16 << blank) - 1)).count_ones();
-                let word = dbs.half(off, idx) >> rank;
-                let child = a + 1 - 2 * ((word & 1) ^ up(a));
-                let full = f + 1 - 2 * (((word >> 8) & 1) ^ up(f));
-                (select_unpredictable(moved, child, a), full)
+                let y = (dbs.pair(off, idx) >> rank) ^ h.m;
+                let child = h.a + 1 - ((y << 1) & 2);
+                (
+                    select_unpredictable(moved, child, h.a),
+                    h.f.wrapping_sub((y >> 7) & 2),
+                )
             }
             Format::Bytes16 => {
                 let h = dbs.half(off, idx + 2 * blank);
@@ -445,7 +524,8 @@ impl<S: Spec, const N: usize> Gen<S, N> {
         let off = S::OFFSETS[g];
         match S::GROUPS[g].format {
             Format::Min2 => dbs.entry(off, idx >> 2),
-            Format::Cells | Format::Pair | Format::Pair8 => dbs.entry(off, idx),
+            Format::Cells | Format::Pair => dbs.entry(off, idx),
+            Format::Pair8 => dbs.pair_entry(off, idx),
             Format::Bytes16 => dbs.entry(off, idx + 2 * blank),
             Format::Bytes8 => dbs.entry(off, idx + blank),
         }
@@ -456,17 +536,18 @@ impl<S: Spec, const N: usize> TableSet for Gen<S, N> {
     const LAYOUT: Layout = S::LAYOUT;
     type Indices = Indices<N>;
     type Values = Values<N>;
-    type Decoder = Values<N>;
+    type Decoder = Decoder<N>;
     type Decoded = Values<N>;
 
     fn root(dbs: Dbs<'_>, boards: &[Board; 2], _blank: usize) -> (Indices<N>, Values<N>, u64) {
         const { assert!(N == S::GROUPS.len(), "N is the number of groups") };
         let mut idx = [[0u32; N]; 2];
-        let mut occ = [[0u16; N]; 2];
+        let mut rank = [[0u8; N]; 2];
         let mut values = Values {
             a: [[0; N]; 2],
             f: [[0; N]; 2],
         };
+        let walked = walk::root_values::<S>(dbs, boards);
         let mut bound = 0u32;
         for (s, board) in boards.iter().enumerate() {
             let blank = board.iter().position(|&t| t == 0).unwrap();
@@ -474,21 +555,18 @@ impl<S: Spec, const N: usize> TableSet for Gen<S, N> {
             for (g, &group) in S::GROUPS.iter().enumerate() {
                 let placement = walk::index(group, board);
                 idx[s][g] = placement * group.format.scale();
-                occ[s][g] = board
-                    .iter()
-                    .enumerate()
-                    .filter(|&(_, &t)| group.has(t))
-                    .fold(0, |m, (c, _)| m | (1 << c));
+                rank[s][g] = board[..blank].iter().filter(|&&t| !group.has(t)).count() as u8;
                 let (a, f) = if group.format.coded() {
-                    let a = walk::value(dbs, S::OFFSETS[g], group, board, false);
-                    let f = if group.format.has_full() {
-                        walk::value(dbs, S::OFFSETS[g], group, board, true)
-                    } else {
-                        0
-                    };
-                    (a, f)
+                    walked[s][g]
                 } else {
-                    Self::decode(dbs, g, idx[s][g], occ[s][g], blank as u32, 0, 0, 0)
+                    Self::decode(
+                        dbs,
+                        g,
+                        (idx[s][g], rank[s][g]),
+                        blank as u32,
+                        0,
+                        Half::new(group.format, 0, 0),
+                    )
                 };
                 values.a[s][g] = a as u8;
                 values.f[s][g] = f as u8;
@@ -499,78 +577,94 @@ impl<S: Spec, const N: usize> TableSet for Gen<S, N> {
             }
             bound = bound.max(sums.into_iter().max().unwrap_or(0));
         }
-        (Indices { idx, occ }, values, u64::from(bound))
+        (Indices { idx, rank }, values, u64::from(bound))
     }
 
     #[inline(always)]
     fn shifted(base: Indices<N>, boards: &[Board; 2], m: &Move, tiles: [u8; 2]) -> Indices<N> {
-        let (i0, o0) = Self::shift_side(base.idx[0], base.occ[0], &boards[0], m, 0, tiles[0]);
-        let (i1, o1) = Self::shift_side(base.idx[1], base.occ[1], &boards[1], m, 1, tiles[1]);
+        let (i0, o0) = Self::shift_side(base.idx[0], base.rank[0], &boards[0], m, 0, tiles[0]);
+        let (i1, o1) = Self::shift_side(base.idx[1], base.rank[1], &boards[1], m, 1, tiles[1]);
         Indices {
             idx: [i0, i1],
-            occ: [o0, o1],
+            rank: [o0, o1],
         }
     }
 
     #[inline(always)]
     fn prefetch(dbs: Dbs<'_>, c: &Indices<N>, blanks: [u8; 2]) {
-        for s in 0..2 {
-            each_group!(N, g, {
-                prefetch(Self::address(dbs, g, c.idx[s][g], u32::from(blanks[s])));
-            });
-        }
+        // In the order evaluate reads them.
+        each_part!(S, p, {
+            for s in 0..2 {
+                each_group!(N, g, {
+                    if S::GROUPS[g].partition as usize == p {
+                        prefetch(Self::address(dbs, g, c.idx[s][g], u32::from(blanks[s])));
+                    }
+                });
+            }
+        });
     }
 
     #[inline(always)]
-    fn decoder(values: Values<N>) -> Values<N> {
-        values
+    fn decoder(values: Values<N>) -> Decoder<N> {
+        Decoder {
+            h: std::array::from_fn(|s| {
+                std::array::from_fn(|g| {
+                    Half::new(S::GROUPS[g].format, values.a[s][g], values.f[s][g])
+                })
+            }),
+        }
     }
 
+    /// Short-circuits in prune order: each partition in both orientations, a partition's
+    /// estimate tested as soon as its groups are decoded. The key is the maximum in the high bits
+    /// and the sum of all the estimates below.
     #[inline(always)]
     fn evaluate(
         dbs: Dbs<'_>,
         c: &Indices<N>,
         blanks: [u8; 2],
         tiles: [u8; 2],
-        decoder: &Values<N>,
+        decoder: &Decoder<N>,
         depth: u64,
     ) -> Option<(u64, Values<N>)> {
-        let mut out = *decoder;
+        let mut out = Values {
+            a: [[0; N]; 2],
+            f: [[0; N]; 2],
+        };
         let mut best = 0u32;
         let mut total = 0u32;
-        for s in 0..2 {
-            let blank = u32::from(blanks[s]);
-            let mut sums = [0u32; MAX_PARTS];
-            let mut fulls = 0u32;
-            each_group!(N, g, {
-                let (a, f) = Self::decode(
-                    dbs,
-                    g,
-                    c.idx[s][g],
-                    c.occ[s][g],
-                    blank,
-                    tiles[s],
-                    u32::from(decoder.a[s][g]),
-                    u32::from(decoder.f[s][g]),
-                );
-                out.a[s][g] = a as u8;
-                out.f[s][g] = f as u8;
-                sums[S::GROUPS[g].partition as usize] += a;
-                if S::GROUPS[g].full {
-                    fulls = fulls.max(f);
-                    total += f;
-                }
-            });
-            let mut m = fulls;
-            for &sum in &sums[..S::PARTS] {
+        each_part!(S, p, {
+            for s in 0..2 {
+                let blank = u32::from(blanks[s]);
+                let mut sum = 0u32;
+                let mut m = 0u32;
+                each_group!(N, g, {
+                    if S::GROUPS[g].partition as usize == p {
+                        let (a, f) = Self::decode(
+                            dbs,
+                            g,
+                            (c.idx[s][g], c.rank[s][g]),
+                            blank,
+                            tiles[s],
+                            decoder.h[s][g],
+                        );
+                        out.a[s][g] = a as u8;
+                        out.f[s][g] = f as u8;
+                        sum += a;
+                        if S::GROUPS[g].full {
+                            m = m.max(f);
+                            total += f;
+                        }
+                    }
+                });
                 m = m.max(sum);
                 total += sum;
+                if u64::from(m) >= depth {
+                    return None;
+                }
+                best = best.max(m);
             }
-            if u64::from(m) >= depth {
-                return None;
-            }
-            best = best.max(m);
-        }
+        });
         Some((u64::from((best << 10) + total), out))
     }
 
@@ -580,160 +674,4 @@ impl<S: Spec, const N: usize> TableSet for Gen<S, N> {
     }
 }
 
-/// Exact values of coded tables at the root, by walking downhill to the goal.
-mod walk {
-    use super::{Format, Group};
-    use crate::solver::size4x4::stm::{
-        build::lehmer,
-        pdb::{Dbs, decode_code},
-        tables::{Board, NEIGHBORS},
-    };
-
-    /// Lehmer index of the group's placement on `board` (unscaled).
-    pub fn index(group: Group, board: &Board) -> u32 {
-        let mut cell = [0u8; 16];
-        for (c, &t) in board.iter().enumerate() {
-            cell[t as usize] = c as u8;
-        }
-        let (tiles, k) = group.tile_list();
-        let cells: [u8; 16] =
-            std::array::from_fn(|i| if i < k { cell[tiles[i] as usize] } else { 0 });
-        lehmer(&cells[..k])
-    }
-
-    fn nbr(cell: usize) -> u16 {
-        NEIGHBORS[cell]
-            .iter()
-            .filter(|&&n| n >= 0)
-            .fold(0, |m, &n| m | (1 << n))
-    }
-
-    fn flood(seed: u16, free: u16) -> u16 {
-        let mut region = seed;
-        loop {
-            let mut next = region;
-            let mut r = region;
-            while r != 0 {
-                let c = r.trailing_zeros() as usize;
-                r &= r - 1;
-                next |= nbr(c) & free;
-            }
-            if next == region {
-                return region;
-            }
-            region = next;
-        }
-    }
-
-    /// The entry code of a placement (`cells`, the blank at `blank`): a bit, or a 2-bit code for
-    /// `Min2`.
-    fn code(dbs: Dbs<'_>, off: isize, group: Group, cells: &[u8], blank: usize, full: bool) -> u32 {
-        let p = lehmer(cells);
-        match group.format {
-            Format::Min2 => (dbs.byte(off, p >> 2) >> ((p & 3) * 2)) & 3,
-            Format::Cells => (dbs.half(off, 2 * p) >> blank) & 1,
-            Format::Pair => (dbs.word(off, 4 * p) >> (2 * blank + usize::from(full))) & 1,
-            Format::Pair8 => {
-                let occ = cells.iter().fold(0u16, |m, &c| m | (1 << c));
-                let rank = (!occ & ((1u16 << blank) - 1)).count_ones();
-                (dbs.half(off, 2 * p) >> (rank + 8 * u32::from(full))) & 1
-            }
-            Format::Bytes16 | Format::Bytes8 => unreachable!(),
-        }
-    }
-
-    /// The exact value at `board` of group `group`'s coded table at `off`: its full value when
-    /// `full`, else its additive value.
-    pub fn value(dbs: Dbs<'_>, off: isize, group: Group, board: &Board, full: bool) -> u32 {
-        let (tiles, k) = group.tile_list();
-        let mut cells = [0u8; 16];
-        let mut blank = 0;
-        for (c, &t) in board.iter().enumerate() {
-            if t == 0 {
-                blank = c;
-            } else if group.has(t) {
-                let i = (group.tiles & ((1 << t) - 1)).count_ones() as usize;
-                cells[i] = c as u8;
-            }
-        }
-        let home: [u8; 16] = std::array::from_fn(|i| if i < k { tiles[i] } else { 0 });
-        let parity = if full {
-            (blank & 1) as u32
-        } else {
-            (0..k).fold(0, |p, i| p ^ (u32::from(cells[i] ^ tiles[i]) & 1))
-        };
-        let min2 = group.format == Format::Min2;
-        let start = if min2 {
-            512 + 2 * code(dbs, off, group, &cells[..k], blank, full) + parity
-        } else {
-            256 + 2 * code(dbs, off, group, &cells[..k], blank, full) + parity
-        };
-        let mut cur = start;
-        loop {
-            let home_placed = cells[..k] == home[..k];
-            if home_placed && (!full || blank == 0) {
-                break;
-            }
-            let occupied = (0..k).fold(0u16, |m, i| m | (1 << cells[i]));
-            let free = !occupied;
-            let decode = |child_code: u32| {
-                if min2 {
-                    decode_code(cur - 3, (cur + 5) / 2, child_code)
-                } else {
-                    let up = ((cur + 1) >> 1) & 1;
-                    cur + 1 - 2 * (child_code ^ up)
-                }
-            };
-            let mut stepped = false;
-            if full {
-                for n in nbr(blank).into_iter_bits() {
-                    let mut next = cells;
-                    if let Some(j) = (0..k).find(|&j| usize::from(cells[j]) == n) {
-                        next[j] = blank as u8;
-                    }
-                    let v = decode(code(dbs, off, group, &next[..k], n, true));
-                    if v < cur {
-                        (cells, blank, cur) = (next, n, v);
-                        stepped = true;
-                        break;
-                    }
-                }
-            } else {
-                let region = if min2 { free } else { flood(1 << blank, free) };
-                'moves: for j in 0..k {
-                    let from = usize::from(cells[j]);
-                    for to in (nbr(from) & region).into_iter_bits() {
-                        let mut next = cells;
-                        next[j] = to as u8;
-                        let v = decode(code(dbs, off, group, &next[..k], from, false));
-                        if v < cur {
-                            (cells, blank, cur) = (next, from, v);
-                            stepped = true;
-                            break 'moves;
-                        }
-                    }
-                }
-            }
-            assert!(stepped, "every entry but the goal's has a lower neighbour");
-        }
-        start - cur
-    }
-
-    /// Iterating the set bits of a mask.
-    trait Bits {
-        fn into_iter_bits(self) -> impl Iterator<Item = usize>;
-    }
-
-    impl Bits for u16 {
-        fn into_iter_bits(self) -> impl Iterator<Item = usize> {
-            let mut m = self;
-            std::iter::from_fn(move || {
-                (m != 0).then(|| {
-                    let c = m.trailing_zeros() as usize;
-                    m &= m - 1;
-                    c
-                })
-            })
-        }
-    }
-}
+mod walk;

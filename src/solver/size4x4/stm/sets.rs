@@ -2,15 +2,15 @@
 //!
 //! Internal labels throughout (serpentine rows `0 1 2 3 / 7 6 5 4 / 8 9 10 11 / 15 14 13 12`,
 //! tile `t`'s home is cell `t`, the blank's cell 0). Speeds are single-threaded solves per second
-//! of random positions on an i5-9500 (one core, 1000-2000 positions; [`x9669`](super::x9669),
-//! 17 GB, does ~7,300 on the same positions).
+//! of random positions on an i5-9500 (one core, 1000-10000 positions).
 //!
 //! | set | partitions | tables | solves/s |
 //! |---|---|---|---|
 //! | [`Tiny`] | 6-6-3, 6-6-3 | 5.9 MB | ~60 |
-//! | [`Medium`] | 7-7-1, 6-6-3 | 75 MB | ~170-190 |
-//! | [`LargeCompact`] | 7-8 | 1.27 GB | ~2,600 |
-//! | [`Large`] | 7-8, 9-6 | 3.5 GB | ~3,100 |
+//! | [`Medium`] | 7-7-1, 6-6-3 | 75 MB | ~175 |
+//! | [`LargeCompact`] | 7-8 | 1.27 GB | ~2,950 |
+//! | [`Large`] | 7-8, 9-6 | 3.5 GB | ~3,550 |
+//! | [`Huge`] | 9-6, 6-9 | 17.0 GB | ~7,100 |
 
 use Format::{Bytes8, Bytes16, Min2, Pair, Pair8};
 
@@ -119,6 +119,39 @@ set!(
         g(R6, 1, Bytes16).with_full(),
     ]
 );
+
+/// Tiles 1-6.
+const L6: &[u8] = &[1, 2, 3, 4, 5, 6];
+/// Tiles 7-15.
+const R9: &[u8] = &[7, 8, 9, 10, 11, 12, 13, 14, 15];
+
+/// The spec of [`Huge`].
+pub struct HugeSpec;
+
+impl HugeSpec {
+    const G: [Group; 4] = [
+        g(R6, 0, Bytes16).with_full(),
+        g(L6, 1, Bytes16).with_full(),
+        g(T9, 0, Pair8).with_full(),
+        g(R9, 1, Pair8).with_full(),
+    ];
+}
+
+impl Spec for HugeSpec {
+    const GROUPS: &'static [Group] = &Self::G;
+    const LAYOUT: Layout = Layout {
+        file: "combined-x9669",
+        parts: &[
+            ("p1015w16", Self::G[0].bytes()),
+            ("p16w16", Self::G[1].bytes()),
+            ("p19pair", Self::G[2].bytes()),
+            ("p715pair", Self::G[3].bytes()),
+        ],
+    };
+}
+
+/// max(9-6, 6-9), everything exact with every group's full value: 17.0 GB.
+pub type Huge = Gen<HugeSpec, 4>;
 
 #[cfg(test)]
 mod tests {
