@@ -66,14 +66,10 @@ const LAST_NINE_START: usize = FIRST_NINE_START + NINE_TILE_TABLE_LEN;
 const LEN: usize = LAST_NINE_START + NINE_TILE_TABLE_LEN;
 
 /// The [`xxh3`] hash of the database, checked by [`Pdb::try_from_bytes`].
-///
-/// Not yet computed (it needs a full build), so `try_from_bytes` rejects every input for now;
-/// `from_bytes_unchecked` works.
-// TODO: set from `test_pdb`'s output once the database has been built.
-const HASH: u64 = 0;
+const HASH: u64 = 0x046f_0e0c_4cf6_f5c0;
 
-/// The huge pattern database (17.0 GB): the maximum of two 9-6 partitions. Builds in about an
-/// hour, using up to 25 GB.
+/// The huge pattern database (17.0 GB): the maximum of two 9-6 partitions. Builds in about 40
+/// minutes on 6 cores, using up to 25 GB.
 ///
 /// See [`Pdb`] for building it, and loading and saving its bytes.
 pub struct Huge {
@@ -409,7 +405,7 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore = "builds two 9-tile tables: about an hour and 25 GB"]
+    #[ignore = "builds two 9-tile tables: about 40 minutes and 25 GB"]
     fn test_pdb() {
         super::super::tests::check(Huge::new(&PdbConfig::default()), HASH);
     }
