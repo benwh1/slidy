@@ -28,15 +28,12 @@ const MAX_PATH: usize = 85;
 /// as the search's type parameter; every method is inlined into the
 /// search. Pairs are `[direct, mirrored]`.
 ///
-/// A new set (see `max7896` for the solver's) gives its combined file's
-/// [`Layout`], its index state (usually Lehmer indices per group and
-/// orientation, shifted with `shift::move_deltas` for two partitions), the
-/// values it carries (empty for byte tables, exact values for bit tables,
-/// whose root values `walk::root_values` finds), and the prune test with
-/// its best-first key. Then point `solver3::Tables` at it (and build its
-/// combined file with `pdbcombine`). Keep the methods' data in registers:
-/// a value stored at a computed index and read back wider fails store
-/// forwarding, and references to locals can keep them in memory.
+/// The one implementation is [`Gen`](super::generic::Gen), for any partitions and table
+/// formats: its [`Layout`], its index state (Lehmer indices per group and orientation, shifted
+/// incrementally), the values it carries (exact values for its coded tables, found at the root
+/// by walking downhill), and the prune test with its best-first key. Keep the methods' data in
+/// registers: a value stored at a computed index and read back wider fails store forwarding, and
+/// references to locals can keep them in memory.
 pub trait TableSet: 'static {
     /// Where the set's tables sit in its combined file.
     const LAYOUT: Layout;

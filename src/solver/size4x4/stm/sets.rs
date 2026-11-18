@@ -181,7 +181,10 @@ mod tests {
     ];
 
     /// The set's tables, built in memory.
-    fn region<S: Spec>() -> Region {
+    fn region<S>() -> Region
+    where
+        S: Spec,
+    {
         Region::build(&S::LAYOUT, |part, out| {
             let group = S::GROUPS[part];
             build::encode(group, &build::values(group, 4), out, 4);
@@ -189,7 +192,10 @@ mod tests {
         .unwrap()
     }
 
-    fn check<S: Spec, const N: usize>() {
+    fn check<S, const N: usize>()
+    where
+        S: Spec,
+    {
         let region = region::<S>();
         for (text, length) in POSITIONS {
             let board = tables::parse_scramble(text).unwrap();

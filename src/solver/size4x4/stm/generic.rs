@@ -6,7 +6,7 @@
 //! of every partition's additive sum and of the full (blank-counting) value of every group whose
 //! table has one and asks for it. Coded tables (2-bit minimum codes, exact bits) are decoded
 //! against the parent's values, which the search carries; the root's come from walking downhill
-//! in each coded table ([`walk`]).
+//! in each coded table (`walk`).
 
 use std::{hint::select_unpredictable, marker::PhantomData};
 

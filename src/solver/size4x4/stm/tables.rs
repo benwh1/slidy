@@ -141,15 +141,6 @@ pub(crate) const MIRROR: [u8; 16] = [0, 7, 8, 15, 14, 9, 6, 1, 2, 5, 10, 13, 12,
 /// Internal position of zero-based cell `i`.
 const FROM_ZERO_BASED: [u8; 16] = [0, 1, 2, 3, 7, 6, 5, 4, 8, 9, 10, 11, 15, 14, 13, 12];
 
-/// Weight of tile `t` in group `lo..=hi`: P(15+lo-t, hi-t), 0 outside.
-/// (Matches the C++ `WEIGHT(piece,a,b)` = `BNK[15+a-piece][b-piece]`.)
-pub(crate) const fn group_weight(tile: i32, lo: i32, hi: i32) -> i32 {
-    if tile < lo || tile > hi {
-        return 0;
-    }
-    permutations(15 + lo - tile, hi - tile)
-}
-
 /// Permutations of `k` out of `n`: `n * (n-1) * … * (n-k+1)`, or 0 when
 /// `k` is out of range. Determines the pattern-database sizes.
 #[must_use]
@@ -164,38 +155,6 @@ pub(crate) const fn permutations(n: i32, k: i32) -> i32 {
         i -= 1;
     }
     total
-}
-
-/// Lehmer code of tiles `from..=to`: the index into that tile group's pattern
-/// database. Each tile's digit is its cell less the group's smaller tiles
-/// in earlier cells, in radix 16, 15, ... Only used at the search root
-/// (deeper levels update the index incrementally), so clarity wins over
-/// speed here.
-#[must_use]
-pub(crate) fn lehmer_index(board: &Board, from: u8, to: u8) -> u64 {
-    let mut cell = [0u64; 16];
-    for (c, &tile) in board.iter().enumerate() {
-        cell[tile as usize] = c as u64;
-    }
-    (from..=to).fold(0, |index, tile| {
-        let before = (from..tile).filter(|&t| cell[t as usize] < cell[tile as usize]);
-        index * u64::from(16 - (tile - from)) + cell[tile as usize] - before.count() as u64
-    })
-}
-
-/// [`lehmer_index`] of tiles `from..=to` all home (tile `t` at cell `t`):
-/// every tile's digit is `from`, its cell less the group tiles before it.
-#[must_use]
-pub(crate) const fn home_index(from: u8, to: u8) -> u64 {
-    let mut index = 0;
-    let mut radix = 16;
-    let mut tile = from;
-    while tile <= to {
-        index = index * radix + from as u64;
-        radix -= 1;
-        tile += 1;
-    }
-    index
 }
 
 /// Reflect a board across the main diagonal. The mirrored search uses the
@@ -286,89 +245,6 @@ pub(crate) fn random_boards(count: usize) -> impl Iterator<Item = Board> {
 mod tests {
     use super::*;
     use crate::puzzle::small::Puzzle4x4;
-
-    #[test]
-    fn home_index_matches_lehmer_index() {
-        for (from, to) in [(1, 7), (8, 15), (1, 9), (10, 15), (2, 10), (5, 5)] {
-            let mut board = [0u8; 16];
-            for tile in from..=to {
-                board[tile as usize] = tile;
-            }
-            assert_eq!(home_index(from, to), lehmer_index(&board, from, to));
-        }
-    }
-
-    #[test]
-    fn nine_group_indices_fit_u32() {
-        // P(16,9) < 2^32: every 1–9 index fits the table type.
-        let boards: [[u8; 16]; 3] = [
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-            [2, 11, 10, 9, 15, 13, 8, 14, 12, 1, 6, 7, 5, 0, 3, 4],
-            [15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0],
-        ];
-        for b in boards {
-            assert!(lehmer_index(&b, 1, 9) < 4_151_347_200);
-        }
-    }
-
-    /// Row 3 check: the mirrored 1-7 Lehmer code is unrelated to the
-    /// direct one, so the two orientations cannot share a cache line in
-    /// a combined table.
-    #[test]
-    fn mirrored_index_is_unrelated_to_direct() {
-        let mut state: u64 = 0x9E3779B97F4A7C15;
-        let mut rand = || {
-            state ^= state >> 30;
-            state = state.wrapping_mul(0xBF58476D1CE4E5B9);
-            state ^= state >> 27;
-            state = state.wrapping_mul(0x94D049BB133111EB);
-            state ^= state >> 31;
-            state
-        };
-        let mut same = 0;
-        let mut total = 0;
-        for _ in 0..2000 {
-            let mut board: Board = [0; 16];
-            for (i, cell) in board.iter_mut().enumerate() {
-                *cell = i as u8;
-            }
-            for i in (1..16).rev() {
-                let j = (rand() % (i as u64 + 1)) as usize;
-                board.swap(i, j);
-            }
-            let mirrored = reflect(&board);
-            let direct = lehmer_index(&board, 1, 7);
-            let mirror = lehmer_index(&mirrored, 1, 7);
-            total += 1;
-            if direct == mirror {
-                same += 1;
-            }
-        }
-        // Only symmetric positions coincide; the orientations are
-        // otherwise independent, so a combined table cannot make the
-        // mirrored lookup share the direct one's cache line.
-        assert!(
-            same * 10 < total,
-            "mirrored index equals direct in {same}/{total}"
-        );
-    }
-
-    #[test]
-    fn lehmer_vectors() {
-        // Cross-checked against an independent Python reimplementation.
-        // (Internal boards here directly; conversion is tested below.)
-        let q: Board = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-        assert_eq!(lehmer_index(&q, 1, 7), 3_862_441);
-        assert_eq!(lehmer_index(&q, 8, 15), 278_095_760);
-
-        let pos: Board = [2, 11, 10, 9, 15, 13, 8, 14, 12, 1, 6, 7, 5, 0, 3, 4];
-        assert_eq!(lehmer_index(&pos, 1, 7), 32_655_348);
-        assert_eq!(lehmer_index(&pos, 8, 15), 201_405_799);
-
-        let one_away: Board = [1, 2, 3, 7, 8, 4, 5, 6, 9, 10, 11, 15, 12, 0, 13, 14];
-        assert_eq!(lehmer_index(&one_away, 1, 7), 2880);
-        assert_eq!(lehmer_index(&one_away, 8, 15), 146_037_778);
-    }
 
     #[test]
     fn user_format_conversions() {

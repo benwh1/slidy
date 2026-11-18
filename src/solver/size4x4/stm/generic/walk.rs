@@ -631,7 +631,10 @@ mod tests {
     };
 
     /// The walk's branch-free shift matches recomputing the index, for every group of `S`.
-    fn check_shift<S: Spec>() {
+    fn check_shift<S>()
+    where
+        S: Spec,
+    {
         // The table is never read: only the index arithmetic is tested.
         let region = [0u8; 64];
         let dbs = Dbs::for_test(region.as_ptr());
@@ -660,6 +663,23 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// Placement indices of known positions (cross-checked against an independent Python
+    /// implementation by solver3).
+    #[test]
+    fn lehmer_vectors() {
+        let t17 = Group::new(&[1, 2, 3, 4, 5, 6, 7], 0, Format::Pair);
+        let t815 = Group::new(&[8, 9, 10, 11, 12, 13, 14, 15], 0, Format::Pair);
+        let q: Board = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+        assert_eq!(index(t17, &q), 3_862_441);
+        assert_eq!(index(t815, &q), 278_095_760);
+        let pos: Board = [2, 11, 10, 9, 15, 13, 8, 14, 12, 1, 6, 7, 5, 0, 3, 4];
+        assert_eq!(index(t17, &pos), 32_655_348);
+        assert_eq!(index(t815, &pos), 201_405_799);
+        let one_away: Board = [1, 2, 3, 7, 8, 4, 5, 6, 9, 10, 11, 15, 12, 0, 13, 14];
+        assert_eq!(index(t17, &one_away), 2880);
+        assert_eq!(index(t815, &one_away), 146_037_778);
     }
 
     #[test]

@@ -299,36 +299,6 @@ impl Dbs<'_> {
                 .read_unaligned()
         })
     }
-
-    /// Address of byte `byte` of placement `index`'s block in a mixed
-    /// table at `offset`: 5-byte blocks of four placements, a byte of their
-    /// four 2-bit codes ([`Self::mix_code`]) and then a byte each
-    /// ([`Self::mix_byte`]). The table may exceed 4 GiB, hence the `usize`
-    /// arithmetic.
-    #[inline(always)]
-    pub(crate) fn mix_entry(self, offset: isize, index: u32, byte: usize) -> *const u8 {
-        // SAFETY: as `entry`; the block lies inside the table.
-        unsafe {
-            self.base
-                .offset(offset)
-                .add(5 * (index as usize >> 2) + byte)
-        }
-    }
-
-    /// Placement `index`'s 2-bit code in a mixed table, `(value >> 1) & 3`
-    /// of a value with known parity: the value mod 8 ([`decode_code`]).
-    #[inline(always)]
-    pub(crate) fn mix_code(self, offset: isize, index: u32) -> u32 {
-        // SAFETY: the entry lies inside the table.
-        (u32::from(unsafe { *self.mix_entry(offset, index, 0) }) >> ((index & 3) * 2)) & 3
-    }
-
-    /// Placement `index`'s own byte in a mixed table.
-    #[inline(always)]
-    pub(crate) fn mix_byte(self, offset: isize, index: u32) -> u32 {
-        // SAFETY: the entry lies inside the table.
-        u32::from(unsafe { *self.mix_entry(offset, index, 1 + (index & 3) as usize) })
-    }
 }
 
 /// The value with 2-bit `code` one move from one of value `parent`, in a
