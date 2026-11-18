@@ -3,9 +3,10 @@
 //!
 //! A state is a placement of the group's tiles and the blank's cell (one without a group tile).
 //! Its additive distance counts only the moves of the group's tiles, the other tiles being
-//! indistinguishable from the blank; its full distance counts every move. Each search keeps its
-//! states' distances mod 3 in 2 bits (3 marks an unvisited state), so even a 9-tile group's 29
-//! billion states fit in 7.3 GB, and reports every state once with its distance.
+//! indistinguishable from the blank; its full distance counts every move. Each search keeps 2
+//! bits per state, whether it is unvisited, in the layer being expanded, in the next layer or
+//! done, so even a 9-tile group's 29 billion states fit in 7.3 GB, and reports every state once
+//! with its distance.
 
 use std::{
     sync::atomic::{
@@ -33,8 +34,18 @@ pub(in crate::solver::size4x4::stm) enum Cost {
     Full,
 }
 
-/// The residue that marks an unvisited state.
+/// The mark of an unvisited state.
 const UNVISITED: u8 = 3;
+
+/// The mark of a state in a layer already expanded.
+const DONE: u8 = 0;
+
+/// The mark of the states at distance `depth` while they are a frontier: the layer being
+/// expanded or the next one. The two alternate, and before a layer is expanded the previous one
+/// is marked [`DONE`], so the next layer can take its mark.
+const fn frontier_mark(depth: usize) -> u8 {
+    1 + (depth & 1) as u8
+}
 
 /// `bytes` viewed as atomics, for writing from several threads.
 pub(in crate::solver::size4x4::stm) fn as_atomic(bytes: &mut [u8]) -> &[AtomicU8] {
@@ -110,10 +121,39 @@ impl Placement {
     }
 }
 
-/// A search's states' distances mod 3, 2 bits each; [`UNVISITED`] marks an unvisited state.
+/// A search's states' marks, 2 bits each: [`UNVISITED`], [`DONE`] or a [`frontier_mark`].
 struct Residues(Vec<u8>);
 
 impl Residues {
+    /// Marks every state marked `mark` as [`DONE`], using `threads` threads.
+    fn retire(&mut self, mark: u8, threads: usize) {
+        const LOW_BITS: u64 = 0x5555_5555_5555_5555;
+        let pattern = u64::from(mark) * LOW_BITS;
+        let (words, rest) = self.0.as_chunks_mut::<8>();
+        let chunk_len = words.len().div_ceil(threads).max(1);
+        thread::scope(|scope| {
+            for chunk in words.chunks_mut(chunk_len) {
+                scope.spawn(move || {
+                    for word in chunk {
+                        let marks = u64::from_le_bytes(*word);
+                        // A field is zero exactly where its mark is `mark`.
+                        let difference = marks ^ pattern;
+                        let matching = !(difference | (difference >> 1)) & LOW_BITS;
+                        let retired = matching * u64::from(DONE);
+                        *word = ((marks & !(matching * 3)) | retired).to_le_bytes();
+                    }
+                });
+            }
+        });
+        for byte in rest {
+            for field in 0..4 {
+                if (*byte >> (2 * field)) & 3 == mark {
+                    *byte = (*byte & !(3 << (2 * field))) | (DONE << (2 * field));
+                }
+            }
+        }
+    }
+
     /// The byte holding `state`'s residue, as an atomic.
     fn byte(&self, state: usize) -> &AtomicU8 {
         // SAFETY: the bytes are only accessed through this, atomically.
@@ -124,13 +164,12 @@ impl Residues {
         (self.byte(state).load(Relaxed) >> (2 * (state & 3))) & 3
     }
 
-    /// Marks unvisited `state` as at distance `residue` mod 3; false when it was visited.
-    fn claim(&self, state: usize, residue: u8) -> bool {
+    /// Marks unvisited `state` with `mark`; false when it was visited.
+    fn claim(&self, state: usize, mark: u8) -> bool {
         let shift = 2 * (state & 3);
         self.byte(state)
             .try_update(AcqRel, Relaxed, |byte| {
-                ((byte >> shift) & 3 == UNVISITED)
-                    .then_some(byte & !((UNVISITED ^ residue) << shift))
+                ((byte >> shift) & 3 == UNVISITED).then_some(byte & !((UNVISITED ^ mark) << shift))
             })
             .is_ok()
     }
@@ -157,9 +196,9 @@ where
     }
 
     /// One placement's part of a layer: when pushing, finds the unvisited neighbours of its
-    /// states at residue `current`; when pulling, finds its unvisited states with a neighbour
-    /// there. Either way they are at distance `depth + 1`, so residue `next`. Returns how many
-    /// states it found.
+    /// states marked `current` (the layer at distance `depth`); when pulling, finds its unvisited
+    /// states with a neighbour there. Either way they are at distance `depth + 1`, and are marked
+    /// `next`. Returns how many states it found.
     fn expand_placement(
         &self,
         placement: &Placement,
@@ -280,7 +319,7 @@ pub(in crate::solver::size4x4::stm) fn breadth_first_search<F>(
     let placements = placement_count(tiles.len());
     let free_count = 16 - tiles.len();
     let states = placements * free_count;
-    let search = Search {
+    let mut search = Search {
         shifts: index_shift_table([&[tiles], &[]]),
         residues: Residues(vec![u8::MAX; states.div_ceil(4)]),
         free_count,
@@ -300,7 +339,7 @@ pub(in crate::solver::size4x4::stm) fn breadth_first_search<F>(
             let rank = blank_rank(home.free_cells, blank);
             search
                 .residues
-                .claim(home.index as usize * free_count + rank, 0);
+                .claim(home.index as usize * free_count + rank, frontier_mark(0));
             visit(home.index, blank, rank, 0);
             layer_sizes[0] += 1;
         }
@@ -317,10 +356,14 @@ pub(in crate::solver::size4x4::stm) fn breadth_first_search<F>(
     report(0, &layer_sizes);
 
     for depth in 0.. {
-        let (current, next) = ((depth % 3) as u8, ((depth + 1) % 3) as u8);
-        // Expanding the layer's states (and the earlier ones with the same residue) or checking
-        // the unvisited ones, whichever is fewer.
-        let push_work: u64 = layer_sizes.iter().rev().step_by(3).sum();
+        let (current, next) = (frontier_mark(depth), frontier_mark(depth + 1));
+        if depth > 0 {
+            // The previous layer is done, and its mark is the next layer's.
+            search.residues.retire(next, threads);
+        }
+        let search = &search;
+        // Expanding the layer's states or checking the unvisited ones, whichever is fewer.
+        let push_work = layer_sizes[depth];
         let pull_work = states as u64 - layer_sizes.iter().sum::<u64>();
         let pulling = pull_work < push_work;
         let source = if pulling { UNVISITED } else { current };
@@ -419,6 +462,116 @@ pub(in crate::solver::size4x4::stm) fn relax_minimums(tiles: &[u8], minimums: &m
         });
         if !changed {
             return;
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{sync::atomic::Ordering::Relaxed, time::Instant};
+
+    use super::*;
+
+    /// The xxh3 hash of every state's distance, as `breadth_first_search` reports it, laid out
+    /// by state (`placement * free_count + rank`); checks each state is reported exactly once.
+    fn distances_hash(tiles: &[u8], cost: Cost) -> u64 {
+        let free_count = 16 - tiles.len();
+        let mut distances = vec![u8::MAX; placement_count(tiles.len()) * free_count];
+        let reports = AtomicU64::new(0);
+        let atomic_distances = as_atomic(&mut distances);
+        breadth_first_search(
+            tiles,
+            cost,
+            &PdbConfig::default(),
+            |index, _, rank, distance| {
+                let state = index as usize * free_count + rank;
+                assert_eq!(atomic_distances[state].swap(distance, Relaxed), u8::MAX);
+                reports.fetch_add(1, Relaxed);
+            },
+        );
+        assert_eq!(reports.into_inner(), distances.len() as u64);
+        xxhash_rust::xxh3::xxh3_64(&distances)
+    }
+
+    /// Checks each case's distances against its known-answer hash (from the original search).
+    fn check_known_answers(cases: &[(&[u8], Cost, u64)]) {
+        let mut failures = Vec::new();
+        for &(tiles, cost, expected) in cases {
+            let hash = distances_hash(tiles, cost);
+            if hash != expected {
+                failures.push(format!("{tiles:?} {}: {hash:#018x}", cost_name(cost)));
+            }
+        }
+        assert!(failures.is_empty(), "mismatched hashes: {failures:?}");
+    }
+
+    fn cost_name(cost: Cost) -> &'static str {
+        match cost {
+            Cost::Additive => "Additive",
+            Cost::Full => "Full",
+        }
+    }
+
+    #[test]
+    fn six_tile_distances_match_known_answers() {
+        check_known_answers(&[
+            (&[1, 2, 3, 4, 5, 6], Cost::Additive, 0xa3d7_92a5_52c0_b480),
+            (&[1, 2, 3, 4, 5, 6], Cost::Full, 0x87ba_0e77_c076_77c2),
+            (
+                &[10, 11, 12, 13, 14, 15],
+                Cost::Additive,
+                0xe364_0c2d_b91f_8db9,
+            ),
+            (&[10, 11, 12, 13, 14, 15], Cost::Full, 0xa4b9_81a1_acb0_e6bb),
+        ]);
+    }
+
+    #[test]
+    #[ignore = "about a minute"]
+    fn seven_tile_distances_match_known_answers() {
+        check_known_answers(&[
+            (
+                &[1, 2, 3, 4, 5, 6, 7],
+                Cost::Additive,
+                0xf0da_925d_bc7a_8326,
+            ),
+            (&[1, 2, 3, 4, 5, 6, 7], Cost::Full, 0x8e60_fc5a_8fb6_e1d9),
+        ]);
+    }
+
+    /// Times the search for the groups and costs in `STM_BFS_BENCH` (e.g. `7a,7f,8f`: the first
+    /// 7 or 8 tiles, additive or full), writing each state's distance into a table as the
+    /// databases' builds do.
+    #[test]
+    #[ignore = "a benchmark"]
+    fn time_breadth_first_search() {
+        let cases = std::env::var("STM_BFS_BENCH").unwrap_or_else(|_| "7a,7f".to_owned());
+        for case in cases.split(',') {
+            let (count, cost) = case.split_at(case.len() - 1);
+            let tiles: Vec<u8> = (1..=count.parse().unwrap()).collect();
+            let cost = if cost == "f" {
+                Cost::Full
+            } else {
+                Cost::Additive
+            };
+            let free_count = 16 - tiles.len();
+            let mut distances = vec![0u8; placement_count(tiles.len()) * free_count];
+            let atomic_distances = as_atomic(&mut distances);
+            let start = Instant::now();
+            breadth_first_search(
+                &tiles,
+                cost,
+                &PdbConfig::default(),
+                |index, _, rank, distance| {
+                    atomic_distances[index as usize * free_count + rank].store(distance, Relaxed);
+                },
+            );
+            println!(
+                "BENCH {case} ({} tiles, {}): {:.2} s",
+                tiles.len(),
+                cost_name(cost),
+                start.elapsed().as_secs_f64()
+            );
         }
     }
 }
