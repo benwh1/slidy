@@ -201,27 +201,34 @@ pub fn parse_scramble(text: &str) -> Result<Board, Box<dyn Error>> {
 /// (`R` moves a tile right, so the blank goes left).
 #[must_use]
 pub(crate) fn solution_string(blank: usize, trail: impl Iterator<Item = usize>) -> String {
+    directions(blank, trail).map(|d| d.as_char()).collect()
+}
+
+/// The moves of a blank trail (internal cells after each move, from `blank`), as the directions
+/// the moved tiles go.
+pub(crate) fn directions(
+    blank: usize,
+    trail: impl Iterator<Item = usize>,
+) -> impl Iterator<Item = Direction> {
     // Row-major (row, column) of an internal cell, as `to_internal` maps it.
     let at = |internal: usize| {
         let cell = 15 - FROM_ZERO_BASED[internal] as i8;
         (cell / 4, cell % 4)
     };
     let mut from = at(blank);
-    trail
-        .map(|cell| {
-            let to = at(cell);
-            // The blank moves (to - from); the tile goes the opposite way.
-            let tile_move = match (to.0 - from.0, to.1 - from.1) {
-                (-1, 0) => 'D',
-                (1, 0) => 'U',
-                (0, -1) => 'R',
-                (0, 1) => 'L',
-                _ => panic!("solution moves to neighboring squares"),
-            };
-            from = to;
-            tile_move
-        })
-        .collect()
+    trail.map(move |cell| {
+        let to = at(cell);
+        // The blank moves (to - from); the tile goes the opposite way.
+        let tile_move = match (to.0 - from.0, to.1 - from.1) {
+            (-1, 0) => Direction::Down,
+            (1, 0) => Direction::Up,
+            (0, -1) => Direction::Right,
+            (0, 1) => Direction::Left,
+            _ => panic!("solution moves to neighboring squares"),
+        };
+        from = to;
+        tile_move
+    })
 }
 
 /// `count` random internal boards (a fixed xorshift sequence), for tests.

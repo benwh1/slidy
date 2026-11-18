@@ -208,6 +208,21 @@ impl Region {
         })
     }
 
+    /// Write the region as `dir/<layout.file>`, which [`Self::preload`] and [`Self::map`] read.
+    /// The file is written under a temporary name and renamed when complete.
+    pub fn save(&self, dir: &Path) -> Result<(), Box<dyn Error>> {
+        let bytes: &[u8] = match &self.bytes {
+            Bytes::Preloaded(bytes) => bytes,
+            Bytes::Mapped(map) => map,
+        };
+        let partial = dir.join(format!("{}.partial", self.layout.file));
+        let mut out = File::create(&partial)?;
+        io::Write::write_all(&mut out, bytes)?;
+        out.sync_all()?;
+        fs::rename(&partial, dir.join(self.layout.file))?;
+        Ok(())
+    }
+
     #[must_use]
     pub fn as_dbs(&self) -> Dbs<'_> {
         let start = match &self.bytes {

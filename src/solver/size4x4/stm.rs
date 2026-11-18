@@ -14,4 +14,5 @@ pub mod large;
 pub mod old;
 pub mod pdb;
 pub mod sets;
+pub mod solver;
 pub mod tables;
