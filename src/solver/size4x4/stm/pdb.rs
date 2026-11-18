@@ -3,10 +3,10 @@
 //!
 //! | database | partitions | size | solves/s |
 //! |---|---|---|---|
-//! | [`Tiny`] | 6-6-3, 6-6-3 | 5.9 MB | ~60 |
-//! | [`Medium`] | 7-7-1, 6-6-3 | 75 MB | ~175 |
-//! | [`Large`] | 7-8 | 1.27 GB | ~2,950 |
-//! | [`Huge`] | 9-6, 6-9 | 17.0 GB | ~7,100 |
+//! | [`Tiny`] | 6-6-3, 6-6-3 | 5.9 MB | ~115 |
+//! | [`Medium`] | 7-7-1, 6-6-3 | 75 MB | ~400 |
+//! | [`Large`] | 7-8 | 1.27 GB | ~2,550 |
+//! | [`Huge`] | 9-6, 6-9 | 17.0 GB | ~4,950 |
 //!
 //! Speeds are single-threaded solves per second of random positions on an i5-9500. Each
 //! database partitions the tiles into groups, once or twice, and its heuristic is the maximum,
