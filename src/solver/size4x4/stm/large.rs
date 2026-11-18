@@ -10,7 +10,7 @@
 //! search is monomorphised per set and every set method is inlined into
 //! it, so a set is chosen at compile time at no cost.
 
-use std::mem::MaybeUninit;
+use std::{marker::PhantomData, mem::MaybeUninit, ops::ControlFlow};
 
 use crate::{
     puzzle::{sliding_puzzle::SlidingPuzzle as _, small::Puzzle4x4},
@@ -20,8 +20,6 @@ use crate::{
         tables::{self, Board, MIRROR, Move},
     },
 };
-
-const MAX_PATH: usize = 85;
 
 /// A combination of pattern databases: everything the search needs to
 /// know about its tables. Implemented by zero-sized marker types, chosen
@@ -84,63 +82,188 @@ pub trait TableSet: 'static {
     fn child(values: Self::Values, decoded: Self::Decoded, tiles: [u8; 2]) -> Self::Values;
 }
 
-/// Solve one position optimally with table set `H`, whose tables `dbs`
-/// holds.
+/// Which move sequences the search may take, as an automaton over moves. A node is
+/// `(state << 4) | allowed`, `allowed` the mask of directions (slidy's: up 0, left 1, down 2,
+/// right 3, a tile's move) the next move may take.
+pub trait Automaton: 'static {
+    /// The root's node.
+    const START: u32;
+
+    /// The node after a move in direction `dir` from `node`.
+    fn next(node: u32, dir: u8) -> u32;
+}
+
+/// Forbids undoing the previous move and one of each pair of equivalent move sequences of equal
+/// length ([`fsm`]): still reaches every position by a shortest path, so it finds an optimal
+/// solution, but not every one.
+pub struct Pruning;
+
+impl Automaton for Pruning {
+    const START: u32 = fsm::START;
+
+    #[inline(always)]
+    fn next(node: u32, dir: u8) -> u32 {
+        // SAFETY: a live automaton state and a direction 0..4 index the automaton (16-bit states:
+        // half the footprint of packed nodes, -12% L2 misses), whose state's group lies inside
+        // the mask table.
+        unsafe {
+            let next = u32::from(
+                *fsm::FSM
+                    .get_unchecked((node >> 4) as usize)
+                    .get_unchecked(dir as usize),
+            );
+            let mask = u32::from(*fsm::MASK_OF.get_unchecked((next >> 6) as usize));
+            (next << 4) | mask
+        }
+    }
+}
+
+/// Forbids only undoing the previous move, so it finds every solution of a length.
+pub struct Backtrack;
+
+impl Automaton for Backtrack {
+    const START: u32 = 15;
+
+    #[inline(always)]
+    fn next(_node: u32, dir: u8) -> u32 {
+        15 & !(1 << ((dir + 2) & 3))
+    }
+}
+
+/// A position to search from, in both orientations, with its table state.
+pub struct Root<H: TableSet> {
+    boards: [Board; 2],
+    blank: usize,
+    indices: H::Indices,
+    values: H::Values,
+    bound: u64,
+}
+
+impl<H: TableSet> Root<H> {
+    /// The root for `internal` (internal labels), whose tables `dbs` holds.
+    #[must_use]
+    pub fn new(internal: &Board, dbs: Dbs<'_>) -> Self {
+        let boards = [*internal, tables::reflect(internal)];
+        let blank = tables::blank_position(internal);
+        let (indices, values, bound) = H::root(dbs, &boards, blank);
+        Self {
+            boards,
+            blank,
+            indices,
+            values,
+            bound,
+        }
+    }
+
+    /// A lower bound on the position's solution length, with the solutions' parity (the parity
+    /// of the blank's distance from home).
+    #[must_use]
+    pub fn lower_bound(&self) -> u64 {
+        self.bound + ((self.bound ^ self.blank as u64) & 1)
+    }
+
+    /// The blank's internal cell.
+    #[must_use]
+    pub fn blank(&self) -> usize {
+        self.blank
+    }
+}
+
+/// The search's buffers, kept between searches.
+pub struct Engine<H: TableSet> {
+    /// `slots[depth]`: see [`Search::pre`].
+    slots: Vec<MaybeUninit<[Expansion<H>; 4]>>,
+    path: Vec<u8>,
+    ready: Vec<u8>,
+}
+
+impl<H: TableSet> Default for Engine<H> {
+    fn default() -> Self {
+        Self {
+            slots: Vec::new(),
+            path: Vec::new(),
+            ready: Vec::new(),
+        }
+    }
+}
+
+impl<H: TableSet> Engine<H> {
+    /// Search for every solution of exactly `depth` moves from `root` that automaton `A` allows,
+    /// calling `found` with each: `cells[d]` is the blank's internal cell with `d` moves left
+    /// (`cells[depth]` the root's, `cells[0]` home). Stops when `found` breaks.
+    pub fn search<A>(
+        &mut self,
+        dbs: Dbs<'_>,
+        root: &Root<H>,
+        depth: u64,
+        found: &mut dyn FnMut(&[u8]) -> ControlFlow<()>,
+    ) -> ControlFlow<()>
+    where
+        A: Automaton,
+    {
+        // Every solution's length is at least the bound and has its parity.
+        if depth < root.bound || (depth ^ root.bound) & 1 != 0 {
+            return ControlFlow::Continue(());
+        }
+        if depth == 0 {
+            // A zero bound: the position is solved.
+            return found(&[root.blank as u8]);
+        }
+        let top = usize::try_from(depth).expect("depth fits in memory");
+        if self.slots.len() < top + 2 {
+            self.slots.resize_with(top + 2, MaybeUninit::uninit);
+            self.path.resize(top + 1, 0);
+            self.ready.resize(top + 1, 0);
+        }
+        let mut search = Search::<H, A> {
+            dbs,
+            boards: root.boards,
+            path: self.path.as_mut_ptr(),
+            pre: self.slots.as_mut_ptr().cast::<[Expansion<H>; 4]>(),
+            ready: self.ready.as_mut_ptr(),
+            top,
+            found,
+            automaton: PhantomData,
+        };
+        // The root's successors go where a parent would have put them.
+        // SAFETY: top + 1 < slots.len(), and nothing else uses the slot now.
+        unsafe {
+            fill(search.pre.add(top + 1).cast(), root.values, |out| {
+                expand::<H, A>(dbs, &search.boards, root.blank, root.indices, A::START, out)
+            });
+            *search.ready.add(top) = 1;
+        }
+        search.dfs(root.blank, depth)
+    }
+}
+
+/// Solve one position (`puzzle`, slidy's labels) optimally with table set `H`, whose tables
+/// `dbs` holds: the blank's moves as `ULDR`, or `None` when it is unsolvable.
 #[must_use]
 pub fn solve<H>(puzzle: &Board, dbs: Dbs<'_>) -> Option<String>
 where
     H: TableSet,
 {
-    let start_state = Puzzle4x4::try_from(*puzzle).unwrap();
-    if start_state.is_solved() {
-        return Some(String::new());
-    }
-    if !start_state.is_solvable() {
+    if !Puzzle4x4::try_from(*puzzle).ok()?.is_solvable() {
         return None;
     }
-    let internal = tables::to_internal(puzzle);
-    let boards = [internal, tables::reflect(&internal)];
-    let blank = tables::blank_position(&internal);
-    let (root, values, distance) = H::root(dbs, &boards, blank);
-
-    // Every slot is written before it is read, so they start uninitialised:
-    // no allocation and no fill per solve.
-    let mut slots = [const { MaybeUninit::<[Expansion<H>; 4]>::uninit() }; MAX_PATH];
-    let mut search = Search {
-        dbs,
-        boards,
-        path: [0; MAX_PATH],
-        pre: slots.as_mut_ptr().cast::<[Expansion<H>; 4]>(),
-        ready: [0; MAX_PATH],
-    };
-    // Thresholds keep the parity of the blank's distance from home.
-    let mut threshold = 2 - (blank % 2) as u64;
-    if distance > threshold {
-        threshold = distance + (threshold.wrapping_sub(distance) & 1);
+    let root = Root::<H>::new(&tables::to_internal(puzzle), dbs);
+    let mut engine = Engine::default();
+    let mut solution = None;
+    let mut depth = root.lower_bound();
+    while solution.is_none() {
+        let _ = engine.search::<Pruning>(dbs, &root, depth, &mut |cells| {
+            // The blank's cells after each move, first move first.
+            let trail = cells[..cells.len() - 1].iter().rev();
+            solution = Some(tables::solution_string(
+                root.blank,
+                trail.map(|&c| usize::from(c)),
+            ));
+            ControlFlow::Break(())
+        });
+        depth += 2;
     }
-    loop {
-        // The root's successors go where a parent would have put them.
-        let top = threshold as usize;
-        // SAFETY: the threshold stays far below MAX_PATH - 1, and nothing
-        // else uses the slot now.
-        unsafe {
-            fill(search.pre.add(top + 1).cast(), values, |out| {
-                expand::<H>(dbs, &search.boards, blank, root, fsm::START, out)
-            });
-        }
-        search.ready[top] = 1;
-        if search.dfs(blank, threshold) {
-            break;
-        }
-        threshold += 2;
-    }
-
-    // The blank's cells after each move, first move first.
-    let trail = search.path[..threshold as usize].iter().rev();
-    Some(tables::solution_string(
-        blank,
-        trail.map(|&cell| cell as usize),
-    ))
+    solution
 }
 
 /// Write a node's `values` and successors (`expand` fills the candidates
@@ -192,24 +315,27 @@ struct Expansion<H: TableSet> {
     values: H::Values,
 }
 
-struct Search<'a, H: TableSet> {
+struct Search<'a, 'f, H: TableSet, A> {
     dbs: Dbs<'a>,
     boards: [Board; 2],
-    /// The blank's cell at each depth of the solution found.
-    path: [u8; MAX_PATH],
-    /// `pre[depth][slot]`: successors of the child visited `slot`-th from
-    /// the node at `depth`, all generated (and prefetched) before the
-    /// first child is visited. On [`solve`]'s stack, uninitialised until
-    /// written ([`fill`]), and reached through a raw pointer, so a node
-    /// can keep reading its own slot while `&mut self` recurses (children
-    /// only write the slots of lower depths).
+    /// `path[depth]`: the blank's cell at each depth of the current path.
+    path: *mut u8,
+    /// `pre[depth][slot]`: successors of the child visited `slot`-th from the node at `depth`,
+    /// all generated (and prefetched) before the first child is visited. In the [`Engine`]'s
+    /// buffer, uninitialised until written ([`fill`]), and reached through a raw pointer, so a
+    /// node can keep reading its own slot while `&mut self` recurses (children only write the
+    /// slots of lower depths).
     pre: *mut [Expansion<H>; 4],
-    /// `ready[depth]`: 1 + the slot in `pre[depth + 1]` holding the
-    /// successors of the node about to be visited at `depth`.
-    ready: [u8; MAX_PATH],
+    /// `ready[depth]`: 1 + the slot in `pre[depth + 1]` holding the successors of the node about
+    /// to be visited at `depth`.
+    ready: *mut u8,
+    /// The root's depth: the buffers hold `top + 1` entries (`pre`, `top + 2`).
+    top: usize,
+    found: &'f mut dyn FnMut(&[u8]) -> ControlFlow<()>,
+    automaton: PhantomData<A>,
 }
 
-impl<H: TableSet> Search<'_, H> {
+impl<H: TableSet, A: Automaton> Search<'_, '_, H, A> {
     /// Put `tiles` at `to` and the blank at `from`, on both boards: a move,
     /// or with the cells swapped its undo.
     #[inline(always)]
@@ -229,11 +355,10 @@ impl<H: TableSet> Search<'_, H> {
     /// slots of lower depths.
     #[inline(always)]
     fn successors<'s>(&self, depth: u64) -> &'s Expansion<H> {
-        // SAFETY: depth < threshold < MAX_PATH; the parent sits at depth + 1
-        // and wrote slot ready - 1 < 4 before descending here, and nothing
-        // writes that slot until this node returns.
+        // SAFETY: depth <= top; the parent sits at depth + 1 and wrote slot ready - 1 < 4 before
+        // descending here, and nothing writes that slot until this node returns.
         unsafe {
-            let ready = *self.ready.get_unchecked(depth as usize) as usize;
+            let ready = *self.ready.add(depth as usize) as usize;
             &*self
                 .pre
                 .add(depth as usize + 1)
@@ -256,8 +381,8 @@ impl<H: TableSet> Search<'_, H> {
     ) {
         let next = c.blanks();
         self.slide(here, next, c.tiles);
-        // SAFETY: depth <= threshold < MAX_PATH and slot < 4; the slot
-        // belongs to this node's children and nobody else uses it now.
+        // SAFETY: depth <= top and slot < 4; the slot belongs to this node's children and nobody
+        // else uses it now.
         unsafe {
             let pre = self
                 .pre
@@ -265,18 +390,29 @@ impl<H: TableSet> Search<'_, H> {
                 .cast::<Expansion<H>>()
                 .add(slot);
             fill(pre, values, |out| {
-                expand::<H>(self.dbs, &self.boards, next[0], c.indices, c.node, out)
+                expand::<H, A>(self.dbs, &self.boards, next[0], c.indices, c.node, out)
             });
         }
         self.slide(next, here, c.tiles);
     }
 
-    /// Search the subtree below `blank`; true when a solution was found.
-    /// The node's successors were generated before it was visited.
-    fn dfs(&mut self, blank: usize, depth: u64) -> bool {
+    /// Pass the path ending with the blank at `blank` (home) to `found`.
+    #[cold]
+    #[inline(never)]
+    fn record(&mut self, blank: usize) -> ControlFlow<()> {
+        // SAFETY: path holds top + 1 entries, all written on the way down.
+        unsafe {
+            *self.path = blank as u8;
+            (self.found)(std::slice::from_raw_parts(self.path, self.top + 1))
+        }
+    }
+
+    /// Search the subtree below `blank` for solutions, passing each to `found`; breaks when it
+    /// does. The node's successors were generated before it was visited.
+    fn dfs(&mut self, blank: usize, depth: u64) -> ControlFlow<()> {
         if depth == 0 {
-            self.path[0] = blank as u8;
-            return true;
+            // Every partition covers every tile, so a zero estimate means solved.
+            return self.record(blank);
         }
         let here = [blank, MIRROR[blank & 15] as usize];
         let pre = self.successors(depth);
@@ -312,23 +448,20 @@ impl<H: TableSet> Search<'_, H> {
 
         for slot in 0..n {
             // Survivor `slot` finds its successors in slot `slot`.
-            // SAFETY: depth < MAX_PATH, slot < n <= 4, and survivors'
-            // entries were written.
+            // SAFETY: 1 <= depth <= top, slot < n <= 4, and survivors' entries were written.
             let c = unsafe {
-                *self.ready.get_unchecked_mut(depth as usize - 1) = slot as u8 + 1;
-                *self.path.get_unchecked_mut(depth as usize) = blank as u8;
+                *self.ready.add(depth as usize - 1) = slot as u8 + 1;
+                *self.path.add(depth as usize) = blank as u8;
                 let ck = *order.get_unchecked(slot);
                 pre.candidates.get_unchecked(ck).assume_init_read()
             };
             let next = c.blanks();
             self.slide(here, next, c.tiles);
-            let found = self.dfs(next[0], depth - 1);
+            let flow = self.dfs(next[0], depth - 1);
             self.slide(next, here, c.tiles);
-            if found {
-                return true;
-            }
+            flow?;
         }
-        false
+        ControlFlow::Continue(())
     }
 }
 
@@ -385,7 +518,7 @@ where
 /// `base`, written to `out` in generation order with its table lines
 /// prefetched. Returns how many were written.
 #[inline(always)]
-fn expand<H>(
+fn expand<H, A>(
     dbs: Dbs<'_>,
     boards: &[Board; 2],
     blank: usize,
@@ -395,12 +528,12 @@ fn expand<H>(
 ) -> usize
 where
     H: TableSet,
+    A: Automaton,
 {
     // The usable moves are looked up in a table: the edge test, the
     // directions the automaton allows (which exclude the undo move) and
     // the geometry the scan needs are all precomputed per (blank cell,
     // allowed mask).
-    let state = (node >> 4) as usize;
     // SAFETY: blank is a board position and the mask is 0..16.
     let list = unsafe {
         tables::MOVES
@@ -408,20 +541,16 @@ where
             .get_unchecked((node & 15) as usize)
     };
     for k in 0..list.n as usize {
-        // SAFETY: k < n <= 4; a live automaton state and a direction 0..4
-        // index the automaton (16-bit states: half the footprint of packed
-        // nodes, -12% L2 misses), whose state's group lies inside the mask
-        // table; the move table lists existing neighbours only.
-        let (m, node, tiles) = unsafe {
+        // SAFETY: k < n <= 4; the move table lists existing neighbours only.
+        let (m, tiles) = unsafe {
             let m = list.moves.get_unchecked(k);
-            let next = u32::from(*fsm::FSM.get_unchecked(state).get_unchecked(m.dir as usize));
-            let mask = u32::from(*fsm::MASK_OF.get_unchecked((next >> 6) as usize));
             let tiles = [
                 *boards[0].get_unchecked(m.next[0] as usize),
                 *boards[1].get_unchecked(m.next[1] as usize),
             ];
-            (m, (next << 4) | mask, tiles)
+            (m, tiles)
         };
+        let node = A::next(node, m.dir);
         let candidate = Candidate {
             indices: H::shifted(base, boards, m, tiles),
             blanks: m.next,
@@ -446,13 +575,12 @@ mod tests {
     fn automaton_prunes_backtracks_and_the_six_move_loop() {
         // Slidy directions: up 0, left 1, down 2, right 3.
         let walk = |dirs: &[u8]| {
-            let mut node = fsm::START;
+            let mut node = Pruning::START;
             for &dir in dirs {
                 if node & (1 << dir) == 0 {
                     return None;
                 }
-                let state = u32::from(fsm::FSM[(node >> 4) as usize][dir as usize]);
-                node = (state << 4) | u32::from(fsm::MASK_OF[(state >> 6) as usize]);
+                node = Pruning::next(node, dir);
             }
             Some(node)
         };
