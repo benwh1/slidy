@@ -337,14 +337,21 @@ pub(in crate::solver::size4x4::stm) fn breadth_first_search<F>(
     };
     let threads = thread::available_parallelism().map_or(1, usize::from);
 
-    // The goal: every tile home, and the blank anywhere (additive) or home (full).
+    // The goal: every tile home, and the blank home (full) or in its home's region (additive,
+    // where moves within a region are free). The group's tiles must free the blank's home before
+    // the puzzle is solved, so an additive goal that walls it in is not reached yet.
     let home = Placement::new(index_of_cells(tiles), tiles);
     let mut layer_sizes = vec![0u64];
     let mut blanks = home.free_cells;
+    let goal_blanks = if cost == Cost::Additive {
+        reachable_region(1, home.free_cells)
+    } else {
+        1
+    };
     while blanks != 0 {
         let blank = blanks.trailing_zeros();
         blanks &= blanks - 1;
-        if cost == Cost::Additive || blank == 0 {
+        if (goal_blanks >> blank) & 1 != 0 {
             let rank = blank_rank(home.free_cells, blank);
             search
                 .marks
@@ -521,7 +528,8 @@ mod tests {
         xxhash_rust::xxh3::xxh3_64(&distances)
     }
 
-    /// Checks each case's distances against its known-answer hash (from the original search).
+    /// Checks each case's distances against its known-answer hash (from the original search, but
+    /// for additive goals that wall in the blank's home, which it ended too early).
     fn check_known_answers(cases: &[(&[u8], Cost, u64)]) {
         let mut failures = Vec::new();
         for &(tiles, cost, expected) in cases {
@@ -561,7 +569,7 @@ mod tests {
             (
                 &[1, 2, 3, 4, 5, 6, 7],
                 Cost::Additive,
-                0xf0da_925d_bc7a_8326,
+                0x0c71_fcf4_d9b4_27eb,
             ),
             (&[1, 2, 3, 4, 5, 6, 7], Cost::Full, 0x8e60_fc5a_8fb6_e1d9),
         ]);

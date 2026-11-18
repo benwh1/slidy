@@ -66,7 +66,7 @@ const LAST_NINE_START: usize = FIRST_NINE_START + NINE_TILE_TABLE_LEN;
 const LEN: usize = LAST_NINE_START + NINE_TILE_TABLE_LEN;
 
 /// The [`xxh3`] hash of the database, checked by [`Pdb::try_from_bytes`].
-const HASH: u64 = 0x046f_0e0c_4cf6_f5c0;
+const HASH: u64 = 0x03a3_0ec1_0688_1f45;
 
 /// The huge pattern database (17.0 GB): the maximum of two 9-6 partitions. Builds in about 40
 /// minutes on 6 cores, using up to 25 GB.

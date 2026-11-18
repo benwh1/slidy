@@ -84,7 +84,7 @@ const CORNER_START: usize = TOP_ROW_START + THREE_TILE_TABLE_LEN;
 const LEN: usize = CORNER_START + ONE_TILE_TABLE_LEN;
 
 /// The [`xxh3`] hash of the database, checked by [`Pdb::try_from_bytes`].
-const HASH: u64 = 0x0d61_c7fc_24c1_c3ad;
+const HASH: u64 = 0xa561_acd8_6ab3_ac0c;
 
 /// The medium pattern database (75 MB): the maximum of a 7-7-1 partition and a 6-6-3 one.
 /// Builds in a minute or two.

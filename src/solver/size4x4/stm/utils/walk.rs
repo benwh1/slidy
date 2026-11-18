@@ -82,7 +82,12 @@ pub(in crate::solver::size4x4::stm) fn exact_value(
     // The value mod `modulus`.
     let mut residue = parity | (code_of(state) << 1);
     let mut value = 0u32;
-    while state.index != goal || (encoding == Encoding::FullBit && state.blank != 0) {
+    // The goal: the placement home, and the blank home (full) or in its home's region (additive).
+    while state.index != goal
+        || (encoding == Encoding::FullBit && state.blank != 0)
+        || (encoding == Encoding::AdditiveBit
+            && reachable_region(1 << state.blank, state.free_cells) & 1 == 0)
+    {
         // The moves: (from, to), the tile on `from` moving to `to`.
         let mut moves = [(0u32, 0u32); 48];
         let mut move_count = 0;

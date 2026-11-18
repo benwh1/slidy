@@ -11,8 +11,10 @@
 //! Speeds are single-threaded solves per second of random positions on an i5-9500. Each
 //! database partitions the tiles into groups, once or twice, and its heuristic is the maximum,
 //! over the partitions and both orientations (the position and its mirror image across the main
-//! diagonal), of the sum of the groups' distances. Some groups' tables also hold the distance
-//! counting every move, which is a term of the maximum too.
+//! diagonal), of the sum of the groups' distances. A group's distance counts only its own tiles'
+//! moves, to its tiles home with the blank free to reach its own home: a group whose tiles wall
+//! in the blank's home must make more moves before the puzzle is solved. Some groups' tables also
+//! hold the distance counting every move, which is a term of the maximum too.
 //!
 //! Most tables store only a code of each distance, which the search decodes against the
 //! parent's distances (a move changes them by a known amount), so the search carries each node's

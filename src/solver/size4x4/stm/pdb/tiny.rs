@@ -76,7 +76,7 @@ const BOTTOM_SIX_START: usize = UPPER_SIX_START + SIX_TILE_TABLE_LEN;
 const LEN: usize = BOTTOM_SIX_START + SIX_TILE_TABLE_LEN;
 
 /// The [`xxh3`] hash of the database, checked by [`Pdb::try_from_bytes`].
-const HASH: u64 = 0xfe6a_4bd3_1b78_1448;
+const HASH: u64 = 0x8dd1_306a_33a8_d57d;
 
 /// The tiny pattern database (5.9 MB): the maximum of two 6-6-3 partitions. Builds in
 /// about a second.

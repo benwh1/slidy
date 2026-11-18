@@ -54,7 +54,7 @@ const BOTTOM_EIGHT_START: usize = TOP_SEVEN_START + SEVEN_TILE_TABLE_LEN;
 const LEN: usize = BOTTOM_EIGHT_START + EIGHT_TILE_TABLE_LEN;
 
 /// The [`xxh3`] hash of the database, checked by [`Pdb::try_from_bytes`].
-const HASH: u64 = 0x9b9c_f4d5_15b5_8c19;
+const HASH: u64 = 0x67d0_6ca4_066a_b09c;
 
 /// The large pattern database (1.27 GB): a single 7-8 partition. Builds in about ten
 /// minutes.
