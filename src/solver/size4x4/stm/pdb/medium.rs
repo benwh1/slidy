@@ -17,48 +17,71 @@ use crate::solver::{
         pdb::Pdb,
         utils::{
             Board, Move,
-            build::{Cost, atomic, bfs, relax},
-            index::{mask, placement, placements, shift, shift_table},
+            build::{Cost, as_atomic, breadth_first_search, relax_minimums},
+            index::{index_shift_table, index_shifts, placement_count, placement_index, tile_mask},
             prefetch,
-            walk::{Code, walk},
+            walk::{Encoding, exact_value},
         },
     },
 };
 
 // The first partition: the top two rows, the bottom two but the far corner, and the corner.
-const T: &[u8] = &[1, 2, 3, 4, 5, 6, 7];
-const B: &[u8] = &[8, 9, 10, 11, 13, 14, 15];
-const S: &[u8] = &[12];
+const TOP_SEVEN: &[u8] = &[1, 2, 3, 4, 5, 6, 7];
+const BOTTOM_SEVEN: &[u8] = &[8, 9, 10, 11, 13, 14, 15];
+const CORNER: &[u8] = &[12];
 // The second: the top row, and the left and right halves of the rest.
-const A: &[u8] = &[1, 2, 3];
-const L: &[u8] = &[6, 7, 8, 9, 14, 15];
-const R: &[u8] = &[4, 5, 10, 11, 12, 13];
+const TOP_ROW: &[u8] = &[1, 2, 3];
+const LEFT_SIX: &[u8] = &[6, 7, 8, 9, 14, 15];
+const RIGHT_SIX: &[u8] = &[4, 5, 10, 11, 12, 13];
 
-/// The groups, in table order.
-const GROUPS: [&[u8]; 6] = [T, B, S, A, L, R];
+/// The groups, in table order (and in the order of [`Medium`]'s indices).
+const GROUPS: [&[u8]; 6] = [
+    TOP_SEVEN,
+    BOTTOM_SEVEN,
+    CORNER,
+    TOP_ROW,
+    LEFT_SIX,
+    RIGHT_SIX,
+];
 
-/// The groups' tiles, as masks.
-const MASKS: [u16; 6] = [mask(T), mask(B), mask(S), mask(A), mask(L), mask(R)];
+/// The groups' tiles as masks, in [`GROUPS`] order.
+const GROUP_MASKS: [u16; 6] = [
+    tile_mask(TOP_SEVEN),
+    tile_mask(BOTTOM_SEVEN),
+    tile_mask(CORNER),
+    tile_mask(TOP_ROW),
+    tile_mask(LEFT_SIX),
+    tile_mask(RIGHT_SIX),
+];
 
 /// How moves shift the groups' indices.
-const SHIFT: [[u64; 16]; 16] = shift_table([&[T, B, S], &[A, L, R]]);
+const INDEX_SHIFTS: [[u64; 16]; 16] = index_shift_table([
+    &[TOP_SEVEN, BOTTOM_SEVEN, CORNER],
+    &[TOP_ROW, LEFT_SIX, RIGHT_SIX],
+]);
 
 /// The size of a 7-tile table: 2 bits per placement.
-const SEVEN: usize = placements(7) / 4;
+const SEVEN_TILE_TABLE_LEN: usize = placement_count(7) / 4;
 
 /// The size of a 6-tile table: a `u32` per placement.
-const SIX: usize = placements(6) * 4;
+const SIX_TILE_TABLE_LEN: usize = placement_count(6) * 4;
+
+/// The size of the 3-tile table: a byte per placement and blank cell.
+const THREE_TILE_TABLE_LEN: usize = placement_count(3) * 16;
+
+/// The size of the 1-tile table: a byte per placement and blank cell.
+const ONE_TILE_TABLE_LEN: usize = placement_count(1) * 16;
 
 // Where each table starts.
-const T_AT: usize = 0;
-const B_AT: usize = T_AT + SEVEN;
-const L_AT: usize = B_AT + SEVEN;
-const R_AT: usize = L_AT + SIX;
-const A_AT: usize = R_AT + SIX;
-const S_AT: usize = A_AT + placements(3) * 16;
+const TOP_SEVEN_START: usize = 0;
+const BOTTOM_SEVEN_START: usize = TOP_SEVEN_START + SEVEN_TILE_TABLE_LEN;
+const LEFT_SIX_START: usize = BOTTOM_SEVEN_START + SEVEN_TILE_TABLE_LEN;
+const RIGHT_SIX_START: usize = LEFT_SIX_START + SIX_TILE_TABLE_LEN;
+const TOP_ROW_START: usize = RIGHT_SIX_START + SIX_TILE_TABLE_LEN;
+const CORNER_START: usize = TOP_ROW_START + THREE_TILE_TABLE_LEN;
 
 /// The length of the database in bytes.
-const LEN: usize = S_AT + placements(1) * 16;
+const LEN: usize = CORNER_START + ONE_TILE_TABLE_LEN;
 
 /// The [`xxh3`] hash of the database, checked by [`Pdb::try_from_bytes`].
 const HASH: u64 = 0x0d61_c7fc_24c1_c3ad;
@@ -71,122 +94,166 @@ pub struct Medium {
 /// `((value + 1) >> 1) & 1`: the bit a 6-tile table holds for `value + 1`. A move changes a
 /// value by exactly 1, so a child's bit matches this exactly when its value went up.
 #[inline(always)]
-const fn up(value: u32) -> u32 {
+const fn bit_if_increased(value: u32) -> u32 {
     ((value + 1) >> 1) & 1
 }
 
 impl Medium {
     #[inline(always)]
-    fn byte(&self, i: usize) -> u8 {
-        debug_assert!(i < LEN);
-        // SAFETY: every index is within its table, and the database has length `LEN`.
-        unsafe { *self.bytes.get_unchecked(i) }
+    fn byte(&self, offset: usize) -> u8 {
+        debug_assert!(offset < LEN);
+        // SAFETY: every offset is within its table, and the database has length `LEN`.
+        unsafe { *self.bytes.get_unchecked(offset) }
     }
 
     #[inline(always)]
-    fn address(&self, i: usize) -> *const u8 {
-        self.bytes.as_ptr().wrapping_add(i)
+    fn address_of(&self, offset: usize) -> *const u8 {
+        self.bytes.as_ptr().wrapping_add(offset)
     }
 
-    /// The code of placement `index` in the 7-tile table at `at`.
+    /// The value of placement `index` and blank cell `blank` in the 1- or 3-tile table at
+    /// `start`.
     #[inline(always)]
-    fn code(&self, at: usize, index: u32) -> u32 {
+    fn byte_value(&self, start: usize, index: u32, blank: usize) -> u8 {
+        self.byte(start + 16 * index as usize + blank)
+    }
+
+    /// The code of placement `index` in the 7-tile table at `start`.
+    #[inline(always)]
+    fn seven_tile_code(&self, start: usize, index: u32) -> u32 {
         let index = index as usize;
-        u32::from(self.byte(at + index / 4) >> (2 * (index % 4))) & 3
+        u32::from(self.byte(start + index / 4) >> (2 * (index % 4))) & 3
     }
 
-    /// A child's value in the 7-tile table at `at` of the tiles in `group`, from its index and
-    /// the moved tile, decoded against its parent's value.
+    /// A child's value in the 7-tile table at `start` of the tiles in `group_mask`, from its
+    /// index and the moved tile, decoded against its parent's value.
     #[inline(always)]
-    fn decode_seven(&self, at: usize, group: u16, index: u32, tile: u8, parent: u8) -> u8 {
+    fn decode_seven_tile(
+        &self,
+        start: usize,
+        group_mask: u16,
+        index: u32,
+        moved: u8,
+        parent: u8,
+    ) -> u8 {
         // The child's value is 1 or 3 away (the four candidates' codes count up mod 4), or the
         // same when the moved tile is not in the group.
         let parent = u32::from(parent);
-        let step = self.code(at, index).wrapping_sub(u32::midpoint(parent, 5)) & 3;
+        let step = self
+            .seven_tile_code(start, index)
+            .wrapping_sub(u32::midpoint(parent, 5))
+            & 3;
         let child = (parent + 2 * step).wrapping_sub(3);
-        select_unpredictable((group >> tile) & 1 != 0, child, parent) as u8
+        select_unpredictable((group_mask >> moved) & 1 != 0, child, parent) as u8
     }
 
-    /// The bits of placement `index` in the 6-tile table at `at`, from blank cell `blank`'s on.
+    /// The bits of placement `index` in the 6-tile table at `start`, from blank cell `blank`'s
+    /// on.
     #[inline(always)]
-    fn bits(&self, at: usize, index: u32, blank: usize) -> u32 {
-        let i = at + 4 * index as usize;
-        debug_assert!(i + 4 <= LEN);
+    fn six_tile_bits(&self, start: usize, index: u32, blank: usize) -> u32 {
+        let offset = start + 4 * index as usize;
+        debug_assert!(offset + 4 <= LEN);
         // SAFETY: as in `byte`.
-        let word = unsafe { self.bytes.as_ptr().add(i).cast::<u32>().read_unaligned() };
+        let word = unsafe {
+            self.bytes
+                .as_ptr()
+                .add(offset)
+                .cast::<u32>()
+                .read_unaligned()
+        };
         word >> (2 * blank)
     }
 
-    /// A child's additive and full values in the 6-tile table at `at` of the tiles in `group`,
-    /// from its index, the blank's cell and the moved tile, decoded against its parent's.
+    /// A child's additive and full values in the 6-tile table at `start` of the tiles in
+    /// `group_mask`, from its index, the blank's cell and the moved tile, decoded against its
+    /// parent's.
     #[inline(always)]
-    fn decode_six(
+    fn decode_six_tile(
         &self,
-        at: usize,
-        group: u16,
+        start: usize,
+        group_mask: u16,
         index: u32,
         blank: usize,
-        tile: u8,
+        moved: u8,
         [additive, full]: [u8; 2],
     ) -> [u8; 2] {
         // Each value goes up when its bit matches, else down; the additive one only changes
         // when the moved tile is in the group.
         let (additive, full) = (u32::from(additive), u32::from(full));
-        let y = self.bits(at, index, blank) ^ (up(additive) | (up(full) << 1));
-        let child = (additive + 1).wrapping_sub((y << 1) & 2);
+        let expected = bit_if_increased(additive) | (bit_if_increased(full) << 1);
+        let went_down = self.six_tile_bits(start, index, blank) ^ expected;
+        let child_additive = (additive + 1).wrapping_sub((went_down << 1) & 2);
+        let child_full = (full + 1).wrapping_sub(went_down & 2);
         [
-            select_unpredictable((group >> tile) & 1 != 0, child, additive) as u8,
-            (full + 1).wrapping_sub(y & 2) as u8,
+            select_unpredictable((group_mask >> moved) & 1 != 0, child_additive, additive) as u8,
+            child_full as u8,
         ]
     }
 }
 
 /// Builds the 7-tile table of `tiles` into `out`.
-fn build_seven(tiles: &[u8], out: &mut [u8], config: &PdbConfig) {
-    let mut min = vec![u8::MAX; placements(tiles.len())];
-    let atomic_min = atomic(&mut min);
-    bfs(tiles, Cost::Additive, config, |p, _, _, d| {
-        atomic_min[p as usize].fetch_min(d, Relaxed);
+fn build_seven_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig) {
+    let mut minimums = vec![u8::MAX; placement_count(tiles.len())];
+    let atomic_minimums = as_atomic(&mut minimums);
+    breadth_first_search(tiles, Cost::Additive, config, |index, _, _, distance| {
+        atomic_minimums[index as usize].fetch_min(distance, Relaxed);
     });
-    relax(tiles, &mut min);
-    for (p, &v) in min.iter().enumerate() {
-        out[p / 4] |= ((v >> 1) & 3) << (2 * (p % 4));
+    relax_minimums(tiles, &mut minimums);
+    for (index, &minimum) in minimums.iter().enumerate() {
+        out[index / 4] |= ((minimum >> 1) & 3) << (2 * (index % 4));
     }
 }
 
 /// Builds the 6-tile table of `tiles` into `out`.
-fn build_six(tiles: &[u8], out: &mut [u8], config: &PdbConfig) {
-    let out = atomic(out);
-    for (cost, bit) in [(Cost::Additive, 0), (Cost::Full, 1)] {
-        bfs(tiles, cost, config, |p, blank, _, d| {
-            let bit = 2 * blank as usize + bit;
-            out[4 * p as usize + bit / 8].fetch_or(((d >> 1) & 1) << (bit % 8), Relaxed);
+fn build_six_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig) {
+    let out = as_atomic(out);
+    for (cost, cost_bit) in [(Cost::Additive, 0), (Cost::Full, 1)] {
+        breadth_first_search(tiles, cost, config, |index, blank, _, distance| {
+            let bit = 2 * blank as usize + cost_bit;
+            let byte = &out[4 * index as usize + bit / 8];
+            byte.fetch_or(((distance >> 1) & 1) << (bit % 8), Relaxed);
         });
     }
 }
 
 /// Builds the table of `tiles` with a byte per placement and blank cell into `out`.
-fn build_bytes(tiles: &[u8], out: &mut [u8], config: &PdbConfig) {
-    let out = atomic(out);
-    bfs(tiles, Cost::Additive, config, |p, blank, _, d| {
-        out[p as usize * 16 + blank as usize].store(d, Relaxed);
-    });
+fn build_byte_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig) {
+    let out = as_atomic(out);
+    breadth_first_search(
+        tiles,
+        Cost::Additive,
+        config,
+        |index, blank, _, distance| {
+            out[index as usize * 16 + blank as usize].store(distance, Relaxed);
+        },
+    );
 }
 
 impl Pdb for Medium {
-    /// Each group's index.
+    /// Each group's index: top seven, bottom seven, corner, top row, left six, right six.
     type Indices = [[u32; 6]; 2];
-    /// The 7-tile groups' values, then the 6-tile groups' additive and full values.
+    /// The 7-tile groups' values (top, bottom), then the 6-tile groups' additive and full values
+    /// (left, right).
     type Values = [[u8; 6]; 2];
 
     fn new(config: &PdbConfig) -> Self {
         let mut bytes = vec![0; LEN].into_boxed_slice();
-        build_seven(T, &mut bytes[T_AT..B_AT], config);
-        build_seven(B, &mut bytes[B_AT..L_AT], config);
-        build_six(L, &mut bytes[L_AT..R_AT], config);
-        build_six(R, &mut bytes[R_AT..A_AT], config);
-        build_bytes(A, &mut bytes[A_AT..S_AT], config);
-        build_bytes(S, &mut bytes[S_AT..], config);
+        let top_seven = &mut bytes[TOP_SEVEN_START..BOTTOM_SEVEN_START];
+        build_seven_tile_table(TOP_SEVEN, top_seven, config);
+        let bottom_seven = &mut bytes[BOTTOM_SEVEN_START..LEFT_SIX_START];
+        build_seven_tile_table(BOTTOM_SEVEN, bottom_seven, config);
+        build_six_tile_table(
+            LEFT_SIX,
+            &mut bytes[LEFT_SIX_START..RIGHT_SIX_START],
+            config,
+        );
+        build_six_tile_table(
+            RIGHT_SIX,
+            &mut bytes[RIGHT_SIX_START..TOP_ROW_START],
+            config,
+        );
+        build_byte_table(TOP_ROW, &mut bytes[TOP_ROW_START..CORNER_START], config);
+        build_byte_table(CORNER, &mut bytes[CORNER_START..], config);
         Self { bytes }
     }
 
@@ -207,43 +274,58 @@ impl Pdb for Medium {
         let mut indices = [[0; 6]; 2];
         let mut values = [[0; 6]; 2];
         let mut bound = 0;
-        for (s, board) in boards.iter().enumerate() {
-            let blank = board.iter().position(|&t| t == 0).unwrap();
-            indices[s] = GROUPS.map(|tiles| placement(tiles, board));
-            let seven = |tiles, at| {
-                walk(
+        for (side, board) in boards.iter().enumerate() {
+            let blank = board.iter().position(|&tile| tile == 0).unwrap();
+            indices[side] = GROUPS.map(|tiles| placement_index(tiles, board));
+            let seven_tile_value = |tiles, start| {
+                exact_value(
                     tiles,
-                    &SHIFT,
+                    &INDEX_SHIFTS,
                     0,
                     board,
-                    Code::Min2,
-                    |n| self.code(at, n.index),
-                    |n| self.address(at + n.index as usize / 4),
+                    Encoding::RelaxedMinimum,
+                    |state| self.seven_tile_code(start, state.index),
+                    |state| self.address_of(start + state.index as usize / 4),
                 )
             };
-            let six = |tiles, at, code, bit: u32| {
-                walk(
+            let six_tile_value = |tiles, start, encoding, bit: u32| {
+                exact_value(
                     tiles,
-                    &SHIFT,
+                    &INDEX_SHIFTS,
                     1,
                     board,
-                    code,
-                    |n| (self.bits(at, n.index, n.blank as usize) >> bit) & 1,
-                    |n| self.address(at + 4 * n.index as usize),
+                    encoding,
+                    |state| {
+                        let bits = self.six_tile_bits(start, state.index, state.blank as usize);
+                        (bits >> bit) & 1
+                    },
+                    |state| self.address_of(start + 4 * state.index as usize),
                 )
             };
-            values[s] = [
-                seven(T, T_AT),
-                seven(B, B_AT),
-                six(L, L_AT, Code::Additive, 0),
-                six(L, L_AT, Code::Full, 1),
-                six(R, R_AT, Code::Additive, 0),
-                six(R, R_AT, Code::Full, 1),
+            values[side] = [
+                seven_tile_value(TOP_SEVEN, TOP_SEVEN_START),
+                seven_tile_value(BOTTOM_SEVEN, BOTTOM_SEVEN_START),
+                six_tile_value(LEFT_SIX, LEFT_SIX_START, Encoding::AdditiveBit, 0),
+                six_tile_value(LEFT_SIX, LEFT_SIX_START, Encoding::FullBit, 1),
+                six_tile_value(RIGHT_SIX, RIGHT_SIX_START, Encoding::AdditiveBit, 0),
+                six_tile_value(RIGHT_SIX, RIGHT_SIX_START, Encoding::FullBit, 1),
             ];
-            let one = self.byte(S_AT + 16 * indices[s][2] as usize + blank);
-            let three = self.byte(A_AT + 16 * indices[s][3] as usize + blank);
-            let [t, b, la, lf, ra, rf] = values[s];
-            bound = bound.max(t + b + one).max(three + la + ra).max(lf).max(rf);
+            let [_, _, corner_index, top_row_index, ..] = indices[side];
+            let corner = self.byte_value(CORNER_START, corner_index, blank);
+            let top_row = self.byte_value(TOP_ROW_START, top_row_index, blank);
+            let [
+                top,
+                bottom,
+                left_additive,
+                left_full,
+                right_additive,
+                right_full,
+            ] = values[side];
+            bound = bound
+                .max(top + bottom + corner)
+                .max(top_row + left_additive + right_additive)
+                .max(left_full)
+                .max(right_full);
         }
         (indices, values, u64::from(bound))
     }
@@ -253,26 +335,27 @@ impl Pdb for Medium {
         &self,
         parent: &Self::Indices,
         boards: &[Board; 2],
-        m: &Move,
+        tile_move: &Move,
         tiles: [u8; 2],
     ) -> Self::Indices {
         let mut indices = *parent;
-        for s in 0..2 {
-            let tile = tiles[s];
-            let delta = shift(&SHIFT, &boards[s], m, s, tile);
-            for (g, group) in MASKS.into_iter().enumerate() {
-                let moved = (group >> tile) & 1 != 0;
-                let index = &mut indices[s][g];
-                *index = index.wrapping_add(select_unpredictable(moved, delta[g / 3], 0));
+        for side in 0..2 {
+            let moved = tiles[side];
+            let deltas = index_shifts(&INDEX_SHIFTS, &boards[side], tile_move, side, moved);
+            for (group, mask) in GROUP_MASKS.into_iter().enumerate() {
+                let in_group = (mask >> moved) & 1 != 0;
+                let delta = select_unpredictable(in_group, deltas[group / 3], 0);
+                indices[side][group] = indices[side][group].wrapping_add(delta);
             }
-            let [t, b, one, three, l, r] = indices[s].map(|i| i as usize);
-            let blank = usize::from(m.next[s]);
-            prefetch(self.address(T_AT + t / 4));
-            prefetch(self.address(B_AT + b / 4));
-            prefetch(self.address(S_AT + 16 * one + blank));
-            prefetch(self.address(A_AT + 16 * three + blank));
-            prefetch(self.address(L_AT + 4 * l));
-            prefetch(self.address(R_AT + 4 * r));
+            let [top, bottom, corner, top_row, left, right] =
+                indices[side].map(|index| index as usize);
+            let blank = usize::from(tile_move.blank_after[side]);
+            prefetch(self.address_of(TOP_SEVEN_START + top / 4));
+            prefetch(self.address_of(BOTTOM_SEVEN_START + bottom / 4));
+            prefetch(self.address_of(CORNER_START + 16 * corner + blank));
+            prefetch(self.address_of(TOP_ROW_START + 16 * top_row + blank));
+            prefetch(self.address_of(LEFT_SIX_START + 4 * left));
+            prefetch(self.address_of(RIGHT_SIX_START + 4 * right));
         }
         indices
     }
@@ -286,33 +369,62 @@ impl Pdb for Medium {
         tiles: [u8; 2],
         depth: u64,
     ) -> Option<(u64, Self::Values)> {
+        let [top_mask, bottom_mask, _, _, left_mask, right_mask] = GROUP_MASKS;
         let mut values = *parent;
         let (mut best, mut total) = (0, 0);
         // One partition in both orientations, then the other, stopping at the first that prunes.
-        for s in 0..2 {
-            let ([t, b, one, ..], v) = (child[s], &mut values[s]);
-            v[0] = self.decode_seven(T_AT, MASKS[0], t, tiles[s], v[0]);
-            v[1] = self.decode_seven(B_AT, MASKS[1], b, tiles[s], v[1]);
-            let one = self.byte(S_AT + 16 * one as usize + usize::from(blanks[s]));
-            let h = u64::from(one + v[0] + v[1]);
-            if h >= depth {
+        for side in 0..2 {
+            let [top_index, bottom_index, corner_index, ..] = child[side];
+            let [top, bottom, ..] = &mut values[side];
+            let moved = tiles[side];
+            *top = self.decode_seven_tile(TOP_SEVEN_START, top_mask, top_index, moved, *top);
+            *bottom = self.decode_seven_tile(
+                BOTTOM_SEVEN_START,
+                bottom_mask,
+                bottom_index,
+                moved,
+                *bottom,
+            );
+            let blank = usize::from(blanks[side]);
+            let corner = self.byte_value(CORNER_START, corner_index, blank);
+            let estimate = u64::from(corner + *top + *bottom);
+            if estimate >= depth {
                 return None;
             }
-            best = best.max(h);
-            total += h;
+            best = best.max(estimate);
+            total += estimate;
         }
-        for s in 0..2 {
-            let ([.., three, l, r], v) = (child[s], &mut values[s]);
-            let blank = usize::from(blanks[s]);
-            [v[2], v[3]] = self.decode_six(L_AT, MASKS[4], l, blank, tiles[s], [v[2], v[3]]);
-            [v[4], v[5]] = self.decode_six(R_AT, MASKS[5], r, blank, tiles[s], [v[4], v[5]]);
-            let three = self.byte(A_AT + 16 * three as usize + blank);
-            let h = u64::from((three + v[2] + v[4]).max(v[3]).max(v[5]));
-            if h >= depth {
+        for side in 0..2 {
+            let [.., top_row_index, left_index, right_index] = child[side];
+            let [_, _, left_additive, left_full, right_additive, right_full] = &mut values[side];
+            let (moved, blank) = (tiles[side], usize::from(blanks[side]));
+            [*left_additive, *left_full] = self.decode_six_tile(
+                LEFT_SIX_START,
+                left_mask,
+                left_index,
+                blank,
+                moved,
+                [*left_additive, *left_full],
+            );
+            [*right_additive, *right_full] = self.decode_six_tile(
+                RIGHT_SIX_START,
+                right_mask,
+                right_index,
+                blank,
+                moved,
+                [*right_additive, *right_full],
+            );
+            let top_row = self.byte_value(TOP_ROW_START, top_row_index, blank);
+            let estimate = u64::from(
+                (top_row + *left_additive + *right_additive)
+                    .max(*left_full)
+                    .max(*right_full),
+            );
+            if estimate >= depth {
                 return None;
             }
-            best = best.max(h);
-            total += h;
+            best = best.max(estimate);
+            total += estimate;
         }
         Some(((best << 10) + total, values))
     }

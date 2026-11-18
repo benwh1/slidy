@@ -23,7 +23,7 @@ use crate::{
         size4x4::stm::{
             pdb::Pdb,
             solver::automaton::{Automaton, Backtrack, Pruning},
-            utils::{self, Board, MIRROR, MOVES},
+            utils::{self, Board, MIRRORED_CELL, MOVES},
         },
         solver::{Solver as SolverT, SolverError},
     },
@@ -50,7 +50,7 @@ struct Candidate<P: Pdb> {
 }
 
 /// A node's values and its successors.
-struct Expansion<P: Pdb> {
+struct ExpandedNode<P: Pdb> {
     values: P::Values,
     candidates: [MaybeUninit<Candidate<P>>; 4],
     count: usize,
@@ -136,7 +136,8 @@ where
             return Err(SolverError::Unsolvable);
         }
 
-        let board: Board = std::array::from_fn(|i| puzzle.piece_at(i as u64).to_u8().unwrap());
+        let board: Board =
+            std::array::from_fn(|cell| puzzle.piece_at(cell as u64).to_u8().unwrap());
         let internal = utils::to_internal(&board);
         let boards = [internal, utils::reflect(&internal)];
         let blank = utils::blank_position(&internal);
@@ -151,25 +152,26 @@ where
 
         iterative_deepening::<Stm, _, _>(
             self,
-            |s| &mut s.search,
+            |solver| &mut solver.search,
             config,
             lower_bound,
-            |s, depth| {
+            |solver, depth| {
                 // Every solution's length is at least the bound and has its parity.
                 if depth < lower_bound || (depth ^ lower_bound) & 1 != 0 {
                     return ControlFlow::Continue(());
                 }
-                s.boards = boards;
-                s.path.resize(depth as usize + 1, 0);
+                solver.boards = boards;
+                solver.path.resize(depth as usize + 1, 0);
                 if depth == 0 {
-                    return s.record(blank);
+                    return solver.record(blank);
                 }
                 if pruning {
-                    let root = s.expand::<Pruning>(blank, &indices, Pruning::START, values);
-                    s.dfs::<Pruning>(blank, depth, &root)
+                    let root = solver.expand::<Pruning>(blank, &indices, Pruning::START, values);
+                    solver.search_subtree::<Pruning>(blank, depth, &root)
                 } else {
-                    let root = s.expand::<Backtrack>(blank, &indices, Backtrack::START, values);
-                    s.dfs::<Backtrack>(blank, depth, &root)
+                    let root =
+                        solver.expand::<Backtrack>(blank, &indices, Backtrack::START, values);
+                    solver.search_subtree::<Backtrack>(blank, depth, &root)
                 }
             },
         );
@@ -192,14 +194,14 @@ where
     #[cold]
     #[inline(never)]
     fn record(&mut self, blank: usize) -> ControlFlow<()> {
-        // `path[d]`: the blank's cell with `d` moves left, so the root's is the last.
+        // `path[depth]`: the blank's cell with `depth` moves left, so the root's is the last.
         self.path[0] = blank as u8;
         let stack = &mut self.search.stack;
         stack.clear();
         let (root, trail) = self.path.split_last().unwrap();
-        let trail = trail.iter().rev().map(|&c| usize::from(c));
-        for d in utils::directions(usize::from(*root), trail) {
-            stack.push(d);
+        let trail = trail.iter().rev().map(|&cell| usize::from(cell));
+        for direction in utils::directions(usize::from(*root), trail) {
+            stack.push(direction);
         }
         self.search.record_solution()
     }
@@ -207,75 +209,90 @@ where
     /// Searches the subtree of the node with the blank at `blank` and `depth` moves left, whose
     /// values and successors are `node`, for solutions, recording each; breaks when the search
     /// should stop.
-    fn dfs<A>(&mut self, blank: usize, depth: u64, node: &Expansion<P>) -> ControlFlow<()>
+    fn search_subtree<A>(
+        &mut self,
+        blank: usize,
+        depth: u64,
+        node: &ExpandedNode<P>,
+    ) -> ControlFlow<()>
     where
         A: Automaton,
     {
         self.path[depth as usize] = blank as u8;
-        let here = [blank as u8, MIRROR[blank & 15]];
+        let blank_cells = [blank as u8, MIRRORED_CELL[blank & 15]];
 
-        // The successors within the bound, best first, and their values.
-        let mut keys = [0u64; 4];
+        // The successors within the bound (the survivors), best first, and their values.
+        let mut sort_keys = [0u64; 4];
         let mut values = [MaybeUninit::<P::Values>::uninit(); 4];
-        let mut order = [0usize; 4];
-        let mut n = 0;
-        for k in 0..node.count {
+        let mut survivors = [0usize; 4];
+        let mut survivor_count = 0;
+        for candidate_index in 0..node.count {
             // SAFETY: the first `count` candidates were written.
-            let c = unsafe { node.candidates[k].assume_init_ref() };
-            if let Some((key, v)) =
-                self.pdb
-                    .evaluate(&node.values, &c.indices, c.blanks, c.tiles, depth)
-            {
-                keys[k] = key;
-                values[k].write(v);
+            let candidate = unsafe { node.candidates[candidate_index].assume_init_ref() };
+            let evaluation = self.pdb.evaluate(
+                &node.values,
+                &candidate.indices,
+                candidate.blanks,
+                candidate.tiles,
+                depth,
+            );
+            if let Some((sort_key, candidate_values)) = evaluation {
+                sort_keys[candidate_index] = sort_key;
+                values[candidate_index].write(candidate_values);
                 // Insertion sort: at most four entries.
-                let mut j = n;
-                while j > 0 && keys[order[j - 1]] > key {
-                    order[j] = order[j - 1];
-                    j -= 1;
+                let mut position = survivor_count;
+                while position > 0 && sort_keys[survivors[position - 1]] > sort_key {
+                    survivors[position] = survivors[position - 1];
+                    position -= 1;
                 }
-                order[j] = k;
-                n += 1;
+                survivors[position] = candidate_index;
+                survivor_count += 1;
             }
         }
+        let survivors = &survivors[..survivor_count];
 
         if depth == 1 {
             // A survivor's estimate is 0: it is solved.
-            for &k in &order[..n] {
+            for &candidate_index in survivors {
                 // SAFETY: as above.
-                let c = unsafe { node.candidates[k].assume_init_ref() };
-                self.record(usize::from(c.blanks[0]))?;
+                let candidate = unsafe { node.candidates[candidate_index].assume_init_ref() };
+                self.record(usize::from(candidate.blanks[0]))?;
             }
             return ControlFlow::Continue(());
         }
 
         // Generate every survivor's successors first, so that their table lines load while the
         // later ones are generated and the earlier ones searched.
-        let mut children = [const { MaybeUninit::<Expansion<P>>::uninit() }; 4];
-        for (slot, &k) in order[..n].iter().enumerate() {
+        let mut children = [const { MaybeUninit::<ExpandedNode<P>>::uninit() }; 4];
+        for (child, &candidate_index) in children.iter_mut().zip(survivors) {
             // SAFETY: survivors' candidates and values were written.
-            let (c, v) = unsafe {
+            let (candidate, candidate_values) = unsafe {
                 (
-                    node.candidates[k].assume_init_ref(),
-                    values[k].assume_init(),
+                    node.candidates[candidate_index].assume_init_ref(),
+                    values[candidate_index].assume_init(),
                 )
             };
-            self.slide(here, c.blanks, c.tiles);
-            let child = self.expand::<A>(usize::from(c.blanks[0]), &c.indices, c.node, v);
-            children[slot].write(child);
-            self.slide(c.blanks, here, c.tiles);
+            self.slide(blank_cells, candidate.blanks, candidate.tiles);
+            child.write(self.expand::<A>(
+                usize::from(candidate.blanks[0]),
+                &candidate.indices,
+                candidate.node,
+                candidate_values,
+            ));
+            self.slide(candidate.blanks, blank_cells, candidate.tiles);
         }
-        for (slot, &k) in order[..n].iter().enumerate() {
+        for (child, &candidate_index) in children.iter().zip(survivors) {
             // SAFETY: as above, and every survivor's successors were written.
-            let (c, child) = unsafe {
+            let (candidate, child) = unsafe {
                 (
-                    node.candidates[k].assume_init_ref(),
-                    children[slot].assume_init_ref(),
+                    node.candidates[candidate_index].assume_init_ref(),
+                    child.assume_init_ref(),
                 )
             };
-            self.slide(here, c.blanks, c.tiles);
-            let flow = self.dfs::<A>(usize::from(c.blanks[0]), depth - 1, child);
-            self.slide(c.blanks, here, c.tiles);
+            self.slide(blank_cells, candidate.blanks, candidate.tiles);
+            let child_blank = usize::from(candidate.blanks[0]);
+            let flow = self.search_subtree::<A>(child_blank, depth - 1, child);
+            self.slide(candidate.blanks, blank_cells, candidate.tiles);
             flow?;
         }
         ControlFlow::Continue(())
@@ -290,29 +307,33 @@ where
         indices: &P::Indices,
         node: u32,
         values: P::Values,
-    ) -> Expansion<P>
+    ) -> ExpandedNode<P>
     where
         A: Automaton,
     {
-        let list = &MOVES[blank & 15][(node & 15) as usize];
-        let mut out = Expansion {
+        let moves = &MOVES[blank & 15][(node & 15) as usize];
+        let mut expanded = ExpandedNode {
             values,
             candidates: [const { MaybeUninit::uninit() }; 4],
-            count: usize::from(list.n),
+            count: usize::from(moves.count),
         };
-        for (k, m) in list.moves[..out.count].iter().enumerate() {
+        for (candidate, tile_move) in expanded
+            .candidates
+            .iter_mut()
+            .zip(&moves.moves[..expanded.count])
+        {
             let tiles = [
-                self.boards[0][usize::from(m.next[0]) & 15],
-                self.boards[1][usize::from(m.next[1]) & 15],
+                self.boards[0][usize::from(tile_move.blank_after[0]) & 15],
+                self.boards[1][usize::from(tile_move.blank_after[1]) & 15],
             ];
-            out.candidates[k].write(Candidate {
-                indices: self.pdb.shifted(indices, &self.boards, m, tiles),
-                blanks: m.next,
+            candidate.write(Candidate {
+                indices: self.pdb.shifted(indices, &self.boards, tile_move, tiles),
+                blanks: tile_move.blank_after,
                 tiles,
-                node: A::next(node, m.dir),
+                node: A::next(node, tile_move.direction),
             });
         }
-        out
+        expanded
     }
 }
 
@@ -383,7 +404,7 @@ mod tests {
             .solve_all_optimal(&puzzle)
             .unwrap()
             .into_iter()
-            .map(|s| s.to_string())
+            .map(|solution| solution.to_string())
             .collect::<Vec<_>>();
         solutions.sort();
         let expected = [

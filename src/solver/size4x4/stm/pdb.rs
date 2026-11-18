@@ -85,13 +85,13 @@ pub trait Pdb: AsRef<[u8]> + Sized {
     /// The root's indices, its values and its lower bound.
     fn root(&self, boards: &[Board; 2]) -> (Self::Indices, Self::Values, u64);
 
-    /// The indices after move `m` from `boards`, which moves `tiles` into the blank. Prefetches
-    /// the entries [`Self::evaluate`] will read.
+    /// The indices after move `tile_move` from `boards`, which moves `tiles` into the blank.
+    /// Prefetches the entries [`Self::evaluate`] will read.
     fn shifted(
         &self,
         parent: &Self::Indices,
         boards: &[Board; 2],
-        m: &Move,
+        tile_move: &Move,
         tiles: [u8; 2],
     ) -> Self::Indices;
 

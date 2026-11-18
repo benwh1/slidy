@@ -26,10 +26,10 @@ pub type Board = [u8; 16];
 
 /// Blank-move directions come from slidy (`Up` = 0, `Left` = 1, `Down` = 2,
 /// `Right` = 3), matching the columns of this table.
-/// `NEIGHBORS[blank][dir]` is the internal position of the blank after moving
-/// it in direction `dir` ([`Direction`] order: up, left, down, right),
+/// `NEIGHBOR_IN_DIRECTION[blank][direction]` is the internal position of the blank after moving
+/// it in direction `direction` ([`Direction`] order: up, left, down, right),
 /// or -1 when that move leaves the board.
-pub const NEIGHBORS: [[i8; 4]; 16] = [
+pub const NEIGHBOR_IN_DIRECTION: [[i8; 4]; 16] = [
     [-1, -1, 7, 1],
     [-1, 0, 6, 2],
     [-1, 1, 5, 3],
@@ -48,17 +48,17 @@ pub const NEIGHBORS: [[i8; 4]; 16] = [
     [8, -1, -1, 14],
 ];
 
-/// `NBR[cell]`: the cells next to `cell`, as a mask.
-pub const NBR: [u16; 16] = {
+/// `NEIGHBOR_MASKS[cell]`: the cells next to `cell`, as a mask.
+pub const NEIGHBOR_MASKS: [u16; 16] = {
     let mut out = [0; 16];
     let mut cell = 0;
     while cell < 16 {
-        let mut dir = 0;
-        while dir < 4 {
-            if NEIGHBORS[cell][dir] >= 0 {
-                out[cell] |= 1 << NEIGHBORS[cell][dir];
+        let mut direction = 0;
+        while direction < 4 {
+            if NEIGHBOR_IN_DIRECTION[cell][direction] >= 0 {
+                out[cell] |= 1 << NEIGHBOR_IN_DIRECTION[cell][direction];
             }
-            dir += 1;
+            direction += 1;
         }
         cell += 1;
     }
@@ -80,37 +80,40 @@ pub fn prefetch(address: *const u8) {
 
 /// One usable move from a blank cell.
 ///
-/// Everything about a move that depends only on the blank's cell and
-/// the direction is precomputed, per orientation (`[direct, mirrored]`):
-/// the neighbour, the lower of the two blank positions and the gap
-/// between them (the cells the index scan walks), and the sign of the
-/// shift.
+/// Everything about a move that depends only on the blank's cell and the direction is
+/// precomputed, per orientation (`[direct, mirrored]`).
 #[derive(Clone, Copy)]
 pub struct Move {
-    pub(crate) dir: u8,
-    pub(crate) next: [u8; 2],
-    pub(crate) lo: [u8; 2],
-    pub(crate) gap: [u8; 2],
-    /// 1 when the blank moves to the higher cell (the shift is negated).
-    pub(crate) sign: [u8; 2],
+    /// The direction the blank moves ([`Direction`] order: up 0, left 1, down 2, right 3).
+    pub(crate) direction: u8,
+    /// The blank's cell after the move.
+    pub(crate) blank_after: [u8; 2],
+    /// The lower of the blank's cells before and after the move.
+    pub(crate) lower_cell: [u8; 2],
+    /// How far apart the blank's cells before and after the move are, in label order: the cells
+    /// strictly between them are the ones the moved tile passes.
+    pub(crate) cell_gap: [u8; 2],
+    /// Whether the blank moves to the higher cell (so the moved tile to the lower one).
+    pub(crate) blank_to_higher_cell: [bool; 2],
 }
 
 /// The usable moves from one blank cell.
 #[derive(Clone, Copy)]
 pub(crate) struct MoveList {
-    pub(crate) n: u8,
+    /// How many moves there are.
+    pub(crate) count: u8,
     pub(crate) moves: [Move; 4],
 }
 
-/// `MOVES[blank][mask]`: the moves available from `blank` among the
-/// directions allowed by `mask` (bit `d` for slidy direction `d`; the
+/// `MOVES[blank][allowed]`: the moves available from `blank` among the
+/// directions allowed by `allowed` (bit `d` for slidy direction `d`; the
 /// duplicate-pruning automaton supplies the mask, which also excludes
 /// the move that would undo the previous one). The moves are listed in
 /// generation order: left, right, up, down.
 pub(crate) const MOVES: [[MoveList; 16]; 16] = build_moves();
 
 /// The order the successors are generated in.
-const MOVE_DIRS: [u8; 4] = [
+const GENERATION_ORDER: [u8; 4] = [
     Direction::Left as u8,
     Direction::Right as u8,
     Direction::Up as u8,
@@ -119,65 +122,68 @@ const MOVE_DIRS: [u8; 4] = [
 
 const fn build_moves() -> [[MoveList; 16]; 16] {
     let none = Move {
-        dir: 0,
-        next: [0; 2],
-        lo: [0; 2],
-        gap: [0; 2],
-        sign: [0; 2],
+        direction: 0,
+        blank_after: [0; 2],
+        lower_cell: [0; 2],
+        cell_gap: [0; 2],
+        blank_to_higher_cell: [false; 2],
     };
-    let mut out = [[MoveList {
-        n: 0,
+    let mut table = [[MoveList {
+        count: 0,
         moves: [none; 4],
     }; 16]; 16];
     let mut blank = 0;
     while blank < 16 {
-        let mut mask = 0;
-        while mask < 16 {
-            let list = &mut out[blank][mask];
-            let mut k = 0;
-            while k < 4 {
-                let dir = MOVE_DIRS[k];
-                let next = NEIGHBORS[blank][dir as usize];
-                if mask & (1 << dir) != 0 && next >= 0 {
-                    let mut m = Move { dir, ..none };
+        let mut allowed = 0;
+        while allowed < 16 {
+            let list = &mut table[blank][allowed];
+            let mut order_index = 0;
+            while order_index < 4 {
+                let direction = GENERATION_ORDER[order_index];
+                let neighbor = NEIGHBOR_IN_DIRECTION[blank][direction as usize];
+                if allowed & (1 << direction) != 0 && neighbor >= 0 {
+                    let mut tile_move = Move { direction, ..none };
                     // The mirrored move joins the mirrored cells.
-                    let ends = [
-                        (blank, next as usize),
-                        (MIRROR[blank] as usize, MIRROR[next as usize] as usize),
+                    let cells = [
+                        (blank, neighbor as usize),
+                        (
+                            MIRRORED_CELL[blank] as usize,
+                            MIRRORED_CELL[neighbor as usize] as usize,
+                        ),
                     ];
                     let mut side = 0;
                     while side < 2 {
-                        let (from, to) = ends[side];
-                        m.next[side] = to as u8;
-                        m.lo[side] = if from < to { from } else { to } as u8;
-                        m.gap[side] = from.abs_diff(to) as u8;
-                        m.sign[side] = (from < to) as u8;
+                        let (from, to) = cells[side];
+                        tile_move.blank_after[side] = to as u8;
+                        tile_move.lower_cell[side] = if from < to { from } else { to } as u8;
+                        tile_move.cell_gap[side] = from.abs_diff(to) as u8;
+                        tile_move.blank_to_higher_cell[side] = from < to;
                         side += 1;
                     }
-                    list.moves[list.n as usize] = m;
-                    list.n += 1;
+                    list.moves[list.count as usize] = tile_move;
+                    list.count += 1;
                 }
-                k += 1;
+                order_index += 1;
             }
-            mask += 1;
+            allowed += 1;
         }
         blank += 1;
     }
-    out
+    table
 }
 
 /// Mirror of an internal position across the main diagonal.
-pub(crate) const MIRROR: [u8; 16] = [0, 7, 8, 15, 14, 9, 6, 1, 2, 5, 10, 13, 12, 11, 4, 3];
+pub(crate) const MIRRORED_CELL: [u8; 16] = [0, 7, 8, 15, 14, 9, 6, 1, 2, 5, 10, 13, 12, 11, 4, 3];
 
-/// Internal position of zero-based cell `i`.
-const FROM_ZERO_BASED: [u8; 16] = [0, 1, 2, 3, 7, 6, 5, 4, 8, 9, 10, 11, 15, 14, 13, 12];
+/// The internal cell of each row-major cell.
+const ROW_MAJOR_TO_INTERNAL: [u8; 16] = [0, 1, 2, 3, 7, 6, 5, 4, 8, 9, 10, 11, 15, 14, 13, 12];
 
 /// Reflect a board across the main diagonal. The mirrored search uses the
 /// same tables on the mirrored position, and the heuristic takes the better
 /// (larger) of both orientations.
 #[must_use]
 pub(crate) fn reflect(board: &Board) -> Board {
-    std::array::from_fn(|i| MIRROR[board[MIRROR[i] as usize] as usize])
+    std::array::from_fn(|cell| MIRRORED_CELL[board[MIRRORED_CELL[cell] as usize] as usize])
 }
 
 /// Internal position of the blank.
@@ -192,9 +198,9 @@ pub(crate) fn blank_position(board: &Board) -> usize {
 /// Convert a user board (row-major, tiles 1–15, 0 blank) to internal order.
 #[must_use]
 pub(crate) fn to_internal(input: &Board) -> Board {
-    std::array::from_fn(|i| {
-        let tile = input[15 - FROM_ZERO_BASED[i] as usize];
-        FROM_ZERO_BASED[(16 - tile as usize) % 16]
+    std::array::from_fn(|cell| {
+        let tile = input[15 - ROW_MAJOR_TO_INTERNAL[cell] as usize];
+        ROW_MAJOR_TO_INTERNAL[(16 - tile as usize) % 16]
     })
 }
 
@@ -205,13 +211,13 @@ pub(crate) fn directions(
     trail: impl Iterator<Item = usize>,
 ) -> impl Iterator<Item = Direction> {
     // Row-major (row, column) of an internal cell, as `to_internal` maps it.
-    let at = |internal: usize| {
-        let cell = 15 - FROM_ZERO_BASED[internal] as i8;
+    let row_and_column = |internal: usize| {
+        let cell = 15 - ROW_MAJOR_TO_INTERNAL[internal] as i8;
         (cell / 4, cell % 4)
     };
-    let mut from = at(blank);
+    let mut from = row_and_column(blank);
     trail.map(move |cell| {
-        let to = at(cell);
+        let to = row_and_column(cell);
         // The blank moves (to - from); the tile goes the opposite way.
         let tile_move = match (to.0 - from.0, to.1 - from.1) {
             (-1, 0) => Direction::Down,
@@ -230,12 +236,12 @@ pub(crate) fn directions(
 pub(crate) fn random_boards(count: usize) -> impl Iterator<Item = Board> {
     let mut state: u64 = 0x9E37_79B9_7F4A_7C15;
     std::iter::repeat_with(move || {
-        let mut board: Board = std::array::from_fn(|i| i as u8);
-        for i in (1..16).rev() {
+        let mut board: Board = std::array::from_fn(|cell| cell as u8);
+        for last in (1..16).rev() {
             state ^= state << 13;
             state ^= state >> 7;
             state ^= state << 17;
-            board.swap(i, (state % (i as u64 + 1)) as usize);
+            board.swap(last, (state % (last as u64 + 1)) as usize);
         }
         board
     })
@@ -250,14 +256,14 @@ mod tests {
     fn user_format_conversions() {
         // The solved user board maps to every tile home (tile `t` on cell `t`).
         let solved: Board = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0];
-        let home: Board = std::array::from_fn(|i| i as u8);
+        let home: Board = std::array::from_fn(|cell| cell as u8);
         assert_eq!(to_internal(&solved), home);
         assert_eq!(reflect(&home), home);
         // A blank trail renders in order (internal 0 to 1 is the blank moving left in the user's
         // board, so a tile moving right).
         let moves = |blank, trail: &[usize]| {
             directions(blank, trail.iter().copied())
-                .map(|d| d.as_char())
+                .map(|direction| direction.as_char())
                 .collect::<String>()
         };
         assert_eq!(moves(0, &[1, 2, 3]), "RRR");

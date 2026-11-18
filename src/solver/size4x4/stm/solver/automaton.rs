@@ -10,8 +10,8 @@ pub trait Automaton: 'static {
     /// The root's node.
     const START: u32;
 
-    /// The node after a move in direction `dir` from `node`.
-    fn next(node: u32, dir: u8) -> u32;
+    /// The node after a move in direction `direction` from `node`.
+    fn next(node: u32, direction: u8) -> u32;
 }
 
 /// Forbids undoing the previous move and one of each pair of equivalent move sequences of equal
@@ -23,18 +23,19 @@ impl Automaton for Pruning {
     const START: u32 = fsm::START;
 
     #[inline(always)]
-    fn next(node: u32, dir: u8) -> u32 {
+    fn next(node: u32, direction: u8) -> u32 {
         // SAFETY: a live automaton state and a direction 0..4 index the automaton (16-bit states:
         // half the footprint of packed nodes, -12% L2 misses), whose state's group lies inside
         // the mask table.
         unsafe {
-            let next = u32::from(
-                *fsm::FSM
+            let next_state = u32::from(
+                *fsm::TRANSITIONS
                     .get_unchecked((node >> 4) as usize)
-                    .get_unchecked(dir as usize),
+                    .get_unchecked(direction as usize),
             );
-            let mask = u32::from(*fsm::MASK_OF.get_unchecked((next >> 6) as usize));
-            (next << 4) | mask
+            let mask =
+                u32::from(*fsm::ALLOWED_DIRECTIONS.get_unchecked((next_state >> 6) as usize));
+            (next_state << 4) | mask
         }
     }
 }
@@ -46,8 +47,8 @@ impl Automaton for Backtrack {
     const START: u32 = 15;
 
     #[inline(always)]
-    fn next(_node: u32, dir: u8) -> u32 {
-        15 & !(1 << ((dir + 2) & 3))
+    fn next(_node: u32, direction: u8) -> u32 {
+        15 & !(1 << ((direction + 2) & 3))
     }
 }
 
@@ -60,19 +61,19 @@ mod tests {
     #[test]
     fn automaton_prunes_backtracks_and_the_six_move_loop() {
         // Slidy directions: up 0, left 1, down 2, right 3.
-        let walk = |dirs: &[u8]| {
+        let walk = |directions: &[u8]| {
             let mut node = Pruning::START;
-            for &dir in dirs {
-                if node & (1 << dir) == 0 {
+            for &direction in directions {
+                if node & (1 << direction) == 0 {
                     return None;
                 }
-                node = Pruning::next(node, dir);
+                node = Pruning::next(node, direction);
             }
             Some(node)
         };
-        for dir in 0..4 {
-            assert!(walk(&[dir]).is_some());
-            assert!(walk(&[dir, (dir + 2) % 4]).is_none());
+        for direction in 0..4 {
+            assert!(walk(&[direction]).is_some());
+            assert!(walk(&[direction, (direction + 2) % 4]).is_none());
         }
         let down_left = walk(&[2, 1, 0, 3, 2, 1]);
         let left_down = walk(&[1, 2, 3, 0, 1, 2]);
