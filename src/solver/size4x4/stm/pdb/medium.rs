@@ -212,9 +212,11 @@ fn build_six_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig) {
     let out = as_atomic(out);
     for (cost, cost_bit) in [(Cost::Additive, 0), (Cost::Full, 1)] {
         breadth_first_search(tiles, cost, config, |index, blank, _, distance| {
-            let bit = 2 * blank as usize + cost_bit;
-            let byte = &out[4 * index as usize + bit / 8];
-            byte.fetch_or(((distance >> 1) & 1) << (bit % 8), Relaxed);
+            // The bytes start zeroed, so only set bits need writing.
+            if (distance >> 1) & 1 != 0 {
+                let bit = 2 * blank as usize + cost_bit;
+                out[4 * index as usize + bit / 8].fetch_or(1 << (bit % 8), Relaxed);
+            }
         });
     }
 }

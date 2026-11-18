@@ -592,8 +592,9 @@ mod tests {
                 cost,
                 &PdbConfig::default(),
                 |index, _, rank, distance| {
-                    bits[2 * index as usize + cost_word]
-                        .fetch_or(u16::from((distance >> 1) & 1) << rank, Relaxed);
+                    if (distance >> 1) & 1 != 0 {
+                        bits[2 * index as usize + cost_word].fetch_or(1 << rank, Relaxed);
+                    }
                 },
             );
             std::hint::black_box(&bits);

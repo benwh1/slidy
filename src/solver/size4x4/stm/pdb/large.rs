@@ -143,15 +143,18 @@ impl Pdb for Large {
         let (top_seven, bottom_eight) = (as_atomic(top_seven), as_atomic(bottom_eight));
         for (cost, cost_bit) in [(Cost::Additive, 0), (Cost::Full, 1)] {
             breadth_first_search(TOP_SEVEN, cost, config, |index, blank, _, distance| {
-                let bit = 2 * blank as usize + cost_bit;
-                let byte = &top_seven[4 * index as usize + bit / 8];
-                byte.fetch_or(((distance >> 1) & 1) << (bit % 8), Relaxed);
+                // The bytes start zeroed, so only set bits need writing.
+                if (distance >> 1) & 1 != 0 {
+                    let bit = 2 * blank as usize + cost_bit;
+                    top_seven[4 * index as usize + bit / 8].fetch_or(1 << (bit % 8), Relaxed);
+                }
             });
         }
         for (cost, cost_byte) in [(Cost::Additive, 0), (Cost::Full, 1)] {
             breadth_first_search(BOTTOM_EIGHT, cost, config, |index, _, rank, distance| {
-                let byte = &bottom_eight[2 * index as usize + cost_byte];
-                byte.fetch_or(((distance >> 1) & 1) << rank, Relaxed);
+                if (distance >> 1) & 1 != 0 {
+                    bottom_eight[2 * index as usize + cost_byte].fetch_or(1 << rank, Relaxed);
+                }
             });
         }
         Self { bytes }

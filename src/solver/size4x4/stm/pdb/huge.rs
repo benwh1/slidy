@@ -175,7 +175,10 @@ fn build_nine_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig) {
     let out = as_atomic(out);
     for (cost, cost_byte) in [(Cost::Additive, 0), (Cost::Full, 1)] {
         breadth_first_search(tiles, cost, config, |index, _, rank, distance| {
-            out[2 * index as usize + cost_byte].fetch_or(((distance >> 1) & 1) << rank, Relaxed);
+            // The bytes start zeroed, so only set bits need writing.
+            if (distance >> 1) & 1 != 0 {
+                out[2 * index as usize + cost_byte].fetch_or(1 << rank, Relaxed);
+            }
         });
     }
 }
