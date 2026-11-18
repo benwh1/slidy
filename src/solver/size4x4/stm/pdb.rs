@@ -5,9 +5,9 @@
 //! |---|---|---|---|
 //! | [`Tiny`] | 6-6-3, 6-6-3 | 5.9 MB | ~60 |
 //! | [`Medium`] | 7-7-1, 6-6-3 | 75 MB | ~175 |
-//! | `LargeCompact` | 7-8 | 1.27 GB | ~2,950 |
-//! | `Large` | 7-8, 9-6 | 3.5 GB | ~3,550 |
-//! | `Huge` | 9-6, 6-9 | 17.0 GB | ~7,100 |
+//! | [`LargeCompact`] | 7-8 | 1.27 GB | ~2,950 |
+//! | [`Large`] | 7-8, 9-6 | 3.5 GB | ~3,550 |
+//! | [`Huge`] | 9-6, 6-9 | 17.0 GB | ~7,100 |
 //!
 //! Speeds are single-threaded solves per second of random positions on an i5-9500. Each
 //! database partitions the tiles into groups, once or twice, and its heuristic is the maximum,
@@ -23,9 +23,15 @@
 //! Internal labels throughout: serpentine rows `0 1 2 3 / 7 6 5 4 / 8 9 10 11 / 15 14 13 12`,
 //! tile `t`'s home is cell `t`, the blank's cell 0.
 
+pub mod huge;
+pub mod large;
+pub mod large_compact;
 pub mod medium;
 pub mod tiny;
 
+pub use huge::Huge;
+pub use large::Large;
+pub use large_compact::LargeCompact;
 pub use medium::Medium;
 pub use tiny::Tiny;
 
