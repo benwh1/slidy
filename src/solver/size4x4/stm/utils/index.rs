@@ -122,12 +122,13 @@ pub(super) fn cells_of_index(index: u32, tile_count: usize) -> [u8; 16] {
 /// The index of the placement of `tiles` on `board`.
 #[must_use]
 pub(in crate::solver::size4x4::stm) fn placement_index(tiles: &[u8], board: &Board) -> u32 {
+    let mut cell_of = [0u8; 16];
+    for (cell, &tile) in board.iter().enumerate() {
+        cell_of[usize::from(tile & 15)] = cell as u8;
+    }
     let mut cells = [0u8; 16];
     for (cell, &tile) in cells.iter_mut().zip(tiles) {
-        *cell = board
-            .iter()
-            .position(|&cell_tile| cell_tile == tile)
-            .unwrap() as u8;
+        *cell = cell_of[usize::from(tile & 15)];
     }
     index_of_cells(&cells[..tiles.len()])
 }
