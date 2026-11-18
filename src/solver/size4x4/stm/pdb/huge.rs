@@ -81,12 +81,12 @@ const fn bit_if_increased(value: u32) -> u32 {
 }
 
 /// The blank's rank among the cells of `board` without a tile of `group_mask`.
-fn blank_rank(board: &Board, group_mask: u16) -> u32 {
+fn blank_rank(board: &Board, group_mask: u16) -> u8 {
     let blank = board.iter().position(|&tile| tile == 0).unwrap();
     board[..blank]
         .iter()
         .filter(|&&tile| (group_mask >> tile) & 1 == 0)
-        .count() as u32
+        .count() as u8
 }
 
 impl Huge {
@@ -212,10 +212,18 @@ impl Pdb for Huge {
     }
 }
 
+/// A node's indices in both orientations, kept small: the search stores them for every
+/// successor.
+#[derive(Clone, Copy)]
+pub struct Indices {
+    /// Each group's index (last six, first nine, first six, last nine).
+    groups: [[u32; 4]; 2],
+    /// The blank's rank among the free cells of the first and the last nine.
+    ranks: [[u8; 2]; 2],
+}
+
 impl Search for Huge {
-    /// Each group's index (last six, first nine, first six, last nine), then the blank's rank
-    /// among the free cells of the first and the last nine.
-    type Indices = [[u32; 6]; 2];
+    type Indices = Indices;
     /// The 9-tile groups' additive and full values (first nine, then last nine).
     type Values = [[u8; 4]; 2];
 
@@ -248,18 +256,18 @@ impl Search for Huge {
             |walk, state| self.address_of(WALKS[walk % 4].3 + 2 * state.index as usize),
         );
         let [_, first_nine_mask, _, last_nine_mask] = GROUP_MASKS;
-        let mut indices = [[0; 6]; 2];
+        let mut indices = Indices {
+            groups: [[0; 4]; 2],
+            ranks: [[0; 2]; 2],
+        };
         let mut values = [[0; 4]; 2];
         let mut bound = 0;
         for (side, board) in boards.iter().enumerate() {
             let blank = board.iter().position(|&tile| tile == 0).unwrap();
             let [last_six, first_nine, first_six, last_nine] =
                 GROUPS.map(|tiles| placement_index(tiles, board));
-            indices[side] = [
-                last_six,
-                first_nine,
-                first_six,
-                last_nine,
+            indices.groups[side] = [last_six, first_nine, first_six, last_nine];
+            indices.ranks[side] = [
                 blank_rank(board, first_nine_mask),
                 blank_rank(board, last_nine_mask),
             ];
@@ -305,16 +313,17 @@ impl Search for Huge {
                 moved,
                 [first_nine_mask, last_nine_mask],
             );
-            let side_indices = &mut indices[side];
+            let groups = &mut indices.groups[side];
             for (group, mask) in GROUP_MASKS.into_iter().enumerate() {
                 let in_group = (mask >> moved) & 1 != 0;
                 let delta = select_unpredictable(in_group, shifts.indices[group / 2], 0);
-                side_indices[group] = side_indices[group].wrapping_add(delta);
+                groups[group] = groups[group].wrapping_add(delta);
             }
-            side_indices[4] = side_indices[4].wrapping_add(shifts.ranks[0]);
-            side_indices[5] = side_indices[5].wrapping_add(shifts.ranks[1]);
-            let [last_six, first_nine, first_six, last_nine, ..] =
-                side_indices.map(|index| index as usize);
+            for (rank, change) in indices.ranks[side].iter_mut().zip(shifts.ranks) {
+                *rank = rank.wrapping_add(change as u8);
+            }
+            let [last_six, first_nine, first_six, last_nine] =
+                indices.groups[side].map(|index| index as usize);
             let blank = usize::from(tile_move.blank_after[side]);
             prefetch(self.address_of(LAST_SIX_START + 32 * last_six + 2 * blank));
             prefetch(self.address_of(FIRST_NINE_START + 2 * first_nine));
@@ -338,7 +347,8 @@ impl Search for Huge {
         let (mut best, mut total) = (0, 0);
         // One partition in both orientations, then the other, stopping at the first that prunes.
         for side in 0..2 {
-            let [last_six_index, first_nine_index, _, _, first_nine_rank, _] = child[side];
+            let [last_six_index, first_nine_index, ..] = child.groups[side];
+            let first_nine_rank = u32::from(child.ranks[side][0]);
             let [first_nine_additive, first_nine_full, ..] = &mut values[side];
             [*first_nine_additive, *first_nine_full] = self.decode_nine_tile(
                 FIRST_NINE_START,
@@ -363,7 +373,8 @@ impl Search for Huge {
             total += estimate;
         }
         for side in 0..2 {
-            let [_, _, first_six_index, last_nine_index, _, last_nine_rank] = child[side];
+            let [_, _, first_six_index, last_nine_index] = child.groups[side];
+            let last_nine_rank = u32::from(child.ranks[side][1]);
             let [.., last_nine_additive, last_nine_full] = &mut values[side];
             [*last_nine_additive, *last_nine_full] = self.decode_nine_tile(
                 LAST_NINE_START,
