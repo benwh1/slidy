@@ -1,182 +1,113 @@
-//! The pattern databases: the [`Pdb`] interface the solver searches with, and the table sets
-//! that implement it, one per memory budget.
+//! The pattern databases, one per memory budget, and the [`Pdb`] interface the solver searches
+//! with.
 //!
-//! | set | partitions | tables | solves/s |
+//! | database | partitions | size | solves/s |
 //! |---|---|---|---|
 //! | [`Tiny`] | 6-6-3, 6-6-3 | 5.9 MB | ~60 |
-//! | [`Medium`] | 7-7-1, 6-6-3 | 75 MB | ~175 |
-//! | [`LargeCompact`] | 7-8 | 1.27 GB | ~2,950 |
-//! | [`Large`] | 7-8, 9-6 | 3.5 GB | ~3,550 |
-//! | [`Huge`] | 9-6, 6-9 | 17.0 GB | ~7,100 |
+//! | `Medium` | 7-7-1, 6-6-3 | 75 MB | ~175 |
+//! | `LargeCompact` | 7-8 | 1.27 GB | ~2,950 |
+//! | `Large` | 7-8, 9-6 | 3.5 GB | ~3,550 |
+//! | `Huge` | 9-6, 6-9 | 17.0 GB | ~7,100 |
 //!
-//! Speeds are single-threaded solves per second of random positions on an i5-9500. Each set is a
-//! list of tile groups ([`group`]) whose tables are built ([`build`]), stored ([`region`]) and
-//! looked up ([`tables`]) by code they all share. The partitions were found by hill-climbing
-//! tile swaps on node counts over 200 random positions.
+//! Speeds are single-threaded solves per second of random positions on an i5-9500. Each
+//! database partitions the tiles into groups, once or twice, and its heuristic is the maximum,
+//! over the partitions and both orientations (the position and its mirror image across the main
+//! diagonal), of the sum of the groups' distances. Some groups' tables also hold the distance
+//! counting every move, which is a term of the maximum too.
+//!
+//! Most tables store only a code of each distance, which the search decodes against the
+//! parent's distances (a move changes them by a known amount), so the search carries each node's
+//! distances down the tree. The root's come from walking downhill in each coded table
+//! ([`walk`](super::utils::walk)).
 //!
 //! Internal labels throughout: serpentine rows `0 1 2 3 / 7 6 5 4 / 8 9 10 11 / 15 14 13 12`,
 //! tile `t`'s home is cell `t`, the blank's cell 0.
 
-pub mod build;
-pub mod group;
-pub mod huge;
-pub mod large;
-pub mod large_compact;
-pub mod medium;
-pub mod region;
-pub mod tables;
 pub mod tiny;
 
-pub use huge::Huge;
-pub use large::Large;
-pub use large_compact::LargeCompact;
-pub use medium::Medium;
 pub use tiny::Tiny;
 
-use crate::solver::size4x4::stm::utils::{Board, Move};
+use crate::solver::{
+    config::PdbConfig,
+    size4x4::stm::utils::{Board, Move},
+};
 
-/// A set of pattern databases: everything the search needs to know about its tables. Pairs are
-/// `[direct, mirrored]`, the position and its mirror image across the main diagonal.
-///
-/// The search carries each node's values down the tree, so tables that store only codes can be
-/// decoded against the parent's values. Every method is inlined into the search, so keep the
-/// methods' data in registers: a value stored at a computed index and read back wider fails store
-/// forwarding, and references to locals can keep them in memory.
-pub trait Pdb {
-    /// A position's table state in both orientations: its indices, and anything else a move
-    /// updates incrementally.
+/// A pattern database: its construction, and everything the search needs to know about it.
+/// Pairs are `[direct, mirrored]`.
+pub trait Pdb: AsRef<[u8]> + Sized {
+    /// A node's table indices in both orientations, and anything else a move updates
+    /// incrementally.
     type Indices: Copy;
-    /// A node's exact table values (both orientations), carried down the tree for its children
-    /// to decode against.
+
+    /// A node's exact values of its coded tables, which its children's entries decode against.
     type Values: Copy;
-    /// A node's values set up for decoding its children's entries.
-    type Decoder;
-    /// A surviving child's decoded estimates, from which [`Self::child`] makes its values.
-    type Decoded: Copy;
 
-    /// The root's table state, its exact values and its lower bound, with the blank at `blank`
-    /// on the direct board.
-    fn root(&self, boards: &[Board; 2], blank: usize) -> (Self::Indices, Self::Values, u64);
+    /// Builds the pattern database.
+    fn new(config: &PdbConfig) -> Self;
 
-    /// The table state after move `m` on `boards`, which moves `tiles` into the blank.
-    fn shifted(base: Self::Indices, boards: &[Board; 2], m: &Move, tiles: [u8; 2])
-    -> Self::Indices;
+    /// Initializes a pattern database from a boxed byte slice containing the pre-computed data
+    /// (see [`AsRef`]).
+    ///
+    /// The length of the data is checked, and the [`xxh3`] hash is computed and checked against
+    /// a known value to verify integrity.
+    ///
+    /// # Safety
+    ///
+    /// Despite the correctness checks described above, this function is unsafe because it is
+    /// still technically possible for `bytes` to contain incorrect data in the event of a hash
+    /// collision.
+    ///
+    /// If the data is incorrect, then using the resulting pattern database in the [`Solver`]
+    /// can cause undefined behavior.
+    ///
+    /// [`xxh3`]: xxhash_rust::xxh3
+    /// [`Solver`]: super::solver::Solver
+    unsafe fn try_from_bytes(bytes: Box<[u8]>) -> Option<Self>;
 
-    /// Prefetch the table lines [`Self::evaluate`] will read for a child with state `c` and the
-    /// blank at `blanks`.
-    fn prefetch(&self, c: &Self::Indices, blanks: [u8; 2]);
+    /// Initializes the pattern database with `bytes`.
+    ///
+    /// # Safety
+    ///
+    /// The caller is responsible for the correctness of the data contained in `bytes`. No
+    /// correctness checks are performed.
+    ///
+    /// If incorrect data is used, then use of the pattern database in the [`Solver`] could lead
+    /// to incorrect results or undefined behavior.
+    ///
+    /// [`Solver`]: super::solver::Solver
+    unsafe fn from_bytes_unchecked(bytes: Box<[u8]>) -> Self;
 
-    /// A node's values set up for [`Self::evaluate`].
-    fn decoder(values: Self::Values) -> Self::Decoder;
+    /// The root's indices, its values and its lower bound.
+    fn root(&self, boards: &[Board; 2]) -> (Self::Indices, Self::Values, u64);
 
-    /// A child with state `c`, the blank at `blanks` and the moved tile `tiles`: `None` when its
-    /// estimate reaches `depth` (the moves left at its parent), else its best-first sort key
-    /// (smaller first) and its decoded estimates.
+    /// The indices after move `m` from `boards`, which moves `tiles` into the blank. Prefetches
+    /// the entries [`Self::evaluate`] will read.
+    fn shifted(
+        &self,
+        parent: &Self::Indices,
+        boards: &[Board; 2],
+        m: &Move,
+        tiles: [u8; 2],
+    ) -> Self::Indices;
+
+    /// A child of a node with values `parent`: the child has indices `child`, the blank at
+    /// `blanks` and the moved tile `tiles`. `None` when its lower bound reaches `depth` (the moves
+    /// left at the parent), else its best-first sort key (smaller first) and its values.
     fn evaluate(
         &self,
-        c: &Self::Indices,
+        parent: &Self::Values,
+        child: &Self::Indices,
         blanks: [u8; 2],
         tiles: [u8; 2],
-        decoder: &Self::Decoder,
         depth: u64,
-    ) -> Option<(u64, Self::Decoded)>;
-
-    /// A surviving child's values from its parent's `values`, its decoded estimates and the
-    /// moved tiles.
-    fn child(values: Self::Values, decoded: Self::Decoded, tiles: [u8; 2]) -> Self::Values;
+    ) -> Option<(u64, Self::Values)>;
 }
-
-/// Gives the set `$set`, a newtype around [`Tables`](tables::Tables), its constructors and its
-/// [`Pdb`] implementation, both delegated to the tables.
-macro_rules! delegate {
-    ($set:ident) => {
-        impl $set {
-            /// Builds the tables in memory on every available thread.
-            #[must_use]
-            pub fn build() -> Self {
-                let threads = std::thread::available_parallelism().map_or(1, usize::from);
-                Self(Tables::build(threads))
-            }
-
-            /// Reads the tables from `dir`: the set's combined file (see [`Self::save`]), or else
-            /// its separate table files. Only the files' sizes are checked: other tables of the
-            /// right sizes give wrong solutions (or a panic), though never undefined behaviour.
-            pub fn load(dir: &std::path::Path) -> Result<Self, Box<dyn std::error::Error>> {
-                Ok(Self(Tables::load(dir)?))
-            }
-
-            /// Maps the set's combined file in `dir` read-only, so that processes using the same
-            /// file share its memory. See [`Self::load`].
-            pub fn map(dir: &std::path::Path) -> Result<Self, Box<dyn std::error::Error>> {
-                Ok(Self(Tables::map(dir)?))
-            }
-
-            /// Saves the tables to `dir` as the set's combined file.
-            pub fn save(&self, dir: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
-                self.0.save(dir)
-            }
-        }
-
-        impl $crate::solver::size4x4::stm::pdb::Pdb for $set {
-            type Indices = <Inner as Pdb>::Indices;
-            type Values = <Inner as Pdb>::Values;
-            type Decoder = <Inner as Pdb>::Decoder;
-            type Decoded = <Inner as Pdb>::Decoded;
-
-            #[inline(always)]
-            fn root(
-                &self,
-                boards: &[Board; 2],
-                blank: usize,
-            ) -> (Self::Indices, Self::Values, u64) {
-                self.0.root(boards, blank)
-            }
-
-            #[inline(always)]
-            fn shifted(
-                base: Self::Indices,
-                boards: &[Board; 2],
-                m: &Move,
-                tiles: [u8; 2],
-            ) -> Self::Indices {
-                Inner::shifted(base, boards, m, tiles)
-            }
-
-            #[inline(always)]
-            fn prefetch(&self, c: &Self::Indices, blanks: [u8; 2]) {
-                self.0.prefetch(c, blanks);
-            }
-
-            #[inline(always)]
-            fn decoder(values: Self::Values) -> Self::Decoder {
-                Inner::decoder(values)
-            }
-
-            #[inline(always)]
-            fn evaluate(
-                &self,
-                c: &Self::Indices,
-                blanks: [u8; 2],
-                tiles: [u8; 2],
-                decoder: &Self::Decoder,
-                depth: u64,
-            ) -> Option<(u64, Self::Decoded)> {
-                self.0.evaluate(c, blanks, tiles, decoder, depth)
-            }
-
-            #[inline(always)]
-            fn child(values: Self::Values, decoded: Self::Decoded, tiles: [u8; 2]) -> Self::Values {
-                Inner::child(values, decoded, tiles)
-            }
-        }
-    };
-}
-
-use delegate;
 
 #[cfg(test)]
 mod tests {
     use std::str::FromStr as _;
+
+    use xxhash_rust::xxh3;
 
     use super::Pdb;
     use crate::{
@@ -201,23 +132,25 @@ mod tests {
         ("7 0 3 10/13 9 1 15/5 12 14 4/6 2 11 8", 45),
     ];
 
-    /// `pdb` solves [`POSITIONS`] optimally.
-    pub(super) fn check<P>(pdb: P)
+    /// `pdb` has hash `hash`, loads from its bytes, and solves [`POSITIONS`] optimally.
+    pub(super) fn check<P>(pdb: P, hash: u64)
     where
         P: Pdb,
     {
-        let mut solver = Solver::new(pdb);
+        assert_eq!(xxh3::xxh3_64(pdb.as_ref()), hash, "{:#x}", xxh3::xxh3_64(pdb.as_ref()));
+        // SAFETY: the bytes come from a database built above.
+        let loaded = unsafe { P::try_from_bytes(pdb.as_ref().into()) }.unwrap();
+        drop(pdb);
+        let mut solver = Solver::with_pdb(loaded);
         for (text, length) in POSITIONS {
             let puzzle = Puzzle::from_str(text).unwrap();
             let solution: Algorithm = solver.solve(&puzzle).unwrap();
             let mut solved = puzzle.clone();
             solved.apply_alg(&solution);
             assert!(solved.is_solved(), "{text}: {solution} does not solve it");
-            assert_eq!(
-                solution.len_stm(),
-                length,
-                "{text}: {solution} is not optimal"
-            );
+            assert_eq!(solution.len_stm(), length, "{text}: {solution} is not optimal");
         }
+        // SAFETY: wrong lengths are rejected before anything is read.
+        assert!(unsafe { P::try_from_bytes(vec![0; 10].into()) }.is_none());
     }
 }

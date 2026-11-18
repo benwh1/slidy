@@ -1,4 +1,6 @@
-//! Board geometry, pattern-database index weights and solution rendering.
+//! Board geometry and moves, solution rendering, and helpers for the pattern databases:
+//! indexing placements ([`index`]), building tables ([`build`]) and decoding the root's values
+//! ([`walk`]).
 //!
 //! Boards are stored in the solver's *internal* (serpentine) order:
 //!
@@ -13,12 +15,11 @@
 //! `1 2 3 4/5 6 7 8/9 10 11 12/13 14 15 0`. `to_internal` converts it;
 //! solutions come back as the moved tiles' directions (`directions`).
 
-use std::error::Error;
+pub mod build;
+pub mod index;
+pub mod walk;
 
-use crate::{
-    algorithm::direction::Direction,
-    puzzle::{puzzle::Puzzle, sliding_puzzle::SlidingPuzzle as _},
-};
+use crate::algorithm::direction::Direction;
 
 /// A 4x4 board: one tile per cell, 0 is the blank.
 pub type Board = [u8; 16];
@@ -46,6 +47,36 @@ pub const NEIGHBORS: [[i8; 4]; 16] = [
     [9, 15, -1, 13],
     [8, -1, -1, 14],
 ];
+
+/// `NBR[cell]`: the cells next to `cell`, as a mask.
+pub const NBR: [u16; 16] = {
+    let mut out = [0; 16];
+    let mut cell = 0;
+    while cell < 16 {
+        let mut dir = 0;
+        while dir < 4 {
+            if NEIGHBORS[cell][dir] >= 0 {
+                out[cell] |= 1 << NEIGHBORS[cell][dir];
+            }
+            dir += 1;
+        }
+        cell += 1;
+    }
+    out
+};
+
+/// Hints the cache line at `address` into the cache ahead of a read. The tables are far larger
+/// than any cache, so nearly every lookup misses without this.
+#[inline(always)]
+pub fn prefetch(address: *const u8) {
+    #[cfg(target_arch = "x86_64")]
+    // SAFETY: SSE is enabled on all x86_64 targets, and a prefetch never faults.
+    unsafe {
+        std::arch::x86_64::_mm_prefetch::<{ std::arch::x86_64::_MM_HINT_T0 }>(address.cast());
+    }
+    #[cfg(not(target_arch = "x86_64"))]
+    let _ = address;
+}
 
 /// One usable move from a blank cell.
 ///
@@ -141,22 +172,6 @@ pub(crate) const MIRROR: [u8; 16] = [0, 7, 8, 15, 14, 9, 6, 1, 2, 5, 10, 13, 12,
 /// Internal position of zero-based cell `i`.
 const FROM_ZERO_BASED: [u8; 16] = [0, 1, 2, 3, 7, 6, 5, 4, 8, 9, 10, 11, 15, 14, 13, 12];
 
-/// Permutations of `k` out of `n`: `n * (n-1) * … * (n-k+1)`, or 0 when
-/// `k` is out of range. Determines the pattern-database sizes.
-#[must_use]
-pub(crate) const fn permutations(n: i32, k: i32) -> i32 {
-    if k < 0 || n < k {
-        return 0;
-    }
-    let mut total = 1;
-    let mut i = n;
-    while i != n - k {
-        total *= i;
-        i -= 1;
-    }
-    total
-}
-
 /// Reflect a board across the main diagonal. The mirrored search uses the
 /// same tables on the mirrored position, and the heuristic takes the better
 /// (larger) of both orientations.
@@ -181,19 +196,6 @@ pub(crate) fn to_internal(input: &Board) -> Board {
         let tile = input[15 - FROM_ZERO_BASED[i] as usize];
         FROM_ZERO_BASED[(16 - tile as usize) % 16]
     })
-}
-
-/// Parse `1 2 3 4/5 6 7 8/9 10 11 12/13 14 15 0` into a row-major board.
-/// Delegates to slidy's parser (same accepted language: digits separated by
-/// whitespace, `/` or newlines; duplicates, out-of-range tiles and ragged
-/// rows rejected) and additionally requires the 4x4 shape our solver needs.
-pub fn parse_scramble(text: &str) -> Result<Board, Box<dyn Error>> {
-    // Trim first: slidy counts a trailing newline as an (empty) extra row.
-    let puzzle = text.trim().parse::<Puzzle>()?;
-    if puzzle.size().width() != 4 || puzzle.size().height() != 4 {
-        Err("expected a 4x4 position")?;
-    }
-    Ok(std::array::from_fn(|i| puzzle.piece_at(i as u64) as u8))
 }
 
 /// The moves of a blank trail (internal cells after each move, from `blank`), as the directions
@@ -243,57 +245,29 @@ pub(crate) fn random_boards(count: usize) -> impl Iterator<Item = Board> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::puzzle::small::Puzzle4x4;
 
     #[test]
     fn user_format_conversions() {
-        // Solved user board maps to all-home internal (tile i at position i).
+        // The solved user board maps to every tile home (tile `t` on cell `t`).
         let solved: Board = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0];
-        let internal = to_internal(&solved);
-        assert_eq!(
-            internal,
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-        );
-        assert!(Puzzle4x4::try_from(solved).unwrap().is_solved());
-        assert!(
-            !Puzzle4x4::try_from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 14, 0])
-                .unwrap()
-                .is_solved()
-        );
-        // Multi-step blank trail renders in order (serpentine internal 0→1 is
-        // row-major right).
-        let solution_string = |blank, trail: &[usize]| {
+        let home: Board = std::array::from_fn(|i| i as u8);
+        assert_eq!(to_internal(&solved), home);
+        assert_eq!(reflect(&home), home);
+        // A blank trail renders in order (internal 0 to 1 is the blank moving left in the user's
+        // board, so a tile moving right).
+        let moves = |blank, trail: &[usize]| {
             directions(blank, trail.iter().copied())
                 .map(|d| d.as_char())
                 .collect::<String>()
         };
-        assert_eq!(solution_string(0, &[1, 2, 3]), "RRR");
-        assert_eq!(solution_string(0, &[7]), "D");
+        assert_eq!(moves(0, &[1, 2, 3]), "RRR");
+        assert_eq!(moves(0, &[7]), "D");
     }
 
     #[test]
-    fn round_trips() {
-        let pos: Board = [2, 11, 10, 9, 13, 8, 14, 12, 15, 1, 5, 4, 7, 3, 0, 6];
-        let internal = to_internal(&pos);
-        // Reflecting twice is the identity.
-        assert_eq!(reflect(&reflect(&internal)), internal);
-        // Swapping two non-blank tiles flips solvability.
-        let home = to_internal(&[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0]);
-        assert_eq!(home, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
-        let solved_user: Board = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0];
-        assert!(Puzzle4x4::try_from(solved_user).unwrap().is_solvable());
-        let mut swapped = solved_user;
-        swapped.swap(12, 13);
-        assert!(!Puzzle4x4::try_from(swapped).unwrap().is_solvable());
-        assert!(
-            Puzzle4x4::try_from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0])
-                .unwrap()
-                .is_solved()
-        );
-        assert!(
-            !Puzzle4x4::try_from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 14, 0])
-                .unwrap()
-                .is_solved()
-        );
+    fn reflecting_twice_is_the_identity() {
+        for board in random_boards(10) {
+            assert_eq!(reflect(&reflect(&board)), board);
+        }
     }
 }
