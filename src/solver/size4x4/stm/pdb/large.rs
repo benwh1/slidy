@@ -1,4 +1,4 @@
-//! The compact large pattern database (1.27 GB): a single 7-8 partition.
+//! The large pattern database (1.27 GB): a single 7-8 partition.
 //!
 //! Both tables hold, for each placement and blank cell, `(value >> 1) & 1` of the group's
 //! additive distance and that of its full distance (counting every move), which bounds the
@@ -47,8 +47,8 @@ const LEN: usize = B_AT + placements(8) * 2;
 // TODO: set from `test_pdb`'s output once the database has been built.
 const HASH: u64 = 0;
 
-/// The compact large pattern database. See the [module documentation](self).
-pub struct LargeCompact {
+/// The large pattern database. See the [module documentation](self).
+pub struct Large {
     bytes: Box<[u8]>,
 }
 
@@ -65,7 +65,7 @@ fn rank(board: &Board, group: u16) -> u32 {
     board[..blank].iter().filter(|&&t| (group >> t) & 1 == 0).count() as u32
 }
 
-impl LargeCompact {
+impl Large {
     #[inline(always)]
     fn address(&self, i: usize) -> *const u8 {
         self.bytes.as_ptr().wrapping_add(i)
@@ -106,7 +106,7 @@ fn decode(bits: u32, at: u32, moved: bool, [additive, full]: [u8; 2]) -> [u8; 2]
     ]
 }
 
-impl Pdb for LargeCompact {
+impl Pdb for Large {
     /// Each group's index, and the blank's rank among the 8-tile group's free cells.
     type Indices = [[u32; 3]; 2];
     /// Each group's additive and full values.
@@ -236,7 +236,7 @@ impl Pdb for LargeCompact {
     }
 }
 
-impl AsRef<[u8]> for LargeCompact {
+impl AsRef<[u8]> for Large {
     fn as_ref(&self) -> &[u8] {
         &self.bytes
     }
@@ -249,6 +249,6 @@ mod tests {
     #[test]
     #[ignore = "builds an 8-tile table: several minutes and a few gigabytes"]
     fn test_pdb() {
-        super::super::tests::check(LargeCompact::new(&PdbConfig::default()), HASH);
+        super::super::tests::check(Large::new(&PdbConfig::default()), HASH);
     }
 }
