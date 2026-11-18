@@ -121,55 +121,66 @@ impl Placement {
     }
 }
 
-/// A search's states' marks, 2 bits each: [`UNVISITED`], [`DONE`] or a [`frontier_mark`].
-struct Residues(Vec<u8>);
+/// The low bit of each 2-bit field of a word of marks.
+const LOW_BITS: u64 = 0x5555_5555_5555_5555;
 
-impl Residues {
+/// How many states' marks a word holds.
+const MARKS_PER_WORD: usize = 32;
+
+/// The low bits of the fields of `word` holding `mark`.
+const fn fields_marked(word: u64, mark: u8) -> u64 {
+    // A field is zero exactly where it holds `mark`.
+    let difference = word ^ (mark as u64 * LOW_BITS);
+    !(difference | (difference >> 1)) & LOW_BITS
+}
+
+/// A search's states' marks, 2 bits each ([`UNVISITED`], [`DONE`] or a [`frontier_mark`]), 32 to
+/// a word; state `s` is field `s % 32` of word `s / 32`.
+struct Marks(Vec<AtomicU64>);
+
+impl Marks {
+    /// Every one of `states` states unvisited.
+    fn new(states: usize) -> Self {
+        let words = states.div_ceil(MARKS_PER_WORD);
+        Self(
+            std::iter::repeat_with(|| AtomicU64::new(u64::MAX))
+                .take(words)
+                .collect(),
+        )
+    }
+
     /// Marks every state marked `mark` as [`DONE`], using `threads` threads.
     fn retire(&mut self, mark: u8, threads: usize) {
-        const LOW_BITS: u64 = 0x5555_5555_5555_5555;
-        let pattern = u64::from(mark) * LOW_BITS;
-        let (words, rest) = self.0.as_chunks_mut::<8>();
-        let chunk_len = words.len().div_ceil(threads).max(1);
+        let chunk_len = self.0.len().div_ceil(threads).max(1);
         thread::scope(|scope| {
-            for chunk in words.chunks_mut(chunk_len) {
+            for chunk in self.0.chunks_mut(chunk_len) {
                 scope.spawn(move || {
                     for word in chunk {
-                        let marks = u64::from_le_bytes(*word);
-                        // A field is zero exactly where its mark is `mark`.
-                        let difference = marks ^ pattern;
-                        let matching = !(difference | (difference >> 1)) & LOW_BITS;
-                        let retired = matching * u64::from(DONE);
-                        *word = ((marks & !(matching * 3)) | retired).to_le_bytes();
+                        let word = word.get_mut();
+                        let matching = fields_marked(*word, mark);
+                        *word = (*word & !(matching * 3)) | (matching * u64::from(DONE));
                     }
                 });
             }
         });
-        for byte in rest {
-            for field in 0..4 {
-                if (*byte >> (2 * field)) & 3 == mark {
-                    *byte = (*byte & !(3 << (2 * field))) | (DONE << (2 * field));
-                }
-            }
-        }
     }
 
-    /// The byte holding `state`'s residue, as an atomic.
-    fn byte(&self, state: usize) -> &AtomicU8 {
-        // SAFETY: the bytes are only accessed through this, atomically.
-        unsafe { &*(&raw const self.0[state >> 2]).cast::<AtomicU8>() }
+    /// The word holding the marks of states `32 * index..32 * (index + 1)`.
+    fn word(&self, index: usize) -> u64 {
+        self.0[index].load(Relaxed)
     }
 
     fn get(&self, state: usize) -> u8 {
-        (self.byte(state).load(Relaxed) >> (2 * (state & 3))) & 3
+        ((self.word(state / MARKS_PER_WORD) >> (2 * (state % MARKS_PER_WORD))) & 3) as u8
     }
 
     /// Marks unvisited `state` with `mark`; false when it was visited.
     fn claim(&self, state: usize, mark: u8) -> bool {
-        let shift = 2 * (state & 3);
-        self.byte(state)
-            .try_update(AcqRel, Relaxed, |byte| {
-                ((byte >> shift) & 3 == UNVISITED).then_some(byte & !((UNVISITED ^ mark) << shift))
+        let shift = 2 * (state % MARKS_PER_WORD);
+        self.0[state / MARKS_PER_WORD]
+            .try_update(AcqRel, Relaxed, |word| {
+                ((word >> shift) & 3 == u64::from(UNVISITED))
+                    .then_some(word & !(u64::from(UNVISITED ^ mark) << shift))
             })
             .is_ok()
     }
@@ -179,7 +190,7 @@ impl Residues {
 struct Search<'a, F> {
     /// The group's [`index_shift_table`].
     shifts: [[u64; 16]; 16],
-    residues: Residues,
+    marks: Marks,
     /// How many cells have no group tile, so states per placement.
     free_count: usize,
     cost: Cost,
@@ -211,7 +222,7 @@ where
         let mut claim = |index: u32, free_cells: u16, blank: u32| {
             let rank = blank_rank(free_cells, blank);
             if self
-                .residues
+                .marks
                 .claim(index as usize * self.free_count + rank, next)
             {
                 (self.visit)(index, blank, rank, depth + 1);
@@ -227,7 +238,7 @@ where
                 while blanks != 0 {
                     let blank = blanks.trailing_zeros();
                     blanks &= blanks - 1;
-                    if self.residues.get(self.state(index, free_cells, blank)) != source {
+                    if self.marks.get(self.state(index, free_cells, blank)) != source {
                         continue;
                     }
                     let mut neighbors = NEIGHBOR_MASKS[blank as usize];
@@ -243,9 +254,7 @@ where
                         };
                         if !pulling {
                             claim(next_index, next_free, neighbor);
-                        } else if self
-                            .residues
-                            .get(self.state(next_index, next_free, neighbor))
+                        } else if self.marks.get(self.state(next_index, next_free, neighbor))
                             == current
                         {
                             claim(index, free_cells, blank);
@@ -262,7 +271,7 @@ where
                     let region = reachable_region(remaining.isolate_lowest_one(), free_cells);
                     remaining &= !region;
                     let lowest = region.trailing_zeros();
-                    if self.residues.get(self.state(index, free_cells, lowest)) != source {
+                    if self.marks.get(self.state(index, free_cells, lowest)) != source {
                         continue;
                     }
                     // Moves of a group tile next to the region into it.
@@ -285,7 +294,7 @@ where
                                     claim(next_index, next_free, cells.trailing_zeros());
                                     cells &= cells - 1;
                                 }
-                            } else if self.residues.get(self.state(next_index, next_free, from))
+                            } else if self.marks.get(self.state(next_index, next_free, from))
                                 == current
                             {
                                 let mut cells = region;
@@ -321,7 +330,7 @@ pub(in crate::solver::size4x4::stm) fn breadth_first_search<F>(
     let states = placements * free_count;
     let mut search = Search {
         shifts: index_shift_table([&[tiles], &[]]),
-        residues: Residues(vec![u8::MAX; states.div_ceil(4)]),
+        marks: Marks::new(states),
         free_count,
         cost,
         visit: &visit,
@@ -338,7 +347,7 @@ pub(in crate::solver::size4x4::stm) fn breadth_first_search<F>(
         if cost == Cost::Additive || blank == 0 {
             let rank = blank_rank(home.free_cells, blank);
             search
-                .residues
+                .marks
                 .claim(home.index as usize * free_count + rank, frontier_mark(0));
             visit(home.index, blank, rank, 0);
             layer_sizes[0] += 1;
@@ -359,7 +368,7 @@ pub(in crate::solver::size4x4::stm) fn breadth_first_search<F>(
         let (current, next) = (frontier_mark(depth), frontier_mark(depth + 1));
         if depth > 0 {
             // The previous layer is done, and its mark is the next layer's.
-            search.residues.retire(next, threads);
+            search.marks.retire(next, threads);
         }
         let search = &search;
         // Expanding the layer's states or checking the unvisited ones, whichever is fewer.
@@ -379,13 +388,28 @@ pub(in crate::solver::size4x4::stm) fn breadth_first_search<F>(
                         if start >= placements {
                             break;
                         }
-                        for index in start..(start + chunk_len).min(placements) {
-                            let first_state = index * free_count;
-                            if !(first_state..first_state + free_count)
-                                .any(|state| search.residues.get(state) == source)
-                            {
+                        let end = (start + chunk_len).min(placements);
+                        // Finds the chunk's placements with a state marked `source`, a word of
+                        // marks at a time. No state gains the mark `source` during a layer (the
+                        // frontier's are fixed, and claimed states lose `UNVISITED`), so a word
+                        // without one can be skipped.
+                        let end_state = end * free_count;
+                        let mut state = start * free_count;
+                        while state < end_state {
+                            let word_index = state / MARKS_PER_WORD;
+                            let word_end = (word_index + 1) * MARKS_PER_WORD;
+                            let mut matching = fields_marked(search.marks.word(word_index), source)
+                                & (u64::MAX << (2 * (state % MARKS_PER_WORD)));
+                            if end_state < word_end {
+                                matching &= (1 << (2 * (end_state % MARKS_PER_WORD))) - 1;
+                            }
+                            if matching == 0 {
+                                state = word_end;
                                 continue;
                             }
+                            let matched = word_index * MARKS_PER_WORD
+                                + matching.trailing_zeros() as usize / 2;
+                            let index = matched / free_count;
                             let placement = Placement::new(index as u32, tiles);
                             found_here += search.expand_placement(
                                 &placement,
@@ -394,6 +418,7 @@ pub(in crate::solver::size4x4::stm) fn breadth_first_search<F>(
                                 next,
                                 depth as u8,
                             );
+                            state = (index + 1) * free_count;
                         }
                     }
                     found.fetch_add(found_here, Relaxed);
