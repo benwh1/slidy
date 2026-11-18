@@ -4,8 +4,8 @@
 use std::sync::atomic::{AtomicU8, Ordering::Relaxed};
 
 use crate::solver::size4x4::stm::{
-    generic::{Format, Group},
-    tables::NEIGHBORS,
+    pdb::tables::{Format, Group},
+    utils::NEIGHBORS,
 };
 
 /// `NBR[cell]`: the cells next to `cell`.

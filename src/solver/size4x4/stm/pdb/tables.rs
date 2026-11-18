@@ -12,8 +12,8 @@ use std::{hint::select_unpredictable, marker::PhantomData};
 
 use crate::solver::size4x4::stm::{
     large::TableSet,
-    pdb::{Dbs, Layout, decode_code, prefetch},
-    tables::{Board, Move, permutations},
+    pdb::region::{Dbs, Layout, decode_code, prefetch},
+    utils::{Board, Move, permutations},
 };
 
 /// The most groups a set may have.

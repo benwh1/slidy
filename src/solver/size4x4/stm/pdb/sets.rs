@@ -14,9 +14,9 @@
 
 use Format::{Bytes8, Bytes16, Min2, Pair, Pair8};
 
-use crate::solver::size4x4::stm::{
-    generic::{Format, Gen, Group, Spec, parts},
-    pdb::Layout,
+use crate::solver::size4x4::stm::pdb::{
+    region::Layout,
+    tables::{Format, Gen, Group, Spec, parts},
 };
 
 // The partitions were found by hill-climbing tile swaps on lab node counts (200 random
@@ -161,7 +161,11 @@ mod tests {
     use crate::{
         algorithm::algorithm::Algorithm,
         puzzle::{sliding_puzzle::SlidingPuzzle as _, small::Puzzle4x4},
-        solver::size4x4::stm::{build, large, pdb::Region, tables},
+        solver::size4x4::stm::{
+            large,
+            pdb::{build, region::Region},
+            utils,
+        },
     };
 
     /// Random positions and their optimal solution lengths.
@@ -198,7 +202,7 @@ mod tests {
     {
         let region = region::<S>();
         for (text, length) in POSITIONS {
-            let board = tables::parse_scramble(text).unwrap();
+            let board = utils::parse_scramble(text).unwrap();
             let solution = large::solve::<Gen<S, N>>(&board, region.as_dbs()).unwrap();
             let mut puzzle = Puzzle4x4::try_from(board).unwrap();
             puzzle.apply_alg(&Algorithm::from_str(&solution).unwrap());

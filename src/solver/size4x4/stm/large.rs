@@ -16,8 +16,8 @@ use crate::{
     puzzle::{sliding_puzzle::SlidingPuzzle as _, small::Puzzle4x4},
     solver::size4x4::stm::{
         fsm,
-        pdb::{Dbs, Layout},
-        tables::{self, Board, MIRROR, Move},
+        pdb::region::{Dbs, Layout},
+        utils::{self, Board, MIRROR, Move},
     },
 };
 
@@ -143,8 +143,8 @@ impl<H: TableSet> Root<H> {
     /// The root for `internal` (internal labels), whose tables `dbs` holds.
     #[must_use]
     pub fn new(internal: &Board, dbs: Dbs<'_>) -> Self {
-        let boards = [*internal, tables::reflect(internal)];
-        let blank = tables::blank_position(internal);
+        let boards = [*internal, utils::reflect(internal)];
+        let blank = utils::blank_position(internal);
         let (indices, values, bound) = H::root(dbs, &boards, blank);
         Self {
             boards,
@@ -247,7 +247,7 @@ where
     if !Puzzle4x4::try_from(*puzzle).ok()?.is_solvable() {
         return None;
     }
-    let root = Root::<H>::new(&tables::to_internal(puzzle), dbs);
+    let root = Root::<H>::new(&utils::to_internal(puzzle), dbs);
     let mut engine = Engine::default();
     let mut solution = None;
     let mut depth = root.lower_bound();
@@ -255,7 +255,7 @@ where
         let _ = engine.search::<Pruning>(dbs, &root, depth, &mut |cells| {
             // The blank's cells after each move, first move first.
             let trail = cells[..cells.len() - 1].iter().rev();
-            solution = Some(tables::solution_string(
+            solution = Some(utils::solution_string(
                 root.blank,
                 trail.map(|&c| usize::from(c)),
             ));
@@ -536,7 +536,7 @@ where
     // allowed mask).
     // SAFETY: blank is a board position and the mask is 0..16.
     let list = unsafe {
-        tables::MOVES
+        utils::MOVES
             .get_unchecked(blank)
             .get_unchecked((node & 15) as usize)
     };

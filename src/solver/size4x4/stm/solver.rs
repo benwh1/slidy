@@ -12,11 +12,13 @@ use crate::{
         config::{PdbConfig, SolverConfig},
         search::{Search, iterative_deepening},
         size4x4::stm::{
-            build,
-            generic::{Gen, Spec},
             large::{Backtrack, Engine, Pruning, Root, TableSet},
-            pdb::Region,
-            tables::{self, Board},
+            pdb::{
+                build,
+                region::Region,
+                tables::{Gen, Spec},
+            },
+            utils::{self, Board},
         },
         solver::{Solver as SolverT, SolverError},
     },
@@ -95,7 +97,7 @@ where
         }
 
         let board: Board = std::array::from_fn(|i| puzzle.piece_at(i as u64).to_u8().unwrap());
-        let root = Root::<H>::new(&tables::to_internal(&board), self.region.as_dbs());
+        let root = Root::<H>::new(&utils::to_internal(&board), self.region.as_dbs());
         let lower_bound = root.lower_bound();
 
         // The duplicate-pruning automaton finds an optimal solution but not every solution, so
@@ -118,7 +120,7 @@ where
                     search.stack.clear();
                     // The blank's cells after each move, first move first.
                     let trail = cells[..cells.len() - 1].iter().rev();
-                    for d in tables::directions(root.blank(), trail.map(|&c| usize::from(c))) {
+                    for d in utils::directions(root.blank(), trail.map(|&c| usize::from(c))) {
                         search.stack.push(d);
                     }
                     search.record_solution()
@@ -158,7 +160,8 @@ mod tests {
 
     use super::*;
     use crate::{
-        algorithm::algorithm::Algorithm, puzzle::puzzle::Puzzle, solver::size4x4::stm::sets::Tiny,
+        algorithm::algorithm::Algorithm, puzzle::puzzle::Puzzle,
+        solver::size4x4::stm::pdb::sets::Tiny,
     };
 
     /// The tiny set's solver, built once and shared by the tests.

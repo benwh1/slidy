@@ -13,9 +13,11 @@ use std::hint::select_unpredictable;
 
 use super::{Format, Group, MAX_GROUPS, Spec};
 use crate::solver::size4x4::stm::{
-    build::lehmer,
-    pdb::{Dbs, decode_code, prefetch},
-    tables::{Board, NEIGHBORS},
+    pdb::{
+        build::lehmer,
+        region::{Dbs, decode_code, prefetch},
+    },
+    utils::{Board, NEIGHBORS},
 };
 
 /// Lehmer index of the group's placement on `board` (unscaled).
@@ -626,8 +628,8 @@ where
 mod tests {
     use super::*;
     use crate::solver::size4x4::stm::{
-        sets::{HugeSpec, LargeSpec, MediumSpec, TinySpec},
-        tables,
+        pdb::sets::{HugeSpec, LargeSpec, MediumSpec, TinySpec},
+        utils,
     };
 
     /// The walk's branch-free shift matches recomputing the index, for every group of `S`.
@@ -638,7 +640,7 @@ mod tests {
         // The table is never read: only the index arithmetic is tested.
         let region = [0u8; 64];
         let dbs = Dbs::for_test(region.as_ptr());
-        for board in tables::random_boards(500) {
+        for board in utils::random_boards(500) {
             let blank = board.iter().position(|&t| t == 0).unwrap() as u8;
             for (g, &group) in S::GROUPS.iter().enumerate() {
                 if !group.format.coded() {
