@@ -23,7 +23,7 @@ use crate::solver::{
                 shifted_blank_rank, tile_mask,
             },
             prefetch,
-            walk::{Encoding, exact_value},
+            walk::{Encoding, WalkSpec, exact_values},
         },
     },
 };
@@ -182,6 +182,42 @@ impl Search for Large {
     type Values = [[u8; 4]; 2];
 
     fn root(&self, boards: &[Board; 2]) -> (Self::Indices, Self::Values, u64) {
+        // The tables' walks, both orientations: (tiles, encoding, bit offset), top seven first.
+        const WALKS: [(&[u8], Encoding, u32); 4] = [
+            (TOP_SEVEN, Encoding::AdditiveBit, 0),
+            (TOP_SEVEN, Encoding::FullBit, 1),
+            (BOTTOM_EIGHT, Encoding::AdditiveBit, 0),
+            (BOTTOM_EIGHT, Encoding::FullBit, 8),
+        ];
+        let walks = std::array::from_fn::<_, 8, _>(|walk| {
+            let (tiles, encoding, _) = WALKS[walk % 4];
+            WalkSpec {
+                tiles,
+                partition: 0,
+                board: &boards[walk / 4],
+                encoding,
+            }
+        });
+        let exact = exact_values(
+            &INDEX_SHIFTS,
+            walks,
+            |walk, state| {
+                let bits = if walk % 4 < 2 {
+                    self.seven_tile_bits(state.index, state.blank as usize)
+                } else {
+                    let rank = (state.free_cells & ((1 << state.blank) - 1)).count_ones();
+                    self.eight_tile_bits(state.index, rank)
+                };
+                (bits >> WALKS[walk % 4].2) & 1
+            },
+            |walk, state| {
+                self.address_of(if walk % 4 < 2 {
+                    TOP_SEVEN_START + 4 * state.index as usize
+                } else {
+                    BOTTOM_EIGHT_START + 2 * state.index as usize
+                })
+            },
+        );
         let mut indices = [[0; 3]; 2];
         let mut values = [[0; 4]; 2];
         let mut bound = 0;
@@ -191,37 +227,7 @@ impl Search for Large {
                 placement_index(BOTTOM_EIGHT, board),
                 blank_rank(board, BOTTOM_EIGHT_MASK),
             ];
-            let seven_tile_value = |encoding, bit: u32| {
-                exact_value(
-                    TOP_SEVEN,
-                    &INDEX_SHIFTS,
-                    0,
-                    board,
-                    encoding,
-                    |state| (self.seven_tile_bits(state.index, state.blank as usize) >> bit) & 1,
-                    |state| self.address_of(TOP_SEVEN_START + 4 * state.index as usize),
-                )
-            };
-            let eight_tile_value = |encoding, bit: u32| {
-                exact_value(
-                    BOTTOM_EIGHT,
-                    &INDEX_SHIFTS,
-                    0,
-                    board,
-                    encoding,
-                    |state| {
-                        let rank = (state.free_cells & ((1 << state.blank) - 1)).count_ones();
-                        (self.eight_tile_bits(state.index, rank) >> bit) & 1
-                    },
-                    |state| self.address_of(BOTTOM_EIGHT_START + 2 * state.index as usize),
-                )
-            };
-            values[side] = [
-                seven_tile_value(Encoding::AdditiveBit, 0),
-                seven_tile_value(Encoding::FullBit, 1),
-                eight_tile_value(Encoding::AdditiveBit, 0),
-                eight_tile_value(Encoding::FullBit, 8),
-            ];
+            values[side] = std::array::from_fn(|walk| exact[4 * side + walk]);
             let [top_additive, top_full, bottom_additive, bottom_full] = values[side];
             bound = bound
                 .max(top_additive + bottom_additive)

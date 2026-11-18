@@ -20,7 +20,7 @@ use crate::solver::{
             build::{Cost, as_atomic, breadth_first_search, relax_minimums},
             index::{index_shift_table, index_shifts, placement_count, placement_index, tile_mask},
             prefetch,
-            walk::{Encoding, exact_value},
+            walk::{Encoding, WalkSpec, exact_values},
         },
     },
 };
@@ -278,45 +278,58 @@ impl Search for Medium {
     type Values = [[u8; 6]; 2];
 
     fn root(&self, boards: &[Board; 2]) -> (Self::Indices, Self::Values, u64) {
+        // The tables' walks, both orientations: (tiles, partition, encoding, table start, bit
+        // offset), in the order of the values.
+        const WALKS: [(&[u8], usize, Encoding, usize, u32); 6] = [
+            (TOP_SEVEN, 0, Encoding::RelaxedMinimum, TOP_SEVEN_START, 0),
+            (
+                BOTTOM_SEVEN,
+                0,
+                Encoding::RelaxedMinimum,
+                BOTTOM_SEVEN_START,
+                0,
+            ),
+            (LEFT_SIX, 1, Encoding::AdditiveBit, LEFT_SIX_START, 0),
+            (LEFT_SIX, 1, Encoding::FullBit, LEFT_SIX_START, 1),
+            (RIGHT_SIX, 1, Encoding::AdditiveBit, RIGHT_SIX_START, 0),
+            (RIGHT_SIX, 1, Encoding::FullBit, RIGHT_SIX_START, 1),
+        ];
+        let walks = std::array::from_fn::<_, 12, _>(|walk| {
+            let (tiles, partition, encoding, ..) = WALKS[walk % 6];
+            WalkSpec {
+                tiles,
+                partition,
+                board: &boards[walk / 6],
+                encoding,
+            }
+        });
+        let exact = exact_values(
+            &INDEX_SHIFTS,
+            walks,
+            |walk, state| {
+                let (.., encoding, start, bit) = WALKS[walk % 6];
+                if encoding == Encoding::RelaxedMinimum {
+                    self.seven_tile_code(start, state.index)
+                } else {
+                    (self.six_tile_bits(start, state.index, state.blank as usize) >> bit) & 1
+                }
+            },
+            |walk, state| {
+                let (.., encoding, start, _) = WALKS[walk % 6];
+                self.address_of(if encoding == Encoding::RelaxedMinimum {
+                    start + state.index as usize / 4
+                } else {
+                    start + 4 * state.index as usize
+                })
+            },
+        );
         let mut indices = [[0; 6]; 2];
         let mut values = [[0; 6]; 2];
         let mut bound = 0;
         for (side, board) in boards.iter().enumerate() {
             let blank = board.iter().position(|&tile| tile == 0).unwrap();
             indices[side] = GROUPS.map(|tiles| placement_index(tiles, board));
-            let seven_tile_value = |tiles, start| {
-                exact_value(
-                    tiles,
-                    &INDEX_SHIFTS,
-                    0,
-                    board,
-                    Encoding::RelaxedMinimum,
-                    |state| self.seven_tile_code(start, state.index),
-                    |state| self.address_of(start + state.index as usize / 4),
-                )
-            };
-            let six_tile_value = |tiles, start, encoding, bit: u32| {
-                exact_value(
-                    tiles,
-                    &INDEX_SHIFTS,
-                    1,
-                    board,
-                    encoding,
-                    |state| {
-                        let bits = self.six_tile_bits(start, state.index, state.blank as usize);
-                        (bits >> bit) & 1
-                    },
-                    |state| self.address_of(start + 4 * state.index as usize),
-                )
-            };
-            values[side] = [
-                seven_tile_value(TOP_SEVEN, TOP_SEVEN_START),
-                seven_tile_value(BOTTOM_SEVEN, BOTTOM_SEVEN_START),
-                six_tile_value(LEFT_SIX, LEFT_SIX_START, Encoding::AdditiveBit, 0),
-                six_tile_value(LEFT_SIX, LEFT_SIX_START, Encoding::FullBit, 1),
-                six_tile_value(RIGHT_SIX, RIGHT_SIX_START, Encoding::AdditiveBit, 0),
-                six_tile_value(RIGHT_SIX, RIGHT_SIX_START, Encoding::FullBit, 1),
-            ];
+            values[side] = std::array::from_fn(|walk| exact[6 * side + walk]);
             let [_, _, corner_index, top_row_index, ..] = indices[side];
             let corner = self.byte_value(CORNER_START, corner_index, blank);
             let top_row = self.byte_value(TOP_ROW_START, top_row_index, blank);

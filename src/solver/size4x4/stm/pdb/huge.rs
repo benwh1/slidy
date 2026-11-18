@@ -23,7 +23,7 @@ use crate::solver::{
                 shifted_blank_rank, tile_mask,
             },
             prefetch,
-            walk::{Encoding, exact_value},
+            walk::{Encoding, WalkSpec, exact_values},
         },
     },
 };
@@ -223,6 +223,33 @@ impl Search for Huge {
     type Values = [[u8; 4]; 2];
 
     fn root(&self, boards: &[Board; 2]) -> (Self::Indices, Self::Values, u64) {
+        // The 9-tile tables' walks, both orientations: (tiles, partition, encoding), and where
+        // each reads its bits (table start, bit offset).
+        const WALKS: [(&[u8], usize, Encoding, usize, u32); 4] = [
+            (FIRST_NINE, 0, Encoding::AdditiveBit, FIRST_NINE_START, 0),
+            (FIRST_NINE, 0, Encoding::FullBit, FIRST_NINE_START, 8),
+            (LAST_NINE, 1, Encoding::AdditiveBit, LAST_NINE_START, 0),
+            (LAST_NINE, 1, Encoding::FullBit, LAST_NINE_START, 8),
+        ];
+        let walks = std::array::from_fn::<_, 8, _>(|walk| {
+            let (tiles, partition, encoding, ..) = WALKS[walk % 4];
+            WalkSpec {
+                tiles,
+                partition,
+                board: &boards[walk / 4],
+                encoding,
+            }
+        });
+        let exact = exact_values(
+            &INDEX_SHIFTS,
+            walks,
+            |walk, state| {
+                let (.., start, bit) = WALKS[walk % 4];
+                let rank = (state.free_cells & ((1 << state.blank) - 1)).count_ones();
+                (self.nine_tile_bits(start, state.index, rank) >> bit) & 1
+            },
+            |walk, state| self.address_of(WALKS[walk % 4].3 + 2 * state.index as usize),
+        );
         let [_, first_nine_mask, _, last_nine_mask] = GROUP_MASKS;
         let mut indices = [[0; 6]; 2];
         let mut values = [[0; 4]; 2];
@@ -239,26 +266,7 @@ impl Search for Huge {
                 blank_rank(board, first_nine_mask),
                 blank_rank(board, last_nine_mask),
             ];
-            let nine_tile_value = |tiles, start, partition, encoding, bit: u32| {
-                exact_value(
-                    tiles,
-                    &INDEX_SHIFTS,
-                    partition,
-                    board,
-                    encoding,
-                    |state| {
-                        let rank = (state.free_cells & ((1 << state.blank) - 1)).count_ones();
-                        (self.nine_tile_bits(start, state.index, rank) >> bit) & 1
-                    },
-                    |state| self.address_of(start + 2 * state.index as usize),
-                )
-            };
-            values[side] = [
-                nine_tile_value(FIRST_NINE, FIRST_NINE_START, 0, Encoding::AdditiveBit, 0),
-                nine_tile_value(FIRST_NINE, FIRST_NINE_START, 0, Encoding::FullBit, 8),
-                nine_tile_value(LAST_NINE, LAST_NINE_START, 1, Encoding::AdditiveBit, 0),
-                nine_tile_value(LAST_NINE, LAST_NINE_START, 1, Encoding::FullBit, 8),
-            ];
+            values[side] = std::array::from_fn(|walk| exact[4 * side + walk]);
             let [
                 first_nine_additive,
                 first_nine_full,

@@ -18,7 +18,7 @@ use crate::solver::{
             build::{Cost, as_atomic, breadth_first_search, relax_minimums},
             index::{index_shift_table, index_shifts, placement_count, placement_index, tile_mask},
             prefetch,
-            walk::{Encoding, exact_value},
+            walk::{Encoding, WalkSpec, exact_values},
         },
     },
 };
@@ -205,29 +205,36 @@ impl Search for Tiny {
     type Values = [[u8; 4]; 2];
 
     fn root(&self, boards: &[Board; 2]) -> (Self::Indices, Self::Values, u64) {
+        // The 6-tile tables' walks, both orientations: (tiles, partition, table start), in the
+        // order of the values.
+        const WALKS: [(&[u8], usize, usize); 4] = [
+            (LEFT_SIX, 0, LEFT_SIX_START),
+            (RIGHT_SIX, 0, RIGHT_SIX_START),
+            (UPPER_SIX, 1, UPPER_SIX_START),
+            (BOTTOM_SIX, 1, BOTTOM_SIX_START),
+        ];
+        let walks = std::array::from_fn::<_, 8, _>(|walk| {
+            let (tiles, partition, _) = WALKS[walk % 4];
+            WalkSpec {
+                tiles,
+                partition,
+                board: &boards[walk / 4],
+                encoding: Encoding::RelaxedMinimum,
+            }
+        });
+        let exact = exact_values(
+            &INDEX_SHIFTS,
+            walks,
+            |walk, state| self.six_tile_code(WALKS[walk % 4].2, state.index),
+            |walk, state| self.address_of(WALKS[walk % 4].2 + state.index as usize / 4),
+        );
         let mut indices = [[0; 6]; 2];
         let mut values = [[0; 4]; 2];
         let mut bound = 0;
         for (side, board) in boards.iter().enumerate() {
             let blank = board.iter().position(|&tile| tile == 0).unwrap();
             indices[side] = GROUPS.map(|tiles| placement_index(tiles, board));
-            let six_tile_value = |tiles, start, partition| {
-                exact_value(
-                    tiles,
-                    &INDEX_SHIFTS,
-                    partition,
-                    board,
-                    Encoding::RelaxedMinimum,
-                    |state| self.six_tile_code(start, state.index),
-                    |state| self.address_of(start + state.index as usize / 4),
-                )
-            };
-            values[side] = [
-                six_tile_value(LEFT_SIX, LEFT_SIX_START, 0),
-                six_tile_value(RIGHT_SIX, RIGHT_SIX_START, 0),
-                six_tile_value(UPPER_SIX, UPPER_SIX_START, 1),
-                six_tile_value(BOTTOM_SIX, BOTTOM_SIX_START, 1),
-            ];
+            values[side] = std::array::from_fn(|walk| exact[4 * side + walk]);
             let [top_row_index, _, _, right_column_index, ..] = indices[side];
             let top_row = self.three_tile_value(TOP_ROW_START, top_row_index, blank);
             let right_column = self.three_tile_value(RIGHT_COLUMN_START, right_column_index, blank);
