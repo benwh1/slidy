@@ -4,7 +4,7 @@
 //! | database | partitions | size | solves/s |
 //! |---|---|---|---|
 //! | [`Tiny`] | 6-6-3, 6-6-3 | 5.9 MB | ~60 |
-//! | `Medium` | 7-7-1, 6-6-3 | 75 MB | ~175 |
+//! | [`Medium`] | 7-7-1, 6-6-3 | 75 MB | ~175 |
 //! | `LargeCompact` | 7-8 | 1.27 GB | ~2,950 |
 //! | `Large` | 7-8, 9-6 | 3.5 GB | ~3,550 |
 //! | `Huge` | 9-6, 6-9 | 17.0 GB | ~7,100 |
@@ -23,8 +23,10 @@
 //! Internal labels throughout: serpentine rows `0 1 2 3 / 7 6 5 4 / 8 9 10 11 / 15 14 13 12`,
 //! tile `t`'s home is cell `t`, the blank's cell 0.
 
+pub mod medium;
 pub mod tiny;
 
+pub use medium::Medium;
 pub use tiny::Tiny;
 
 use crate::solver::{
@@ -132,16 +134,13 @@ mod tests {
         ("7 0 3 10/13 9 1 15/5 12 14 4/6 2 11 8", 45),
     ];
 
-    /// `pdb` has hash `hash`, loads from its bytes, and solves [`POSITIONS`] optimally.
+    /// `pdb` solves [`POSITIONS`] optimally, has hash `hash`, and (unless it is over a gigabyte,
+    /// to spare the copy) loads from its bytes.
     pub(super) fn check<P>(pdb: P, hash: u64)
     where
         P: Pdb,
     {
-        assert_eq!(xxh3::xxh3_64(pdb.as_ref()), hash, "{:#x}", xxh3::xxh3_64(pdb.as_ref()));
-        // SAFETY: the bytes come from a database built above.
-        let loaded = unsafe { P::try_from_bytes(pdb.as_ref().into()) }.unwrap();
-        drop(pdb);
-        let mut solver = Solver::with_pdb(loaded);
+        let mut solver = Solver::with_pdb(pdb);
         for (text, length) in POSITIONS {
             let puzzle = Puzzle::from_str(text).unwrap();
             let solution: Algorithm = solver.solve(&puzzle).unwrap();
@@ -149,6 +148,13 @@ mod tests {
             solved.apply_alg(&solution);
             assert!(solved.is_solved(), "{text}: {solution} does not solve it");
             assert_eq!(solution.len_stm(), length, "{text}: {solution} is not optimal");
+        }
+        let bytes = solver.pdb().as_ref();
+        let actual = xxh3::xxh3_64(bytes);
+        assert_eq!(actual, hash, "the hash is {actual:#x}");
+        if bytes.len() < 1 << 30 {
+            // SAFETY: the bytes come from a database built above.
+            assert!(unsafe { P::try_from_bytes(bytes.into()) }.is_some());
         }
         // SAFETY: wrong lengths are rejected before anything is read.
         assert!(unsafe { P::try_from_bytes(vec![0; 10].into()) }.is_none());

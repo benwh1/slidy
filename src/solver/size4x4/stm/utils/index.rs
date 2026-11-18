@@ -4,6 +4,8 @@
 //! placement's Lehmer code: tile `i`'s digit is its cell minus the number of earlier tiles on
 //! lower cells, and the digits are read in a mixed radix (`16`, `15`, ...).
 
+use std::hint::select_unpredictable;
+
 use crate::solver::size4x4::stm::utils::{Board, Move};
 
 /// Number of placements of `k` tiles.
@@ -150,6 +152,25 @@ pub fn shift(table: &[[u64; 16]; 16], board: &Board, m: &Move, side: usize, tile
     [lane(sum), lane(sum >> 32)]
 }
 
+/// The blank's rank among the cells without a tile of `group` (how many of them are below its
+/// own cell) after `m` on `board` (`side` of the move), which moves `tile`, from its rank `rank`
+/// before the move.
+#[inline(always)]
+#[must_use]
+pub fn shift_rank(rank: u32, board: &Board, m: &Move, side: usize, group: u16, tile: u8) -> u32 {
+    // The cells that change sides of the blank: those it passes (in label order) without a
+    // group tile, and the moved tile's own unless it is in the group.
+    let lo = usize::from(m.lo[side]);
+    let mut passed = u32::from((group >> tile) & 1 == 0);
+    for cell in lo + 1..lo + usize::from(m.gap[side]) {
+        // SAFETY: the cells between two cells of the board are cells, holding tiles below 16.
+        let other = unsafe { *board.get_unchecked(cell) };
+        passed += u32::from((group >> other) & 1 == 0);
+    }
+    // The blank moves to the higher cell when the tile moves to the lower one.
+    select_unpredictable(m.sign[side] != 0, rank + passed, rank.wrapping_sub(passed))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -193,6 +214,32 @@ mod tests {
                             assert_eq!(before.wrapping_add(delta[p]), placement(tiles, &moved));
                         }
                     }
+                }
+            }
+        }
+    }
+
+    /// The rank shifts match recounting, for every move of random boards.
+    #[test]
+    fn shift_rank_matches_recount() {
+        let group = mask(&[1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        let rank = |board: &Board| {
+            let blank = board.iter().position(|&t| t == 0).unwrap();
+            board[..blank].iter().filter(|&&t| (group >> t) & 1 == 0).count() as u32
+        };
+        for board in random_boards(200) {
+            let boards = [board, reflect(&board)];
+            let blank = board.iter().position(|&t| t == 0).unwrap();
+            for m in &MOVES[blank][15].moves[..usize::from(MOVES[blank][15].n)] {
+                for (side, board) in boards.iter().enumerate() {
+                    let here = if side == 0 { blank } else { usize::from(MIRROR[blank]) };
+                    let next = usize::from(m.next[side]);
+                    let tile = board[next];
+                    let mut moved = *board;
+                    moved[here] = tile;
+                    moved[next] = 0;
+                    let shifted = shift_rank(rank(board), board, m, side, group, tile);
+                    assert_eq!(shifted, rank(&moved));
                 }
             }
         }
