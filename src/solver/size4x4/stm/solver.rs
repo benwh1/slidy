@@ -165,13 +165,24 @@ where
                 if depth == 0 {
                     return solver.record(blank);
                 }
+                let mut root = MaybeUninit::uninit();
                 if pruning {
-                    let root = solver.expand::<Pruning>(blank, &indices, Pruning::START, values);
-                    solver.search_subtree::<Pruning>(blank, depth, &root)
+                    solver.expand::<Pruning>(blank, &indices, Pruning::START, values, &mut root);
+                    // SAFETY: `expand` wrote it.
+                    solver
+                        .search_subtree::<Pruning>(blank, depth, unsafe { root.assume_init_ref() })
                 } else {
-                    let root =
-                        solver.expand::<Backtrack>(blank, &indices, Backtrack::START, values);
-                    solver.search_subtree::<Backtrack>(blank, depth, &root)
+                    solver.expand::<Backtrack>(
+                        blank,
+                        &indices,
+                        Backtrack::START,
+                        values,
+                        &mut root,
+                    );
+                    // SAFETY: `expand` wrote it.
+                    solver.search_subtree::<Backtrack>(blank, depth, unsafe {
+                        root.assume_init_ref()
+                    })
                 }
             },
         );
@@ -273,12 +284,13 @@ where
                 )
             };
             self.slide(blank_cells, candidate.blanks, candidate.tiles);
-            child.write(self.expand::<A>(
+            self.expand::<A>(
                 usize::from(candidate.blanks[0]),
                 &candidate.indices,
                 candidate.node,
                 candidate_values,
-            ));
+                child,
+            );
             self.slide(candidate.blanks, blank_cells, candidate.tiles);
         }
         for (child, &candidate_index) in children.iter().zip(survivors) {
@@ -298,8 +310,9 @@ where
         ControlFlow::Continue(())
     }
 
-    /// The node with the blank at `blank`, indices `indices`, automaton node `node` and values
-    /// `values`: its values and its successors, each move the automaton allows.
+    /// Writes the node with the blank at `blank`, indices `indices`, automaton node `node` and
+    /// values `values` to `out`: its values and its successors, each move the automaton allows.
+    /// Written in place, field by field: returned by value, the node was copied.
     #[inline(always)]
     fn expand<A>(
         &self,
@@ -307,20 +320,22 @@ where
         indices: &P::Indices,
         node: u32,
         values: P::Values,
-    ) -> ExpandedNode<P>
-    where
+        out: &mut MaybeUninit<ExpandedNode<P>>,
+    ) where
         A: Automaton,
     {
         let moves = &MOVES[blank & 15][(node & 15) as usize];
-        let mut expanded = ExpandedNode {
-            values,
-            candidates: [const { MaybeUninit::uninit() }; 4],
-            count: usize::from(moves.count),
+        let out = out.as_mut_ptr();
+        // SAFETY: `out` points to an `ExpandedNode`, whose fields are written without reading
+        // them, and whose candidates are `MaybeUninit`, valid whatever they hold.
+        let candidates = unsafe {
+            (&raw mut (*out).values).write(values);
+            (&raw mut (*out).count).write(usize::from(moves.count));
+            &mut (*out).candidates
         };
-        for (candidate, tile_move) in expanded
-            .candidates
+        for (candidate, tile_move) in candidates
             .iter_mut()
-            .zip(&moves.moves[..expanded.count])
+            .zip(&moves.moves[..usize::from(moves.count)])
         {
             let tiles = [
                 self.boards[0][usize::from(tile_move.blank_after[0]) & 15],
@@ -333,7 +348,6 @@ where
                 node: A::next(node, tile_move.direction),
             });
         }
-        expanded
     }
 }
 
