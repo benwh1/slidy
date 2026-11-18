@@ -18,10 +18,7 @@ use crate::solver::{
         utils::{
             Board, Move,
             build::{Cost, as_atomic, breadth_first_search},
-            index::{
-                index_shift_table, index_shifts, placement_count, placement_index,
-                shifted_blank_rank, tile_mask,
-            },
+            index::{index_shift_table, move_shifts, placement_count, placement_index, tile_mask},
             prefetch,
             walk::{Encoding, WalkSpec, exact_values},
         },
@@ -300,30 +297,22 @@ impl Search for Huge {
         let mut indices = *parent;
         for side in 0..2 {
             let (moved, board) = (tiles[side], &boards[side]);
-            let deltas = index_shifts(&INDEX_SHIFTS, board, tile_move, side, moved);
+            let shifts = move_shifts(
+                &INDEX_SHIFTS,
+                board,
+                tile_move,
+                side,
+                moved,
+                [first_nine_mask, last_nine_mask],
+            );
             let side_indices = &mut indices[side];
             for (group, mask) in GROUP_MASKS.into_iter().enumerate() {
                 let in_group = (mask >> moved) & 1 != 0;
-                let delta = select_unpredictable(in_group, deltas[group / 2], 0);
+                let delta = select_unpredictable(in_group, shifts.indices[group / 2], 0);
                 side_indices[group] = side_indices[group].wrapping_add(delta);
             }
-            let [.., first_nine_rank, last_nine_rank] = side_indices;
-            *first_nine_rank = shifted_blank_rank(
-                *first_nine_rank,
-                board,
-                tile_move,
-                side,
-                first_nine_mask,
-                moved,
-            );
-            *last_nine_rank = shifted_blank_rank(
-                *last_nine_rank,
-                board,
-                tile_move,
-                side,
-                last_nine_mask,
-                moved,
-            );
+            side_indices[4] = side_indices[4].wrapping_add(shifts.ranks[0]);
+            side_indices[5] = side_indices[5].wrapping_add(shifts.ranks[1]);
             let [last_six, first_nine, first_six, last_nine, ..] =
                 side_indices.map(|index| index as usize);
             let blank = usize::from(tile_move.blank_after[side]);

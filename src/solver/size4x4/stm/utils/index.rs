@@ -218,34 +218,74 @@ pub(in crate::solver::size4x4::stm) fn index_shifts(
     [signed(sum), signed(sum >> 32)]
 }
 
-/// The blank's rank among the cells without a tile of `group` (how many of them are below its
-/// own cell) after `tile_move` on `board` (`side` of the move), which moves `tile`, from its rank
-/// `rank` before the move.
+/// The index shifts and blank rank changes of a move: see [`move_shifts`].
+pub(in crate::solver::size4x4::stm) struct MoveShifts<const G: usize> {
+    /// Each partition's index shift, to be added with wrapping.
+    pub(in crate::solver::size4x4::stm) indices: [u32; 2],
+    /// For each group, the change in the blank's rank among the cells without a tile of the
+    /// group (how many of them are below its own cell), to be added with wrapping.
+    pub(in crate::solver::size4x4::stm) ranks: [u32; G],
+}
+
+/// The index shifts (see [`index_shift_table`]) of both partitions for `tile_move` on `board`
+/// (`side` of the move), which moves `tile`, and the blank's rank changes for the groups of tiles
+/// `groups`, from one scan of the cells the tile passes. `table` is the partitions'
+/// [`index_shift_table`].
 #[inline(always)]
 #[must_use]
-pub(in crate::solver::size4x4::stm) fn shifted_blank_rank(
-    rank: u32,
+pub(in crate::solver::size4x4::stm) fn move_shifts<const G: usize>(
+    table: &[[u64; 16]; 16],
     board: &Board,
     tile_move: &Move,
     side: usize,
-    group: u16,
     tile: u8,
-) -> u32 {
-    // The cells that change sides of the blank: those it passes (in label order) without a
-    // group tile, and the moved tile's own unless it is in the group.
+    groups: [u16; G],
+) -> MoveShifts<G> {
+    let row = &table[usize::from(tile & 15)];
     let lower = usize::from(tile_move.lower_cell[side]);
-    let mut passed = u32::from((group >> tile) & 1 == 0);
-    for cell in lower + 1..lower + usize::from(tile_move.cell_gap[side]) {
-        // SAFETY: the cells between two cells of the board are cells, holding tiles below 16.
-        let other = unsafe { *board.get_unchecked(cell) };
-        passed += u32::from((group >> other) & 1 == 0);
+    let mut sum = row[0];
+    // The cells that change sides of the blank: those the tile passes without a group tile,
+    // and the moved tile's own unless it is in the group.
+    let mut passed = groups.map(|group| u32::from((group >> tile) & 1 == 0));
+    let mut visit = |offset: usize| {
+        let other = board[(lower + offset) & 15];
+        sum = sum.wrapping_add(row[usize::from(other & 15)]);
+        for (count, group) in passed.iter_mut().zip(groups) {
+            *count += u32::from((group >> other) & 1 == 0);
+        }
+    };
+    // The tile passes 0, 2, 4 or 6 cells: one branch on the count, then no loop.
+    match tile_move.cell_gap[side] {
+        1 => {}
+        3 => {
+            visit(1);
+            visit(2);
+        }
+        5 => {
+            visit(1);
+            visit(2);
+            visit(3);
+            visit(4);
+        }
+        _ => {
+            visit(1);
+            visit(2);
+            visit(3);
+            visit(4);
+            visit(5);
+            visit(6);
+        }
     }
-    // The blank moves to the higher cell when the tile moves to the lower one.
-    select_unpredictable(
-        tile_move.blank_to_higher_cell[side],
-        rank + passed,
-        rank.wrapping_sub(passed),
-    )
+    // The tile moves to the lower cell when the blank moves to the higher one.
+    let to_higher = u32::from(tile_move.blank_to_higher_cell[side]).wrapping_neg();
+    let negated_if = |value: u32, mask: u32| (value ^ mask).wrapping_sub(mask);
+    MoveShifts {
+        indices: [
+            negated_if(sum as u32, to_higher),
+            negated_if((sum >> 32) as u32, to_higher),
+        ],
+        ranks: passed.map(|count| negated_if(count, !to_higher)),
+    }
 }
 
 #[cfg(test)]
@@ -317,6 +357,10 @@ mod tests {
     /// The rank shifts match recounting, for every move of random boards.
     #[test]
     fn shifted_ranks_match_recounting() {
+        const INDEX_SHIFTS: [[u64; 16]; 16] = index_shift_table([
+            &[&[1, 2, 3, 4, 5, 6, 7, 8, 9], &[10, 11, 12, 13, 14, 15]],
+            &[&[1, 2, 3, 4, 5, 6], &[7, 8, 9, 10, 11, 12, 13, 14, 15]],
+        ]);
         let group_mask = tile_mask(&[1, 2, 3, 4, 5, 6, 7, 8, 9]);
         let rank = |board: &Board| {
             let blank = board.iter().position(|&tile| tile == 0).unwrap();
@@ -341,9 +385,13 @@ mod tests {
                     let mut moved = *board;
                     moved[blank_cell] = tile;
                     moved[blank_after] = 0;
-                    let shifted =
-                        shifted_blank_rank(rank(board), board, tile_move, side, group_mask, tile);
-                    assert_eq!(shifted, rank(&moved));
+                    let shifts =
+                        move_shifts(&INDEX_SHIFTS, board, tile_move, side, tile, [group_mask]);
+                    assert_eq!(
+                        shifts.indices,
+                        index_shifts(&INDEX_SHIFTS, board, tile_move, side, tile)
+                    );
+                    assert_eq!(rank(board).wrapping_add(shifts.ranks[0]), rank(&moved));
                 }
             }
         }

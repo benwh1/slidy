@@ -18,10 +18,7 @@ use crate::solver::{
         utils::{
             Board, Move,
             build::{Cost, as_atomic, breadth_first_search},
-            index::{
-                index_shift_table, index_shifts, placement_count, placement_index,
-                shifted_blank_rank, tile_mask,
-            },
+            index::{index_shift_table, move_shifts, placement_count, placement_index, tile_mask},
             prefetch,
             walk::{Encoding, WalkSpec, exact_values},
         },
@@ -249,13 +246,21 @@ impl Search for Large {
         for side in 0..2 {
             let moved = tiles[side];
             let board = &boards[side];
-            let [delta, _] = index_shifts(&INDEX_SHIFTS, board, tile_move, side, moved);
+            let shifts = move_shifts(
+                &INDEX_SHIFTS,
+                board,
+                tile_move,
+                side,
+                moved,
+                [BOTTOM_EIGHT_MASK],
+            );
+            let [delta, _] = shifts.indices;
             let [top, bottom, rank] = &mut indices[side];
             let top_moved = (TOP_SEVEN_MASK >> moved) & 1 != 0;
             *top = top.wrapping_add(select_unpredictable(top_moved, delta, 0));
             let bottom_moved = (BOTTOM_EIGHT_MASK >> moved) & 1 != 0;
             *bottom = bottom.wrapping_add(select_unpredictable(bottom_moved, delta, 0));
-            *rank = shifted_blank_rank(*rank, board, tile_move, side, BOTTOM_EIGHT_MASK, moved);
+            *rank = rank.wrapping_add(shifts.ranks[0]);
             prefetch(self.address_of(TOP_SEVEN_START + 4 * *top as usize));
             prefetch(self.address_of(BOTTOM_EIGHT_START + 2 * *bottom as usize));
         }
