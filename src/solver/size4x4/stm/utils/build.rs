@@ -493,7 +493,10 @@ pub(in crate::solver::size4x4::stm) fn relax_minimums(tiles: &[u8], minimums: &m
 
 #[cfg(test)]
 mod tests {
-    use std::{sync::atomic::Ordering::Relaxed, time::Instant};
+    use std::{
+        sync::atomic::{AtomicU16, Ordering::Relaxed},
+        time::Instant,
+    };
 
     use super::*;
 
@@ -565,8 +568,8 @@ mod tests {
     }
 
     /// Times the search for the groups and costs in `STM_BFS_BENCH` (e.g. `7a,7f,8f`: the first
-    /// 7 or 8 tiles, additive or full), writing each state's distance into a table as the
-    /// databases' builds do.
+    /// 7 or 8 tiles, additive or full), recording each state's distance as the huge database's
+    /// 9-tile tables do: bit 1 of it, at the blank's rank in its placement's word for the cost.
     #[test]
     #[ignore = "a benchmark"]
     fn time_breadth_first_search() {
@@ -579,18 +582,21 @@ mod tests {
             } else {
                 Cost::Additive
             };
-            let free_count = 16 - tiles.len();
-            let mut distances = vec![0u8; placement_count(tiles.len()) * free_count];
-            let atomic_distances = as_atomic(&mut distances);
+            let cost_word = usize::from(cost == Cost::Full);
+            let bits: Vec<AtomicU16> = std::iter::repeat_with(|| AtomicU16::new(0))
+                .take(2 * placement_count(tiles.len()))
+                .collect();
             let start = Instant::now();
             breadth_first_search(
                 &tiles,
                 cost,
                 &PdbConfig::default(),
                 |index, _, rank, distance| {
-                    atomic_distances[index as usize * free_count + rank].store(distance, Relaxed);
+                    bits[2 * index as usize + cost_word]
+                        .fetch_or(u16::from((distance >> 1) & 1) << rank, Relaxed);
                 },
             );
+            std::hint::black_box(&bits);
             println!(
                 "BENCH {case} ({} tiles, {}): {:.2} s",
                 tiles.len(),
