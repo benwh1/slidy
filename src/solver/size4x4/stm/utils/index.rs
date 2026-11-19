@@ -67,7 +67,7 @@ const SET_BIT_POSITIONS: [[u8; 8]; 256] = {
 
 /// The position of set bit `n` (from the lowest) of `mask`, which has more than `n`.
 #[inline(always)]
-fn nth_set_bit(mask: u16, n: u32) -> u32 {
+pub(super) fn nth_set_bit(mask: u16, n: u32) -> u32 {
     let low = usize::from(mask as u8);
     let low_count = low.count_ones();
     let in_low = u32::from(SET_BIT_POSITIONS[low][(n & 7) as usize]);
@@ -76,9 +76,9 @@ fn nth_set_bit(mask: u16, n: u32) -> u32 {
     select_unpredictable(n < low_count, in_low, in_high)
 }
 
-/// The cells of placement `index` of `N` tiles.
+/// The digits of placement `index` of `N` tiles.
 #[inline(always)]
-fn cells_of_index_with<const N: usize>(mut index: u32) -> [u8; N] {
+fn digits_of_index_with<const N: usize>(mut index: u32) -> [u32; N] {
     // With `N` known, the divisions by the radices are by constants.
     let mut digits = [0; N];
     for position in (0..N).rev() {
@@ -86,6 +86,38 @@ fn cells_of_index_with<const N: usize>(mut index: u32) -> [u8; N] {
         digits[position] = index % radix;
         index /= radix;
     }
+    digits
+}
+
+/// The digits of placement `index` of `tile_count` tiles (from 1 to 9), then zeros.
+#[inline(always)]
+#[must_use]
+pub(super) fn digits_of_index(index: u32, tile_count: usize) -> [u8; 16] {
+    fn padded<const N: usize>(digits: [u32; N]) -> [u8; 16] {
+        let mut padded = [0; 16];
+        for (padded, digit) in padded.iter_mut().zip(digits) {
+            *padded = digit as u8;
+        }
+        padded
+    }
+    match tile_count {
+        1 => padded(digits_of_index_with::<1>(index)),
+        2 => padded(digits_of_index_with::<2>(index)),
+        3 => padded(digits_of_index_with::<3>(index)),
+        4 => padded(digits_of_index_with::<4>(index)),
+        5 => padded(digits_of_index_with::<5>(index)),
+        6 => padded(digits_of_index_with::<6>(index)),
+        7 => padded(digits_of_index_with::<7>(index)),
+        8 => padded(digits_of_index_with::<8>(index)),
+        9 => padded(digits_of_index_with::<9>(index)),
+        _ => panic!("groups have 1 to 9 tiles"),
+    }
+}
+
+/// The cells of placement `index` of `N` tiles.
+#[inline(always)]
+fn cells_of_index_with<const N: usize>(index: u32) -> [u8; N] {
+    let digits = digits_of_index_with::<N>(index);
     let mut cells = [0; N];
     let mut unused = u16::MAX;
     for (cell, digit) in cells.iter_mut().zip(digits) {
