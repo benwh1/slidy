@@ -65,6 +65,17 @@ const NEIGHBOR_MASKS: [u16; 16] = {
     out
 };
 
+/// The cells next to any of `cells` (the same as [`NEIGHBOR_MASKS`] for one cell). A row is a
+/// nibble of the serpentine order: a cell's neighbours across are the bits next to it in its
+/// nibble, and those above and below are in the nibbles next to it, in reverse order.
+#[inline(always)]
+pub(super) const fn neighbors(cells: u16) -> u16 {
+    let across = ((cells << 1) & 0xeeee) | ((cells >> 1) & 0x7777);
+    let reversed = ((cells & 0x5555) << 1) | ((cells >> 1) & 0x5555);
+    let reversed = ((reversed & 0x3333) << 2) | ((reversed >> 2) & 0x3333);
+    across | (reversed << 4) | (reversed >> 4)
+}
+
 /// Hints the cache line at `address` into the cache ahead of a read. The tables are far larger
 /// than any cache, so nearly every lookup misses without this.
 #[inline(always)]
@@ -255,7 +266,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn user_format_conversions() {
+    fn test_user_format() {
         // The solved user board maps to every tile home (tile `t` on cell `t`).
         let solved: Board = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0];
         let home: Board = std::array::from_fn(|cell| cell as u8);
@@ -273,7 +284,21 @@ mod tests {
     }
 
     #[test]
-    fn reflecting_twice_is_the_identity() {
+    fn test_neighbors() {
+        for (cell, &mask) in NEIGHBOR_MASKS.iter().enumerate() {
+            assert_eq!(neighbors(1 << cell), mask, "cell {cell}");
+        }
+        for board in random_boards(100) {
+            let cells = u16::from_le_bytes([board[0], board[1]]);
+            let expected = (0..16)
+                .filter(|&cell| (cells >> cell) & 1 != 0)
+                .fold(0, |mask, cell| mask | NEIGHBOR_MASKS[cell]);
+            assert_eq!(neighbors(cells), expected, "cells {cells:#06x}");
+        }
+    }
+
+    #[test]
+    fn test_reflect() {
         for board in random_boards(10) {
             assert_eq!(reflect(&reflect(&board)), board);
         }

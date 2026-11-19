@@ -17,7 +17,7 @@ use crate::solver::{
         pdb::{Pdb, Search},
         utils::{
             Board, Move,
-            build::{Cost, as_atomic, breadth_first_search, relax_minimums},
+            build::{Cost, as_atomic, breadth_first_search, relaxed_minimums},
             index::{index_shift_table, index_shifts, placement_count, placement_index, tile_mask},
             prefetch,
             walk::{Encoding, WalkSpec, exact_values},
@@ -196,12 +196,7 @@ impl Medium {
 
 /// Builds the 7-tile table of `tiles` into `out`.
 fn build_seven_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig) {
-    let mut minimums = vec![u8::MAX; placement_count(tiles.len())];
-    let atomic_minimums = as_atomic(&mut minimums);
-    breadth_first_search(tiles, Cost::Additive, config, |index, _, _, distance| {
-        atomic_minimums[index as usize].fetch_min(distance, Relaxed);
-    });
-    relax_minimums(tiles, &mut minimums);
+    let minimums = relaxed_minimums(tiles, config);
     for (index, &minimum) in minimums.iter().enumerate() {
         out[index / 4] |= ((minimum >> 1) & 3) << (2 * (index % 4));
     }

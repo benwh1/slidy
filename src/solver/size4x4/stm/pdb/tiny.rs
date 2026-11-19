@@ -3,7 +3,7 @@
 //! Each 3-tile group's table holds its additive distance as a byte per placement and blank cell.
 //! Each 6-tile group's table holds 2 bits per placement: `(value >> 1) & 3` of its additive
 //! distance minimised over the blank's cells and relaxed so that a move changes it by 1 or 3.
-//! Builds in about a second.
+//! Builds in under a second (about 0.8 s on an i5-9500's 6 cores).
 
 use std::{hint::select_unpredictable, sync::atomic::Ordering::Relaxed};
 
@@ -15,7 +15,9 @@ use crate::solver::{
         pdb::{Pdb, Search},
         utils::{
             Board, Move,
-            build::{Cost, as_atomic, breadth_first_search, relax_minimums},
+            build::{
+                Cost, as_atomic, breadth_first_search, mirrored_relaxed_minimums, relaxed_minimums,
+            },
             index::{index_shift_table, index_shifts, placement_count, placement_index, tile_mask},
             prefetch,
             walk::{Encoding, WalkSpec, exact_values},
@@ -78,8 +80,8 @@ const LEN: usize = BOTTOM_SIX_START + SIX_TILE_TABLE_LEN;
 /// The [`xxh3`] hash of the database, checked by [`Pdb::try_from_bytes`].
 const HASH: u64 = 0x8dd1_306a_33a8_d57d;
 
-/// The tiny pattern database (5.9 MB): the maximum of two 6-6-3 partitions. Builds in
-/// about a second.
+/// The tiny pattern database (5.9 MB): the maximum of two 6-6-3 partitions. Builds in under a
+/// second.
 ///
 /// See [`Pdb`] for building it, and loading and saving its bytes.
 pub struct Tiny {
@@ -150,37 +152,34 @@ fn build_three_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig) {
 }
 
 /// Builds the 6-tile table of `tiles` into `out`.
-fn build_six_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig) {
-    let mut minimums = vec![u8::MAX; placement_count(tiles.len())];
-    let atomic_minimums = as_atomic(&mut minimums);
-    breadth_first_search(tiles, Cost::Additive, config, |index, _, _, distance| {
-        atomic_minimums[index as usize].fetch_min(distance, Relaxed);
-    });
-    relax_minimums(tiles, &mut minimums);
-    for (index, &minimum) in minimums.iter().enumerate() {
-        out[index / 4] |= ((minimum >> 1) & 3) << (2 * (index % 4));
+/// Packs a 6-tile group's relaxed minimums into its table, 2 bits each.
+fn pack_six_tile_table(minimums: &[u8], out: &mut [u8]) {
+    for (byte, minimums) in out.iter_mut().zip(minimums.chunks(4)) {
+        *byte = minimums
+            .iter()
+            .enumerate()
+            .fold(0, |byte, (position, &minimum)| {
+                byte | (((minimum >> 1) & 3) << (2 * position))
+            });
     }
 }
 
 impl Pdb for Tiny {
     fn new(config: &PdbConfig) -> Self {
         let mut bytes = vec![0; LEN].into_boxed_slice();
-        let tables = [
-            (TOP_ROW, TOP_ROW_START, LEFT_SIX_START),
-            (LEFT_SIX, LEFT_SIX_START, RIGHT_SIX_START),
-            (RIGHT_SIX, RIGHT_SIX_START, RIGHT_COLUMN_START),
-            (RIGHT_COLUMN, RIGHT_COLUMN_START, UPPER_SIX_START),
-            (UPPER_SIX, UPPER_SIX_START, BOTTOM_SIX_START),
-            (BOTTOM_SIX, BOTTOM_SIX_START, LEN),
-        ];
-        for (tiles, start, end) in tables {
-            let out = &mut bytes[start..end];
-            if tiles.len() == 3 {
-                build_three_tile_table(tiles, out, config);
-            } else {
-                build_six_tile_table(tiles, out, config);
-            }
-        }
+        let (top_row, rest) = bytes.split_at_mut(LEFT_SIX_START);
+        let (left_six, rest) = rest.split_at_mut(RIGHT_SIX_START - LEFT_SIX_START);
+        let (right_six, rest) = rest.split_at_mut(RIGHT_COLUMN_START - RIGHT_SIX_START);
+        let (right_column, rest) = rest.split_at_mut(UPPER_SIX_START - RIGHT_COLUMN_START);
+        let (upper_six, bottom_six) = rest.split_at_mut(BOTTOM_SIX_START - UPPER_SIX_START);
+        build_three_tile_table(TOP_ROW, top_row, config);
+        // RIGHT_SIX is LEFT_SIX reflected left to right.
+        let (left, right) = mirrored_relaxed_minimums(LEFT_SIX, RIGHT_SIX, config);
+        pack_six_tile_table(&left, left_six);
+        pack_six_tile_table(&right, right_six);
+        build_three_tile_table(RIGHT_COLUMN, right_column, config);
+        pack_six_tile_table(&relaxed_minimums(UPPER_SIX, config), upper_six);
+        pack_six_tile_table(&relaxed_minimums(BOTTOM_SIX, config), bottom_six);
         Self { bytes }
     }
 

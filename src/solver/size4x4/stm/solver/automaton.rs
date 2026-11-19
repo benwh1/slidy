@@ -55,11 +55,9 @@ impl Automaton for Backtrack {
 #[cfg(test)]
 mod tests {
     use super::*;
-    /// The automaton forbids undoing the previous move, and of the
-    /// shortest duplicate pair - 1.5 laps around a 2x2 block one way or
-    /// the other, which reach the same position - it allows exactly one.
+
     #[test]
-    fn automaton_prunes_backtracks_and_the_six_move_loop() {
+    fn test_pruning() {
         // Slidy directions: up 0, left 1, down 2, right 3.
         let walk = |directions: &[u8]| {
             let mut node = Pruning::START;
@@ -71,10 +69,13 @@ mod tests {
             }
             Some(node)
         };
+        // Undoing the previous move is pruned.
         for direction in 0..4 {
             assert!(walk(&[direction]).is_some());
             assert!(walk(&[direction, (direction + 2) % 4]).is_none());
         }
+        // Of 1.5 laps around a 2x2 block one way or the other, which reach the same position,
+        // exactly one is allowed.
         let down_left = walk(&[2, 1, 0, 3, 2, 1]);
         let left_down = walk(&[1, 2, 3, 0, 1, 2]);
         assert!(down_left.is_some());

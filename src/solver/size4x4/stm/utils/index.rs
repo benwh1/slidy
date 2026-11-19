@@ -294,7 +294,7 @@ mod tests {
     use crate::solver::size4x4::stm::utils::{MIRRORED_CELL, MOVES, random_boards, reflect};
 
     #[test]
-    fn nth_set_bit_matches_clearing_lower_bits() {
+    fn test_nth_set_bit() {
         for mask in 1..=u16::MAX {
             let mut remaining = mask;
             for n in 0..mask.count_ones() {
@@ -305,7 +305,7 @@ mod tests {
     }
 
     #[test]
-    fn indices_round_trip() {
+    fn test_indices() {
         for tile_count in [1, 3, 6, 9] {
             let last = placement_count(tile_count) as u32 - 1;
             for index in [0, 1, last / 3, last] {
@@ -319,9 +319,8 @@ mod tests {
         assert_eq!(placement_index(&home, &board), index_of_cells(&home));
     }
 
-    /// The shifts match recomputing the indices, for every move of random boards.
     #[test]
-    fn shifts_match_recomputing() {
+    fn test_index_shifts() {
         const SEVEN_EIGHT: &[&[u8]] = &[&[1, 2, 3, 4, 5, 6, 7], &[8, 9, 10, 11, 12, 13, 14, 15]];
         const NINE_SIX: &[&[u8]] = &[&[1, 2, 3, 4, 5, 6, 7, 8, 9], &[10, 11, 12, 13, 14, 15]];
         const INDEX_SHIFTS: [[u64; 16]; 16] = index_shift_table([SEVEN_EIGHT, NINE_SIX]);
@@ -354,9 +353,8 @@ mod tests {
         }
     }
 
-    /// The rank shifts match recounting, for every move of random boards.
     #[test]
-    fn shifted_ranks_match_recounting() {
+    fn test_move_shifts() {
         const INDEX_SHIFTS: [[u64; 16]; 16] = index_shift_table([
             &[&[1, 2, 3, 4, 5, 6, 7, 8, 9], &[10, 11, 12, 13, 14, 15]],
             &[&[1, 2, 3, 4, 5, 6], &[7, 8, 9, 10, 11, 12, 13, 14, 15]],
