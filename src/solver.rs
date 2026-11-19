@@ -22,7 +22,7 @@ mod test_util;
 use crate::{
     algorithm::metric::{Mtm, Stm},
     solver::{
-        size4x4::{mtm::solver::Solver as Solver44M, stm::old::solver::Solver as Solver44S},
+        size4x4::{mtm::solver::Solver as Solver44M, stm::solver::Solver as Solver44S},
         small::solver::Solver as SmallSolver,
     },
 };
@@ -47,8 +47,24 @@ pub type Solver4x2Mtm = SmallSolver<4, 2, 8, Mtm>;
 pub type Solver4x3Stm = SmallSolver<4, 3, 12, Stm>;
 /// A solver for 4x3 and 3x4 puzzles in [`Mtm`].
 pub type Solver4x3Mtm = SmallSolver<4, 3, 12, Mtm>;
-/// A solver for 4x4 puzzles in [`Stm`].
-pub type Solver4x4Stm = Solver44S;
+/// A solver for 4x4 puzzles in [`Stm`], with the 5.9 MB pattern database [`Small`].
+///
+/// [`Small`]: size4x4::stm::pdb::Small
+pub type Solver4x4StmSmall = Solver44S<size4x4::stm::pdb::Small>;
+/// A solver for 4x4 puzzles in [`Stm`], with the 75 MB pattern database [`Medium`].
+///
+/// [`Medium`]: size4x4::stm::pdb::Medium
+pub type Solver4x4StmMedium = Solver44S<size4x4::stm::pdb::Medium>;
+/// A solver for 4x4 puzzles in [`Stm`], with the 1.27 GB pattern database [`Large`].
+///
+/// [`Large`]: size4x4::stm::pdb::Large
+pub type Solver4x4StmLarge = Solver44S<size4x4::stm::pdb::Large>;
+/// A solver for 4x4 puzzles in [`Stm`], with the 17.0 GB pattern database [`Huge`] (64-bit
+/// targets only).
+///
+/// [`Huge`]: size4x4::stm::pdb::Huge
+#[cfg(target_pointer_width = "64")]
+pub type Solver4x4StmHuge = Solver44S<size4x4::stm::pdb::Huge>;
 /// A solver for 4x4 puzzles in [`Mtm`].
 pub type Solver4x4Mtm = Solver44M;
 /// A solver for 5x2 and 2x5 puzzles in [`Stm`].

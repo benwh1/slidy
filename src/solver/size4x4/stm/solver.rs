@@ -583,4 +583,21 @@ mod tests {
             assert!(solutions.contains(&solution));
         }
     }
+
+    #[test]
+    fn test_zero_solutions() {
+        let mut solver = Solver::<Small>::default();
+        let config = || SolverConfig {
+            num_solutions: 0,
+            ..Default::default()
+        };
+        let puzzle = Puzzle::from_str("6 12 0 3/11 1 10 4/9 7 8 13/15 14 2 5").unwrap();
+        assert_eq!(solver.solve_collect(&puzzle, config()), Ok(Vec::new()));
+
+        let unsolvable = Puzzle::from_str("2 1 3 4/5 6 7 8/9 10 11 12/13 14 15 0").unwrap();
+        assert_eq!(
+            solver.solve_collect(&unsolvable, config()),
+            Err(SolverError::Unsolvable)
+        );
+    }
 }
