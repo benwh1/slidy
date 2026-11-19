@@ -1,4 +1,4 @@
-//! The tiny pattern database (5.9 MB): the maximum of two 6-6-3 partitions.
+//! The small pattern database (5.9 MB): the maximum of two 6-6-3 partitions.
 //!
 //! Each 3-tile group's table holds its additive distance as a byte per placement and blank cell.
 //! Each 6-tile group's table holds 2 bits per placement: `(value >> 1) & 3` of its additive
@@ -34,7 +34,7 @@ const RIGHT_COLUMN: &[u8] = &[3, 4, 11];
 const UPPER_SIX: &[u8] = &[1, 2, 5, 6, 7, 10];
 const BOTTOM_SIX: &[u8] = &[8, 9, 12, 13, 14, 15];
 
-/// The groups, in table order (and in the order of [`Tiny`]'s indices).
+/// The groups, in table order (and in the order of [`Small`]'s indices).
 const GROUPS: [&[u8]; 6] = [
     TOP_ROW,
     LEFT_SIX,
@@ -80,15 +80,15 @@ const LEN: usize = BOTTOM_SIX_START + SIX_TILE_TABLE_LEN;
 /// The [`xxh3`] hash of the database, checked by [`Pdb::try_from_bytes`].
 const HASH: u64 = 0x8dd1_306a_33a8_d57d;
 
-/// The tiny pattern database (5.9 MB): the maximum of two 6-6-3 partitions. Builds in under a
+/// The small pattern database (5.9 MB): the maximum of two 6-6-3 partitions. Builds in under a
 /// second.
 ///
 /// See [`Pdb`] for building it, and loading and saving its bytes.
-pub struct Tiny {
+pub struct Small {
     bytes: Box<[u8]>,
 }
 
-impl Tiny {
+impl Small {
     #[inline(always)]
     fn byte(&self, offset: usize) -> u8 {
         debug_assert!(offset < LEN);
@@ -165,7 +165,7 @@ fn pack_six_tile_table(minimums: &[u8], out: &mut [u8]) {
     }
 }
 
-impl Pdb for Tiny {
+impl Pdb for Small {
     fn new_with_thread_count(config: &PdbConfig, threads: NonZeroUsize) -> Self {
         let threads = threads.get();
         let mut bytes = vec![0; LEN].into_boxed_slice();
@@ -199,7 +199,7 @@ impl Pdb for Tiny {
     }
 }
 
-impl Search for Tiny {
+impl Search for Small {
     /// Each group's index: top row, left six, right six, right column, upper six, bottom six.
     type Indices = [[u32; 6]; 2];
     /// The 6-tile groups' values: left, right, upper, bottom.
@@ -341,7 +341,7 @@ impl Search for Tiny {
     }
 }
 
-impl AsRef<[u8]> for Tiny {
+impl AsRef<[u8]> for Small {
     fn as_ref(&self) -> &[u8] {
         &self.bytes
     }
@@ -353,12 +353,12 @@ mod tests {
 
     #[test]
     fn test_pdb() {
-        super::super::tests::check(Tiny::new(&PdbConfig::default()), HASH);
+        super::super::tests::check(Small::new(&PdbConfig::default()), HASH);
     }
 
     #[test]
     fn test_pdb_single_threaded() {
-        let pdb = Tiny::new_with_thread_count(&PdbConfig::default(), NonZeroUsize::MIN);
+        let pdb = Small::new_with_thread_count(&PdbConfig::default(), NonZeroUsize::MIN);
         assert_eq!(xxh3::xxh3_64(pdb.as_ref()), HASH);
     }
 }

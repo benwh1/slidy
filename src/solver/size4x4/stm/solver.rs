@@ -374,7 +374,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        algorithm::algorithm::Algorithm, puzzle::puzzle::Puzzle, solver::size4x4::stm::pdb::Tiny,
+        algorithm::algorithm::Algorithm, puzzle::puzzle::Puzzle, solver::size4x4::stm::pdb::Small,
     };
 
     /// Random positions and every optimal solution of each, from `slidy generate -n 8 --seed 1
@@ -553,7 +553,7 @@ mod tests {
 
     #[test]
     fn test_solver() {
-        let mut solver = Solver::<Tiny>::default();
+        let mut solver = Solver::<Small>::default();
         for (state, expected) in ALL_OPTIMAL {
             let puzzle = Puzzle::from_str(state).unwrap();
             let solutions = solver.solve_all_optimal(&puzzle).unwrap();

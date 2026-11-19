@@ -3,7 +3,7 @@
 //!
 //! | database | partitions | size | solves/s |
 //! |---|---|---|---|
-//! | [`Tiny`] | 6-6-3, 6-6-3 | 5.9 MB | ~130 |
+//! | [`Small`] | 6-6-3, 6-6-3 | 5.9 MB | ~130 |
 //! | [`Medium`] | 7-7-1, 6-6-3 | 75 MB | ~450 |
 //! | [`Large`] | 7-8 | 1.27 GB | ~2,900 |
 //! | [`Huge`] | 9-6, 6-9 | 17.0 GB | ~6,000 |
@@ -29,7 +29,7 @@ mod huge;
 mod large;
 mod medium;
 mod sealed;
-mod tiny;
+mod small;
 
 use std::num::NonZeroUsize;
 
@@ -38,7 +38,7 @@ pub use huge::Huge;
 pub use large::Large;
 pub use medium::Medium;
 use sealed::Search;
-pub use tiny::Tiny;
+pub use small::Small;
 
 use crate::solver::config::PdbConfig;
 
