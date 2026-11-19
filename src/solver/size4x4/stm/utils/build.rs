@@ -48,6 +48,29 @@ const fn frontier_mark(depth: usize) -> u8 {
     1 + (depth & 1) as u8
 }
 
+/// Runs `work` on each of `threads` threads, giving each one's result. One thread is the calling
+/// thread, without spawning any, so it needs no thread support (as on WebAssembly).
+fn on_threads<T, F>(threads: usize, work: F) -> Vec<T>
+where
+    F: Fn() -> T + Sync,
+    T: Send,
+{
+    if threads <= 1 {
+        return vec![work()];
+    }
+    thread::scope(|scope| {
+        let mut handles = Vec::with_capacity(threads);
+        // Every thread starts before any is joined.
+        for _ in 0..threads {
+            handles.push(scope.spawn(&work));
+        }
+        handles
+            .into_iter()
+            .map(|handle| handle.join().unwrap())
+            .collect()
+    })
+}
+
 /// `bytes` viewed as atomics, for writing from several threads.
 pub(in crate::solver::size4x4::stm) fn as_atomic(bytes: &mut [u8]) -> &[AtomicU8] {
     // SAFETY: `AtomicU8` has the same layout as `u8`, and the borrow is exclusive.
@@ -162,17 +185,23 @@ impl Marks {
     }
 
     /// Marks every state marked `mark` as [`DONE`], using `threads` threads.
-    fn retire(&mut self, mark: u8, threads: usize) {
+    fn retire(&self, mark: u8, threads: usize) {
         let chunk_len = self.0.len().div_ceil(threads).max(1);
-        thread::scope(|scope| {
-            for chunk in self.0.chunks_mut(chunk_len) {
-                scope.spawn(move || {
-                    for word in chunk {
-                        let word = word.get_mut();
-                        let matching = fields_marked(*word, mark);
-                        *word = (*word & !(matching * 3)) | (matching * u64::from(DONE));
-                    }
-                });
+        let next_chunk = AtomicUsize::new(0);
+        on_threads(threads, || {
+            while let Some(chunk) = self
+                .0
+                .chunks(chunk_len)
+                .nth(next_chunk.fetch_add(1, Relaxed))
+            {
+                for word in chunk {
+                    let marks = word.load(Relaxed);
+                    let matching = fields_marked(marks, mark);
+                    word.store(
+                        (marks & !(matching * 3)) | (matching * u64::from(DONE)),
+                        Relaxed,
+                    );
+                }
             }
         });
     }
@@ -327,12 +356,13 @@ where
 
 /// Searches the states of `tiles` (at most 9 of them, each home on the cell of its label) for
 /// `cost`'s distances, calling `visit(placement, blank, rank, distance)` once for every state
-/// (`rank`: how many cells below the blank's have no group tile), from several threads. Reports
-/// each layer to `config`'s callback.
+/// (`rank`: how many cells below the blank's have no group tile), from `threads` threads.
+/// Reports each layer to `config`'s callback.
 pub(in crate::solver::size4x4::stm) fn breadth_first_search<F>(
     tiles: &[u8],
     cost: Cost,
     config: &PdbConfig,
+    threads: usize,
     visit: F,
 ) where
     F: Fn(u32, u32, usize, u8) + Sync,
@@ -340,15 +370,13 @@ pub(in crate::solver::size4x4::stm) fn breadth_first_search<F>(
     let placements = placement_count(tiles.len());
     let free_count = 16 - tiles.len();
     let states = placements * free_count;
-    let mut search = Search {
+    let search = Search {
         shifts: index_shift_table([&[tiles], &[]]),
         marks: Marks::new(states),
         free_count,
         cost,
         visit: &visit,
     };
-    let threads = thread::available_parallelism().map_or(1, usize::from);
-
     // The goal: every tile home, and the blank home (full) or in its home's region (additive,
     // where moves within a region are free). The group's tiles must free the blank's home before
     // the puzzle is solved, so an additive goal that walls it in is not reached yet.
@@ -395,56 +423,46 @@ pub(in crate::solver::size4x4::stm) fn breadth_first_search<F>(
         let pull_work = states as u64 - layer_sizes.iter().sum::<u64>();
         let pulling = pull_work < push_work;
         let source = if pulling { UNVISITED } else { current };
-        let found = AtomicU64::new(0);
         let chunk_len = placements.div_ceil(threads * 64).max(1);
         let next_chunk = AtomicUsize::new(0);
-        thread::scope(|scope| {
-            for _ in 0..threads {
-                scope.spawn(|| {
-                    let mut found_here = 0;
-                    loop {
-                        let start = next_chunk.fetch_add(chunk_len, Relaxed);
-                        if start >= placements {
-                            break;
-                        }
-                        let end = (start + chunk_len).min(placements);
-                        // Finds the chunk's placements with a state marked `source`, a word of
-                        // marks at a time. No state gains the mark `source` during a layer (the
-                        // frontier's are fixed, and claimed states lose `UNVISITED`), so a word
-                        // without one can be skipped.
-                        let end_state = end * free_count;
-                        let mut state = start * free_count;
-                        while state < end_state {
-                            let word_index = state / MARKS_PER_WORD;
-                            let word_end = (word_index + 1) * MARKS_PER_WORD;
-                            let mut matching = fields_marked(search.marks.word(word_index), source)
-                                & (u64::MAX << (2 * (state % MARKS_PER_WORD)));
-                            if end_state < word_end {
-                                matching &= (1 << (2 * (end_state % MARKS_PER_WORD))) - 1;
-                            }
-                            if matching == 0 {
-                                state = word_end;
-                                continue;
-                            }
-                            let matched = word_index * MARKS_PER_WORD
-                                + matching.trailing_zeros() as usize / 2;
-                            let index = matched / free_count;
-                            let placement = Placement::new(index as u32, tiles);
-                            found_here += search.expand_placement(
-                                &placement,
-                                pulling,
-                                current,
-                                next,
-                                depth as u8,
-                            );
-                            state = (index + 1) * free_count;
-                        }
+        let found = on_threads(threads, || {
+            let mut found_here = 0;
+            loop {
+                let start = next_chunk.fetch_add(chunk_len, Relaxed);
+                if start >= placements {
+                    break;
+                }
+                let end = (start + chunk_len).min(placements);
+                // Finds the chunk's placements with a state marked `source`, a word of
+                // marks at a time. No state gains the mark `source` during a layer (the
+                // frontier's are fixed, and claimed states lose `UNVISITED`), so a word
+                // without one can be skipped.
+                let end_state = end * free_count;
+                let mut state = start * free_count;
+                while state < end_state {
+                    let word_index = state / MARKS_PER_WORD;
+                    let word_end = (word_index + 1) * MARKS_PER_WORD;
+                    let mut matching = fields_marked(search.marks.word(word_index), source)
+                        & (u64::MAX << (2 * (state % MARKS_PER_WORD)));
+                    if end_state < word_end {
+                        matching &= (1 << (2 * (end_state % MARKS_PER_WORD))) - 1;
                     }
-                    found.fetch_add(found_here, Relaxed);
-                });
+                    if matching == 0 {
+                        state = word_end;
+                        continue;
+                    }
+                    let matched =
+                        word_index * MARKS_PER_WORD + matching.trailing_zeros() as usize / 2;
+                    let index = matched / free_count;
+                    let placement = Placement::new(index as u32, tiles);
+                    found_here +=
+                        search.expand_placement(&placement, pulling, current, next, depth as u8);
+                    state = (index + 1) * free_count;
+                }
             }
+            found_here
         });
-        layer_sizes.push(found.into_inner());
+        layer_sizes.push(found.into_iter().sum());
         report(depth + 1, &layer_sizes);
         if layer_sizes[depth + 1] == 0 {
             return;
@@ -539,8 +557,8 @@ trait PlacementKeys: Sync {
     fn after_move(&self, placement: &Self::Placement, key: u32, from: u32, to: u32) -> u32;
 
     /// The minimums (one less than `values`, one per key) in placement index order, one per
-    /// placement.
-    fn minimums(&self, values: Vec<u8>) -> Vec<u8>;
+    /// placement, using `threads` threads.
+    fn minimums(&self, values: Vec<u8>, threads: usize) -> Vec<u8>;
 }
 
 /// Keys that are placement indices.
@@ -582,7 +600,7 @@ impl PlacementKeys for IndexKeys<'_> {
         placement.after_move(&self.shifts, from, to).0
     }
 
-    fn minimums(&self, mut values: Vec<u8>) -> Vec<u8> {
+    fn minimums(&self, mut values: Vec<u8>, _: usize) -> Vec<u8> {
         for value in &mut values {
             *value = minimum(*value);
         }
@@ -628,8 +646,8 @@ impl PlacementKeys for NibbleKeys {
         key - (from << shift) + (to << shift)
     }
 
-    fn minimums(&self, values: Vec<u8>) -> Vec<u8> {
-        in_index_order(self.tile_count, |cells| {
+    fn minimums(&self, values: Vec<u8>, threads: usize) -> Vec<u8> {
+        in_index_order(self.tile_count, threads, |cells| {
             minimum(values[self.key_of(cells) as usize])
         })
     }
@@ -647,12 +665,16 @@ const MOVE_BATCH_REGIONS: usize = 16;
 /// Also gives the keys with a region more than 2 further than their value: the only placements
 /// that moving a tile from can lower another's value in [`relax`] (a move into a region leads at
 /// most 1 further), so they are all it needs to start from.
-fn additive_values<K>(keys: &K, tiles: &[u8], config: &PdbConfig) -> (Vec<u8>, Vec<u32>)
+fn additive_values<K>(
+    keys: &K,
+    tiles: &[u8],
+    config: &PdbConfig,
+    threads: usize,
+) -> (Vec<u8>, Vec<u32>)
 where
     K: PlacementKeys,
 {
     let labels = RegionLabels::new(16 - tiles.len());
-    let threads = thread::available_parallelism().map_or(1, usize::from);
     let mut values = vec![0; keys.len()];
     let atomic_values = as_atomic(&mut values);
     // A region is `16 * key + its rank`, with a bit set once it is reached. Nearly every
@@ -713,86 +735,75 @@ where
         let next_chunk = AtomicUsize::new(0);
         let chunk_len = frontier.len().div_ceil(threads * 64).max(1);
         // Small layers are not worth starting every thread for.
-        let layer_threads = frontier.len().div_ceil(1 << 14).min(threads);
+        let layer_threads = frontier.len().div_ceil(1 << 14).clamp(1, threads);
         let (layer, reach_first, bit_of, labels) = (&frontier, &reach_first, &bit_of, &labels);
-        let layers: Vec<(Vec<u32>, u64, Vec<u32>)> = thread::scope(|scope| {
-            // Every thread starts before any is joined.
-            let handles: Vec<_> = std::iter::repeat_with(|| {
-                scope.spawn(|| {
-                    let (mut next, mut found, mut far) = (Vec::new(), 0, Vec::new());
-                    // A batch of moves' regions, with their free cells, whose bits are
-                    // fetched before any is checked.
-                    let mut moves: Vec<(u32, u16)> = Vec::with_capacity(1024);
-                    // The new regions whose keys' values must be read, fetched first too.
-                    let mut unsure: Vec<u32> = Vec::with_capacity(1024);
-                    loop {
-                        let start = next_chunk.fetch_add(chunk_len, Relaxed);
-                        if start >= layer.len() {
-                            break;
-                        }
-                        let end = (start + chunk_len).min(layer.len());
-                        for regions in layer[start..end].chunks(MOVE_BATCH_REGIONS) {
-                            moves.clear();
-                            for &region in regions {
-                                let key = region / 16;
-                                let (placement, free_cells) = keys.placement(key);
-                                let region = labels.region(free_cells, region % 16);
-                                // The group tiles next to the region, each movable into it.
-                                let mut movable = neighbors(region) & !free_cells;
-                                while movable != 0 {
-                                    let from = movable.trailing_zeros();
-                                    movable &= movable - 1;
-                                    let mut targets = NEIGHBOR_MASKS[from as usize] & region;
-                                    while targets != 0 {
-                                        let to = targets.trailing_zeros();
-                                        targets &= targets - 1;
-                                        let next_key = keys.after_move(&placement, key, from, to);
-                                        let next_free = free_cells ^ (1 << from) ^ (1 << to);
-                                        let id = 16 * next_key + labels.rank(next_free, from);
-                                        prefetch(bit_of(id).0.as_ptr().cast());
-                                        moves.push((id, next_free));
-                                    }
-                                }
-                            }
-                            unsure.clear();
-                            for &(id, next_free) in &moves {
-                                let Some(first) = reach_first(id, next_free) else {
-                                    continue;
-                                };
-                                next.push(id);
-                                if counting {
-                                    let next_region = labels.region(next_free, id % 16);
-                                    found += u64::from(next_region.count_ones());
-                                }
-                                // A key's first region reached is its nearest.
-                                let value = &atomic_values[id as usize / 16];
-                                if first == Some(true) {
-                                    value.store(depth + 2, Relaxed);
-                                } else {
-                                    prefetch(value.as_ptr().cast());
-                                    unsure.push(id / 16);
-                                }
-                            }
-                            for &key in &unsure {
-                                let value = &atomic_values[key as usize];
-                                let old = value.load(Relaxed);
-                                if old == 0 {
-                                    value.store(depth + 2, Relaxed);
-                                } else if depth > old {
-                                    far.push(key);
-                                }
+        let layers: Vec<(Vec<u32>, u64, Vec<u32>)> = on_threads(layer_threads, || {
+            let (mut next, mut found, mut far) = (Vec::new(), 0, Vec::new());
+            // A batch of moves' regions, with their free cells, whose bits are
+            // fetched before any is checked.
+            let mut moves: Vec<(u32, u16)> = Vec::with_capacity(1024);
+            // The new regions whose keys' values must be read, fetched first too.
+            let mut unsure: Vec<u32> = Vec::with_capacity(1024);
+            loop {
+                let start = next_chunk.fetch_add(chunk_len, Relaxed);
+                if start >= layer.len() {
+                    break;
+                }
+                let end = (start + chunk_len).min(layer.len());
+                for regions in layer[start..end].chunks(MOVE_BATCH_REGIONS) {
+                    moves.clear();
+                    for &region in regions {
+                        let key = region / 16;
+                        let (placement, free_cells) = keys.placement(key);
+                        let region = labels.region(free_cells, region % 16);
+                        // The group tiles next to the region, each movable into it.
+                        let mut movable = neighbors(region) & !free_cells;
+                        while movable != 0 {
+                            let from = movable.trailing_zeros();
+                            movable &= movable - 1;
+                            let mut targets = NEIGHBOR_MASKS[from as usize] & region;
+                            while targets != 0 {
+                                let to = targets.trailing_zeros();
+                                targets &= targets - 1;
+                                let next_key = keys.after_move(&placement, key, from, to);
+                                let next_free = free_cells ^ (1 << from) ^ (1 << to);
+                                let id = 16 * next_key + labels.rank(next_free, from);
+                                prefetch(bit_of(id).0.as_ptr().cast());
+                                moves.push((id, next_free));
                             }
                         }
                     }
-                    (next, found, far)
-                })
-            })
-            .take(layer_threads)
-            .collect();
-            handles
-                .into_iter()
-                .map(|handle| handle.join().unwrap())
-                .collect()
+                    unsure.clear();
+                    for &(id, next_free) in &moves {
+                        let Some(first) = reach_first(id, next_free) else {
+                            continue;
+                        };
+                        next.push(id);
+                        if counting {
+                            let next_region = labels.region(next_free, id % 16);
+                            found += u64::from(next_region.count_ones());
+                        }
+                        // A key's first region reached is its nearest.
+                        let value = &atomic_values[id as usize / 16];
+                        if first == Some(true) {
+                            value.store(depth + 2, Relaxed);
+                        } else {
+                            prefetch(value.as_ptr().cast());
+                            unsure.push(id / 16);
+                        }
+                    }
+                    for &key in &unsure {
+                        let value = &atomic_values[key as usize];
+                        let old = value.load(Relaxed);
+                        if old == 0 {
+                            value.store(depth + 2, Relaxed);
+                        } else if depth > old {
+                            far.push(key);
+                        }
+                    }
+                }
+            }
+            (next, found, far)
         });
         let mut next = Vec::with_capacity(layers.iter().map(|layer| layer.0.len()).sum());
         let mut found = 0;
@@ -870,12 +881,13 @@ where
 /// Each placement of `tiles` (at most 9 of them) with its least additive distance over the
 /// blank's cells (see [`additive_values`]), then lowered (by steps of 2, keeping it admissible
 /// and its parity) until moving one of `tiles` to a neighbouring cell changes it by at most 3
-/// (see [`relax`]). Reports the search's layers to `config`'s callback.
+/// (see [`relax`]). Reports the search's layers to `config`'s callback, using `threads` threads.
 pub(in crate::solver::size4x4::stm) fn relaxed_minimums(
     tiles: &[u8],
     config: &PdbConfig,
+    threads: usize,
 ) -> Vec<u8> {
-    relaxed_minimums_and_mirror(tiles, None, config).0
+    relaxed_minimums_and_mirror(tiles, None, config, threads).0
 }
 
 /// [`relaxed_minimums`] of `tiles`, and those carried over to the placements of `mirrored`:
@@ -887,8 +899,9 @@ pub(in crate::solver::size4x4::stm) fn mirrored_relaxed_minimums(
     tiles: &[u8],
     mirrored: &[u8],
     config: &PdbConfig,
+    threads: usize,
 ) -> (Vec<u8>, Vec<u8>) {
-    let (minimums, mirror) = relaxed_minimums_and_mirror(tiles, Some(mirrored), config);
+    let (minimums, mirror) = relaxed_minimums_and_mirror(tiles, Some(mirrored), config, threads);
     (minimums, mirror.expect("a mirror was asked for"))
 }
 
@@ -897,15 +910,16 @@ fn relaxed_minimums_and_mirror(
     tiles: &[u8],
     mirrored: Option<&[u8]>,
     config: &PdbConfig,
+    threads: usize,
 ) -> (Vec<u8>, Option<Vec<u8>>) {
     // Nibble keys are faster, but take 16 bytes and more per placement beyond 6 tiles.
     if tiles.len() <= 6 {
         let keys = NibbleKeys {
             tile_count: tiles.len(),
         };
-        relaxed_minimums_with_keys(&keys, tiles, mirrored, config)
+        relaxed_minimums_with_keys(&keys, tiles, mirrored, config, threads)
     } else {
-        relaxed_minimums_with_keys(&IndexKeys::new(tiles), tiles, mirrored, config)
+        relaxed_minimums_with_keys(&IndexKeys::new(tiles), tiles, mirrored, config, threads)
     }
 }
 
@@ -915,19 +929,26 @@ fn relaxed_minimums_with_keys<K>(
     tiles: &[u8],
     mirrored: Option<&[u8]>,
     config: &PdbConfig,
+    threads: usize,
 ) -> (Vec<u8>, Option<Vec<u8>>)
 where
     K: PlacementKeys,
 {
-    let (mut values, starts) = additive_values(keys, tiles, config);
+    let (mut values, starts) = additive_values(keys, tiles, config, threads);
     relax(keys, &mut values, &starts);
-    let mirror = mirrored.map(|mirrored| mirror_minimums(keys, tiles, &values, mirrored));
-    (keys.minimums(values), mirror)
+    let mirror = mirrored.map(|mirrored| mirror_minimums(keys, tiles, &values, mirrored, threads));
+    (keys.minimums(values, threads), mirror)
 }
 
 /// The minimums of `values` (one per key of `tiles`) carried over to the placements of `mirrored`
 /// (see [`mirrored_relaxed_minimums`]), in index order.
-fn mirror_minimums<K>(keys: &K, tiles: &[u8], values: &[u8], mirrored: &[u8]) -> Vec<u8>
+fn mirror_minimums<K>(
+    keys: &K,
+    tiles: &[u8],
+    values: &[u8],
+    mirrored: &[u8],
+    threads: usize,
+) -> Vec<u8>
 where
     K: PlacementKeys,
 {
@@ -951,7 +972,7 @@ where
         mirrored.len(),
         "`mirrored` must be `tiles` reflected"
     );
-    in_index_order(mirrored.len(), |cells| {
+    in_index_order(mirrored.len(), threads, |cells| {
         let mut reflected = [0; 16];
         for (cell, &position) in reflected.iter_mut().zip(&positions) {
             *cell = cells[position] ^ 3;
@@ -966,8 +987,9 @@ fn minimum(value: u8) -> u8 {
     value.checked_sub(1).expect("every placement is reachable")
 }
 
-/// `value` of each placement of `tile_count` tiles (from 2 to 9; given its cells), in index order.
-fn in_index_order<F>(tile_count: usize, value: F) -> Vec<u8>
+/// `value` of each placement of `tile_count` tiles (from 2 to 9; given its cells), in index order,
+/// using `threads` threads.
+fn in_index_order<F>(tile_count: usize, threads: usize, value: F) -> Vec<u8>
 where
     F: Fn(&[u8]) -> u8 + Sync,
 {
@@ -1010,24 +1032,19 @@ where
         .map(std::sync::Mutex::new)
         .collect();
     let next_block = AtomicUsize::new(0);
-    let threads = thread::available_parallelism().map_or(1, usize::from);
-    thread::scope(|scope| {
-        for _ in 0..threads {
-            scope.spawn(|| {
-                loop {
-                    let block = next_block.fetch_add(1, Relaxed);
-                    let Some(out) = blocks.get(block) else {
-                        break;
-                    };
-                    let first = block / 15;
-                    let second = block % 15 + usize::from(block % 15 >= first);
-                    let mut cells = [0; 16];
-                    cells[..2].copy_from_slice(&[first as u8, second as u8]);
-                    let used = (1 << first) | (1 << second);
-                    let mut out = out.lock().unwrap();
-                    place(&mut cells, 2, tile_count, used, &mut out.iter_mut(), &value);
-                }
-            });
+    on_threads(threads, || {
+        loop {
+            let block = next_block.fetch_add(1, Relaxed);
+            let Some(out) = blocks.get(block) else {
+                break;
+            };
+            let first = block / 15;
+            let second = block % 15 + usize::from(block % 15 >= first);
+            let mut cells = [0; 16];
+            cells[..2].copy_from_slice(&[first as u8, second as u8]);
+            let used = (1 << first) | (1 << second);
+            let mut out = out.lock().unwrap();
+            place(&mut cells, 2, tile_count, used, &mut out.iter_mut(), &value);
         }
     });
     drop(blocks);
@@ -1040,6 +1057,9 @@ mod tests {
 
     use super::*;
 
+    /// The threads the tests build with.
+    const THREADS: usize = 4;
+
     /// The xxh3 hash of every state's distance, laid out by state (`placement * free_count +
     /// rank`), checking that each state is visited exactly once.
     fn distances_hash(tiles: &[u8], cost: Cost) -> u64 {
@@ -1050,6 +1070,7 @@ mod tests {
             tiles,
             cost,
             &PdbConfig::default(),
+            THREADS,
             |index, _, rank, distance| {
                 let state = index as usize * free_count + rank;
                 assert_eq!(atomic_distances[state].swap(distance, Relaxed), u8::MAX);
@@ -1068,6 +1089,7 @@ mod tests {
             tiles,
             Cost::Additive,
             &PdbConfig::default(),
+            THREADS,
             |index, _, _, distance| {
                 atomic_minimums[index as usize].fetch_min(distance, Relaxed);
             },
@@ -1139,8 +1161,9 @@ mod tests {
                 tile_count: tiles.len(),
             };
             let index_keys = IndexKeys::new(tiles);
-            let (nibble, _) = relaxed_minimums_with_keys(&nibble_keys, tiles, None, &config);
-            let (index, _) = relaxed_minimums_with_keys(&index_keys, tiles, None, &config);
+            let (nibble, _) =
+                relaxed_minimums_with_keys(&nibble_keys, tiles, None, &config, THREADS);
+            let (index, _) = relaxed_minimums_with_keys(&index_keys, tiles, None, &config, THREADS);
             assert!(nibble == expected, "{tiles:?}");
             assert!(index == expected, "{tiles:?}");
         }
@@ -1153,11 +1176,11 @@ mod tests {
             (&[6, 7, 8, 9, 14, 15][..], &[5, 4, 11, 10, 13, 12][..]),
             (&[1, 2, 6, 9], &[2, 1, 5, 10]),
         ] {
-            let expected = relaxed_minimums(mirrored, &config);
-            let (_, nibble) = mirrored_relaxed_minimums(tiles, mirrored, &config);
+            let expected = relaxed_minimums(mirrored, &config, THREADS);
+            let (_, nibble) = mirrored_relaxed_minimums(tiles, mirrored, &config, THREADS);
             let index_keys = IndexKeys::new(tiles);
             let (_, index) =
-                relaxed_minimums_with_keys(&index_keys, tiles, Some(mirrored), &config);
+                relaxed_minimums_with_keys(&index_keys, tiles, Some(mirrored), &config, THREADS);
             assert!(nibble == expected, "{tiles:?}");
             assert!(index.unwrap() == expected, "{tiles:?}");
         }

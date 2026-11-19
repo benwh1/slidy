@@ -7,7 +7,7 @@
 //! distance. A full distance bounds the solution length on its own. Builds in about an hour,
 //! using up to 25 GB.
 
-use std::{hint::select_unpredictable, sync::atomic::Ordering::Relaxed};
+use std::{hint::select_unpredictable, num::NonZeroUsize, sync::atomic::Ordering::Relaxed};
 
 use xxhash_rust::xxh3;
 
@@ -154,20 +154,20 @@ impl Huge {
 }
 
 /// Builds the 6-tile table of `tiles` into `out`.
-fn build_six_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig) {
+fn build_six_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig, threads: usize) {
     let out = as_atomic(out);
     for (cost, cost_byte) in [(Cost::Additive, 0), (Cost::Full, 1)] {
-        breadth_first_search(tiles, cost, config, |index, blank, _, distance| {
+        breadth_first_search(tiles, cost, config, threads, |index, blank, _, distance| {
             out[32 * index as usize + 2 * blank as usize + cost_byte].store(distance, Relaxed);
         });
     }
 }
 
 /// Builds the 9-tile table of `tiles` into `out`.
-fn build_nine_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig) {
+fn build_nine_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig, threads: usize) {
     let out = as_atomic(out);
     for (cost, cost_byte) in [(Cost::Additive, 0), (Cost::Full, 1)] {
-        breadth_first_search(tiles, cost, config, |index, _, rank, distance| {
+        breadth_first_search(tiles, cost, config, threads, |index, _, rank, distance| {
             // The bytes start zeroed, so only set bits need writing.
             if (distance >> 1) & 1 != 0 {
                 out[2 * index as usize + cost_byte].fetch_or(1 << rank, Relaxed);
@@ -177,24 +177,28 @@ fn build_nine_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig) {
 }
 
 impl Pdb for Huge {
-    fn new(config: &PdbConfig) -> Self {
+    fn new_with_thread_count(config: &PdbConfig, threads: NonZeroUsize) -> Self {
+        let threads = threads.get();
         let mut bytes = vec![0; LEN].into_boxed_slice();
         build_six_tile_table(
             LAST_SIX,
             &mut bytes[LAST_SIX_START..FIRST_SIX_START],
             config,
+            threads,
         );
         build_six_tile_table(
             FIRST_SIX,
             &mut bytes[FIRST_SIX_START..FIRST_NINE_START],
             config,
+            threads,
         );
         build_nine_tile_table(
             FIRST_NINE,
             &mut bytes[FIRST_NINE_START..LAST_NINE_START],
             config,
+            threads,
         );
-        build_nine_tile_table(LAST_NINE, &mut bytes[LAST_NINE_START..], config);
+        build_nine_tile_table(LAST_NINE, &mut bytes[LAST_NINE_START..], config, threads);
         Self { bytes }
     }
 

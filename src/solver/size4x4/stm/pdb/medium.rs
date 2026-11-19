@@ -7,7 +7,7 @@
 //! is `(value >> 1) & 1` of the additive distance and bit `2b + 1` that of the full distance
 //! (counting every move), which bounds the solution length on its own. Builds in a minute or two.
 
-use std::{hint::select_unpredictable, sync::atomic::Ordering::Relaxed};
+use std::{hint::select_unpredictable, num::NonZeroUsize, sync::atomic::Ordering::Relaxed};
 
 use xxhash_rust::xxh3;
 
@@ -195,18 +195,18 @@ impl Medium {
 }
 
 /// Builds the 7-tile table of `tiles` into `out`.
-fn build_seven_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig) {
-    let minimums = relaxed_minimums(tiles, config);
+fn build_seven_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig, threads: usize) {
+    let minimums = relaxed_minimums(tiles, config, threads);
     for (index, &minimum) in minimums.iter().enumerate() {
         out[index / 4] |= ((minimum >> 1) & 3) << (2 * (index % 4));
     }
 }
 
 /// Builds the 6-tile table of `tiles` into `out`.
-fn build_six_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig) {
+fn build_six_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig, threads: usize) {
     let out = as_atomic(out);
     for (cost, cost_bit) in [(Cost::Additive, 0), (Cost::Full, 1)] {
-        breadth_first_search(tiles, cost, config, |index, blank, _, distance| {
+        breadth_first_search(tiles, cost, config, threads, |index, blank, _, distance| {
             // The bytes start zeroed, so only set bits need writing.
             if (distance >> 1) & 1 != 0 {
                 let bit = 2 * blank as usize + cost_bit;
@@ -217,12 +217,13 @@ fn build_six_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig) {
 }
 
 /// Builds the table of `tiles` with a byte per placement and blank cell into `out`.
-fn build_byte_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig) {
+fn build_byte_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig, threads: usize) {
     let out = as_atomic(out);
     breadth_first_search(
         tiles,
         Cost::Additive,
         config,
+        threads,
         |index, blank, _, distance| {
             out[index as usize * 16 + blank as usize].store(distance, Relaxed);
         },
@@ -230,24 +231,32 @@ fn build_byte_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig) {
 }
 
 impl Pdb for Medium {
-    fn new(config: &PdbConfig) -> Self {
+    fn new_with_thread_count(config: &PdbConfig, threads: NonZeroUsize) -> Self {
+        let threads = threads.get();
         let mut bytes = vec![0; LEN].into_boxed_slice();
         let top_seven = &mut bytes[TOP_SEVEN_START..BOTTOM_SEVEN_START];
-        build_seven_tile_table(TOP_SEVEN, top_seven, config);
+        build_seven_tile_table(TOP_SEVEN, top_seven, config, threads);
         let bottom_seven = &mut bytes[BOTTOM_SEVEN_START..LEFT_SIX_START];
-        build_seven_tile_table(BOTTOM_SEVEN, bottom_seven, config);
+        build_seven_tile_table(BOTTOM_SEVEN, bottom_seven, config, threads);
         build_six_tile_table(
             LEFT_SIX,
             &mut bytes[LEFT_SIX_START..RIGHT_SIX_START],
             config,
+            threads,
         );
         build_six_tile_table(
             RIGHT_SIX,
             &mut bytes[RIGHT_SIX_START..TOP_ROW_START],
             config,
+            threads,
         );
-        build_byte_table(TOP_ROW, &mut bytes[TOP_ROW_START..CORNER_START], config);
-        build_byte_table(CORNER, &mut bytes[CORNER_START..], config);
+        build_byte_table(
+            TOP_ROW,
+            &mut bytes[TOP_ROW_START..CORNER_START],
+            config,
+            threads,
+        );
+        build_byte_table(CORNER, &mut bytes[CORNER_START..], config, threads);
         Self { bytes }
     }
 

@@ -31,6 +31,8 @@ mod medium;
 mod sealed;
 mod tiny;
 
+use std::num::NonZeroUsize;
+
 #[cfg(target_pointer_width = "64")]
 pub use huge::Huge;
 pub use large::Large;
@@ -45,8 +47,19 @@ use crate::solver::config::PdbConfig;
 ///
 /// [`Solver`]: super::solver::Solver
 pub trait Pdb: AsRef<[u8]> + Sized + Search {
-    /// Builds the pattern database.
-    fn new(config: &PdbConfig) -> Self;
+    /// Builds the pattern database, using every available thread (see
+    /// [`std::thread::available_parallelism`]).
+    #[must_use]
+    fn new(config: &PdbConfig) -> Self {
+        let threads = std::thread::available_parallelism().unwrap_or(NonZeroUsize::MIN);
+        Self::new_with_thread_count(config, threads)
+    }
+
+    /// Builds the pattern database using `threads` threads. With one, it builds on the calling
+    /// thread without spawning any, as targets without threads (such as `wasm32-unknown-unknown`)
+    /// need.
+    #[must_use]
+    fn new_with_thread_count(config: &PdbConfig, threads: NonZeroUsize) -> Self;
 
     /// Initializes a pattern database from a boxed byte slice containing the pre-computed data
     /// (see [`AsRef`]).

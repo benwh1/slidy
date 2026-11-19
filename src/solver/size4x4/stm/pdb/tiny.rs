@@ -5,7 +5,7 @@
 //! distance minimised over the blank's cells and relaxed so that a move changes it by 1 or 3.
 //! Builds in under a second (about 0.8 s on an i5-9500's 6 cores).
 
-use std::{hint::select_unpredictable, sync::atomic::Ordering::Relaxed};
+use std::{hint::select_unpredictable, num::NonZeroUsize, sync::atomic::Ordering::Relaxed};
 
 use xxhash_rust::xxh3;
 
@@ -139,12 +139,13 @@ impl Tiny {
 }
 
 /// Builds the 3-tile table of `tiles` into `out`.
-fn build_three_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig) {
+fn build_three_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig, threads: usize) {
     let out = as_atomic(out);
     breadth_first_search(
         tiles,
         Cost::Additive,
         config,
+        threads,
         |index, blank, _, distance| {
             out[index as usize * 16 + blank as usize].store(distance, Relaxed);
         },
@@ -165,21 +166,22 @@ fn pack_six_tile_table(minimums: &[u8], out: &mut [u8]) {
 }
 
 impl Pdb for Tiny {
-    fn new(config: &PdbConfig) -> Self {
+    fn new_with_thread_count(config: &PdbConfig, threads: NonZeroUsize) -> Self {
+        let threads = threads.get();
         let mut bytes = vec![0; LEN].into_boxed_slice();
         let (top_row, rest) = bytes.split_at_mut(LEFT_SIX_START);
         let (left_six, rest) = rest.split_at_mut(RIGHT_SIX_START - LEFT_SIX_START);
         let (right_six, rest) = rest.split_at_mut(RIGHT_COLUMN_START - RIGHT_SIX_START);
         let (right_column, rest) = rest.split_at_mut(UPPER_SIX_START - RIGHT_COLUMN_START);
         let (upper_six, bottom_six) = rest.split_at_mut(BOTTOM_SIX_START - UPPER_SIX_START);
-        build_three_tile_table(TOP_ROW, top_row, config);
+        build_three_tile_table(TOP_ROW, top_row, config, threads);
         // RIGHT_SIX is LEFT_SIX reflected left to right.
-        let (left, right) = mirrored_relaxed_minimums(LEFT_SIX, RIGHT_SIX, config);
+        let (left, right) = mirrored_relaxed_minimums(LEFT_SIX, RIGHT_SIX, config, threads);
         pack_six_tile_table(&left, left_six);
         pack_six_tile_table(&right, right_six);
-        build_three_tile_table(RIGHT_COLUMN, right_column, config);
-        pack_six_tile_table(&relaxed_minimums(UPPER_SIX, config), upper_six);
-        pack_six_tile_table(&relaxed_minimums(BOTTOM_SIX, config), bottom_six);
+        build_three_tile_table(RIGHT_COLUMN, right_column, config, threads);
+        pack_six_tile_table(&relaxed_minimums(UPPER_SIX, config, threads), upper_six);
+        pack_six_tile_table(&relaxed_minimums(BOTTOM_SIX, config, threads), bottom_six);
         Self { bytes }
     }
 
@@ -352,5 +354,11 @@ mod tests {
     #[test]
     fn test_pdb() {
         super::super::tests::check(Tiny::new(&PdbConfig::default()), HASH);
+    }
+
+    #[test]
+    fn test_pdb_single_threaded() {
+        let pdb = Tiny::new_with_thread_count(&PdbConfig::default(), NonZeroUsize::MIN);
+        assert_eq!(xxh3::xxh3_64(pdb.as_ref()), HASH);
     }
 }

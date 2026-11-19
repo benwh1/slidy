@@ -7,7 +7,7 @@
 //! `u16` per placement, indexed by the blank's rank `r` among the 8 cells without a group tile:
 //! bit `r` is the additive bit, bit `8 + r` the full one. Builds in about ten minutes.
 
-use std::{hint::select_unpredictable, sync::atomic::Ordering::Relaxed};
+use std::{hint::select_unpredictable, num::NonZeroUsize, sync::atomic::Ordering::Relaxed};
 
 use xxhash_rust::xxh3;
 
@@ -134,25 +134,38 @@ fn decode_bits(bits: u32, full_offset: u32, in_group: bool, [additive, full]: [u
 }
 
 impl Pdb for Large {
-    fn new(config: &PdbConfig) -> Self {
+    fn new_with_thread_count(config: &PdbConfig, threads: NonZeroUsize) -> Self {
+        let threads = threads.get();
         let mut bytes = vec![0; LEN].into_boxed_slice();
         let (top_seven, bottom_eight) = bytes.split_at_mut(BOTTOM_EIGHT_START);
         let (top_seven, bottom_eight) = (as_atomic(top_seven), as_atomic(bottom_eight));
         for (cost, cost_bit) in [(Cost::Additive, 0), (Cost::Full, 1)] {
-            breadth_first_search(TOP_SEVEN, cost, config, |index, blank, _, distance| {
-                // The bytes start zeroed, so only set bits need writing.
-                if (distance >> 1) & 1 != 0 {
-                    let bit = 2 * blank as usize + cost_bit;
-                    top_seven[4 * index as usize + bit / 8].fetch_or(1 << (bit % 8), Relaxed);
-                }
-            });
+            breadth_first_search(
+                TOP_SEVEN,
+                cost,
+                config,
+                threads,
+                |index, blank, _, distance| {
+                    // The bytes start zeroed, so only set bits need writing.
+                    if (distance >> 1) & 1 != 0 {
+                        let bit = 2 * blank as usize + cost_bit;
+                        top_seven[4 * index as usize + bit / 8].fetch_or(1 << (bit % 8), Relaxed);
+                    }
+                },
+            );
         }
         for (cost, cost_byte) in [(Cost::Additive, 0), (Cost::Full, 1)] {
-            breadth_first_search(BOTTOM_EIGHT, cost, config, |index, _, rank, distance| {
-                if (distance >> 1) & 1 != 0 {
-                    bottom_eight[2 * index as usize + cost_byte].fetch_or(1 << rank, Relaxed);
-                }
-            });
+            breadth_first_search(
+                BOTTOM_EIGHT,
+                cost,
+                config,
+                threads,
+                |index, _, rank, distance| {
+                    if (distance >> 1) & 1 != 0 {
+                        bottom_eight[2 * index as usize + cost_byte].fetch_or(1 << rank, Relaxed);
+                    }
+                },
+            );
         }
         Self { bytes }
     }
