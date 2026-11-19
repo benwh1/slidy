@@ -321,6 +321,13 @@ fn has_bit_instructions() -> bool {
         && is_x86_feature_detected!("bmi2")
 }
 
+/// Whether the CPU has the instructions that the searches' `*_with_bit_instructions` functions
+/// are compiled with: they are x86 instructions, so no.
+#[cfg(not(target_arch = "x86_64"))]
+fn has_bit_instructions() -> bool {
+    false
+}
+
 /// One layer of a search: the states at distance `depth + 1`, found from those at `depth`.
 struct Layer {
     /// Whether it is found by checking the unvisited states (else by expanding the layer before).
@@ -415,9 +422,9 @@ where
     ///
     /// # Safety
     ///
-    /// The CPU must support the `popcnt`, `bmi1`, and `bmi2` target features.
-    #[cfg(target_arch = "x86_64")]
-    #[target_feature(enable = "popcnt,bmi1,bmi2")]
+    /// The CPU must support the `popcnt`, `bmi1`, and `bmi2` target features, as
+    /// [`has_bit_instructions`] checks (only x86 CPUs do; elsewhere this is never called).
+    #[cfg_attr(target_arch = "x86_64", target_feature(enable = "popcnt,bmi1,bmi2"))]
     unsafe fn expand_chunks_with_bit_instructions(
         &self,
         layer: &Layer,
@@ -663,7 +670,6 @@ pub(in crate::solver::size4x4::stm) fn breadth_first_search<F>(
     let placements = placement_count(tiles.len());
     let free_count = 16 - tiles.len();
     let states = placements * free_count;
-    #[cfg(target_arch = "x86_64")]
     let bit_instructions = has_bit_instructions();
     let search = Search {
         tiles,
@@ -733,12 +739,12 @@ pub(in crate::solver::size4x4::stm) fn breadth_first_search<F>(
         };
         let next_chunk = AtomicUsize::new(0);
         let found = on_threads(threads, || {
-            #[cfg(target_arch = "x86_64")]
             if bit_instructions {
                 // SAFETY: The target features are available.
-                return unsafe { search.expand_chunks_with_bit_instructions(&layer, &next_chunk) };
+                unsafe { search.expand_chunks_with_bit_instructions(&layer, &next_chunk) }
+            } else {
+                search.expand_chunks(&layer, &next_chunk)
             }
-            search.expand_chunks(&layer, &next_chunk)
         });
         layer_sizes.push(found.into_iter().sum());
         report(depth + 1, &layer_sizes);
@@ -1133,9 +1139,9 @@ where
     ///
     /// # Safety
     ///
-    /// The CPU must support the `popcnt`, `bmi1`, and `bmi2` target features.
-    #[cfg(target_arch = "x86_64")]
-    #[target_feature(enable = "popcnt,bmi1,bmi2")]
+    /// The CPU must support the `popcnt`, `bmi1`, and `bmi2` target features, as
+    /// [`has_bit_instructions`] checks (only x86 CPUs do; elsewhere this is never called).
+    #[cfg_attr(target_arch = "x86_64", target_feature(enable = "popcnt,bmi1,bmi2"))]
     unsafe fn expand_with_bit_instructions(
         &self,
         layer: &RegionLayer,
@@ -1162,7 +1168,6 @@ fn additive_values<K>(
 where
     K: PlacementKeys,
 {
-    #[cfg(target_arch = "x86_64")]
     let bit_instructions = has_bit_instructions();
     let mut values = vec![0; keys.len()];
     let search = RegionSearch {
@@ -1204,12 +1209,12 @@ where
         // Small layers are not worth starting every thread for.
         let layer_threads = frontier.len().div_ceil(1 << 14).clamp(1, threads);
         let layers = on_threads(layer_threads, || {
-            #[cfg(target_arch = "x86_64")]
             if bit_instructions {
                 // SAFETY: The target features are available.
-                return unsafe { search.expand_with_bit_instructions(&layer) };
+                unsafe { search.expand_with_bit_instructions(&layer) }
+            } else {
+                search.expand(&layer)
             }
-            search.expand(&layer)
         });
         let mut next = Vec::with_capacity(layers.iter().map(|layer| layer.0.len()).sum());
         let mut found = 0;

@@ -156,14 +156,15 @@ impl Medium {
     fn six_tile_bits(&self, start: usize, index: u32, blank: usize) -> u32 {
         let offset = start + 4 * index as usize;
         debug_assert!(offset + 4 <= LEN);
+        // The tables are written a byte at a time, low bits first, so are read little-endian.
         // SAFETY: as in `byte`.
-        let word = unsafe {
+        let word = u32::from_le(unsafe {
             self.bytes
                 .as_ptr()
                 .add(offset)
                 .cast::<u32>()
                 .read_unaligned()
-        };
+        });
         word >> (2 * blank)
     }
 

@@ -115,14 +115,15 @@ impl Huge {
     fn nine_tile_bits(&self, start: usize, index: u32, rank: u32) -> u32 {
         let offset = start + 2 * index as usize;
         debug_assert!(offset + 2 <= LEN);
+        // The tables are written a byte at a time, low bits first, so are read little-endian.
         // SAFETY: as in `byte`.
-        let half = unsafe {
+        let half = u16::from_le(unsafe {
             self.bytes
                 .as_ptr()
                 .add(offset)
                 .cast::<u16>()
                 .read_unaligned()
-        };
+        });
         u32::from(half) >> rank
     }
 
