@@ -2,7 +2,9 @@
 //! indexing placements ([`index`]), building tables ([`build`]) and decoding the root's values
 //! ([`walk`]).
 //!
-//! Boards are stored in the solver's *internal* (serpentine) order:
+//! Boards are stored in the solver's *internal* order: a half turn of the user's board, with the
+//! cells labelled in serpentine order, so that tile `t`'s home is cell `t` and the blank's is
+//! cell 0:
 //!
 //! ```text
 //! 00 01 02 03
@@ -12,8 +14,8 @@
 //! ```
 //!
 //! The user-facing format is row-major with tiles 1–15 and 0 as the blank:
-//! `1 2 3 4/5 6 7 8/9 10 11 12/13 14 15 0`. `to_internal` converts it;
-//! solutions come back as the moved tiles' directions (`directions`).
+//! `1 2 3 4/5 6 7 8/9 10 11 12/13 14 15 0`. [`to_internal`] converts it, relabeling the tiles
+//! to match; solutions come back as the moved tiles' directions ([`directions`]).
 
 pub(super) mod build;
 pub(super) mod index;
@@ -24,11 +26,9 @@ use crate::algorithm::direction::Direction;
 /// A 4x4 board: one tile per cell, 0 is the blank.
 pub(super) type Board = [u8; 16];
 
-/// Blank-move directions come from slidy (`Up` = 0, `Left` = 1, `Down` = 2,
-/// `Right` = 3), matching the columns of this table.
-/// `NEIGHBOR_IN_DIRECTION[blank][direction]` is the internal position of the blank after moving
-/// it in direction `direction` ([`Direction`] order: up, left, down, right),
-/// or -1 when that move leaves the board.
+/// `NEIGHBOR_IN_DIRECTION[blank][direction]`: the blank's internal cell after it moves from
+/// `blank` in direction `direction` ([`Direction`] order: up 0, left 1, down 2, right 3, on the
+/// internal layout), or -1 when that move leaves the board.
 const NEIGHBOR_IN_DIRECTION: [[i8; 4]; 16] = [
     [-1, -1, 7, 1],
     [-1, 0, 6, 2],
@@ -118,11 +118,10 @@ pub(super) struct MoveList {
     pub(super) moves: [Move; 4],
 }
 
-/// `MOVES[blank][allowed]`: the moves available from `blank` among the
-/// directions allowed by `allowed` (bit `d` for slidy direction `d`; the
-/// duplicate-pruning automaton supplies the mask, which also excludes
-/// the move that would undo the previous one). The moves are listed in
-/// generation order: left, right, up, down.
+/// `MOVES[blank][allowed]`: the moves available from `blank` among the directions allowed by
+/// `allowed` (bit `d` for direction `d`; the search's automaton supplies the mask, which always
+/// excludes the move that would undo the previous one), in generation order: left, right, up,
+/// down.
 pub(super) const MOVES: [[MoveList; 16]; 16] = build_moves();
 
 /// The order the successors are generated in.
@@ -191,15 +190,14 @@ pub(super) const MIRRORED_CELL: [u8; 16] = [0, 7, 8, 15, 14, 9, 6, 1, 2, 5, 10, 
 /// The internal cell of each row-major cell.
 const ROW_MAJOR_TO_INTERNAL: [u8; 16] = [0, 1, 2, 3, 7, 6, 5, 4, 8, 9, 10, 11, 15, 14, 13, 12];
 
-/// Reflect a board across the main diagonal. The mirrored search uses the
-/// same tables on the mirrored position, and the heuristic takes the better
-/// (larger) of both orientations.
+/// `board` reflected across the main diagonal. The search looks up the same tables for both
+/// orientations, and its bound is the larger of the two.
 #[must_use]
 pub(super) fn reflect(board: &Board) -> Board {
     std::array::from_fn(|cell| MIRRORED_CELL[board[MIRRORED_CELL[cell] as usize] as usize])
 }
 
-/// Internal position of the blank.
+/// The blank's internal cell.
 #[must_use]
 pub(super) fn blank_position(board: &Board) -> usize {
     board
@@ -208,7 +206,7 @@ pub(super) fn blank_position(board: &Board) -> usize {
         .expect("board always contains the blank")
 }
 
-/// Convert a user board (row-major, tiles 1–15, 0 blank) to internal order.
+/// A user board (row-major, tiles 1–15, 0 the blank) in internal order.
 #[must_use]
 pub(super) fn to_internal(input: &Board) -> Board {
     std::array::from_fn(|cell| {

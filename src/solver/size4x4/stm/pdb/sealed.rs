@@ -61,6 +61,7 @@ impl SortKey {
         Some(())
     }
 
+    /// The key: the largest estimate, then the total.
     #[inline(always)]
     pub const fn key(&self) -> u64 {
         (self.best << 10) + self.total

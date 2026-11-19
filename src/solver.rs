@@ -1,7 +1,7 @@
 //! Contains everything related to finding solutions to sliding puzzles.
 //!
 //! For convenience, we provide type aliases for the fastest solvers for each small puzzle size and
-//! metric.
+//! metric, and for 4x4 puzzles in [`Stm`] one per pattern database, which trade memory for speed.
 
 pub mod config;
 mod directions;

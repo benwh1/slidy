@@ -5,7 +5,8 @@
 //! 1- and 3-tile groups' tables hold their additive distance as a byte per placement and blank
 //! cell. Each 6-tile group's table holds a `u32` per placement: for each blank cell `b`, bit `2b`
 //! is `(value >> 1) & 1` of the additive distance and bit `2b + 1` that of the full distance
-//! (counting every move), which bounds the solution length on its own. Builds in a minute or two.
+//! (counting every move), which bounds the solution length on its own. Builds in about 10 seconds
+//! on 6 cores.
 
 use std::{hint::select_unpredictable, num::NonZeroUsize};
 
@@ -91,7 +92,7 @@ const LEN: usize = CORNER_START + ONE_TILE_TABLE_LEN;
 const HASH: u64 = 0xa561_acd8_6ab3_ac0c;
 
 /// The medium pattern database (75 MB): the maximum of a 7-7-1 partition and a 6-6-3 one.
-/// Builds in a minute or two.
+/// Builds in about 10 seconds on 6 cores.
 ///
 /// See [`Pdb`] for building it, and loading and saving its bytes.
 pub struct Medium {
@@ -322,7 +323,7 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore = "builds 7-tile tables: about a minute"]
+    #[ignore = "builds 7-tile tables: about 10 seconds"]
     fn test_pdb() {
         super::super::tests::check(Medium::new(&PdbConfig::default()), HASH);
     }

@@ -4,8 +4,8 @@
 mod fsm;
 
 /// Which move sequences the search may take, as an automaton over moves. A node is
-/// `(state << 4) | allowed`, `allowed` the mask of directions (slidy's: up 0, left 1, down 2,
-/// right 3, a tile's move) the next move may take.
+/// `(state << 4) | allowed`, `allowed` the mask of directions the blank's next move may take
+/// (slidy's order: up 0, left 1, down 2, right 3).
 pub(super) trait Automaton: 'static {
     /// The root's node.
     const START: u32;

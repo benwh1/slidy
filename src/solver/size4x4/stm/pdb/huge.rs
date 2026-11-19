@@ -4,8 +4,8 @@
 //! the low byte, its full distance (counting every move) in the high byte. Each 9-tile table
 //! holds a `u16` per placement, indexed by the blank's rank `r` among the 7 cells without a group
 //! tile: bit `r` is `(value >> 1) & 1` of the additive distance, bit `8 + r` that of the full
-//! distance. A full distance bounds the solution length on its own. Builds in about an hour,
-//! using up to 25 GB.
+//! distance. A full distance bounds the solution length on its own. Builds in about 40 minutes on
+//! 6 cores, using up to 25 GB.
 
 use std::{hint::select_unpredictable, num::NonZeroUsize};
 

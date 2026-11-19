@@ -322,7 +322,7 @@ fn has_bit_instructions() -> bool {
 }
 
 /// Whether the CPU has the instructions that the searches' `*_with_bit_instructions` functions
-/// are compiled with: they are x86 instructions, so no.
+/// are compiled with: they are x86-64 instructions, so no.
 #[cfg(not(target_arch = "x86_64"))]
 fn has_bit_instructions() -> bool {
     false
@@ -423,7 +423,7 @@ where
     /// # Safety
     ///
     /// The CPU must support the `popcnt`, `bmi1`, and `bmi2` target features, as
-    /// [`has_bit_instructions`] checks (only x86 CPUs do; elsewhere this is never called).
+    /// [`has_bit_instructions`] checks (only on x86-64; elsewhere this is never called).
     #[cfg_attr(target_arch = "x86_64", target_feature(enable = "popcnt,bmi1,bmi2"))]
     unsafe fn expand_chunks_with_bit_instructions(
         &self,
@@ -1122,7 +1122,7 @@ where
     /// # Safety
     ///
     /// The CPU must support the `popcnt`, `bmi1`, and `bmi2` target features, as
-    /// [`has_bit_instructions`] checks (only x86 CPUs do; elsewhere this is never called).
+    /// [`has_bit_instructions`] checks (only on x86-64; elsewhere this is never called).
     #[cfg_attr(target_arch = "x86_64", target_feature(enable = "popcnt,bmi1,bmi2"))]
     unsafe fn expand_with_bit_instructions(
         &self,
@@ -1563,7 +1563,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "about a minute"]
+    #[ignore = "about 15 seconds"]
     fn test_breadth_first_search_7() {
         let tiles = [1, 2, 3, 4, 5, 6, 7];
         for (cost, expected) in [

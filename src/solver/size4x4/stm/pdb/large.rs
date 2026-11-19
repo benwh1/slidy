@@ -5,7 +5,7 @@
 //! solution length on its own. The 7-tile table holds a `u32` per placement: bit `2b` is the
 //! additive bit with the blank on cell `b`, bit `2b + 1` the full one. The 8-tile table holds a
 //! `u16` per placement, indexed by the blank's rank `r` among the 8 cells without a group tile:
-//! bit `r` is the additive bit, bit `8 + r` the full one. Builds in about ten minutes.
+//! bit `r` is the additive bit, bit `8 + r` the full one. Builds in under two minutes on 6 cores.
 
 use std::{hint::select_unpredictable, num::NonZeroUsize};
 
@@ -56,8 +56,8 @@ const LEN: usize = BOTTOM_EIGHT_START + EIGHT_TILE_TABLE_LEN;
 /// The [`xxh3`](xxhash_rust::xxh3) hash of the database, checked by [`Pdb::try_from_bytes`].
 const HASH: u64 = 0x67d0_6ca4_066a_b09c;
 
-/// The large pattern database (1.27 GB): a single 7-8 partition. Builds in about ten
-/// minutes.
+/// The large pattern database (1.27 GB): a single 7-8 partition. Builds in under two minutes
+/// on 6 cores.
 ///
 /// See [`Pdb`] for building it, and loading and saving its bytes.
 pub struct Large {
@@ -245,7 +245,7 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore = "builds an 8-tile table: several minutes and a few gigabytes"]
+    #[ignore = "builds an 8-tile table: about two minutes and a few gigabytes"]
     fn test_pdb() {
         super::super::tests::check(Large::new(&PdbConfig::default()), HASH);
     }
