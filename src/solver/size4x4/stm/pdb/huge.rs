@@ -7,17 +7,21 @@
 //! distance. A full distance bounds the solution length on its own. Builds in about an hour,
 //! using up to 25 GB.
 
-use std::{hint::select_unpredictable, num::NonZeroUsize, sync::atomic::Ordering::Relaxed};
-
-use xxhash_rust::xxh3;
+use std::{hint::select_unpredictable, num::NonZeroUsize};
 
 use crate::solver::{
     config::PdbConfig,
     size4x4::stm::{
-        pdb::{Pdb, Search},
+        pdb::{
+            Pdb, Search, SortKey,
+            tables::{
+                Tables, blank_rank, build_distance_table, build_rank_bit_table, decode_bits,
+                in_group,
+            },
+        },
         utils::{
-            Board, Move,
-            build::{Cost, as_atomic, breadth_first_search},
+            Board, Move, blank_position,
+            build::Cost,
             index::{index_shift_table, move_shifts, placement_count, placement_index, tile_mask},
             prefetch,
             walk::{Encoding, WalkSpec, exact_values},
@@ -32,7 +36,8 @@ const FIRST_NINE: &[u8] = &[1, 2, 3, 4, 5, 6, 7, 8, 9];
 const FIRST_SIX: &[u8] = &[1, 2, 3, 4, 5, 6];
 const LAST_NINE: &[u8] = &[7, 8, 9, 10, 11, 12, 13, 14, 15];
 
-/// The groups, in the order of [`Huge`]'s indices.
+/// The groups, in the order of [`Huge`]'s indices: each partition's 6-tile group, then its 9-tile
+/// one.
 const GROUPS: [&[u8]; 4] = [LAST_SIX, FIRST_NINE, FIRST_SIX, LAST_NINE];
 
 /// The groups' tiles as masks, in [`GROUPS`] order.
@@ -59,10 +64,14 @@ const FIRST_SIX_START: usize = LAST_SIX_START + SIX_TILE_TABLE_LEN;
 const FIRST_NINE_START: usize = FIRST_SIX_START + SIX_TILE_TABLE_LEN;
 const LAST_NINE_START: usize = FIRST_NINE_START + NINE_TILE_TABLE_LEN;
 
+/// Where each partition's 6-tile and 9-tile tables start.
+const SIX_TILE_STARTS: [usize; 2] = [LAST_SIX_START, FIRST_SIX_START];
+const NINE_TILE_STARTS: [usize; 2] = [FIRST_NINE_START, LAST_NINE_START];
+
 /// The length of the database in bytes.
 const LEN: usize = LAST_NINE_START + NINE_TILE_TABLE_LEN;
 
-/// The [`xxh3`] hash of the database, checked by [`Pdb::try_from_bytes`].
+/// The [`xxh3`](xxhash_rust::xxh3) hash of the database, checked by [`Pdb::try_from_bytes`].
 const HASH: u64 = 0x03a3_0ec1_0688_1f45;
 
 /// The huge pattern database (17.0 GB): the maximum of two 9-6 partitions. Builds in about 40
@@ -70,150 +79,52 @@ const HASH: u64 = 0x03a3_0ec1_0688_1f45;
 ///
 /// See [`Pdb`] for building it, and loading and saving its bytes.
 pub struct Huge {
-    bytes: Box<[u8]>,
-}
-
-/// `((value + 1) >> 1) & 1`: the bit a 9-tile table holds for `value + 1`. A move changes a value
-/// by exactly 1, so a child's bit matches this exactly when its value went up.
-#[inline(always)]
-const fn bit_if_increased(value: u32) -> u32 {
-    ((value + 1) >> 1) & 1
-}
-
-/// The blank's rank among the cells of `board` without a tile of `group_mask`.
-fn blank_rank(board: &Board, group_mask: u16) -> u8 {
-    let blank = board.iter().position(|&tile| tile == 0).unwrap();
-    board[..blank]
-        .iter()
-        .filter(|&&tile| (group_mask >> tile) & 1 == 0)
-        .count() as u8
+    tables: Tables<LEN, HASH>,
 }
 
 impl Huge {
+    /// The additive and full values of placement `index` and blank cell `blank` in partition
+    /// `partition`'s 6-tile table.
     #[inline(always)]
-    fn byte(&self, offset: usize) -> u8 {
-        debug_assert!(offset < LEN);
-        // SAFETY: every offset is within its table, and the database has length `LEN`.
-        unsafe { *self.bytes.get_unchecked(offset) }
+    fn six_tile_values(&self, partition: usize, index: u32, blank: usize) -> [u8; 2] {
+        let offset = SIX_TILE_STARTS[partition] + 32 * index as usize + 2 * blank;
+        [self.tables.byte(offset), self.tables.byte(offset + 1)]
     }
 
+    /// The bits of placement `index` in partition `partition`'s 9-tile table, from blank rank
+    /// `rank`'s on.
     #[inline(always)]
-    fn address_of(&self, offset: usize) -> *const u8 {
-        self.bytes.as_ptr().wrapping_add(offset)
-    }
-
-    /// The additive and full values of placement `index` and blank cell `blank` in the 6-tile
-    /// table at `start`.
-    #[inline(always)]
-    fn six_tile_values(&self, start: usize, index: u32, blank: usize) -> [u8; 2] {
-        let offset = start + 32 * index as usize + 2 * blank;
-        [self.byte(offset), self.byte(offset + 1)]
-    }
-
-    /// The bits of placement `index` in the 9-tile table at `start`, from blank rank `rank`'s on.
-    #[inline(always)]
-    fn nine_tile_bits(&self, start: usize, index: u32, rank: u32) -> u32 {
-        let offset = start + 2 * index as usize;
-        debug_assert!(offset + 2 <= LEN);
-        // The tables are written a byte at a time, low bits first, so are read little-endian.
-        // SAFETY: as in `byte`.
-        let half = u16::from_le(unsafe {
-            self.bytes
-                .as_ptr()
-                .add(offset)
-                .cast::<u16>()
-                .read_unaligned()
-        });
-        u32::from(half) >> rank
-    }
-
-    /// A child's additive and full values in the 9-tile table at `start` of the tiles in
-    /// `group_mask`, from its index, the blank's rank and the moved tile, decoded against its
-    /// parent's.
-    #[inline(always)]
-    fn decode_nine_tile(
-        &self,
-        start: usize,
-        group_mask: u16,
-        index: u32,
-        rank: u32,
-        moved: u8,
-        [additive, full]: [u8; 2],
-    ) -> [u8; 2] {
-        // Each value goes up when its bit matches, else down; the additive one only changes
-        // when the moved tile is in the group.
-        let (additive, full) = (u32::from(additive), u32::from(full));
-        let expected = bit_if_increased(additive) | (bit_if_increased(full) << 8);
-        let went_down = self.nine_tile_bits(start, index, rank) ^ expected;
-        let child_additive = (additive + 1).wrapping_sub((went_down << 1) & 2);
-        let child_full = (full + 1).wrapping_sub((went_down >> 7) & 2);
-        [
-            select_unpredictable((group_mask >> moved) & 1 != 0, child_additive, additive) as u8,
-            child_full as u8,
-        ]
-    }
-}
-
-/// Builds the 6-tile table of `tiles` into `out`.
-fn build_six_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig, threads: usize) {
-    let out = as_atomic(out);
-    for (cost, cost_byte) in [(Cost::Additive, 0), (Cost::Full, 1)] {
-        breadth_first_search(tiles, cost, config, threads, |index, blank, _, distance| {
-            out[32 * index as usize + 2 * blank as usize + cost_byte].store(distance, Relaxed);
-        });
-    }
-}
-
-/// Builds the 9-tile table of `tiles` into `out`.
-fn build_nine_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig, threads: usize) {
-    let out = as_atomic(out);
-    for (cost, cost_byte) in [(Cost::Additive, 0), (Cost::Full, 1)] {
-        breadth_first_search(tiles, cost, config, threads, |index, _, rank, distance| {
-            // The bytes start zeroed, so only set bits need writing.
-            if (distance >> 1) & 1 != 0 {
-                out[2 * index as usize + cost_byte].fetch_or(1 << rank, Relaxed);
-            }
-        });
+    fn nine_tile_bits(&self, partition: usize, index: u32, rank: u32) -> u32 {
+        let offset = NINE_TILE_STARTS[partition] + 2 * index as usize;
+        u32::from(self.tables.u16(offset)) >> rank
     }
 }
 
 impl Pdb for Huge {
     fn new_with_thread_count(config: &PdbConfig, threads: NonZeroUsize) -> Self {
         let threads = threads.get();
-        let mut bytes = vec![0; LEN].into_boxed_slice();
-        build_six_tile_table(
-            LAST_SIX,
-            &mut bytes[LAST_SIX_START..FIRST_SIX_START],
-            config,
-            threads,
-        );
-        build_six_tile_table(
-            FIRST_SIX,
-            &mut bytes[FIRST_SIX_START..FIRST_NINE_START],
-            config,
-            threads,
-        );
-        build_nine_tile_table(
-            FIRST_NINE,
-            &mut bytes[FIRST_NINE_START..LAST_NINE_START],
-            config,
-            threads,
-        );
-        build_nine_tile_table(LAST_NINE, &mut bytes[LAST_NINE_START..], config, threads);
-        Self { bytes }
+        let tables = Tables::build(|bytes| {
+            let both = &[Cost::Additive, Cost::Full];
+            for (tiles, start) in [(LAST_SIX, LAST_SIX_START), (FIRST_SIX, FIRST_SIX_START)] {
+                let table = &mut bytes[start..][..SIX_TILE_TABLE_LEN];
+                build_distance_table(tiles, both, table, config, threads);
+            }
+            for (tiles, start) in [(FIRST_NINE, FIRST_NINE_START), (LAST_NINE, LAST_NINE_START)] {
+                let table = &mut bytes[start..][..NINE_TILE_TABLE_LEN];
+                build_rank_bit_table(tiles, table, config, threads);
+            }
+        });
+        Self { tables }
     }
 
     unsafe fn try_from_bytes(bytes: Box<[u8]>) -> Option<Self> {
-        if bytes.len() != LEN || xxh3::xxh3_64(&bytes) != HASH {
-            return None;
-        }
-        // SAFETY: We checked above that the data is (almost certainly) correct.
-        Some(unsafe { Self::from_bytes_unchecked(bytes) })
+        Tables::try_from_bytes(bytes).map(|tables| Self { tables })
     }
 
     unsafe fn from_bytes_unchecked(bytes: Box<[u8]>) -> Self {
-        assert_eq!(bytes.len(), LEN, "the database has the wrong length");
-        Self { bytes }
+        Self {
+            tables: Tables::from_bytes_unchecked(bytes),
+        }
     }
 }
 
@@ -233,16 +144,15 @@ impl Search for Huge {
     type Values = [[u8; 4]; 2];
 
     fn root(&self, boards: &[Board; 2]) -> (Self::Indices, Self::Values, u64) {
-        // The 9-tile tables' walks, both orientations: (tiles, partition, encoding), and where
-        // each reads its bits (table start, bit offset).
-        const WALKS: [(&[u8], usize, Encoding, usize, u32); 4] = [
-            (FIRST_NINE, 0, Encoding::AdditiveBit, FIRST_NINE_START, 0),
-            (FIRST_NINE, 0, Encoding::FullBit, FIRST_NINE_START, 8),
-            (LAST_NINE, 1, Encoding::AdditiveBit, LAST_NINE_START, 0),
-            (LAST_NINE, 1, Encoding::FullBit, LAST_NINE_START, 8),
+        // The 9-tile tables' walks, both orientations: (tiles, partition, encoding, bit offset).
+        const WALKS: [(&[u8], usize, Encoding, u32); 4] = [
+            (FIRST_NINE, 0, Encoding::AdditiveBit, 0),
+            (FIRST_NINE, 0, Encoding::FullBit, 8),
+            (LAST_NINE, 1, Encoding::AdditiveBit, 0),
+            (LAST_NINE, 1, Encoding::FullBit, 8),
         ];
         let walks = std::array::from_fn::<_, 8, _>(|walk| {
-            let (tiles, partition, encoding, ..) = WALKS[walk % 4];
+            let (tiles, partition, encoding, _) = WALKS[walk % 4];
             WalkSpec {
                 tiles,
                 partition,
@@ -254,46 +164,34 @@ impl Search for Huge {
             &INDEX_SHIFTS,
             walks,
             |walk, state| {
-                let (.., start, bit) = WALKS[walk % 4];
+                let (_, partition, _, bit) = WALKS[walk % 4];
                 let rank = (state.free_cells & ((1 << state.blank) - 1)).count_ones();
-                (self.nine_tile_bits(start, state.index, rank) >> bit) & 1
+                (self.nine_tile_bits(partition, state.index, rank) >> bit) & 1
             },
-            |walk, state| self.address_of(WALKS[walk % 4].3 + 2 * state.index as usize),
+            |walk, state| {
+                let partition = WALKS[walk % 4].1;
+                self.tables
+                    .address(NINE_TILE_STARTS[partition] + 2 * state.index as usize)
+            },
         );
         let [_, first_nine_mask, _, last_nine_mask] = GROUP_MASKS;
-        let mut indices = Indices {
-            groups: [[0; 4]; 2],
-            ranks: [[0; 2]; 2],
+        let indices = Indices {
+            groups: boards.map(|board| GROUPS.map(|tiles| placement_index(tiles, &board))),
+            ranks: boards.map(|board| {
+                [first_nine_mask, last_nine_mask].map(|mask| blank_rank(&board, mask) as u8)
+            }),
         };
-        let mut values = [[0; 4]; 2];
+        let values = [0, 1].map(|side| std::array::from_fn(|value| exact[4 * side + value]));
         let mut bound = 0;
         for (side, board) in boards.iter().enumerate() {
-            let blank = board.iter().position(|&tile| tile == 0).unwrap();
-            let [last_six, first_nine, first_six, last_nine] =
-                GROUPS.map(|tiles| placement_index(tiles, board));
-            indices.groups[side] = [last_six, first_nine, first_six, last_nine];
-            indices.ranks[side] = [
-                blank_rank(board, first_nine_mask),
-                blank_rank(board, last_nine_mask),
-            ];
-            values[side] = std::array::from_fn(|walk| exact[4 * side + walk]);
-            let [
-                first_nine_additive,
-                first_nine_full,
-                last_nine_additive,
-                last_nine_full,
-            ] = values[side];
-            let [last_six_additive, last_six_full] =
-                self.six_tile_values(LAST_SIX_START, last_six, blank);
-            let [first_six_additive, first_six_full] =
-                self.six_tile_values(FIRST_SIX_START, first_six, blank);
-            bound = bound
-                .max(last_six_additive + first_nine_additive)
-                .max(last_six_full)
-                .max(first_nine_full)
-                .max(first_six_additive + last_nine_additive)
-                .max(first_six_full)
-                .max(last_nine_full);
+            let blank = blank_position(board);
+            for partition in 0..2 {
+                let six_index = indices.groups[side][2 * partition];
+                let [six_additive, six_full] = self.six_tile_values(partition, six_index, blank);
+                let [additive, full] =
+                    [values[side][2 * partition], values[side][2 * partition + 1]];
+                bound = bound.max(six_additive + additive).max(six_full).max(full);
+            }
         }
         (indices, values, u64::from(bound))
     }
@@ -309,20 +207,22 @@ impl Search for Huge {
         let [_, first_nine_mask, _, last_nine_mask] = GROUP_MASKS;
         let mut indices = *parent;
         for side in 0..2 {
-            let (moved, board) = (tiles[side], &boards[side]);
+            let moved = tiles[side];
             let shifts = move_shifts(
                 &INDEX_SHIFTS,
-                board,
+                &boards[side],
                 tile_move,
                 side,
                 moved,
                 [first_nine_mask, last_nine_mask],
             );
-            let groups = &mut indices.groups[side];
-            for (group, mask) in GROUP_MASKS.into_iter().enumerate() {
-                let in_group = (mask >> moved) & 1 != 0;
-                let delta = select_unpredictable(in_group, shifts.indices[group / 2], 0);
-                groups[group] = groups[group].wrapping_add(delta);
+            for (group, index) in indices.groups[side].iter_mut().enumerate() {
+                let delta = select_unpredictable(
+                    in_group(GROUP_MASKS[group], moved),
+                    shifts.indices[group / 2],
+                    0,
+                );
+                *index = index.wrapping_add(delta);
             }
             for (rank, change) in indices.ranks[side].iter_mut().zip(shifts.ranks) {
                 *rank = rank.wrapping_add(change as u8);
@@ -330,10 +230,16 @@ impl Search for Huge {
             let [last_six, first_nine, first_six, last_nine] =
                 indices.groups[side].map(|index| index as usize);
             let blank = usize::from(tile_move.blank_after[side]);
-            prefetch(self.address_of(LAST_SIX_START + 32 * last_six + 2 * blank));
-            prefetch(self.address_of(FIRST_NINE_START + 2 * first_nine));
-            prefetch(self.address_of(FIRST_SIX_START + 32 * first_six + 2 * blank));
-            prefetch(self.address_of(LAST_NINE_START + 2 * last_nine));
+            prefetch(
+                self.tables
+                    .address(LAST_SIX_START + 32 * last_six + 2 * blank),
+            );
+            prefetch(self.tables.address(FIRST_NINE_START + 2 * first_nine));
+            prefetch(
+                self.tables
+                    .address(FIRST_SIX_START + 32 * first_six + 2 * blank),
+            );
+            prefetch(self.tables.address(LAST_NINE_START + 2 * last_nine));
         }
         indices
     }
@@ -349,67 +255,49 @@ impl Search for Huge {
     ) -> Option<(u64, Self::Values)> {
         let [_, first_nine_mask, _, last_nine_mask] = GROUP_MASKS;
         let mut values = *parent;
-        let (mut best, mut total) = (0, 0);
+        let mut key = SortKey::default();
         // One partition in both orientations, then the other, stopping at the first that prunes.
         for side in 0..2 {
             let [last_six_index, first_nine_index, ..] = child.groups[side];
-            let first_nine_rank = u32::from(child.ranks[side][0]);
-            let [first_nine_additive, first_nine_full, ..] = &mut values[side];
-            [*first_nine_additive, *first_nine_full] = self.decode_nine_tile(
-                FIRST_NINE_START,
-                first_nine_mask,
-                first_nine_index,
-                first_nine_rank,
-                tiles[side],
-                [*first_nine_additive, *first_nine_full],
+            let rank = u32::from(child.ranks[side][0]);
+            let [additive, full, ..] = &mut values[side];
+            [*additive, *full] = decode_bits(
+                self.nine_tile_bits(0, first_nine_index, rank),
+                8,
+                in_group(first_nine_mask, tiles[side]),
+                [*additive, *full],
             );
-            let blank = usize::from(blanks[side]);
-            let [last_six_additive, last_six_full] =
-                self.six_tile_values(LAST_SIX_START, last_six_index, blank);
-            let estimate = u64::from(
-                (last_six_additive + *first_nine_additive)
-                    .max(last_six_full)
-                    .max(*first_nine_full),
-            );
-            if estimate >= depth {
-                return None;
-            }
-            best = best.max(estimate);
-            total += estimate;
+            let [six_additive, six_full] =
+                self.six_tile_values(0, last_six_index, usize::from(blanks[side]));
+            key.add(
+                u64::from((six_additive + *additive).max(six_full).max(*full)),
+                depth,
+            )?;
         }
         for side in 0..2 {
             let [_, _, first_six_index, last_nine_index] = child.groups[side];
-            let last_nine_rank = u32::from(child.ranks[side][1]);
-            let [.., last_nine_additive, last_nine_full] = &mut values[side];
-            [*last_nine_additive, *last_nine_full] = self.decode_nine_tile(
-                LAST_NINE_START,
-                last_nine_mask,
-                last_nine_index,
-                last_nine_rank,
-                tiles[side],
-                [*last_nine_additive, *last_nine_full],
+            let rank = u32::from(child.ranks[side][1]);
+            let [.., additive, full] = &mut values[side];
+            [*additive, *full] = decode_bits(
+                self.nine_tile_bits(1, last_nine_index, rank),
+                8,
+                in_group(last_nine_mask, tiles[side]),
+                [*additive, *full],
             );
-            let blank = usize::from(blanks[side]);
-            let [first_six_additive, first_six_full] =
-                self.six_tile_values(FIRST_SIX_START, first_six_index, blank);
-            let estimate = u64::from(
-                (first_six_additive + *last_nine_additive)
-                    .max(first_six_full)
-                    .max(*last_nine_full),
-            );
-            if estimate >= depth {
-                return None;
-            }
-            best = best.max(estimate);
-            total += estimate;
+            let [six_additive, six_full] =
+                self.six_tile_values(1, first_six_index, usize::from(blanks[side]));
+            key.add(
+                u64::from((six_additive + *additive).max(six_full).max(*full)),
+                depth,
+            )?;
         }
-        Some(((best << 10) + total, values))
+        Some((key.key(), values))
     }
 }
 
 impl AsRef<[u8]> for Huge {
     fn as_ref(&self) -> &[u8] {
-        &self.bytes
+        self.tables.bytes()
     }
 }
 

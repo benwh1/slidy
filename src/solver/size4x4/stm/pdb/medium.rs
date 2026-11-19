@@ -7,18 +7,22 @@
 //! is `(value >> 1) & 1` of the additive distance and bit `2b + 1` that of the full distance
 //! (counting every move), which bounds the solution length on its own. Builds in a minute or two.
 
-use std::{hint::select_unpredictable, num::NonZeroUsize, sync::atomic::Ordering::Relaxed};
-
-use xxhash_rust::xxh3;
+use std::{hint::select_unpredictable, num::NonZeroUsize};
 
 use crate::solver::{
     config::PdbConfig,
     size4x4::stm::{
-        pdb::{Pdb, Search},
+        pdb::{
+            Pdb, Search, SortKey,
+            tables::{
+                Tables, build_cell_bit_table, build_distance_table, decode_bits, decode_code,
+                in_group, pack_codes,
+            },
+        },
         utils::{
-            Board, Move,
-            build::{Cost, as_atomic, breadth_first_search, relaxed_minimums},
-            index::{index_shift_table, index_shifts, placement_count, placement_index, tile_mask},
+            Board, Move, blank_position,
+            build::{Cost, relaxed_minimums},
+            index::{index_shift_table, move_shifts, placement_count, placement_index, tile_mask},
             prefetch,
             walk::{Encoding, WalkSpec, exact_values},
         },
@@ -83,7 +87,7 @@ const CORNER_START: usize = TOP_ROW_START + THREE_TILE_TABLE_LEN;
 /// The length of the database in bytes.
 const LEN: usize = CORNER_START + ONE_TILE_TABLE_LEN;
 
-/// The [`xxh3`] hash of the database, checked by [`Pdb::try_from_bytes`].
+/// The [`xxh3`](xxhash_rust::xxh3) hash of the database, checked by [`Pdb::try_from_bytes`].
 const HASH: u64 = 0xa561_acd8_6ab3_ac0c;
 
 /// The medium pattern database (75 MB): the maximum of a 7-7-1 partition and a 6-6-3 one.
@@ -91,187 +95,59 @@ const HASH: u64 = 0xa561_acd8_6ab3_ac0c;
 ///
 /// See [`Pdb`] for building it, and loading and saving its bytes.
 pub struct Medium {
-    bytes: Box<[u8]>,
-}
-
-/// `((value + 1) >> 1) & 1`: the bit a 6-tile table holds for `value + 1`. A move changes a
-/// value by exactly 1, so a child's bit matches this exactly when its value went up.
-#[inline(always)]
-const fn bit_if_increased(value: u32) -> u32 {
-    ((value + 1) >> 1) & 1
+    tables: Tables<LEN, HASH>,
 }
 
 impl Medium {
-    #[inline(always)]
-    fn byte(&self, offset: usize) -> u8 {
-        debug_assert!(offset < LEN);
-        // SAFETY: every offset is within its table, and the database has length `LEN`.
-        unsafe { *self.bytes.get_unchecked(offset) }
-    }
-
-    #[inline(always)]
-    fn address_of(&self, offset: usize) -> *const u8 {
-        self.bytes.as_ptr().wrapping_add(offset)
-    }
-
     /// The value of placement `index` and blank cell `blank` in the 1- or 3-tile table at
     /// `start`.
     #[inline(always)]
     fn byte_value(&self, start: usize, index: u32, blank: usize) -> u8 {
-        self.byte(start + 16 * index as usize + blank)
-    }
-
-    /// The code of placement `index` in the 7-tile table at `start`.
-    #[inline(always)]
-    fn seven_tile_code(&self, start: usize, index: u32) -> u32 {
-        let index = index as usize;
-        u32::from(self.byte(start + index / 4) >> (2 * (index % 4))) & 3
-    }
-
-    /// A child's value in the 7-tile table at `start` of the tiles in `group_mask`, from its
-    /// index and the moved tile, decoded against its parent's value.
-    #[inline(always)]
-    fn decode_seven_tile(
-        &self,
-        start: usize,
-        group_mask: u16,
-        index: u32,
-        moved: u8,
-        parent: u8,
-    ) -> u8 {
-        // The child's value is 1 or 3 away (the four candidates' codes count up mod 4), or the
-        // same when the moved tile is not in the group.
-        let parent = u32::from(parent);
-        let step = self
-            .seven_tile_code(start, index)
-            .wrapping_sub(u32::midpoint(parent, 5))
-            & 3;
-        let child = (parent + 2 * step).wrapping_sub(3);
-        select_unpredictable((group_mask >> moved) & 1 != 0, child, parent) as u8
+        self.tables.byte(start + 16 * index as usize + blank)
     }
 
     /// The bits of placement `index` in the 6-tile table at `start`, from blank cell `blank`'s
     /// on.
     #[inline(always)]
     fn six_tile_bits(&self, start: usize, index: u32, blank: usize) -> u32 {
-        let offset = start + 4 * index as usize;
-        debug_assert!(offset + 4 <= LEN);
-        // The tables are written a byte at a time, low bits first, so are read little-endian.
-        // SAFETY: as in `byte`.
-        let word = u32::from_le(unsafe {
-            self.bytes
-                .as_ptr()
-                .add(offset)
-                .cast::<u32>()
-                .read_unaligned()
-        });
-        word >> (2 * blank)
+        self.tables.u32(start + 4 * index as usize) >> (2 * blank)
     }
-
-    /// A child's additive and full values in the 6-tile table at `start` of the tiles in
-    /// `group_mask`, from its index, the blank's cell and the moved tile, decoded against its
-    /// parent's.
-    #[inline(always)]
-    fn decode_six_tile(
-        &self,
-        start: usize,
-        group_mask: u16,
-        index: u32,
-        blank: usize,
-        moved: u8,
-        [additive, full]: [u8; 2],
-    ) -> [u8; 2] {
-        // Each value goes up when its bit matches, else down; the additive one only changes
-        // when the moved tile is in the group.
-        let (additive, full) = (u32::from(additive), u32::from(full));
-        let expected = bit_if_increased(additive) | (bit_if_increased(full) << 1);
-        let went_down = self.six_tile_bits(start, index, blank) ^ expected;
-        let child_additive = (additive + 1).wrapping_sub((went_down << 1) & 2);
-        let child_full = (full + 1).wrapping_sub(went_down & 2);
-        [
-            select_unpredictable((group_mask >> moved) & 1 != 0, child_additive, additive) as u8,
-            child_full as u8,
-        ]
-    }
-}
-
-/// Builds the 7-tile table of `tiles` into `out`.
-fn build_seven_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig, threads: usize) {
-    let minimums = relaxed_minimums(tiles, config, threads);
-    for (index, &minimum) in minimums.iter().enumerate() {
-        out[index / 4] |= ((minimum >> 1) & 3) << (2 * (index % 4));
-    }
-}
-
-/// Builds the 6-tile table of `tiles` into `out`.
-fn build_six_tile_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig, threads: usize) {
-    let out = as_atomic(out);
-    for (cost, cost_bit) in [(Cost::Additive, 0), (Cost::Full, 1)] {
-        breadth_first_search(tiles, cost, config, threads, |index, blank, _, distance| {
-            // The bytes start zeroed, so only set bits need writing.
-            if (distance >> 1) & 1 != 0 {
-                let bit = 2 * blank as usize + cost_bit;
-                out[4 * index as usize + bit / 8].fetch_or(1 << (bit % 8), Relaxed);
-            }
-        });
-    }
-}
-
-/// Builds the table of `tiles` with a byte per placement and blank cell into `out`.
-fn build_byte_table(tiles: &[u8], out: &mut [u8], config: &PdbConfig, threads: usize) {
-    let out = as_atomic(out);
-    breadth_first_search(
-        tiles,
-        Cost::Additive,
-        config,
-        threads,
-        |index, blank, _, distance| {
-            out[index as usize * 16 + blank as usize].store(distance, Relaxed);
-        },
-    );
 }
 
 impl Pdb for Medium {
     fn new_with_thread_count(config: &PdbConfig, threads: NonZeroUsize) -> Self {
         let threads = threads.get();
-        let mut bytes = vec![0; LEN].into_boxed_slice();
-        let top_seven = &mut bytes[TOP_SEVEN_START..BOTTOM_SEVEN_START];
-        build_seven_tile_table(TOP_SEVEN, top_seven, config, threads);
-        let bottom_seven = &mut bytes[BOTTOM_SEVEN_START..LEFT_SIX_START];
-        build_seven_tile_table(BOTTOM_SEVEN, bottom_seven, config, threads);
-        build_six_tile_table(
-            LEFT_SIX,
-            &mut bytes[LEFT_SIX_START..RIGHT_SIX_START],
-            config,
-            threads,
-        );
-        build_six_tile_table(
-            RIGHT_SIX,
-            &mut bytes[RIGHT_SIX_START..TOP_ROW_START],
-            config,
-            threads,
-        );
-        build_byte_table(
-            TOP_ROW,
-            &mut bytes[TOP_ROW_START..CORNER_START],
-            config,
-            threads,
-        );
-        build_byte_table(CORNER, &mut bytes[CORNER_START..], config, threads);
-        Self { bytes }
+        let tables = Tables::build(|bytes| {
+            for (tiles, start) in [
+                (TOP_SEVEN, TOP_SEVEN_START),
+                (BOTTOM_SEVEN, BOTTOM_SEVEN_START),
+            ] {
+                let table = &mut bytes[start..][..SEVEN_TILE_TABLE_LEN];
+                pack_codes(&relaxed_minimums(tiles, config, threads), table);
+            }
+            for (tiles, start) in [(LEFT_SIX, LEFT_SIX_START), (RIGHT_SIX, RIGHT_SIX_START)] {
+                let table = &mut bytes[start..][..SIX_TILE_TABLE_LEN];
+                build_cell_bit_table(tiles, table, config, threads);
+            }
+            for (tiles, start, len) in [
+                (TOP_ROW, TOP_ROW_START, THREE_TILE_TABLE_LEN),
+                (CORNER, CORNER_START, ONE_TILE_TABLE_LEN),
+            ] {
+                let table = &mut bytes[start..][..len];
+                build_distance_table(tiles, &[Cost::Additive], table, config, threads);
+            }
+        });
+        Self { tables }
     }
 
     unsafe fn try_from_bytes(bytes: Box<[u8]>) -> Option<Self> {
-        if bytes.len() != LEN || xxh3::xxh3_64(&bytes) != HASH {
-            return None;
-        }
-        // SAFETY: We checked above that the data is (almost certainly) correct.
-        Some(unsafe { Self::from_bytes_unchecked(bytes) })
+        Tables::try_from_bytes(bytes).map(|tables| Self { tables })
     }
 
     unsafe fn from_bytes_unchecked(bytes: Box<[u8]>) -> Self {
-        assert_eq!(bytes.len(), LEN, "the database has the wrong length");
-        Self { bytes }
+        Self {
+            tables: Tables::from_bytes_unchecked(bytes),
+        }
     }
 }
 
@@ -314,27 +190,26 @@ impl Search for Medium {
             |walk, state| {
                 let (.., encoding, start, bit) = WALKS[walk % 6];
                 if encoding == Encoding::RelaxedMinimum {
-                    self.seven_tile_code(start, state.index)
+                    self.tables.code(start, state.index)
                 } else {
                     (self.six_tile_bits(start, state.index, state.blank as usize) >> bit) & 1
                 }
             },
             |walk, state| {
                 let (.., encoding, start, _) = WALKS[walk % 6];
-                self.address_of(if encoding == Encoding::RelaxedMinimum {
-                    start + state.index as usize / 4
-                } else {
-                    start + 4 * state.index as usize
-                })
+                self.tables
+                    .address(if encoding == Encoding::RelaxedMinimum {
+                        start + state.index as usize / 4
+                    } else {
+                        start + 4 * state.index as usize
+                    })
             },
         );
-        let mut indices = [[0; 6]; 2];
-        let mut values = [[0; 6]; 2];
+        let indices = boards.map(|board| GROUPS.map(|tiles| placement_index(tiles, &board)));
+        let values = [0, 1].map(|side| std::array::from_fn(|value| exact[6 * side + value]));
         let mut bound = 0;
         for (side, board) in boards.iter().enumerate() {
-            let blank = board.iter().position(|&tile| tile == 0).unwrap();
-            indices[side] = GROUPS.map(|tiles| placement_index(tiles, board));
-            values[side] = std::array::from_fn(|walk| exact[6 * side + walk]);
+            let blank = blank_position(board);
             let [_, _, corner_index, top_row_index, ..] = indices[side];
             let corner = self.byte_value(CORNER_START, corner_index, blank);
             let top_row = self.byte_value(TOP_ROW_START, top_row_index, blank);
@@ -366,21 +241,22 @@ impl Search for Medium {
         let mut indices = *parent;
         for side in 0..2 {
             let moved = tiles[side];
-            let deltas = index_shifts(&INDEX_SHIFTS, &boards[side], tile_move, side, moved);
-            for (group, mask) in GROUP_MASKS.into_iter().enumerate() {
-                let in_group = (mask >> moved) & 1 != 0;
-                let delta = select_unpredictable(in_group, deltas[group / 3], 0);
-                indices[side][group] = indices[side][group].wrapping_add(delta);
+            let deltas =
+                move_shifts(&INDEX_SHIFTS, &boards[side], tile_move, side, moved, []).indices;
+            for (group, index) in indices[side].iter_mut().enumerate() {
+                let delta =
+                    select_unpredictable(in_group(GROUP_MASKS[group], moved), deltas[group / 3], 0);
+                *index = index.wrapping_add(delta);
             }
             let [top, bottom, corner, top_row, left, right] =
                 indices[side].map(|index| index as usize);
             let blank = usize::from(tile_move.blank_after[side]);
-            prefetch(self.address_of(TOP_SEVEN_START + top / 4));
-            prefetch(self.address_of(BOTTOM_SEVEN_START + bottom / 4));
-            prefetch(self.address_of(CORNER_START + 16 * corner + blank));
-            prefetch(self.address_of(TOP_ROW_START + 16 * top_row + blank));
-            prefetch(self.address_of(LEFT_SIX_START + 4 * left));
-            prefetch(self.address_of(RIGHT_SIX_START + 4 * right));
+            prefetch(self.tables.address(TOP_SEVEN_START + top / 4));
+            prefetch(self.tables.address(BOTTOM_SEVEN_START + bottom / 4));
+            prefetch(self.tables.address(CORNER_START + 16 * corner + blank));
+            prefetch(self.tables.address(TOP_ROW_START + 16 * top_row + blank));
+            prefetch(self.tables.address(LEFT_SIX_START + 4 * left));
+            prefetch(self.tables.address(RIGHT_SIX_START + 4 * right));
         }
         indices
     }
@@ -396,68 +272,48 @@ impl Search for Medium {
     ) -> Option<(u64, Self::Values)> {
         let [top_mask, bottom_mask, _, _, left_mask, right_mask] = GROUP_MASKS;
         let mut values = *parent;
-        let (mut best, mut total) = (0, 0);
+        let mut key = SortKey::default();
         // One partition in both orientations, then the other, stopping at the first that prunes.
         for side in 0..2 {
             let [top_index, bottom_index, corner_index, ..] = child[side];
             let [top, bottom, ..] = &mut values[side];
-            let moved = tiles[side];
-            *top = self.decode_seven_tile(TOP_SEVEN_START, top_mask, top_index, moved, *top);
-            *bottom = self.decode_seven_tile(
-                BOTTOM_SEVEN_START,
-                bottom_mask,
-                bottom_index,
-                moved,
-                *bottom,
-            );
-            let blank = usize::from(blanks[side]);
+            let (moved, blank) = (tiles[side], usize::from(blanks[side]));
+            let top_code = self.tables.code(TOP_SEVEN_START, top_index);
+            *top = decode_code(top_code, in_group(top_mask, moved), *top);
+            let bottom_code = self.tables.code(BOTTOM_SEVEN_START, bottom_index);
+            *bottom = decode_code(bottom_code, in_group(bottom_mask, moved), *bottom);
             let corner = self.byte_value(CORNER_START, corner_index, blank);
-            let estimate = u64::from(corner + *top + *bottom);
-            if estimate >= depth {
-                return None;
-            }
-            best = best.max(estimate);
-            total += estimate;
+            key.add(u64::from(corner + *top + *bottom), depth)?;
         }
         for side in 0..2 {
             let [.., top_row_index, left_index, right_index] = child[side];
             let [_, _, left_additive, left_full, right_additive, right_full] = &mut values[side];
             let (moved, blank) = (tiles[side], usize::from(blanks[side]));
-            [*left_additive, *left_full] = self.decode_six_tile(
-                LEFT_SIX_START,
-                left_mask,
-                left_index,
-                blank,
-                moved,
+            [*left_additive, *left_full] = decode_bits(
+                self.six_tile_bits(LEFT_SIX_START, left_index, blank),
+                1,
+                in_group(left_mask, moved),
                 [*left_additive, *left_full],
             );
-            [*right_additive, *right_full] = self.decode_six_tile(
-                RIGHT_SIX_START,
-                right_mask,
-                right_index,
-                blank,
-                moved,
+            [*right_additive, *right_full] = decode_bits(
+                self.six_tile_bits(RIGHT_SIX_START, right_index, blank),
+                1,
+                in_group(right_mask, moved),
                 [*right_additive, *right_full],
             );
             let top_row = self.byte_value(TOP_ROW_START, top_row_index, blank);
-            let estimate = u64::from(
-                (top_row + *left_additive + *right_additive)
-                    .max(*left_full)
-                    .max(*right_full),
-            );
-            if estimate >= depth {
-                return None;
-            }
-            best = best.max(estimate);
-            total += estimate;
+            let estimate = (top_row + *left_additive + *right_additive)
+                .max(*left_full)
+                .max(*right_full);
+            key.add(u64::from(estimate), depth)?;
         }
-        Some(((best << 10) + total, values))
+        Some((key.key(), values))
     }
 }
 
 impl AsRef<[u8]> for Medium {
     fn as_ref(&self) -> &[u8] {
-        &self.bytes
+        self.tables.bytes()
     }
 }
 

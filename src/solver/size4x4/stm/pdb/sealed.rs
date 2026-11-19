@@ -39,3 +39,30 @@ pub trait Search {
         depth: u64,
     ) -> Option<(u64, Self::Values)>;
 }
+
+/// A successor's best-first sort key (see [`Search::evaluate`]), from its estimates: smaller
+/// for a smaller largest estimate, then a smaller total.
+#[derive(Default)]
+pub struct SortKey {
+    best: u64,
+    total: u64,
+}
+
+impl SortKey {
+    /// Adds an estimate of the successor's distance; `None` when it reaches `depth`, the moves
+    /// left at its parent, which prunes it.
+    #[inline(always)]
+    pub fn add(&mut self, estimate: u64, depth: u64) -> Option<()> {
+        if estimate >= depth {
+            return None;
+        }
+        self.best = self.best.max(estimate);
+        self.total += estimate;
+        Some(())
+    }
+
+    #[inline(always)]
+    pub const fn key(&self) -> u64 {
+        (self.best << 10) + self.total
+    }
+}

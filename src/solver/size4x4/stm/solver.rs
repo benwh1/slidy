@@ -165,29 +165,33 @@ where
                 if depth == 0 {
                     return solver.record(blank);
                 }
-                let mut root = MaybeUninit::uninit();
                 if pruning {
-                    solver.expand::<Pruning>(blank, &indices, Pruning::START, values, &mut root);
-                    // SAFETY: `expand` wrote it.
-                    solver
-                        .search_subtree::<Pruning>(blank, depth, unsafe { root.assume_init_ref() })
+                    solver.search_root::<Pruning>(blank, &indices, values, depth)
                 } else {
-                    solver.expand::<Backtrack>(
-                        blank,
-                        &indices,
-                        Backtrack::START,
-                        values,
-                        &mut root,
-                    );
-                    // SAFETY: `expand` wrote it.
-                    solver.search_subtree::<Backtrack>(blank, depth, unsafe {
-                        root.assume_init_ref()
-                    })
+                    solver.search_root::<Backtrack>(blank, &indices, values, depth)
                 }
             },
         );
 
         Ok(())
+    }
+
+    /// Searches from the root, with the blank at `blank`, indices `indices` and values `values`,
+    /// for solutions of `depth` moves.
+    fn search_root<A>(
+        &mut self,
+        blank: usize,
+        indices: &P::Indices,
+        values: P::Values,
+        depth: u64,
+    ) -> ControlFlow<()>
+    where
+        A: Automaton,
+    {
+        let mut root = MaybeUninit::uninit();
+        self.expand::<A>(blank, indices, A::START, values, &mut root);
+        // SAFETY: `expand` wrote it.
+        self.search_subtree::<A>(blank, depth, unsafe { root.assume_init_ref() })
     }
 
     /// Puts `tiles` on `to` and the blank on `from`, on both boards: a move, or with the cells

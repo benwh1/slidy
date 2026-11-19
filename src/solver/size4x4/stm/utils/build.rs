@@ -799,24 +799,6 @@ impl RegionLabels {
     fn regions(&self, free_cells: u16) -> Regions {
         Regions(self.0[usize::from(free_cells)])
     }
-
-    /// How many regions `free_cells` (not every cell) make.
-    #[inline(always)]
-    fn count(&self, free_cells: u16) -> u32 {
-        self.regions(free_cells).count(free_cells)
-    }
-
-    /// The rank of free cell `cell`'s region.
-    #[inline(always)]
-    fn rank(&self, free_cells: u16, cell: u32) -> u32 {
-        self.regions(free_cells).rank(cell)
-    }
-
-    /// The region of rank `rank`.
-    #[inline(always)]
-    fn region(&self, free_cells: u16, rank: u32) -> u16 {
-        self.regions(free_cells).region(rank)
-    }
 }
 
 /// The regions of one set of free cells: its [`RegionLabels`] entry.
@@ -1052,7 +1034,7 @@ where
             return Reached::Before;
         }
         let key_bits = 15 << (4 * (region / 16 % 16));
-        if self.labels.count(free_cells) <= 4 && old & key_bits == 0 {
+        if self.labels.regions(free_cells).count(free_cells) <= 4 && old & key_bits == 0 {
             Reached::First
         } else {
             Reached::New
@@ -1083,7 +1065,7 @@ where
                 for &region in regions {
                     let key = region / 16;
                     let (placement, free_cells) = keys.placement(key);
-                    let region = labels.region(free_cells, region % 16);
+                    let region = labels.regions(free_cells).region(region % 16);
                     // The group tiles next to the region, each movable into it.
                     let mut movable = neighbors(region) & !free_cells;
                     while movable != 0 {
@@ -1095,7 +1077,7 @@ where
                             targets &= targets - 1;
                             let next_key = keys.after_move(&placement, key, from, to);
                             let next_free = free_cells ^ (1 << from) ^ (1 << to);
-                            let id = 16 * next_key + labels.rank(next_free, from);
+                            let id = 16 * next_key + labels.regions(next_free).rank(from);
                             prefetch(self.bit_of(id).0.as_ptr().cast());
                             moves.push((id, next_free));
                         }
@@ -1109,7 +1091,7 @@ where
                     }
                     next.push(id);
                     if self.counting {
-                        let next_region = labels.region(next_free, id % 16);
+                        let next_region = labels.regions(next_free).region(id % 16);
                         found += u64::from(next_region.count_ones());
                     }
                     // A key's first region reached is its nearest.

@@ -30,6 +30,7 @@ mod large;
 mod medium;
 mod sealed;
 mod small;
+mod tables;
 
 use std::num::NonZeroUsize;
 
@@ -37,7 +38,7 @@ use std::num::NonZeroUsize;
 pub use huge::Huge;
 pub use large::Large;
 pub use medium::Medium;
-use sealed::Search;
+use sealed::{Search, SortKey};
 pub use small::Small;
 
 use crate::solver::config::PdbConfig;

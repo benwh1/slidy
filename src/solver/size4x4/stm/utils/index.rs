@@ -89,38 +89,22 @@ fn digits_of_index_with<const N: usize>(mut index: u32) -> [u32; N] {
     digits
 }
 
-/// The digits of placement `index` of `tile_count` tiles (from 1 to 9), then zeros.
+/// The digits of placement `index` of `N` tiles, then zeros.
 #[inline(always)]
-#[must_use]
-pub(super) fn digits_of_index(index: u32, tile_count: usize) -> [u8; 16] {
-    fn padded<const N: usize>(digits: [u32; N]) -> [u8; 16] {
-        let mut padded = [0; 16];
-        for (padded, digit) in padded.iter_mut().zip(digits) {
-            *padded = digit as u8;
-        }
-        padded
+fn padded_digits_of_index_with<const N: usize>(index: u32) -> [u8; 16] {
+    let mut digits = [0; 16];
+    for (padded, digit) in digits.iter_mut().zip(digits_of_index_with::<N>(index)) {
+        *padded = digit as u8;
     }
-    match tile_count {
-        1 => padded(digits_of_index_with::<1>(index)),
-        2 => padded(digits_of_index_with::<2>(index)),
-        3 => padded(digits_of_index_with::<3>(index)),
-        4 => padded(digits_of_index_with::<4>(index)),
-        5 => padded(digits_of_index_with::<5>(index)),
-        6 => padded(digits_of_index_with::<6>(index)),
-        7 => padded(digits_of_index_with::<7>(index)),
-        8 => padded(digits_of_index_with::<8>(index)),
-        9 => padded(digits_of_index_with::<9>(index)),
-        _ => panic!("groups have 1 to 9 tiles"),
-    }
+    digits
 }
 
-/// The cells of placement `index` of `N` tiles.
+/// The cells of placement `index` of `N` tiles, then zeros.
 #[inline(always)]
-fn cells_of_index_with<const N: usize>(index: u32) -> [u8; N] {
-    let digits = digits_of_index_with::<N>(index);
-    let mut cells = [0; N];
+fn cells_of_index_with<const N: usize>(index: u32) -> [u8; 16] {
+    let mut cells = [0; 16];
     let mut unused = u16::MAX;
-    for (cell, digit) in cells.iter_mut().zip(digits) {
+    for (cell, digit) in cells.iter_mut().zip(digits_of_index_with::<N>(index)) {
         let position = nth_set_bit(unused, digit);
         *cell = position as u8;
         unused &= !(1 << position);
@@ -128,27 +112,36 @@ fn cells_of_index_with<const N: usize>(index: u32) -> [u8; N] {
     cells
 }
 
+/// `function::<N>(index)`, for `N` the tile count `tile_count` (from 1 to 9).
+macro_rules! with_tile_count {
+    ($tile_count:expr, $function:ident($index:expr)) => {
+        match $tile_count {
+            1 => $function::<1>($index),
+            2 => $function::<2>($index),
+            3 => $function::<3>($index),
+            4 => $function::<4>($index),
+            5 => $function::<5>($index),
+            6 => $function::<6>($index),
+            7 => $function::<7>($index),
+            8 => $function::<8>($index),
+            9 => $function::<9>($index),
+            _ => panic!("groups have 1 to 9 tiles"),
+        }
+    };
+}
+
+/// The digits of placement `index` of `tile_count` tiles (from 1 to 9), then zeros.
+#[inline(always)]
+#[must_use]
+pub(super) fn digits_of_index(index: u32, tile_count: usize) -> [u8; 16] {
+    with_tile_count!(tile_count, padded_digits_of_index_with(index))
+}
+
 /// The cells of placement `index` of `tile_count` tiles (from 1 to 9), then zeros.
 #[inline(always)]
 #[must_use]
 pub(super) fn cells_of_index(index: u32, tile_count: usize) -> [u8; 16] {
-    fn padded<const N: usize>(cells: [u8; N]) -> [u8; 16] {
-        let mut padded = [0; 16];
-        padded[..N].copy_from_slice(&cells);
-        padded
-    }
-    match tile_count {
-        1 => padded(cells_of_index_with::<1>(index)),
-        2 => padded(cells_of_index_with::<2>(index)),
-        3 => padded(cells_of_index_with::<3>(index)),
-        4 => padded(cells_of_index_with::<4>(index)),
-        5 => padded(cells_of_index_with::<5>(index)),
-        6 => padded(cells_of_index_with::<6>(index)),
-        7 => padded(cells_of_index_with::<7>(index)),
-        8 => padded(cells_of_index_with::<8>(index)),
-        9 => padded(cells_of_index_with::<9>(index)),
-        _ => panic!("groups have 1 to 9 tiles"),
-    }
+    with_tile_count!(tile_count, cells_of_index_with(index))
 }
 
 /// The index of the placement of `tiles` on `board`.
@@ -222,32 +215,6 @@ pub(in crate::solver::size4x4::stm) const fn index_shift_table(
         partition += 1;
     }
     table
-}
-
-/// The index shifts (see [`index_shift_table`]) of both partitions for `tile_move` on `board`
-/// (`side` of the move), which moves `tile`: partition 0's first, each to be added with wrapping.
-/// `table` is the partitions' [`index_shift_table`].
-#[inline(always)]
-#[must_use]
-pub(in crate::solver::size4x4::stm) fn index_shifts(
-    table: &[[u64; 16]; 16],
-    board: &Board,
-    tile_move: &Move,
-    side: usize,
-    tile: u8,
-) -> [u32; 2] {
-    // SAFETY: tiles are below 16.
-    let row = unsafe { table.get_unchecked(usize::from(tile)) };
-    let lower = usize::from(tile_move.lower_cell[side]);
-    let mut sum = row[0];
-    for cell in lower + 1..lower + usize::from(tile_move.cell_gap[side]) {
-        // SAFETY: the cells between two cells of the board are cells, holding tiles below 16.
-        sum += unsafe { row.get_unchecked(usize::from(*board.get_unchecked(cell))) };
-    }
-    // The tile moves to the lower cell when the blank moves to the higher one.
-    let negate = u32::from(tile_move.blank_to_higher_cell[side]).wrapping_neg();
-    let signed = |lane: u64| (lane as u32 ^ negate).wrapping_sub(negate);
-    [signed(sum), signed(sum >> 32)]
 }
 
 /// The index shifts and blank rank changes of a move: see [`move_shifts`].
@@ -352,46 +319,11 @@ mod tests {
     }
 
     #[test]
-    fn test_index_shifts() {
+    fn test_move_shifts() {
         const SEVEN_EIGHT: &[&[u8]] = &[&[1, 2, 3, 4, 5, 6, 7], &[8, 9, 10, 11, 12, 13, 14, 15]];
         const NINE_SIX: &[&[u8]] = &[&[1, 2, 3, 4, 5, 6, 7, 8, 9], &[10, 11, 12, 13, 14, 15]];
         const INDEX_SHIFTS: [[u64; 16]; 16] = index_shift_table([SEVEN_EIGHT, NINE_SIX]);
-        for board in random_boards(200) {
-            let boards = [board, reflect(&board)];
-            let blank = board.iter().position(|&tile| tile == 0).unwrap();
-            let moves = &MOVES[blank][15];
-            for tile_move in &moves.moves[..usize::from(moves.count)] {
-                for (side, board) in boards.iter().enumerate() {
-                    let blank_cell = if side == 0 {
-                        blank
-                    } else {
-                        usize::from(MIRRORED_CELL[blank])
-                    };
-                    let blank_after = usize::from(tile_move.blank_after[side]);
-                    let tile = board[blank_after];
-                    let mut moved = *board;
-                    moved[blank_cell] = tile;
-                    moved[blank_after] = 0;
-                    let delta = index_shifts(&INDEX_SHIFTS, board, tile_move, side, tile);
-                    for (partition, groups) in [SEVEN_EIGHT, NINE_SIX].iter().enumerate() {
-                        for tiles in groups.iter().filter(|group| group.contains(&tile)) {
-                            let before = placement_index(tiles, board);
-                            let after = placement_index(tiles, &moved);
-                            assert_eq!(before.wrapping_add(delta[partition]), after);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn test_move_shifts() {
-        const INDEX_SHIFTS: [[u64; 16]; 16] = index_shift_table([
-            &[&[1, 2, 3, 4, 5, 6, 7, 8, 9], &[10, 11, 12, 13, 14, 15]],
-            &[&[1, 2, 3, 4, 5, 6], &[7, 8, 9, 10, 11, 12, 13, 14, 15]],
-        ]);
-        let group_mask = tile_mask(&[1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        let group_mask = tile_mask(NINE_SIX[0]);
         let rank = |board: &Board| {
             let blank = board.iter().position(|&tile| tile == 0).unwrap();
             board[..blank]
@@ -417,10 +349,13 @@ mod tests {
                     moved[blank_after] = 0;
                     let shifts =
                         move_shifts(&INDEX_SHIFTS, board, tile_move, side, tile, [group_mask]);
-                    assert_eq!(
-                        shifts.indices,
-                        index_shifts(&INDEX_SHIFTS, board, tile_move, side, tile)
-                    );
+                    for (partition, groups) in [SEVEN_EIGHT, NINE_SIX].iter().enumerate() {
+                        for tiles in groups.iter().filter(|group| group.contains(&tile)) {
+                            let before = placement_index(tiles, board);
+                            let after = placement_index(tiles, &moved);
+                            assert_eq!(before.wrapping_add(shifts.indices[partition]), after);
+                        }
+                    }
                     assert_eq!(rank(board).wrapping_add(shifts.ranks[0]), rank(&moved));
                 }
             }
