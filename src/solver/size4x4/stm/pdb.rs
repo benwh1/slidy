@@ -23,12 +23,15 @@
 // Internal labels throughout: serpentine rows `0 1 2 3 / 7 6 5 4 / 8 9 10 11 / 15 14 13 12`,
 // tile `t`'s home is cell `t`, the blank's cell 0.
 
+// Huge's tables need more than a 32-bit address space.
+#[cfg(target_pointer_width = "64")]
 mod huge;
 mod large;
 mod medium;
 mod sealed;
 mod tiny;
 
+#[cfg(target_pointer_width = "64")]
 pub use huge::Huge;
 pub use large::Large;
 pub use medium::Medium;
