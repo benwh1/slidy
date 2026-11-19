@@ -1,7 +1,7 @@
 //! Exact values of a position's coded pattern-database entries.
 //!
 //! A coded entry holds `(value >> 1) & 1` or `(value >> 1) & 3` of its state's distance, and a
-//! state's colour gives the distance's parity, so the entry gives the distance mod 4 or mod 8.
+//! state's color gives the distance's parity, so the entry gives the distance mod 4 or mod 8.
 //! The search decodes its children against their parent's exact values, so at the root each
 //! coded table is walked downhill to its goal: some move always leads to a lower distance, and
 //! the codes tell which. The walk's length is the root's value.
@@ -25,7 +25,7 @@ pub(in crate::solver::size4x4::stm) enum Encoding {
     /// `(value >> 1) & 1` of the full distance: the blank moves.
     FullBit,
     /// `(value >> 1) & 3` of the placement's relaxed minimum additive distance (which a move
-    /// changes by 1 or 3): a group tile moves to any neighbouring cell without one.
+    /// changes by 1 or 3): a group tile moves to any neighboring cell without one.
     RelaxedMinimum,
 }
 
@@ -158,7 +158,7 @@ impl<'a> Walk<'a> {
                 .filter(|&cell| group_board[cell] == 0)
                 .fold(0, |mask, cell| mask | (1 << cell)),
         };
-        // The value's parity: in the serpentine order a cell's colour is its parity, and an
+        // The value's parity: in the serpentine order a cell's color is its parity, and an
         // additive move moves a group tile, a full one the blank.
         let parity = if encoding == Encoding::FullBit {
             state.blank & 1
@@ -217,8 +217,8 @@ impl<'a> Walk<'a> {
         }
     }
 
-    /// How much lower than the current value a neighbour with code `code` is, if it is lower:
-    /// a neighbour's value is 1 or 3 away, and those values have different codes.
+    /// How much lower than the current value a neighbor with code `code` is, if it is lower:
+    /// a neighbor's value is 1 or 3 away, and those values have different codes.
     #[inline(always)]
     fn decrease(&self, code: u32) -> Option<u32> {
         let code_if_lower_by =

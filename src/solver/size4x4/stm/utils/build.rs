@@ -531,9 +531,9 @@ where
         found
     }
 
-    /// One placement's part of a layer: when pushing, finds the unvisited neighbours of its
+    /// One placement's part of a layer: when pushing, finds the unvisited neighbors of its
     /// states marked `current` (the layer at distance `depth`); when pulling, finds its unvisited
-    /// states with a neighbour there. Either way they are at distance `depth + 1`, and are marked
+    /// states with a neighbor there. Either way they are at distance `depth + 1`, and are marked
     /// `next`. Returns how many states it found.
     #[inline(always)]
     fn expand_placement(
@@ -755,8 +755,8 @@ pub(in crate::solver::size4x4::stm) fn breadth_first_search<F>(
 }
 
 /// Each free cell's region (its cells reachable through free cells) for every set of free cells
-/// of one size, labelled by the region's rank (counting the regions in the order of their lowest
-/// cells, from 0), a nibble per cell; cells that are not free are labelled with the number of
+/// of one size, labeled by the region's rank (counting the regions in the order of their lowest
+/// cells, from 0), a nibble per cell; cells that are not free are labeled with the number of
 /// regions, which no rank is.
 struct RegionLabels(Vec<u64>);
 
@@ -771,10 +771,10 @@ impl RegionLabels {
             if free_cells.count_ones() as usize != free_count {
                 continue;
             }
-            let (mut cell_labels, mut rank, mut unlabelled) = (u64::MAX, 0, free_cells);
-            while unlabelled != 0 {
-                let region = reachable_region(unlabelled.isolate_lowest_one(), free_cells);
-                unlabelled &= !region;
+            let (mut cell_labels, mut rank, mut unlabeled) = (u64::MAX, 0, free_cells);
+            while unlabeled != 0 {
+                let region = reachable_region(unlabeled.isolate_lowest_one(), free_cells);
+                unlabeled &= !region;
                 for cell in 0..16 {
                     if (region >> cell) & 1 != 0 {
                         cell_labels &= !(15 << (4 * cell));
@@ -818,9 +818,9 @@ impl Regions {
         ((self.0 >> (4 * cell)) & 15) as u32
     }
 
-    /// The lowest bit of each nibble labelled `rank`.
+    /// The lowest bit of each nibble labeled `rank`.
     #[inline(always)]
-    fn labelled(self, rank: u32) -> u64 {
+    fn labeled(self, rank: u32) -> u64 {
         // A nibble is zero exactly where the label is `rank`.
         let difference = self.0 ^ (u64::from(rank) * RegionLabels::NIBBLES);
         !(difference | (difference >> 1) | (difference >> 2) | (difference >> 3))
@@ -830,13 +830,13 @@ impl Regions {
     /// The lowest cell of the region of rank `rank`.
     #[inline(always)]
     fn lowest(self, rank: u32) -> u32 {
-        self.labelled(rank).trailing_zeros() / 4
+        self.labeled(rank).trailing_zeros() / 4
     }
 
     /// The region of rank `rank`.
     #[inline(always)]
     fn region(self, rank: u32) -> u16 {
-        let mut matching = self.labelled(rank);
+        let mut matching = self.labeled(rank);
         // Each nibble's bit to one bit of the result, a pair, then four, then eight at a time.
         matching = (matching | (matching >> 3)) & 0x0303_0303_0303_0303;
         matching = (matching | (matching >> 6)) & 0x000f_000f_000f_000f;
@@ -1042,7 +1042,7 @@ where
     }
 
     /// One thread's part of `layer`: the chunks of its frontier it takes, their regions'
-    /// unreached neighbours (the next layer's regions) reached and their keys' values set. Returns
+    /// unreached neighbors (the next layer's regions) reached and their keys' values set. Returns
     /// the regions it reached, how many cells they have (if counting), and the keys with a region
     /// more than 2 further than their value.
     #[inline(always)]
@@ -1133,7 +1133,7 @@ where
 }
 
 /// Each key's least additive distance over the blank's cells, plus 1 (0 for keys naming no
-/// placement): what [`breadth_first_search`] finds for [`Cost::Additive`], minimised over each
+/// placement): what [`breadth_first_search`] finds for [`Cost::Additive`], minimized over each
 /// placement's states, but searching the blank's regions (its cells reachable without moving a
 /// group tile, which share a distance) instead of every cell. Reports each layer (counting every
 /// cell of its regions, as [`breadth_first_search`] does) to `config`'s callback.
@@ -1216,13 +1216,13 @@ where
 }
 
 /// Lowers each placement's value in `values` (by steps of 2, keeping it admissible and its
-/// parity) until moving one of its tiles to a neighbouring cell changes it by at most 3: to the
+/// parity) until moving one of its tiles to a neighboring cell changes it by at most 3: to the
 /// least, over every placement, of its value plus 3 for each move away. Keys with the value 0 name
 /// no placement, and only the moves from `starts` lower any value at first. Uses `threads`
 /// threads.
 ///
-/// Lowering a value as far as a neighbour's allows, in any order, reaches the same values, once
-/// every placement has been expanded (its neighbours lowered) with its final value. So `starts`
+/// Lowering a value as far as a neighbor's allows, in any order, reaches the same values, once
+/// every placement has been expanded (its neighbors lowered) with its final value. So `starts`
 /// are expanded, then the placements lowered, as shortest paths: from the lowest values up (a
 /// bucket queue), each once, when final. Expanding a bucket lowers values only into a higher one,
 /// so its placements are expanded in parallel.
@@ -1231,7 +1231,7 @@ where
     K: PlacementKeys,
 {
     let values = as_atomic(values);
-    // Lowers each neighbour of placement `key` above `value + 3` to it, collecting them.
+    // Lowers each neighbor of placement `key` above `value + 3` to it, collecting them.
     let expand = |key: u32, value: u8, lowered: &mut Vec<u32>| {
         let (placement, free_cells) = keys.placement(key);
         let mut occupied = !free_cells;
@@ -1307,7 +1307,7 @@ where
 
 /// Each placement of `tiles` (at most 9 of them) with its least additive distance over the
 /// blank's cells (see [`additive_values`]), then lowered (by steps of 2, keeping it admissible
-/// and its parity) until moving one of `tiles` to a neighbouring cell changes it by at most 3
+/// and its parity) until moving one of `tiles` to a neighboring cell changes it by at most 3
 /// (see [`relax`]). Reports the search's layers to `config`'s callback, using `threads` threads.
 pub(in crate::solver::size4x4::stm) fn relaxed_minimums(
     tiles: &[u8],
@@ -1507,7 +1507,7 @@ mod tests {
         xxhash_rust::xxh3::xxh3_64(&distances)
     }
 
-    /// `relaxed_minimums` of `tiles` the slow way: the search's distances minimised over each
+    /// `relaxed_minimums` of `tiles` the slow way: the search's distances minimized over each
     /// placement's states, then lowered until no move lowers any further.
     fn relaxed_minimums_slowly(tiles: &[u8]) -> Vec<u8> {
         let mut minimums = vec![u8::MAX; placement_count(tiles.len())];

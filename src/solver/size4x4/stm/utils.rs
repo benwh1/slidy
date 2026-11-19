@@ -3,7 +3,7 @@
 //! ([`walk`]).
 //!
 //! Boards are stored in the solver's *internal* order: a half turn of the user's board, with the
-//! cells labelled in serpentine order, so that tile `t`'s home is cell `t` and the blank's is
+//! cells labeled in serpentine order, so that tile `t`'s home is cell `t` and the blank's is
 //! cell 0:
 //!
 //! ```text
@@ -66,7 +66,7 @@ const NEIGHBOR_MASKS: [u16; 16] = {
 };
 
 /// The cells next to any of `cells` (the same as [`NEIGHBOR_MASKS`] for one cell). A row is a
-/// nibble of the serpentine order: a cell's neighbours across are the bits next to it in its
+/// nibble of the serpentine order: a cell's neighbors across are the bits next to it in its
 /// nibble, and those above and below are in the nibbles next to it, in reverse order.
 #[inline(always)]
 pub(super) const fn neighbors(cells: u16) -> u16 {

@@ -1,7 +1,7 @@
 //! The medium pattern database (75 MB): the maximum of a 7-7-1 partition and a 6-6-3 one.
 //!
 //! Each 7-tile group's table holds 2 bits per placement: `(value >> 1) & 3` of its additive
-//! distance minimised over the blank's cells and relaxed so that a move changes it by 1 or 3. The
+//! distance minimized over the blank's cells and relaxed so that a move changes it by 1 or 3. The
 //! 1- and 3-tile groups' tables hold their additive distance as a byte per placement and blank
 //! cell. Each 6-tile group's table holds a `u32` per placement: for each blank cell `b`, bit `2b`
 //! is `(value >> 1) & 1` of the additive distance and bit `2b + 1` that of the full distance

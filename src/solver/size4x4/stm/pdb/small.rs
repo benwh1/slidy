@@ -2,7 +2,7 @@
 //!
 //! Each 3-tile group's table holds its additive distance as a byte per placement and blank cell.
 //! Each 6-tile group's table holds 2 bits per placement: `(value >> 1) & 3` of its additive
-//! distance minimised over the blank's cells and relaxed so that a move changes it by 1 or 3.
+//! distance minimized over the blank's cells and relaxed so that a move changes it by 1 or 3.
 //! Builds in under a second (about 0.8 s on an i5-9500's 6 cores).
 
 use std::{hint::select_unpredictable, num::NonZeroUsize};
