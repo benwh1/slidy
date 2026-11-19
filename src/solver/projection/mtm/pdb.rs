@@ -41,7 +41,7 @@ impl Pdb<Mtm> {
     }
 
     /// The length in bytes of a [`Pdb`] built for `label` on a puzzle of the given size.
-    pub(in crate::solver::projection) fn expected_len<L>(label: &L, size: Size) -> usize
+    pub(crate) fn expected_len<L>(label: &L, size: Size) -> usize
     where
         L: Label,
     {

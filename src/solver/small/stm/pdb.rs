@@ -549,7 +549,7 @@ where
     ///
     /// `index` must be less than `N! / 2`.
     #[inline(always)]
-    pub(in crate::solver::small) unsafe fn bit_unchecked(&self, index: u64) -> u8 {
+    pub(crate) unsafe fn bit_unchecked(&self, index: u64) -> u8 {
         // SAFETY: The table has `ceil((N! / 2) / 8)` bytes, and `index < N! / 2`.
         let byte = unsafe { *self.pdb.get_unchecked((index / 8) as usize) };
         (byte >> (index % 8)) & 1

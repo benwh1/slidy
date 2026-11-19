@@ -196,7 +196,7 @@ impl PiecewiseConstant {
     serde(try_from = "RectPartitionUnvalidated")
 )]
 pub struct RectPartition {
-    pub(in crate::puzzle) rects: Vec<Rect>,
+    pub(crate) rects: Vec<Rect>,
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize))]

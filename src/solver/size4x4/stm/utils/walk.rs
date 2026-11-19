@@ -19,7 +19,7 @@ use crate::solver::size4x4::stm::utils::{
 
 /// What a coded table holds, and so how a walk moves.
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub(in crate::solver::size4x4::stm) enum Encoding {
+pub enum Encoding {
     /// `(value >> 1) & 1` of the additive distance: a group tile moves into the blank's region.
     AdditiveBit,
     /// `(value >> 1) & 1` of the full distance: the blank moves.
@@ -31,10 +31,10 @@ pub(in crate::solver::size4x4::stm) enum Encoding {
 
 /// A state of a walk: the placement's index, the blank's cell and the cells without a group tile.
 #[derive(Clone, Copy, Default)]
-pub(in crate::solver::size4x4::stm) struct WalkState {
-    pub(in crate::solver::size4x4::stm) index: u32,
-    pub(in crate::solver::size4x4::stm) blank: u32,
-    pub(in crate::solver::size4x4::stm) free_cells: u16,
+pub struct WalkState {
+    pub index: u32,
+    pub blank: u32,
+    pub free_cells: u16,
 }
 
 /// A walk to take: the coded table of `tiles` (which `encoding` describes) from `board`. The
@@ -42,11 +42,11 @@ pub(in crate::solver::size4x4::stm) struct WalkState {
 ///
 /// [`index_shift_table`]: super::index::index_shift_table
 #[derive(Clone, Copy)]
-pub(in crate::solver::size4x4::stm) struct WalkSpec<'a> {
-    pub(in crate::solver::size4x4::stm) tiles: &'a [u8],
-    pub(in crate::solver::size4x4::stm) partition: usize,
-    pub(in crate::solver::size4x4::stm) board: &'a Board,
-    pub(in crate::solver::size4x4::stm) encoding: Encoding,
+pub struct WalkSpec<'a> {
+    pub tiles: &'a [u8],
+    pub partition: usize,
+    pub board: &'a Board,
+    pub encoding: Encoding,
 }
 
 /// `CLOSER_NEIGHBORS[tile][cell]`: the cells next to `cell` nearer to `tile`'s home (cell
@@ -369,7 +369,7 @@ impl<'a> Walk<'a> {
 /// Panics if a table's codes lead nowhere, which only wrong tables do.
 ///
 /// [`index_shift_table`]: super::index::index_shift_table
-pub(in crate::solver::size4x4::stm) fn exact_values<const N: usize>(
+pub fn exact_values<const N: usize>(
     shifts: &[[u64; 16]; 16],
     walks: [WalkSpec<'_>; N],
     code_of: impl Fn(usize, WalkState) -> u32,

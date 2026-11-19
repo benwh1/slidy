@@ -31,7 +31,7 @@ use crate::solver::{
 
 /// Which moves a distance counts.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(in crate::solver::size4x4::stm) enum Cost {
+pub enum Cost {
     /// Only moves of the group's tiles.
     Additive,
     /// Every move.
@@ -75,7 +75,7 @@ where
 }
 
 /// `bytes` viewed as atomics, for writing from several threads.
-pub(in crate::solver::size4x4::stm) fn as_atomic(bytes: &mut [u8]) -> &[AtomicU8] {
+pub fn as_atomic(bytes: &mut [u8]) -> &[AtomicU8] {
     // SAFETY: `AtomicU8` has the same layout as `u8`, and the borrow is exclusive.
     unsafe { std::slice::from_raw_parts(bytes.as_mut_ptr().cast::<AtomicU8>(), bytes.len()) }
 }
@@ -658,7 +658,7 @@ fn cells_marked<const N: usize>(free_cells: u16, marks: u64, wanted: [u8; N]) ->
 /// `cost`'s distances, calling `visit(placement, blank, rank, distance)` once for every state
 /// (`rank`: how many cells below the blank's have no group tile), from `threads` threads.
 /// Reports each layer to `config`'s callback.
-pub(in crate::solver::size4x4::stm) fn breadth_first_search<F>(
+pub fn breadth_first_search<F>(
     tiles: &[u8],
     cost: Cost,
     config: &PdbConfig,
@@ -1309,11 +1309,7 @@ where
 /// blank's cells (see [`additive_values`]), then lowered (by steps of 2, keeping it admissible
 /// and its parity) until moving one of `tiles` to a neighboring cell changes it by at most 3
 /// (see [`relax`]). Reports the search's layers to `config`'s callback, using `threads` threads.
-pub(in crate::solver::size4x4::stm) fn relaxed_minimums(
-    tiles: &[u8],
-    config: &PdbConfig,
-    threads: usize,
-) -> Vec<u8> {
+pub fn relaxed_minimums(tiles: &[u8], config: &PdbConfig, threads: usize) -> Vec<u8> {
     relaxed_minimums_and_mirror(tiles, None, config, threads).0
 }
 
@@ -1322,7 +1318,7 @@ pub(in crate::solver::size4x4::stm) fn relaxed_minimums(
 /// the other, so reflecting reverses a cell's label within its row). Reflecting keeps every move,
 /// so it keeps the additive distances as long as it keeps the goal: the blank's home region must
 /// hold cell 3, cell 0's reflection.
-pub(in crate::solver::size4x4::stm) fn mirrored_relaxed_minimums(
+pub fn mirrored_relaxed_minimums(
     tiles: &[u8],
     mirrored: &[u8],
     config: &PdbConfig,
