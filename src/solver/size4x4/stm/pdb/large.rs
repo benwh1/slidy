@@ -243,10 +243,11 @@ impl AsRef<[u8]> for Large {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::solver::size4x4::stm::pdb::tests::check;
 
     #[test]
     #[ignore = "builds an 8-tile table: about two minutes and a few gigabytes"]
     fn test_pdb() {
-        super::super::tests::check(Large::new(&PdbConfig::default()), HASH);
+        check(Large::new(&PdbConfig::default()), HASH);
     }
 }

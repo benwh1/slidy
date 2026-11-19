@@ -110,11 +110,8 @@ impl Display for DisplayShort {
 
 #[cfg(test)]
 mod tests {
-    use crate::algorithm::{
-        direction::Direction,
-        display::r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
-        r#move::r#move::Move,
-    };
+    use super::*;
+    use crate::algorithm::direction::Direction;
 
     #[test]
     fn test_display() {

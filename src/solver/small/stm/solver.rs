@@ -221,12 +221,11 @@ where
 mod tests {
     use std::str::FromStr as _;
 
+    use super::*;
     use crate::{
-        puzzle::{puzzle::Puzzle, sliding_puzzle::SlidingPuzzle as _},
+        puzzle::puzzle::Puzzle,
         solver::{
-            Solver2x2Stm, Solver3x3Stm, Solver4x2Stm,
-            config::SolverConfig,
-            solver::{Solver as _, SolverError},
+            Solver2x2Stm, Solver3x3Stm, Solver4x2Stm, config::SolverConfig, solver::SolverError,
         },
     };
 

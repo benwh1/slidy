@@ -637,7 +637,7 @@ mod tests {
         use rand::{RngExt as _, SeedableRng as _};
         use rand_xoshiro::Xoroshiro128StarStar;
 
-        use super::super::{Puzzle as Small, SmallPuzzle};
+        use super::*;
         use crate::{
             algorithm::{algorithm::Algorithm, direction::Direction, r#move::r#move::Move},
             puzzle::{
@@ -645,7 +645,7 @@ mod tests {
                 puzzle::Puzzle,
                 scrambler::{RandomInvertibleState, RandomState, Scrambler as _},
                 size::Size,
-                sliding_puzzle::SlidingPuzzle as _,
+                small::Puzzle as Small,
             },
         };
 

@@ -142,7 +142,7 @@ mod tests {
                 mod [< $label:snake >] {
                     use crate::puzzle::{label::label::{Label as _, RowGrids}, size::Size};
 
-                    use super::{$label};
+                    use super::*;
 
                     $(#[test]
                     fn [< test_ $label:snake _ $w x $h >] () {

@@ -304,10 +304,11 @@ impl AsRef<[u8]> for Huge {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::solver::size4x4::stm::pdb::tests::check;
 
     #[test]
     #[ignore = "builds two 9-tile tables: about 40 minutes and 25 GB"]
     fn test_pdb() {
-        super::super::tests::check(Huge::new(&PdbConfig::default()), HASH);
+        check(Huge::new(&PdbConfig::default()), HASH);
     }
 }

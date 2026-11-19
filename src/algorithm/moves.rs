@@ -56,7 +56,8 @@ impl FusedIterator for Moves<'_> {}
 mod tests {
     use std::str::FromStr as _;
 
-    use crate::algorithm::{algorithm::Algorithm, r#move::r#move::Move};
+    use super::*;
+    use crate::algorithm::algorithm::Algorithm;
 
     #[test]
     fn test_multi_tile_moves() -> Result<(), Box<dyn std::error::Error>> {

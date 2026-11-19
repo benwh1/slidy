@@ -30,7 +30,7 @@ use crate::{
 };
 
 /// An optimal solver for 4x4 puzzles in [`Stm`], with pattern database `P` (one of those in
-/// [`pdb`](super::pdb), which trade memory for speed).
+/// [`pdb`](crate::solver::size4x4::stm::pdb), which trade memory for speed).
 pub struct Solver<P: Pdb> {
     pdb: P,
     search: Search<128>,

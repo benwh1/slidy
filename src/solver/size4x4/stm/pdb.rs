@@ -46,7 +46,7 @@ use crate::solver::config::PdbConfig;
 /// A pattern database for the [`Solver`]: building it, and loading it from the bytes it gives
 /// through [`AsRef`]. Implemented only by the databases in this module.
 ///
-/// [`Solver`]: super::solver::Solver
+/// [`Solver`]: crate::solver::size4x4::stm::solver::Solver
 pub trait Pdb: AsRef<[u8]> + Sized + Search {
     /// Builds the pattern database, using every available thread (see
     /// [`std::thread::available_parallelism`]).
@@ -78,7 +78,7 @@ pub trait Pdb: AsRef<[u8]> + Sized + Search {
     /// can cause undefined behavior.
     ///
     /// [`xxh3`]: xxhash_rust::xxh3
-    /// [`Solver`]: super::solver::Solver
+    /// [`Solver`]: crate::solver::size4x4::stm::solver::Solver
     unsafe fn try_from_bytes(bytes: Box<[u8]>) -> Option<Self>;
 
     /// Initializes the pattern database with `bytes`.
@@ -91,7 +91,7 @@ pub trait Pdb: AsRef<[u8]> + Sized + Search {
     /// If incorrect data is used, then use of the pattern database in the [`Solver`] could lead
     /// to incorrect results or undefined behavior.
     ///
-    /// [`Solver`]: super::solver::Solver
+    /// [`Solver`]: crate::solver::size4x4::stm::solver::Solver
     unsafe fn from_bytes_unchecked(bytes: Box<[u8]>) -> Self;
 }
 
@@ -101,7 +101,7 @@ mod tests {
 
     use xxhash_rust::xxh3;
 
-    use super::Pdb;
+    use super::*;
     use crate::{
         algorithm::algorithm::Algorithm,
         puzzle::{puzzle::Puzzle, sliding_puzzle::SlidingPuzzle as _},

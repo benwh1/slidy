@@ -40,7 +40,7 @@ pub struct WalkState {
 /// A walk to take: the coded table of `tiles` (which `encoding` describes) from `board`. The
 /// [`index_shift_table`] the walks share holds the group in partition `partition`.
 ///
-/// [`index_shift_table`]: super::index::index_shift_table
+/// [`index_shift_table`]: crate::solver::size4x4::stm::utils::index::index_shift_table
 #[derive(Clone, Copy)]
 pub struct WalkSpec<'a> {
     pub tiles: &'a [u8],
@@ -368,7 +368,7 @@ impl<'a> Walk<'a> {
 ///
 /// Panics if a table's codes lead nowhere, which only wrong tables do.
 ///
-/// [`index_shift_table`]: super::index::index_shift_table
+/// [`index_shift_table`]: crate::solver::size4x4::stm::utils::index::index_shift_table
 pub fn exact_values<const N: usize>(
     shifts: &[[u64; 16]; 16],
     walks: [WalkSpec<'_>; N],

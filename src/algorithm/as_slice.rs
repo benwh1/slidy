@@ -29,10 +29,8 @@ impl<'a> AsAlgorithmSlice<'a> for AlgorithmSlice<'a> {
 mod tests {
     use std::str::FromStr as _;
 
-    use crate::algorithm::{
-        algorithm::Algorithm, as_slice::AsAlgorithmSlice as _, r#move::r#move::Move,
-        slice::AlgorithmSlice,
-    };
+    use super::*;
+    use crate::algorithm::{algorithm::Algorithm, r#move::r#move::Move, slice::AlgorithmSlice};
 
     #[test]
     fn test_algorithm() {

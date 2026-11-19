@@ -931,13 +931,8 @@ mod tests {
     }
 
     mod from_str {
-        use std::str::FromStr as _;
-
-        use crate::algorithm::{
-            algorithm::{Algorithm, ParseAlgorithmError},
-            direction::Direction,
-            r#move::r#move::Move,
-        };
+        use super::*;
+        use crate::algorithm::{direction::Direction, r#move::r#move::Move};
 
         #[test]
         fn test_from_str() {

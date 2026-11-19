@@ -271,10 +271,11 @@ impl AsRef<[u8]> for Small {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::solver::size4x4::stm::pdb::tests::check;
 
     #[test]
     fn test_pdb() {
-        super::super::tests::check(Small::new(&PdbConfig::default()), HASH);
+        check(Small::new(&PdbConfig::default()), HASH);
     }
 
     #[test]

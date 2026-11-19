@@ -321,10 +321,11 @@ impl AsRef<[u8]> for Medium {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::solver::size4x4::stm::pdb::tests::check;
 
     #[test]
     #[ignore = "builds 7-tile tables: about 10 seconds"]
     fn test_pdb() {
-        super::super::tests::check(Medium::new(&PdbConfig::default()), HASH);
+        check(Medium::new(&PdbConfig::default()), HASH);
     }
 }

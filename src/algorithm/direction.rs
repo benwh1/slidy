@@ -167,9 +167,7 @@ impl Distribution<Direction> for StandardUniform {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr as _;
-
-    use crate::algorithm::direction::{Direction, ParseDirectionError};
+    use super::*;
 
     #[test]
     fn test_from_str() {

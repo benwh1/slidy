@@ -85,12 +85,10 @@ impl<T: MoveDisplay + Display> Display for DisplayUnspaced<'_, T> {
 mod tests {
     use std::str::FromStr as _;
 
+    use super::*;
     use crate::algorithm::{
         algorithm::Algorithm,
-        display::{
-            algorithm::{AlgorithmDisplay as _, DisplaySpaced, DisplayUnspaced},
-            r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
-        },
+        display::r#move::{DisplayLongSpaced, DisplayLongUnspaced, DisplayShort},
     };
 
     #[test]

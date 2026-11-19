@@ -1,5 +1,6 @@
 //! The search's interface to a pattern database, in a private module so that only the
-//! databases in [`pdb`](super) implement [`Pdb`](super::Pdb).
+//! databases in [`pdb`](crate::solver::size4x4::stm::pdb) implement
+//! [`Pdb`](crate::solver::size4x4::stm::pdb::Pdb).
 
 use crate::solver::size4x4::stm::utils::{Board, Move};
 
